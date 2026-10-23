@@ -20,8 +20,8 @@ function enterArena(id) {
   P.x = 3 * T; P.y = 15 * T; P.vx = 0; P.vy = 0; P.face = 1; camSnap();
   G.superDue = id === 'blum' && META.blumWins >= 5;
   spawnBoss(id);
-  G.banner = 3; G.bannerTxt = BOSSDEF[id].name; G.bannerSub = id === 'blum' ? 'THE LOAD AT THE END' : AREAS[BOSSDEF[id].area].name.toUpperCase();
-  music.play(id === 'blum2' ? 'super' : id === 'blum' ? 'blum' : 'boss'); sfx.roar(); saveRun();
+  G.banner = 0; bossIntro(id);
+  music.play(id === 'blum2' ? 'super' : id === 'blum' ? 'blum' : 'boss'); saveRun();
 }
 function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } }
 function mkBoss(id, x, y, hpMul) {
@@ -48,13 +48,15 @@ function bossDown(b) {
   RUN.drops += 120 * t * (1 + 0.3 * META.ng);
   if (b.id === 'blum') {
     META.blumWins++; saveMeta();
-    if (G.superDue) { G.banner = 3; G.bannerTxt = 'SUPER BLUMHEAD RISES'; G.bannerSub = 'IT IS NOT OVER'; G.superIn = 2.6; sfx.roar(); return; }
-    G.banner = 3.5; G.bannerTxt = 'BLUMHEAD FALLS'; G.bannerSub = META.blumWins === 5 ? 'SUPER BLUMHEAD AWAKENS NEXT TIME' : 'WIN ' + META.blumWins + ' OF 5 FOR SUPER BLUMHEAD';
-    if (META.blumWins > 5) G.bannerSub = 'LEGACY COMPLETE'; G.winT = 4; G.winKind = 1; sfx.goal(); return;
+    if (G.superDue) { superTransform(b); return; } // a secret: nothing tells you he is coming
+    G.winT = 4; G.winKind = 1; sfx.goal();
+    blumFallScene(function () { G.banner = 3.5; G.bannerTxt = 'BLUMHEAD FALLS'; G.bannerSub = META.superWins ? 'LEGACY COMPLETE' : 'THE LOAD IS SPENT. FOR NOW.'; });
+    return;
   }
   if (b.id === 'blum2') { META.superWins++; saveMeta(); G.banner = 3.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = 'THE LOAD IS LIFTED'; G.winT = 4; G.winKind = 2; sfx.goal(); return; }
   var area = BOSSDEF[b.id].area; META.bosses[area] = 1; saveMeta();
   G.lock = false; G.layer = null; sfx.goal(); G.banner = 3; G.bannerTxt = b.d.name.toUpperCase() + ' DEFEATED'; G.bannerSub = 'SEAL ' + sealCount() + ' OF 4 BROKEN'; saveRun();
+  G.sealDue = { n: sealCount(), t: 1.8 };
 }
 function finishLegacy(kind) {
   META.ng++; META.bosses = {}; var bonus = Math.round((kind === 2 ? 2500 : 1200) * META.ng); RUN.drops += bonus; saveMeta(); runOver(kind);
@@ -83,7 +85,7 @@ function updateBosses(dt) {
     }
   }
 }
-function brother() { var c = mkBoss('pig', L.w * T / 2, 7 * T, 0.4); c.id = 'cowpig'; c.d = { name: 'Cowboy Brother', sp: 'boss_cowpig', sc: 1.1, w: 30, h: 50 }; c.w = 30; c.h = 50; c.dmg *= 0.8; c.st = 'idle'; c.cd = 1; bosses.push(c); G.banner = 2; G.bannerTxt = 'THE COWBOY BROTHER'; G.bannerSub = 'BROTHERS LOAD REUNITED'; sfx.roar(); poof(c.x, c.y - 20, 20, ['#c8a050', '#f1e7d0']); }
+function brother() { var c = mkBoss('pig', L.w * T / 2, 7 * T, 0.4); c.id = 'cowpig'; c.d = { name: 'Cowboy Brother', sp: 'f_cowpig_', sc: 1, w: 30, h: 50 }; c.w = 30; c.h = 50; c.dmg *= 0.8; c.st = 'idle'; c.cd = 1; bosses.push(c); poof(c.x, c.y - 20, 20, ['#c8a050', '#f1e7d0']); brotherIntro(c); }
 function towardP(b) { return P.x < b.x ? -1 : 1; }
 var BRAIN = {
   beast: function (b, dt, W, ph) {

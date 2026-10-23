@@ -55,7 +55,7 @@ window.__ll = { step: step, G: G, get P() { return P; }, get RUN() { return RUN;
   get enemies() { return enemies; }, get bosses() { return bosses; }, get drops() { return drops; }, get ST() { return ST; }, keys: keys, input: input,
   startRun: startRun, goTown: goTown, enterRoom: enterRoom, enterArena: enterArena, openHeirs: openHeirs, openBuilding: openBuilding, useThing: useThing, hurtE: hurtE, hurtP: hurtP,
   genWorld: genWorld, buildRoom: buildRoom, calcStats: calcStats, resumeRun: resumeRun, readRun: readRun, saveRun: saveRun, closeMenu: closeMenu, menuOpen: menuOpen, toTitle: toTitle,
-  get TOWN() { return TOWN; }, moveBody: moveBody, tileAt: tileAt, setL: function (l) { L = l; }, rsOf: rsOf, spawnRoom: spawnRoom, AREAS: AREAS, CLASSES: CLASSES, BOSSDEF: BOSSDEF, music: music, findNear: findNear, special: special, attack: attack, render: render };
+  get TOWN() { return TOWN; }, moveBody: moveBody, tileAt: tileAt, setL: function (l) { L = l; }, rsOf: rsOf, spawnRoom: spawnRoom, AREAS: AREAS, CLASSES: CLASSES, BOSSDEF: BOSSDEF, music: music, findNear: findNear, get cut() { return CUT; }, cutPlay: cutPlay, spawnTest: function (k, x, y) { var e = mkEnemy(k, x, y, -1); enemies.push(e); return e; }, special: special, attack: attack, render: render, get eshots() { return eshots; }, ENEMIES: ENEMIES, openGamble: openGamble };
 
 /* ---------- controller in every menu + the on-screen controls toggle (padkit.js) ---------- */
 if (window.HSPad) HSPad.setup({

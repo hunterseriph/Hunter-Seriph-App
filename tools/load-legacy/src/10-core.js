@@ -29,14 +29,14 @@ Object.keys(SRC).forEach(function (k) { var i = new Image(); i.src = SRC[k]; img
 function ok(i) { return i && i.complete && i.naturalWidth > 0; }
 /* draw a sheet sprite with its feet at (x, y), centred */
 function spr(name, x, y, flip, sc, alpha) {
-  var f = SPR[name], a = f && f[4] ? imgs.hom : imgs.sheet; if (!f || !ok(a)) return;
+  var f = SPR[name], a = f && f[4] ? (f[4] === 2 ? imgs.foe : imgs.hom) : imgs.sheet; if (!f || !ok(a)) return;
   sc = sc || 1; var w = f[2] * sc, h = f[3] * sc;
   ctx.save(); ctx.translate(Math.round(x), Math.round(y)); if (flip) ctx.scale(-1, 1); if (alpha !== undefined) ctx.globalAlpha = alpha;
   ctx.drawImage(a, f[0], f[1], f[2], f[3], -Math.round(w / 2), -Math.round(h), Math.round(w), Math.round(h));
   ctx.restore();
 }
 function sprCanvas(name, sc) {
-  var f = SPR[name], a = f && f[4] ? imgs.hom : imgs.sheet; if (!f || !ok(a)) return null; sc = sc || 1;
+  var f = SPR[name], a = f && f[4] ? (f[4] === 2 ? imgs.foe : imgs.hom) : imgs.sheet; if (!f || !ok(a)) return null; sc = sc || 1;
   var c = mk(Math.round(f[2] * sc), Math.round(f[3] * sc)), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.drawImage(a, f[0], f[1], f[2], f[3], 0, 0, c.width, c.height); return c;
 }
@@ -165,7 +165,7 @@ function key(e, down) {
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = down;
   else if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'z' || k === 'Z') keys.j = down;
   else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = down;
-  else if (k === 'x' || k === 'X' || k === 'k' || k === 'K' || k === 'e' || k === 'E') keys.a = down;
+  else if (k === 'x' || k === 'X' || k === 'k' || k === 'K' || k === 'e' || k === 'E' || k === 'b' || k === 'B' || k === 'Enter') keys.a = down; // B on the keyboard matches the B button
   else if (k === 'c' || k === 'C' || k === 'Shift' || k === 'l' || k === 'L') keys.s = down;
   else return;
   e.preventDefault();

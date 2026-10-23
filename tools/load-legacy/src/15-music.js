@@ -37,6 +37,13 @@ var music = (function () {
       mel: 'd5 - f5 - a5 - d6 - | c#6 d6 c#6 bb5 a5 - f5 - | g5 - bb5 - d6 - g6 - | f6 - e6 - c#6 - a5 - | d6 - - a5 f5 - d5 - | bb5 - - f5 d5 - bb4 - | eb5 - g5 - bb5 - eb6 - | c#6 - - - e6 - - - | ' +
            'd6 - bb5 - g5 - d5 - | f5 - a5 - d6 - f6 - | e6 d6 c#6 d6 bb5 - f5 - | a5 - c#6 - e6 - a6 - | f6 - e6 d6 a5 - d6 - | bb5 - g5 - d5 - g5 - | e5 - a5 - c#6 - e6 - | d6 - - - - - - -' }
   };
+  // Pulsar's tracks: he changes up the tunes when you visit his stall
+  SONGS.pulsar1 = { bpm: 88, beats: 4, vol: 0.85, wet: 0.5, lead: 'soft', bass: 'walk', acc: 'arp8', drums: 'shuffle', chords: 'F Am Bb C F Am Gm C',
+    mel: 'a5 - - g5 a5 - c6 - | e5 - - - - - . . | f5 - g5 - a5 - c6 - | bb5 - a5 - g5 - . . | a5 - - g5 a5 - c6 - | e6 - d6 - c6 - a5 - | g5 - f5 - d5 - f5 - | e5 - - - - - . .' };
+  SONGS.pulsar2 = { bpm: 116, beats: 4, vol: 0.85, wet: 0.45, lead: 'pulse', bass: 'drive', acc: 'arp16', drums: 'rock', chords: 'Am F C G Am F C E',
+    mel: 'e5 - a5 - c6 - b5 a5 | c6 - - - a5 - - - | g5 - e5 - g5 - c6 - | b5 - - - g5 - - - | e5 - a5 - c6 - e6 - | f6 - e6 - c6 - a5 - | g5 - c6 - e6 - g6 - | g#5 - b5 - e6 - - -' };
+  SONGS.pulsar3 = { bpm: 76, beats: 4, vol: 1, wet: 0.7, lead: 'soft', bass: 'walk', acc: 'bell', drums: 'slow', chords: 'Dm Dm Gm A Dm Bb Gm A',
+    mel: 'd5 - - - f5 - a5 - | . . c6 - a5 - - - | bb5 - - - g5 - d5 - | e5 - - - c#5 - - - | d5 - f5 - a5 - d6 - | . . bb5 - f5 - - - | g5 - bb5 - d6 - g5 - | a5 - - - - - . .' };
   SONGS.super = (function () { var s = {}; for (var k in SONGS.blum) s[k] = SONGS.blum[k]; s.bpm = 166; s.shift = 1; s.harm = 1; return s; })();
   // drum kits: one bar each, 16th notes (12 for a waltz). k kick, s snare, h hat, o open hat, t tom, '.' nothing
   var KITS = {

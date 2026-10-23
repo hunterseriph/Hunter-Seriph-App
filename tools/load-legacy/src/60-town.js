@@ -2,7 +2,7 @@
    TOWN: Clubhouse Row. Walk the street, step up to a building and press B. Empty lots can be bought.
    The castle gate is at the far right end.
    ===================================================================================================== */
-var TOWN = null, BLD_X0 = 140, BLD_GAP = 170;
+var TOWN = null, BLD_X0 = 100, BLD_GAP = 124; // a tighter street than before
 function buildTown() {
   var n = BUILDINGS.length, gateX = BLD_X0 + n * BLD_GAP + 90, W = Math.ceil((gateX + 220) / T), H = CH, tl = new Uint8Array(W * H);
   for (var x = 0; x < W; x++) tl[(H - 1) * W + x] = TW;

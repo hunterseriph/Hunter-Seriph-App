@@ -129,7 +129,7 @@ function openArcadeMenu() {
     { icon: 'npc_potbelly', name: 'PLAY MEATNADO ESCAPE', sub: 'The cabinet by the door', fn: function () { openCab('meatnado.html'); } },
     { icon: 'cumface', name: 'PLAY CUMHEAD THE SPERMHOG', sub: 'Where this engine came from', fn: function () { openCab('spermhog.html'); } },
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: openLegacy },
-    { icon: 'boss_blum', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x  ·  Super Blumhead ' + META.superWins + 'x  ·  New Game+ ' + META.ng, fn: null }
+    { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng, fn: null }
   ];
   openMenu({ title: 'Potbelly Arcade', note: BUILDINGS[10].quote, pic: 'npc_potbelly', rows: rows });
 }
@@ -171,7 +171,10 @@ function openMerchant(e) {
     { icon: 'sage', name: 'TOP UP MANA', sub: 'Fill your mana', price: fmtN(18 * t * m), fn: function () { if (spend(Math.round(18 * t * m), true)) { P.mana = ST.mmana; renderMenu(true); } } },
     { icon: pw.icon, name: rs.b.p ? 'SOLD OUT' : pw.name.toUpperCase(), sub: rs.b.p ? '' : pw.d + ' for this run', price: rs.b.p ? '' : fmtN(90 * t * m), cls: rs.b.p ? 'off' : 'sec', fn: rs.b.p ? null : function () { if (spend(Math.round(90 * t * m), true)) { rs.b.p = 1; closeMenu(); grantPower(pw.id); } } }
   ];
-  openMenu({ title: who + "'s Stall", note: '"Drops spend the same in here, love."', pic: e.who, rows: rows, bank: 'run' });
+  if (e.who === 'npc_pulsar') rows.unshift({ icon: 'npc_pulsar', name: 'CHANGE UP THE TUNES', sub: 'Pulsar spins a new track for the rest of this area', price: 'FREE', cls: 'sec', fn: function () {
+    var all = ['pulsar1', 'pulsar2', 'pulsar3'].filter(function (t) { return !RUN.tune || t !== RUN.tune.id; }); RUN.tune = { id: all[Math.floor(Math.random() * all.length)], area: G.rm.area };
+    music.play(RUN.tune.id); sfx.magic(); toastMenu('"Just vibes, friend. Free of charge."'); } });
+  openMenu({ title: who + "'s Stall", note: e.who === 'npc_pulsar' ? '"Just vibes, friend. Free of charge."' : '"Drops spend the same in here, love."', pic: e.who, rows: rows, bank: 'run' });
 }
 function openAltar(e) {
   var rs = rsOf(G.roomKey); if (!rs.alt) rs.alt = shuffle(POWERS.slice()).slice(0, 2).map(function (p) { return p.id; });

@@ -205,26 +205,33 @@ function special() {
 function rsOf(k) { return RUN.rs[k] || (RUN.rs[k] = { k: {}, c: {}, d: {}, b: {} }); }
 function enterRoom(k, from, at) {
   var prevArea = G.rm && !(L && L.arena) ? G.rm.area : null;
-  G.roomKey = k; G.rm = WORLD.rooms[k]; L = buildRoom(G.rm); G.lock = false; G.near = null; G.layer = null;
+  G.rm = WORLD.rooms[k]; k = key2(G.rm.cx, G.rm.cy); G.roomKey = k; L = buildRoom(G.rm); G.lock = false; G.near = null; G.layer = null;
   var rs = rsOf(k); rs.v = 1;
   spawnRoom(rs);
+  // which screen of a big room we come in through
+  var ox = from && from.cell ? (from.cell[0] - G.rm.cx) * CW * T : 0, oy = from && from.cell ? (from.cell[1] - G.rm.cy) * CH * T : 0;
+  var ly = from ? ((from.y % (CH * T)) + CH * T) % (CH * T) : 0, lx = from ? ((from.x % (CW * T)) + CW * T) % (CW * T) : 0;
   if (at) { P.x = at.x; P.y = at.y; P.vx = 0; P.vy = 0; }
-  else if (!from) { P.x = L.spawnX; P.y = 15 * T; P.vx = 0; P.vy = 0; }
-  else if (from.dir === 'r') { P.x = 10; P.y = clamp(from.y, 13 * T, 15 * T); }
-  else if (from.dir === 'l') { P.x = L.w * T - 10; P.y = clamp(from.y, 13 * T, 15 * T); }
-  else if (from.dir === 'd') { P.x = from.x; P.y = P.h + 2; }
-  else if (from.dir === 'u') { P.x = from.x; P.y = L.h * T - 1; P.vy = -420; }
+  else if (!from) { P.x = L.spawnX; P.y = L.h * T - T; P.vx = 0; P.vy = 0; }
+  else if (from.dir === 'r') { P.x = 10; P.y = oy + clamp(ly, 13 * T, 15 * T); }
+  else if (from.dir === 'l') { P.x = L.w * T - 10; P.y = oy + clamp(ly, 13 * T, 15 * T); }
+  else if (from.dir === 'd') { P.x = ox + lx; P.y = P.h + 2; }
+  else if (from.dir === 'u') { P.x = ox + lx; P.y = L.h * T - 1; P.vy = -420; }
   if (P.state === 'hurt') P.state = 'normal';
   camSnap();
   var area = G.rm.area;
   if (area !== prevArea) { G.banner = 2.6; G.bannerTxt = AREAS[area].name; G.bannerSub = AREAS[area].sub; if (!RUN.seenArea) RUN.seenArea = {}; RUN.seenArea[area] = 1; }
-  music.play(AREAS[area].music, false);
+  if (RUN.tune && RUN.tune.area !== area) RUN.tune = null; // Pulsar's track lasts until you leave his area
+  music.play(RUN.tune ? RUN.tune.id : AREAS[area].music, false);
   saveRun();
 }
 function spawnRoom(rs) {
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {}; G.chal = null;
   L.ents.forEach(function (e) {
-    if (e.k === 'enemy') { if (!rs.k[e.idx]) { var me = mkEnemy(e.e, e.x, e.y, e.idx); var ad = ENEMIES[e.e].ai; if (ad === 'fly' || ad === 'shoot') { if (boxSolid(me.x - me.w / 2, me.y - me.h, me.x + me.w / 2, me.y)) unstick(me); } else unstick(me); enemies.push(me); } }
+    if (e.k === 'enemy') {
+      var ed0 = ENEMIES[e.e], n0 = ed0.pack || 1;
+      for (var pj = 0; pj < n0; pj++) { var id0 = pj ? e.idx + '_' + pj : e.idx; if (rs.k[id0]) continue; var me = mkEnemy(e.e, e.x + pj * (pj % 2 ? -16 : 16), e.y, id0); if (isFlyer(ed0)) { if (ed0.ai !== 'phase' && boxSolid(me.x - me.w / 2, me.y - me.h, me.x + me.w / 2, me.y)) unstick(me); } else unstick(me); enemies.push(me); }
+    }
     else if (e.k === 'drop') { if (!rs.d[e.i]) drops.push({ x: e.x, y: e.y, fly: false, vx: 0, vy: 0, age: 0, room: e.i }); }
     else if (e.k === 'chest') e.open = !!rs.c[e.i];
     else if (e.k === 'altar') e.taken = !!rs.taken;
@@ -243,13 +250,16 @@ function roomEdges() {
   if (P.state === 'dead') return;
   var W = L.w * T, H = L.h * T;
   if (L.arena) { if (P.x < -2) leaveArena(); return; }
-  var rm = G.rm, nk = null, d = null;
-  if (P.x < -2 && rm.ex.l) { nk = key2(rm.cx - 1, rm.cy); d = 'l'; }
-  else if (P.x > W + 2 && rm.ex.r) { nk = key2(rm.cx + 1, rm.cy); d = 'r'; }
-  else if (P.y - P.h / 2 < 0 && P.vy < 0 && rm.ex.u) { nk = key2(rm.cx, rm.cy - 1); d = 'u'; }
-  else if (P.y - P.h / 2 > H && rm.ex.d) { nk = key2(rm.cx, rm.cy + 1); d = 'd'; }
-  if (nk && WORLD.rooms[nk]) { G.fade = 0.18; enterRoom(nk, { dir: d, x: P.x, y: P.y }); }
-  else { if (!rm.ex.l && P.x < 6) P.x = 6; if (!rm.ex.r && P.x > W - 6) P.x = W - 6; if (P.y > H + 60) { P.y = 15 * T; P.x = L.spawnX; } }
+  var rm = G.rm, d = null, i = 0;
+  var row = clamp(Math.floor((P.y - 1) / (CH * T)), 0, (rm.ch || 1) - 1), col = clamp(Math.floor(P.x / (CW * T)), 0, (rm.cw || 1) - 1);
+  if (P.x < -2) { d = 'l'; i = row; } else if (P.x > W + 2) { d = 'r'; i = row; } else if (P.y - P.h / 2 < 0 && P.vy < 0) { d = 'u'; i = col; } else if (P.y - P.h / 2 > H) { d = 'd'; i = col; }
+  var exit = d && hasExit(rm, d, i), cell = exit ? exitCell(rm, d, i) : null, nk = cell ? key2(cell[0], cell[1]) : null;
+  if (nk && WORLD.rooms[nk]) { G.fade = 0.18; enterRoom(nk, { dir: d, x: P.x, y: P.y, cell: cell }); }
+  else { if (!hasExit(rm, 'l', row) && P.x < 6) P.x = 6; if (!hasExit(rm, 'r', row) && P.x > W - 6) P.x = W - 6; if (P.y > H + 60) { P.y = L.h * T - T; P.x = L.spawnX; } }
+}
+/* exits of any room, one or two screens big */
+function hasExit(rm, d, i) { var ex = rm.exits || []; for (var k = 0; k < ex.length; k++) if (ex[k].d === d && ex[k].i === i) return true; return false; }
+function exitCell(rm, d, i) { var cw = rm.cw || 1, ch = rm.ch || 1; return d === 'l' ? [rm.cx - 1, rm.cy + i] : d === 'r' ? [rm.cx + cw, rm.cy + i] : d === 'u' ? [rm.cx + i, rm.cy - 1] : [rm.cx + i, rm.cy + ch];
 }
 function bodyInFake() { var tx0 = Math.floor((P.x - P.w / 2) / T), tx1 = Math.floor((P.x + P.w / 2) / T), ty0 = Math.floor((P.y - P.h) / T), ty1 = Math.floor((P.y - 1) / T); for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) if (tx >= 0 && ty >= 0 && tx < L.w && ty < L.h && L.tiles[ty * L.w + tx] === TF) return true; return false; }
 function crumble(i) { if (G.crumble[i] === undefined) { G.crumble[i] = 0.4; sfx.land(); } }
@@ -275,12 +285,13 @@ function updateEnemies(dt) {
     var e = enemies[i]; if (!e.alive) continue; e.t += dt; if (e.flash > 0) e.flash -= dt;
     if (e.burn > 0) { e.burnT = (e.burnT || 0) - dt; if (e.burnT <= 0) { e.burnT = 0.5; e.burn--; hurtE(e, Math.max(1, ST.dmg * 0.25), 'burn'); if (!e.alive) continue; } }
     if (e.poison > 0) { e.poisT = (e.poisT || 0) - dt; if (e.poisT <= 0) { e.poisT = 0.5; e.poison--; hurtE(e, Math.max(1, ST.dmg * 0.3), 'poison'); if (!e.alive) continue; } }
-    if (e.stun > 0) { e.stun -= dt; if (!e.d.fly && e.d.ai !== 'fly' && e.d.ai !== 'shoot') { e.vx = 0; moveBody(e, dt, GRAV); } continue; }
+    if (e.stun > 0) { e.stun -= dt; e.ghost = false; if (!isFlyer(e.d)) { e.vx = 0; moveBody(e, dt, GRAV); } continue; }
     var dx = P.x - e.x, dy = (P.y - P.h / 2) - (e.y - e.h / 2), adx = Math.abs(dx), ai = e.d.ai, sp = e.d.spd * (1 + 0.1 * (t - 1));
-    if (ai === 'walk' || ai === 'charge' || ai === 'heavy') {
+    if (ai === 'walk' || ai === 'charge' || ai === 'heavy' || ai === 'guard') {
       if (ai === 'charge' && e.st === 'go' && adx < 170 && Math.abs(dy) < 34 && (dx > 0) === (e.face > 0) && e.cd <= 0) { e.st = 'tell'; e.st2 = 0.35; }
       if (e.st === 'tell') { e.vx = 0; e.st2 -= dt; if (e.st2 <= 0) { e.st = 'rush'; e.st2 = 0.8; } }
       else if (e.st === 'rush') { e.vx = e.face * sp * 3.4; e.st2 -= dt; if (e.st2 <= 0 || e.hitWall) { e.st = 'go'; e.cd = 1.4; } }
+      else if (ai === 'guard' && adx < 180 && Math.abs(dy) < 40) { e.cd -= dt; guardStep(e, dx, adx, sp, dt); }
       else { e.cd -= dt;
         // turn round at walls and ledges first, then walk, so walkers never get pinned against a wall
         if (e.hitWall) e.face = -e.face;
@@ -312,13 +323,14 @@ function updateEnemies(dt) {
         e.face = P.x > e.x ? 1 : -1; e.shootIn = 0.5;
       }
       if (e.shootIn > 0) { e.shootIn -= dt; if (e.shootIn <= 0) { var a2 = Math.atan2(dy, dx); [-0.25, 0, 0.25].forEach(function (o) { eshots.push({ x: e.x, y: e.y - 20, vx: Math.cos(a2 + o) * 170, vy: Math.sin(a2 + o) * 170, life: 2.5, r: 4, dmg: e.dmg, k: 'bolt' }); }); sfx.fire(); } }
-    }
-    if (ai === 'fly' || ai === 'shoot' || ai === 'tele') { e.x = clamp(e.x, 20, L.w * T - 20); e.y = clamp(e.y, 30, L.h * T - 20); }
+    } else foeAI(e, dt, dx, dy, adx, sp);
+    if (isFlyer(e.d) || ai === 'tele') { e.x = clamp(e.x, 20, L.w * T - 20); e.y = clamp(e.y, 30, L.h * T - 20); }
     if (e.y > L.h * T + 40 || e.x < -40 || e.x > L.w * T + 40) { e.alive = false; continue; }
-    if (ai !== 'fly' && ai !== 'shoot' && boxSolid(e.x - e.w / 2 + 2, e.y - e.h + 2, e.x + e.w / 2 - 2, e.y - 2)) { e.stuck = (e.stuck || 0) + dt; if (e.stuck > 0.2 && unstick(e)) e.stuck = 0; else if (e.stuck > 1.5) { e.alive = false; poof(e.x, e.y - e.h / 2, 8, ['#ff2630', '#5a0f14']); spill(e.x, e.y - e.h / 2, 2); continue; } } else e.stuck = 0;
+    if (!isFlyer(e.d) && boxSolid(e.x - e.w / 2 + 2, e.y - e.h + 2, e.x + e.w / 2 - 2, e.y - 2)) { e.stuck = (e.stuck || 0) + dt; if (e.stuck > 0.2 && unstick(e)) e.stuck = 0; else if (e.stuck > 1.5) { e.alive = false; poof(e.x, e.y - e.h / 2, 8, ['#ff2630', '#5a0f14']); spill(e.x, e.y - e.h / 2, 2); continue; } } else e.stuck = 0;
     // touch: stomp or get hurt
-    if (P.state === 'dead') continue;
+    if (P.state === 'dead' || e.ghost) continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) {
+      if (e.d.burst) { hurtE(e, 999, 'pop'); continue; }
       if (P.vy > 30 && P.y - 6 < e.y - e.h + 8 && P.state === 'normal') { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5), 'stomp'); }
       else if (P.ooze > 0) { if (!e.oozeHit || G.t - e.oozeHit > 0.5) { e.oozeHit = G.t; hurtE(e, ST.dmg * 0.6, 'ooze'); } }
       else hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase());
@@ -343,7 +355,8 @@ function hurtE(e, dmg, src) {
     e.alive = false; G.shake = Math.max(G.shake, 3); homGain(e.boss ? 80 : 10);
     if (e.boss) { bossDown(e); return; }
     sfx.kill(); poof(e.x, e.y - e.h / 2, 10, ['#ff2630', '#b3121c', '#f1e7d0']); RUN.kills++;
-    if (e.idx !== undefined && e.idx !== null && e.idx >= 0) rsOf(G.roomKey).k[e.idx] = 1;
+    if (e.idx !== undefined && e.idx !== null && (typeof e.idx === 'string' || e.idx >= 0)) rsOf(G.roomKey).k[e.idx] = 1;
+    if (e.d.burst) burstShards(e);
     spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
     P.mana = Math.min(ST.mmana, P.mana + 4);
     if (RUN.cls === 'spermaid') healP(3);
@@ -358,16 +371,17 @@ function spill(x, y, n) {
 /* ---------- player shots, enemy shots, shockwaves ---------- */
 function shotHits(s, x0, y0, x1, y1) {
   var hitAny = false;
-  enemies.forEach(function (e) { if (!e.alive || (s.hit && s.hit[e.uid || (e.uid = Math.random())])) return; if (ov(x0, y0, x1, y1, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) { hitAny = true; if (s.hit) s.hit[e.uid] = 1; hitShot(s, e); } });
+  enemies.forEach(function (e) { if (!e.alive || e.ghost || (s.hit && s.hit[e.uid || (e.uid = Math.random())])) return; if (ov(x0, y0, x1, y1, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) { hitAny = true; if (s.hit) s.hit[e.uid] = 1; hitShot(s, e); } });
   bosses.forEach(function (b) { if (!b.alive || b.hidden || (s.hit && s.hit[b.uid || (b.uid = Math.random())])) return; if (ov(x0, y0, x1, y1, b.x - b.w / 2, b.y - b.h, b.x + b.w / 2, b.y)) { hitAny = true; if (s.hit) s.hit[b.uid] = 1; hitShot(s, b); } });
   return hitAny;
 }
 function hitShot(s, e) {
+  if (shieldBlock(s, e)) return;
   var r = dmgRoll(); hurtE(e, r.v * s.m, 'hit');
   if (s.k === 'acid') e.poison = 3;
   homHit(s, e);
 }
-function splash(x, y, r, m) { sfx.splat(); fx.push({ k: 'ring', x: x, y: y, age: 0, c: '#f1e7d0' }); poof(x, y, 12, ['#f1e7d0', '#fff6d8', '#d9b36a']); var s = { m: m, k: 'pie' }; enemies.concat(bosses).forEach(function (e) { if (e.alive && Math.hypot(e.x - x, (e.y - e.h / 2) - y) < r + e.w / 2) hitShot(s, e); }); }
+function splash(x, y, r, m) { sfx.splat(); fx.push({ k: 'ring', x: x, y: y, age: 0, c: '#f1e7d0' }); poof(x, y, 12, ['#f1e7d0', '#fff6d8', '#d9b36a']); var s = { m: m, k: 'pie', x: x }; enemies.concat(bosses).forEach(function (e) { if (e.alive && Math.hypot(e.x - x, (e.y - e.h / 2) - y) < r + e.w / 2) hitShot(s, e); }); }
 function updateShots(dt) {
   for (var i = 0; i < pshots.length; i++) {
     var s = pshots[i]; s.life -= dt;
@@ -387,7 +401,8 @@ function updateShots(dt) {
   pshots = pshots.filter(function (q) { return q.life > 0; });
   for (i = 0; i < eshots.length; i++) {
     var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt; b.x += b.vx * dt; b.y += b.vy * dt;
-    if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; poof(b.x, b.y, 4, ['#ff9a40', '#ff2630']); continue; }
+    if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? ['#7dff3a', '#3ab43a'] : ['#ff9a40', '#ff2630']); continue; }
+    if (b.safe > 0) { b.safe -= dt; continue; }
     if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
   }
   eshots = eshots.filter(function (q) { return q.life > 0 && q.x > -40 && q.x < L.w * T + 40 && q.y > -60 && q.y < L.h * T + 40; });
@@ -424,7 +439,7 @@ function findNear() {
   var best = null, bd = 1e9;
   L.ents.forEach(function (e) {
     var dx = Math.abs(e.x - P.x), dy = Math.abs(e.y - P.y), r = 0;
-    if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
+    if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'shrine' && !rsOf(G.roomKey).prayed) r = 24; else if (e.k === 'gamble') r = 24; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
     if (dx < r && dy < 30 && dx < bd) { bd = dx; best = e; }
   });
   return best;
@@ -434,10 +449,13 @@ function useThing(e) {
   if (e.k === 'chest') {
     e.open = true; rs.c[e.i] = 1; sfx.chest(); spill(e.x, e.y - 10, e.big ? 22 : 12); poof(e.x, e.y - 8, 14, ['#ffe36a', '#f1e7d0']);
     if (e.chal || (e.secret && Math.random() < 0.5)) { var pw = shuffle(POWERS.slice())[0]; grantPower(pw.id); }
+    if (e.ambush && !rs.amb) startAmbush(rs);
     saveRun();
   } else if (e.k === 'door') openDoor(e);
   else if (e.k === 'npc') openMerchant(e);
   else if (e.k === 'altar') openAltar(e);
+  else if (e.k === 'shrine') pray(e);
+  else if (e.k === 'gamble') openGamble(e);
 }
 function grantPower(id) {
   var p = powerById(id); RUN.powers.push(id); var oldM = ST.mhp; ST = calcStats();
@@ -462,6 +480,7 @@ function updateRoomThings(dt) {
       if (!enemies.length) { G.chal.wait -= dt; if (G.chal.wait <= 0) { if (G.chal.wave >= 3) { rs.done = 1; G.chal = null; G.lock = false; lockExits(false); G.layer = null; sfx.goal(); G.banner = 1.8; G.bannerTxt = 'CHALLENGE CLEARED'; G.bannerSub = 'A CHEST APPEARS'; L.ents.push({ k: 'chest', x: L.cx0 * T, y: 15 * T, big: 1, chal: 1, i: 'ch', open: false }); saveRun(); } else { G.chal.wave++; G.chal.wait = 1.2; spawnWave(2 + tierOf() + G.chal.wave - 1); } } }
     }
   }
+  ambushStep(dt); quirkStep(dt);
   G.near = findNear();
 }
 function lockExits(on) {
@@ -476,9 +495,9 @@ function spawnWave(n) {
   var pool = AREAS[G.rm.area].pool, tot = 0; pool.forEach(function (p) { tot += p[1]; });
   for (var i = 0; i < n; i++) {
     var v = Math.random() * tot, k = pool[0][0]; for (var j = 0; j < pool.length; j++) { v -= pool[j][1]; if (v <= 0) { k = pool[j][0]; break; } }
-    var d = ENEMIES[k], x = (5 + Math.random() * 22) * T, y = d.ai === 'fly' || d.ai === 'shoot' ? (3 + Math.random() * 4) * T : 15 * T;
+    var d = ENEMIES[k], x = (5 + Math.random() * 22) * T, y = isFlyer(d) ? (3 + Math.random() * 4) * T : 15 * T;
     if (Math.abs(x - P.x) < 50) x = clamp(x + 100 * (x < P.x ? -1 : 1), 5 * T, 27 * T);
-    if (d.ai !== 'fly' && d.ai !== 'shoot') { for (var ty = 15; ty > 1; ty--) { if (boxSolid(x - 6, ty * T - d.h, x + 6, ty * T) === null && (boxSolid(x - 4, ty * T, x + 4, ty * T + 2) || tileAt(x, ty * T + 1) === TL)) { y = ty * T; break; } } }
+    if (!isFlyer(d)) { for (var ty = 15; ty > 1; ty--) { if (boxSolid(x - 6, ty * T - d.h, x + 6, ty * T) === null && (boxSolid(x - 4, ty * T, x + 4, ty * T + 2) || tileAt(x, ty * T + 1) === TL)) { y = ty * T; break; } } }
     var e = mkEnemy(k, x, y, -1); e.cd = 1; unstick(e); enemies.push(e); poof(x, y - 10, 10, ['#ff2630', '#5a0f14']);
   }
 }
@@ -493,17 +512,20 @@ function updateFx(dt) {
   fx.forEach(function (f) { f.age += dt; }); fx = fx.filter(function (f) { return f.age < 0.45; });
 }
 function camTarget() {
-  var W = L.w * T, tx = P.x - VW * 0.5 + P.face * 20;
-  return { x: W <= VW ? (W - VW) / 2 : clamp(tx, 0, W - VW), y: 0 };
+  var W = L.w * T, H = L.h * T, tx = P.x - VW * 0.5 + P.face * 20;
+  return { x: W <= VW ? (W - VW) / 2 : clamp(tx, 0, W - VW), y: H <= VH ? 0 : clamp(P.y - VH * 0.6, 0, H - VH) };
 }
 function camSnap() { var c = camTarget(); G.cam.x = c.x; G.cam.y = c.y; }
 
 function stepPlay(dt) {
   RUN.t += dt;
+  if (CUT) { cutStep(dt); updateFx(dt); return; } // a cutscene holds the action
   updatePlayer(dt);
   if (G.mode !== 'play') return;
   G.inFake = bodyInFake(); if (G.inFake && Math.random() < 0.7) parts.push({ x: P.x + (Math.random() - 0.5) * 22, y: P.y - Math.random() * P.h, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 40, life: 0.45, c: pick(['#ffe36a', '#fff6d8', '#d878ff', '#f1e7d0']), spark: 1 });
   updateEnemies(dt); updateBosses(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
-  var c = camTarget(); G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7);
+  var c = camTarget(); G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7); G.cam.y += (c.y - G.cam.y) * Math.min(1, dt * 6);
+  if (G.sealDue) { G.sealDue.t -= dt; if (G.sealDue.t <= 0) { var sn = G.sealDue.n; G.sealDue = null; sealScene(sn); } }
+  if (G.rm && G.rm.entry && G.rm.area === 'city' && !META.metSteve && !L.arena) { var stv = L.ents.filter(function (e) { return e.k === 'steve'; })[0]; if (stv && Math.abs(P.x - stv.x) < 90 && P.onGround) steveScene(stv); }
   if (P.state !== 'dead' && P.hp < ST.mhp * 0.25 && !G.lowWarn) { G.lowWarn = 1; } else if (P.hp >= ST.mhp * 0.25) G.lowWarn = 0;
 }

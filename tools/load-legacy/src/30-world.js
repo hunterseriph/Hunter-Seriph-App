@@ -59,18 +59,33 @@ function genWorld(seed) {
     free.sort(function (p, q) { return (q.dist + (deg(q) === 1 ? 3 : 0)) - (p.dist + (deg(p) === 1 ? 3 : 0)); });
     var boss = free.shift(); if (boss) boss.type = 'bossdoor';
     shuffle(free, r);
-    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion'], extra = ['powerup', 'challenge', 'trap', 'illusion']; shuffle(extra, r); if (r() < 0.6) want.push(extra[0]); if (r() < 0.3) want.push(extra[1]);
+    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'], extra = ['powerup', 'challenge', 'trap', 'illusion', 'ambush', 'ambush']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); if (r() < 0.6) want.push(extra[0]); if (r() < 0.3) want.push(extra[1]);
     want.forEach(function (t) { var q = free.shift(); if (q) q.type = t; });
     if (a === 'city') { var fq = free.filter(function (q) { return !q.ex.d; })[0] || free[0]; if (fq) { fq.type = 'flume'; free.splice(free.indexOf(fq), 1); } }
   });
-  var id = 0; Object.keys(rooms).forEach(function (k) { rooms[k].id = id++; });
-  return { seed: seed, rooms: rooms, start: key2(start.cx, start.cy) };
+  // some neighbouring plain rooms join into one big room: two screens wide, or two screens tall
+  var list = Object.keys(rooms).map(function (k) { return rooms[k]; });
+  function plain(q) { return q && q.type === 'normal' && !q.entry && !q.big && q !== start && Math.abs(q.cx - start.cx) + Math.abs(q.cy - start.cy) > 1; }
+  shuffle(list, r);
+  list.forEach(function (q) {
+    if (rooms[key2(q.cx, q.cy)] !== q || !plain(q) || r() > 0.42) return;
+    var opts = []; if (q.ex.r && plain(rooms[key2(q.cx + 1, q.cy)]) && rooms[key2(q.cx + 1, q.cy)].area === q.area) opts.push('r'); if (q.ex.d && plain(rooms[key2(q.cx, q.cy + 1)]) && rooms[key2(q.cx, q.cy + 1)].area === q.area) opts.push('d');
+    if (!opts.length) return;
+    var d = opts[Math.floor(r() * opts.length)], o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])], wide = d === 'r';
+    var R = { cx: q.cx, cy: q.cy, cw: wide ? 2 : 1, ch: wide ? 1 : 2, area: q.area, type: 'normal', ex: {}, big: wide ? 'wide' : 'tall', exits: [], dist: Math.max(q.dist || 0, o.dist || 0) };
+    for (var e1 in q.ex) if (e1 !== d) R.exits.push({ d: e1, i: 0 });
+    for (var e2 in o.ex) if (e2 !== OPP[d]) R.exits.push({ d: e2, i: (wide ? (e2 === 'u' || e2 === 'd') : (e2 === 'l' || e2 === 'r')) ? 1 : 0 });
+    rooms[key2(q.cx, q.cy)] = R; rooms[key2(o.cx, o.cy)] = R;
+  });
+  var uniq = []; Object.keys(rooms).forEach(function (k) { if (uniq.indexOf(rooms[k]) < 0) uniq.push(rooms[k]); });
+  uniq.forEach(function (q, i) { q.id = i; if (!q.exits) { q.exits = []; for (var d in q.ex) q.exits.push({ d: d, i: 0 }); } });
+  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy) };
 }
 
 /* ---------- building one room's tiles and contents (deterministic per room) ---------- */
 function roomRng(rm) { return mulberry(hash2(WORLD.seed, rm.cx + 50, rm.cy + 50)); }
 function buildRoom(rm) {
-  var W = CW, H = CH, tl = new Uint8Array(W * H), res = new Uint8Array(W * H), ents = [], r = roomRng(rm), A = AREAS[rm.area];
+  var W = CW * (rm.cw || 1), H = CH * (rm.ch || 1), tl = new Uint8Array(W * H), res = new Uint8Array(W * H), ents = [], r = roomRng(rm), A = AREAS[rm.area];
   function S(x, y, v) { if (x >= 0 && y >= 0 && x < W && y < H) tl[y * W + x] = v; }
   function G(x, y) { return (x < 0 || y < 0 || x >= W || y >= H) ? TW : tl[y * W + x]; }
   function RS(x0, y0, x1, y1) { for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) if (x >= 0 && y >= 0 && x < W && y < H) res[y * W + x] = 1; }
@@ -79,13 +94,42 @@ function buildRoom(rm) {
   for (var x = 0; x < W; x++) { S(x, 0, TW); S(x, H - 1, TW); }
   for (var y = 0; y < H; y++) { S(0, y, TW); S(W - 1, y, TW); }
   var ex = rm.ex;
-  if (ex.l) { for (y = 12; y <= 14; y++) S(0, y, TA); RS(0, 10, 4, 14); }
-  if (ex.r) { for (y = 12; y <= 14; y++) S(W - 1, y, TA); RS(W - 5, 10, W - 1, 14); }
-  if (ex.u) { for (x = 14; x <= 17; x++) S(x, 0, TA); RS(12, 0, 19, 3); }
-  if (ex.d) { for (x = 14; x <= 17; x++) S(x, H - 1, TG); RS(12, 10, 19, 15); }
+  // the openings: rows 12-14 on the sides, columns 14-17 top and bottom, in whichever screen of a big room they belong to
+  (rm.exits || []).forEach(function (e) {
+    var oy = e.i * CH, ox = e.i * CW;
+    if (e.d === 'l') { for (y = oy + 12; y <= oy + 14; y++) S(0, y, TA); RS(0, oy + 10, 4, oy + 14); }
+    if (e.d === 'r') { for (y = oy + 12; y <= oy + 14; y++) S(W - 1, y, TA); RS(W - 5, oy + 10, W - 1, oy + 14); }
+    if (e.d === 'u') { for (x = ox + 14; x <= ox + 17; x++) S(x, 0, TA); RS(ox + 12, 0, ox + 19, 3); }
+    if (e.d === 'd') { for (x = ox + 14; x <= ox + 17; x++) S(x, H - 1, TG); RS(ox + 12, H - 6, ox + 19, H - 1); }
+  });
   function plat(x0, x1, y, v) { for (var x = x0; x <= x1; x++) S(x, y, v || TL); RS(x0, y - 3, x1, y - 1); RS(x0, y, x1, y); }
+  if (rm.big) bigRoom();
+  function bigRoom() {
+    var segs = rm.big === 'wide' ? 2 : 1, s2, x, y;
+    if (rm.big === 'tall') {
+      // a tall shaft: ledges zig-zag up to the top screen, with a landing beside each high exit
+      var cols = [[4, 9], [11, 16], [18, 23], [11, 16]], k = 0;
+      for (y = H - 5; y >= 4; y -= 4) { var c2 = cols[k % 4]; if (free(c2[0], y - 2, c2[1], y)) plat(c2[0], c2[1], y); k++; }
+      rm.exits.forEach(function (e) {
+        if (e.d === 'l' && e.i === 0) plat(1, 5, CH - 1); if (e.d === 'r' && e.i === 0) plat(W - 6, W - 2, CH - 1);
+        if (e.d === 'u') { plat(9, 13, 8); plat(18, 22, 4); }
+      });
+      for (var sp = 0; sp < 2; sp++) { var sx = rn(5, W - 8); var okS = true; for (x = sx; x < sx + 2; x++) if (res[(H - 2) * W + x] || G(x, H - 2) !== TA) okS = false; if (okS && r() < 0.6) { for (x = sx; x < sx + 2; x++) S(x, H - 2, TS); RS(sx, H - 3, sx + 1, H - 2); } }
+    } else {
+      rm.exits.forEach(function (e) { if (e.d === 'u') { var ox = e.i * CW; plat(ox + 9, ox + 13, 12); plat(ox + 18, ox + 22, 8); plat(ox + 12, ox + 16, 4); } }); // a way up to each exit in the ceiling
+      for (s2 = 0; s2 < segs; s2++) {
+        var ox = s2 * CW;
+        var nb = rn(1, 3); for (var bi = 0; bi < nb; bi++) { var bw = rn(2, 4), bh = rn(1, 2), bx = ox + rn(4, 27 - bw); if (free(bx, 15 - bh, bx + bw - 1, 14) && free(bx, 15 - bh - 2, bx + bw - 1, 15 - bh - 1)) { for (y = 15 - bh; y <= 14; y++) for (x = bx; x < bx + bw; x++) S(x, y, TW); RS(bx, 15 - bh - 2, bx + bw - 1, 14); } }
+        var np = rn(2, 4); for (var pi = 0; pi < np; pi++) { var pw = rn(3, 6), py = rn(6, 11), px = ox + rn(3, 28 - pw); if (free(px - 1, py - 2, px + pw, py + 1)) plat(px, px + pw - 1, py); }
+        var ns = rn(0, 2); for (var si = 0; si < ns; si++) { var sw = rn(2, 3), sx2 = ox + rn(5, 26 - sw), okS2 = true; for (x = sx2; x < sx2 + sw; x++) if (res[14 * W + x] || G(x, 14) !== TA || G(x, 15) !== TW) okS2 = false; if (okS2) { for (x = sx2; x < sx2 + sw; x++) S(x, 14, TS); RS(sx2, 13, sx2 + sw - 1, 14); } }
+      }
+      // a high walkway across the middle of a wide hall, with a chest on it sometimes
+      if (r() < 0.6) { var wy = rn(7, 8), w0 = CW - 6, w1 = CW + 5; if (free(w0, wy - 2, w1, wy) && free(w0 - 5, wy + 2, w0 - 1, wy + 4)) { plat(w0, w1, wy); plat(w0 - 5, w0 - 1, wy + 4); if (r() < 0.5) ents.push({ k: 'chest', x: CW * T, y: wy * T }); } }
+    }
+  }
   if (ex.u) { plat(9, 13, 12); plat(18, 22, 8); plat(12, 16, 4); }
   var t = rm.type, nE = 0, cx0 = ex.d ? 23 : 16, cxp = cx0 * T;
+  if (rm.big) { t = 'big'; nE = 3 + Math.floor(A.tier / 2) + (rm.big === 'wide' ? 2 : 1); }
   if (t === 'start') {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: 'blum' }); RS(cx0 - 5, 9, cx0 + 4, 14);
     ents.push({ k: 'deco', d: 'throneL', x: 6 * T, y: 15 * T }); ents.push({ k: 'deco', d: 'throneR', x: 26 * T, y: 15 * T });
@@ -113,6 +157,16 @@ function buildRoom(rm) {
     RS(3, 11, 28, 15);
     [[5, 8, 9], [12, 16, 7], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 2) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
     nE = 2;
+  } else if (t === 'shrine') {
+    // a blood fountain: pray once to heal
+    ents.push({ k: 'shrine', x: cxp, y: 15 * T }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 1;
+  } else if (t === 'gamble') {
+    // a slot machine (Steve's prize wheel in Ejaculand): pay drops, pull, hope
+    ents.push({ k: 'gamble', x: cxp, y: 15 * T, park: rm.area === 'city' }); RS(cx0 - 4, 8, cx0 + 4, 14); nE = 1;
+  } else if (t === 'ambush') {
+    // a lonely chest in the middle of the room. Opening it locks the doors.
+    ents.push({ k: 'chest', x: cxp, y: 15 * T, big: 1, ambush: 1 }); RS(cx0 - 3, 11, cx0 + 3, 14);
+    plat(5, 9, 10); plat(22, 26, 10); nE = 0;
   } else if (t === 'illusion') {
     var right = !ex.r || r() < 0.5, mx0 = right ? 23 : 1, mx1 = right ? 30 : 8;
     if (ex.u && !right) { mx0 = 1; mx1 = 8; }
@@ -128,17 +182,33 @@ function buildRoom(rm) {
     for (x = ax0; x <= ax1; x++) ents.push({ k: 'drop', x: x * T + 8, y: 7 * T - 2 });
     for (var fv = 0; fv < 3; fv++) { var fx = rn(4, 24), fy = rn(9, 11); if (free(fx, fy, fx + 3, fy)) { for (x = fx; x <= fx + 3; x++) S(x, fy, TV); RS(fx, fy - 2, fx + 3, fy); } }
     nE = 1 + Math.floor(A.tier / 2);
-  } else nE = 2 + Math.floor(A.tier / 2) + (r() < 0.5 ? 1 : 0);
+  } else if (t !== 'big') nE = 2 + Math.floor(A.tier / 2) + (r() < 0.5 ? 1 : 0);
   // general features for rooms that fight
-  if (t === 'normal' || t === 'illusion' || t === 'challenge') {
-    var nb = t === 'challenge' ? 1 : rn(0, 3);
+  if (t === 'normal' || t === 'illusion' || t === 'challenge' || t === 'ambush') {
+    var nb = t === 'challenge' || t === 'ambush' ? 1 : rn(0, 3);
     for (var bi = 0; bi < nb; bi++) { var bw = rn(2, 4), bh = rn(1, 2) + (r() < 0.15 ? 1 : 0), bx = rn(4, 27 - bw); if (free(bx, 15 - bh, bx + bw - 1, 14) && free(bx, 15 - bh - 2, bx + bw - 1, 15 - bh - 1)) { for (y = 15 - bh; y <= 14; y++) for (x = bx; x < bx + bw; x++) S(x, y, TW); RS(bx, 15 - bh - 2, bx + bw - 1, 14); } }
-    var np = t === 'challenge' ? 0 : rn(2, 4);
+    var np = t === 'challenge' || t === 'ambush' ? 0 : rn(2, 4);
     for (var pi = 0; pi < np; pi++) { var pw = rn(3, 6), py = rn(6, 11), px = rn(3, 28 - pw); if (free(px - 1, py - 2, px + pw, py + 1)) plat(px, px + pw - 1, py); }
     if (t === 'normal') { var ns = rn(0, 2); for (var si = 0; si < ns; si++) { var sw = rn(2, 3), sx = rn(5, 26 - sw); var okS = true; for (x = sx; x < sx + sw; x++) if (res[14 * W + x] || G(x, 14) !== TA || G(x, 15) !== TW) okS = false; if (okS) { for (x = sx; x < sx + sw; x++) S(x, 14, TS); RS(sx, 13, sx + sw - 1, 14); } } }
   }
   // Ejaculand's front gate, with Steve the mascot waving you in
   if (rm.entry && rm.area === 'city') { ents.push({ k: 'deco', d: 'parkgate', x: 6 * T, y: 15 * T }); ents.push({ k: 'steve', x: 11 * T, y: 15 * T }); nE = 0; }
+  // area quirks
+  var fights = t === 'normal' || t === 'big', dark = false, wind = 0;
+  if (fights && rm.area === 'castle' && r() < 0.55) { // chandeliers that drop when you walk under them
+    var nc = rn(1, rm.big === 'wide' ? 3 : 2), tries = 0;
+    while (nc > 0 && tries++ < 20) { var chx = rn(4, W - 5); if (G(chx, 0) === TW && free(chx - 1, 1, chx + 1, 5)) { ents.push({ k: 'chand', x: chx * T + 8, y: T, st: 'hang' }); RS(chx - 2, 1, chx + 2, 5); nc--; } }
+  }
+  if (rm.area === 'city' && t !== 'flume' && !rm.entry && r() < 0.6) { // bounce pads on the floor
+    var npd = rn(1, 2), tries2 = 0;
+    while (npd > 0 && tries2++ < 30) { var pdx = rn(4, W - 5), fy = H - 2; if (G(pdx, fy + 1) === TW && free(pdx - 1, fy - 3, pdx + 1, fy)) { ents.push({ k: 'pad', x: pdx * T + 8, y: (fy + 1) * T }); RS(pdx - 1, fy - 3, pdx + 1, fy); npd--; } }
+  }
+  if (rm.area === 'dungeon' && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
+    var ndr = rn(1, 3);
+    for (var dq = 0; dq < ndr; dq++) { var drx = rn(3, W - 4); if (G(drx, 0) === TW && G(drx, 1) === TA) ents.push({ k: 'drip', x: drx * T + 8, y: T, cd: 1 + r() * 3 }); }
+    dark = fights && r() < 0.5;
+  }
+  if (rm.area === 'roof' && fights && r() < 0.6) wind = r() < 0.5 ? -1 : 1; // gusts across the rooftops
   // stand spots for enemies and drops
   var stands = [];
   for (x = 2; x < W - 2; x++) for (y = 2; y < H - 1; y++) { var b = G(x, y + 1); if (G(x, y) === TA && G(x, y - 1) === TA && (b === TW || b === TL) && !res[y * W + x]) stands.push([x, y]); }
@@ -147,7 +217,8 @@ function buildRoom(rm) {
   function pickE() { var v = r() * tot; for (var i = 0; i < pool.length; i++) { v -= pool[i][1]; if (v <= 0) return pool[i][0]; } return pool[0][0]; }
   for (var e = 0; e < nE; e++) {
     var ek = t === 'flume' ? (r() < 0.5 ? 'batP' : 'imp') : pickE(), ed = ENEMIES[ek];
-    if (ed.ai === 'fly' || ed.ai === 'shoot') ents.push({ k: 'enemy', e: ek, x: rn(6, 25) * T, y: rn(3, 8) * T, idx: e });
+    if (ek === 'gargoyle') ents.push({ k: 'enemy', e: ek, x: rn(5, W - 6) * T, y: T + 23, idx: e }); // clings under the ceiling
+    else if (isFlyer(ed)) ents.push({ k: 'enemy', e: ek, x: rn(6, W - 7) * T, y: rn(3, H - 8) * T, idx: e });
     else { var sp = null; for (var q = 0; q < stands.length; q++) { var sx2 = stands[q][0]; if (sx2 > 6 && sx2 < W - 7 && Math.abs(sx2 - 16) > 2) { sp = stands.splice(q, 1)[0]; break; } } if (sp) ents.push({ k: 'enemy', e: ek, x: sp[0] * T + 8, y: (sp[1] + 1) * T, idx: e }); }
   }
   // drops: little rows on ledges, like Spermhog
@@ -183,7 +254,7 @@ function buildRoom(rm) {
     }
   }
   ents.forEach(function (en, i) { en.i = i; });
-  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d ? 8 : (t === 'start' ? 10 : 16)) * T };
+  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d ? 8 : (t === 'start' ? 10 : 16)) * T, dark: dark, wind: wind, storm: rm.area === 'roof' };
 }
 
 /* ---------- boss arenas (two screens wide). Reached through a boss door. ---------- */
