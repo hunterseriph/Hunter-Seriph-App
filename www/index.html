@@ -149,7 +149,51 @@ html.pc #vidYT{flex:0 0 260px}
 html.pc #vidHint{flex:1 1 100%}
 /* update bar */
 html.pc #upd{left:auto;right:28px;bottom:28px;width:460px;margin:0}
+
+/* ---------- video cards ---------- */
+.vcard{display:flex;flex-direction:row;gap:12px;align-items:flex-start}
+.vthumb{position:relative;flex:none;overflow:hidden;background:#14090a;border-bottom:2px solid #c4121c;aspect-ratio:16/9}
+.vthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.vcard .vthumb{width:148px}
+.vbadge{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.85);color:#f1e7d0;font-size:11px;font-weight:600;padding:1px 5px;letter-spacing:.02em}
+.vtext{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.vtitle{font-size:14px;font-weight:600;line-height:1.2;color:#f1e7d0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.vmeta{font-size:12px;font-weight:500;color:#a6968f}
+.vsmall{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vsmall .vtitle{font-size:13px;-webkit-line-clamp:2}
+.vempty{font-size:14px;color:#a6968f;padding:12px 0}
+.skel{aspect-ratio:16/9;background:linear-gradient(90deg,#0e0708 0,#1a0a0c 50%,#0e0708 100%);background-size:200% 100%;animation:skel 1.4s linear infinite}
+#vidList .skel{height:83px;aspect-ratio:auto}
+@keyframes skel{to{background-position:-200% 0}}
+.pc-only{display:none}
+#vidTypes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));box-shadow:inset 0 0 0 1px #4a1a1c;background:#0e0708}
+#vidTypes button{appearance:none;border:0;background:none;color:#a6968f;font:700 12px 'Archivo Narrow',sans-serif;letter-spacing:.14em;height:42px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 4px}
+#vidTypes button b{font-weight:600;font-size:11px;color:#6e5f5b;letter-spacing:.04em}
+#vidTypes button.on{background:#c4121c;color:#f1e7d0}
+#vidTypes button.on b{color:#f1e7d0;opacity:.75}
+#vidTypes button:disabled{opacity:.35;cursor:default}
+#vidSearchBox{display:flex;align-items:center;gap:10px;height:44px;padding:0 6px 0 14px;background:#0e0708;box-shadow:inset 0 0 0 1px #4a1a1c;color:#a6968f}
+#vidSearchBox:focus-within{box-shadow:inset 0 0 0 1px #c4121c;color:#ff2630}
+#vidSearch{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:#f1e7d0;font:500 15px 'Archivo Narrow',sans-serif;letter-spacing:.02em}
+#vidSearch::placeholder{color:#6e5f5b}
+#vidSearch::-webkit-search-cancel-button{display:none}
+#vidClear{appearance:none;border:0;background:none;color:#a6968f;font-size:22px;width:36px;height:36px;cursor:pointer}
+#vidMore{appearance:none;border:0;width:100%;height:46px;background:#14090a;box-shadow:inset 0 0 0 1px #c4121c;color:#f1e7d0;font:700 13px 'Archivo Narrow',sans-serif;letter-spacing:.16em;cursor:pointer}
+#vidMore[hidden]{display:none}
+html.pc .pc-only{display:block}
+html.pc #vidTools{flex-direction:row!important;align-items:center;gap:16px!important;padding-top:24px!important}
+html.pc #vidTypes{flex:0 0 520px}
+html.pc #vidSearchBox{flex:1}
+html.pc #vidTypes button:not(.on):not(:disabled):hover{color:#f1e7d0;background:#1a0a0c}
+html.pc #vidList .vthumb{width:100%}
+html.pc #vidList .skel{height:auto;aspect-ratio:16/9}
+html.pc #vidList .vtitle{font-size:15px;line-height:1.25}
+html.pc #vidMore{max-width:420px;margin:12px auto 0;display:block}
+html.pc #vidMore:hover{background:#c4121c}
+html.pc .vthumb img{transition:transform .25s,filter .25s}
+html.pc a:hover>.vthumb img{transform:scale(1.04);filter:brightness(1.12)}
 </style>
+<script src="videos.js"></script>
 <script>
 (function(){var r=document.documentElement;function f(){var pc=innerWidth>=900&&(!!window.hsDesktop||matchMedia("(pointer:fine)").matches);if(r.classList.contains("pc")!==pc){r.classList.toggle("pc",pc);window.dispatchEvent(new Event("hslayout"));}}f();addEventListener("resize",f);})();
 </script>
@@ -186,22 +230,7 @@ html.pc #upd{left:auto;right:28px;bottom:28px;width:460px;margin:0}
 <div style="font-family: 'Pirata One', serif; font-size: 24px; line-height: 1; letter-spacing: 0.02em">Fresh from the crypt</div>
 <a href="#/Videos" style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #ff2630; padding: 8px 0">ALL ›</a>
 </div>
-<div id="freshGrid" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-<a href="#/Videos" style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
-<div style="position: relative; height: 94px; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_soulchained.jpg" alt="Soul Chained final episode thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); color: #f1e7d0; font-size: 11px; font-weight: 600; padding: 1px 5px">10:45</span>
-</div>
-<div style="font-size: 13px; font-weight: 600; line-height: 1.2; color: #f1e7d0">We Finally Beat Soul Chained - Was It Worth The Struggle?</div>
-</a>
-<a href="#/Videos" style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
-<div style="position: relative; height: 94px; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_deadspace.jpg" alt="Dead Space first playthrough thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); color: #f1e7d0; font-size: 11px; font-weight: 600; padding: 1px 5px">4:50:22</span>
-</div>
-<div style="font-size: 13px; font-weight: 600; line-height: 1.2; color: #f1e7d0">Souls-like Player Playing Dead Space For The First Time!</div>
-</a>
-</div>
+<div id="freshGrid" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px"><div class="skel"></div><div class="skel"></div><div class="skel pc-only"></div><div class="skel pc-only"></div></div>
 </div>
 
 <div style="padding: 12px 16px 0; flex: none">
@@ -266,88 +295,25 @@ html.pc #upd{left:auto;right:28px;bottom:28px;width:460px;margin:0}
 <section id="s-Videos" class="screen tab-screen">
 
 <div style="display: flex; flex-direction: column; gap: 2px; padding: 20px 16px 0; flex: none">
-<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">YOUTUBE · @HUNTERSERIPH</div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">YOUTUBE · @HUNTERSERIPH<span id="vidCount"></span></div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; text-shadow: 0 0 18px rgba(196,18,28,0.55)">The archive</div>
 </div>
 
-<div id="chips" style="display: flex; flex-direction: row; gap: 8px; padding: 14px 16px 0; overflow-x: auto; flex: none">
-<span style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; background: #c4121c; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">ALL</span>
-<span style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #c9bbb6; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">SOUL CHAINED</span>
-<span style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #c9bbb6; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">DEMOS</span>
-<span style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #c9bbb6; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">BOSSES</span>
-<span style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #c9bbb6; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">SHORTS</span>
+<div id="vidTools" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 0; flex: none">
+<div id="vidTypes"><button type="button" data-k="" class="on">ALL<b></b></button><button type="button" data-k="v">VIDEOS<b></b></button><button type="button" data-k="l">STREAMS<b></b></button><button type="button" data-k="s">SHORTS<b></b></button></div>
+<div id="vidSearchBox"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg><input id="vidSearch" type="search" placeholder="Search the archive" autocomplete="off" spellcheck="false"><button type="button" id="vidClear" aria-label="Clear search" hidden>&times;</button></div>
 </div>
 
-<div id="vidList" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 24px; flex: none">
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_soulchained.jpg" alt="Soul Chained final episode thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">10:45</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">We Finally Beat Soul Chained - Was It Worth The Struggle?</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">209 views · 5 days ago</div>
-</div>
-</a>
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_deadspace.jpg" alt="Dead Space first playthrough thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">4:50:22</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">Souls-like Player Playing Dead Space For The First Time!</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">219 views · 7 days ago</div>
-</div>
-</a>
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_latitude76.jpg" alt="Latitude 76 demo thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">8:35</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">Souls-Like Demos: Latitude 76: Land of the Onkilons</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">29 views · 2 weeks ago</div>
-</div>
-</a>
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_calx.jpg" alt="CALX demo thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">20:31</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">Souls-Like Demos: CALX</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">134 views · 2 weeks ago</div>
-</div>
-</a>
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_kristala.jpg" alt="Kristala stray mode thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">5:46:24</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">I Tested My Skills on the Shard Bosses in Kristala | STRAY MODE (Part 3)</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">37 views · 2 weeks ago</div>
-</div>
-</a>
-
-<a href="https://www.youtube.com/@hunterseriph" target="_blank" rel="noopener" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start">
-<div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden">
-<img src="assets/t_lubu.jpg" alt="Lu Bu beaten thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block">
-<span style="position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600; padding: 1px 5px">5:57</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1">
-<div style="font-size: 14px; font-weight: 600; line-height: 1.2">I Finally Beat Lu Bu in Wo Long 2: Wings of Ember</div>
-<div style="font-size: 12px; font-weight: 500; color: #a6968f">801 views · 3 weeks ago</div>
-</div>
-</a>
-
+<div id="chips" style="display: flex; flex-direction: row; gap: 8px; padding: 12px 16px 0; overflow-x: auto; flex: none">
+<span data-f="" style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); background: #c4121c">EVERYTHING</span>
+<span data-f="soul chained" style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; color: #c9bbb6">SOUL CHAINED</span>
+<span data-f="demo" style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; color: #c9bbb6">DEMOS</span>
+<span data-f="boss" style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; color: #c9bbb6">BOSSES</span>
+<span data-f="first time" style="flex: none; display: flex; align-items: center; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); background: #14090a; box-shadow: inset 0 0 0 1px #4a1a1c; color: #c9bbb6">FIRST TIME</span>
 </div>
 
+<div id="vidList" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 8px; flex: none"></div>
+<div style="padding: 4px 16px 28px; flex: none"><button type="button" id="vidMore" hidden>SHOW MORE</button></div>
 
 </section>
 <section id="s-Games" class="screen tab-screen">
@@ -864,22 +830,34 @@ function checkLive(){
 }
 checkLive(); setInterval(checkLive,120000);
 /* ---------- YouTube (public RSS feed, no key needed) ---------- */
-var vids=null, loading=false, lastLoad=0, filter='ALL';
-function ago(iso){ var d=(Date.now()-new Date(iso).getTime())/1000; var u=[['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60]]; for(var i=0;i<u.length;i++){ var n=Math.floor(d/u[i][1]); if(n>=1) return n+' '+u[i][0]+(n>1?'s':'')+' ago'; } return 'just now'; }
+var vids=null, loading=false, lastLoad=0, topic='', vtype='', query='', shown=0;
+function ago(ts){ var d=(Date.now()-ts)/1000; var u=[['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60]]; for(var i=0;i<u.length;i++){ var n=Math.floor(d/u[i][1]); if(n>=1) return n+' '+u[i][0]+(n>1?'s':'')+' ago'; } return 'just now'; }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function dur(s){ if(!s) return ''; var h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60; return (h?h+':'+(m<10?'0':''):'')+m+':'+(x<10?'0':'')+x; }
+function views(n){ if(n==null) return ''; return (n>=1e6?(n/1e6).toFixed(1).replace(/\.0$/,'')+'M':n>=1e3?(n/1e3).toFixed(1).replace(/\.0$/,'')+'K':n)+' view'+(n===1?'':'s'); }
 function parse(xml){
   var d=new DOMParser().parseFromString(xml,'text/xml'), out=[], es=d.getElementsByTagName('entry');
   for(var i=0;i<es.length;i++){ var e=es[i], g=function(n){var x=e.getElementsByTagName(n)[0]; return x?x:null;};
-    var id=g('yt:videoId'), title=g('title'), pub=g('published'), th=g('media:thumbnail'), st=g('media:statistics'), ln=e.getElementsByTagName('link')[0];
+    var id=g('yt:videoId'), title=g('title'), pub=g('published'), st=g('media:statistics'), ln=e.getElementsByTagName('link')[0];
     if(!id||!title) continue;
-    out.push({id:id.textContent,title:title.textContent,pub:pub?pub.textContent:'',thumb:th?th.getAttribute('url'):'https://i.ytimg.com/vi/'+id.textContent+'/hqdefault.jpg',views:st?parseInt(st.getAttribute('views')||'0',10):null,url:ln?ln.getAttribute('href'):'https://www.youtube.com/watch?v='+id.textContent});
+    var url=ln?ln.getAttribute('href'):'';
+    out.push({id:id.textContent,title:title.textContent,ts:pub?new Date(pub.textContent).getTime():0,views:st?parseInt(st.getAttribute('views')||'0',10):null,kind:/\/shorts\//.test(url)?'s':'v',dur:0});
   }
   return out;
 }
+/* the full list is baked in at build time (www/videos.js); the RSS feed adds anything uploaded since */
+var BAKED=(window.HS_VIDEOS&&window.HS_VIDEOS.videos||[]).map(function(x){ return {id:x.id,title:x.t,dur:x.d,views:x.v,kind:x.k,ts:x.ts?x.ts*1000:0}; });
+function merge(rss){
+  var by={}, out=BAKED.map(function(v){ var c={}; for(var k in v) c[k]=v[k]; by[c.id]=c; return c; }), fresh=[];
+  (rss||[]).forEach(function(r){ var b=by[r.id]; if(b){ if(r.ts) b.ts=r.ts; if(r.views!=null) b.views=Math.max(b.views||0,r.views); } else fresh.push(r); });
+  return fresh.concat(out);
+}
+if(BAKED.length) vids=merge(null);
 function loadVideos(){
-  if(loading||(vids&&Date.now()-lastLoad<300000)) return; loading=true;
-  try{ var c=JSON.parse(localStorage.getItem('hs-vids')||'null'); if(c&&c.length&&!vids){ vids=c; render(); } }catch(x){}
-  getText('https://www.youtube.com/feeds/videos.xml?channel_id='+CHANNEL_ID,12000).then(function(x){ var v=parse(x); if(v.length){ vids=v; lastLoad=Date.now(); try{localStorage.setItem('hs-vids',JSON.stringify(v));}catch(e){} render(); } }).catch(function(){}).then(function(){loading=false;});
+  if(loading||(lastLoad&&Date.now()-lastLoad<300000)) return; loading=true;
+  if(!vids){ try{ var c=JSON.parse(localStorage.getItem('hs-rss')||'null'); if(c&&c.length){ vids=merge(c); } }catch(x){} }
+  render();
+  getText('https://www.youtube.com/feeds/videos.xml?channel_id='+CHANNEL_ID,12000).then(function(x){ var v=parse(x); if(v.length){ lastLoad=Date.now(); try{localStorage.setItem('hs-rss',JSON.stringify(v));}catch(e){} vids=merge(v); render(true); } }).catch(function(){}).then(function(){loading=false;});
 }
 
 function isPC(){ return document.documentElement.classList.contains('pc'); }
@@ -907,20 +885,45 @@ function schedule(){
     cells[i].children[1].style.color=on?'#f1e7d0':'#c9bbb6'; }
 }
 schedule(); setInterval(schedule,60000);
+function badge(v){ var t=v.kind==='s'?'SHORT':dur(v.dur); return t?'<span class="vbadge">'+t+'</span>':''; }
+function meta(v){ return [views(v.views), v.ts?ago(v.ts):(v.kind==='l'?'Stream':'')].filter(Boolean).join(' · '); }
 function card(v){
-  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start"><div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a">'+thumbImg(v)+' style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1"><div style="font-size: 14px; font-weight: 600; line-height: 1.2">'+esc(v.title)+'</div><div style="font-size: 12px; font-weight: 500; color: #a6968f">'+(v.views!=null?v.views.toLocaleString('en-GB')+' views · ':'')+ago(v.pub)+'</div></div></a>';
+  return '<a href="#/watch" class="vcard" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'"><div class="vthumb">'+thumbImg(v)+'>'+badge(v)+'</div><div class="vtext"><div class="vtitle">'+esc(v.title)+'</div><div class="vmeta">'+esc(meta(v))+'</div></div></a>';
 }
 function small(v){
-  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><div style="position: relative; height: 94px; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a">'+thumbImg(v)+' style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="font-size: 13px; font-weight: 600; line-height: 1.2; color: #f1e7d0">'+esc(v.title)+'</div></a>';
+  return '<a href="#/watch" class="vsmall" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'"><div class="vthumb">'+thumbImg(v)+'>'+badge(v)+'</div><div class="vtitle">'+esc(v.title)+'</div></a>';
 }
-function match(v){ var t=v.title.toLowerCase(); if(filter==='ALL') return true; if(filter==='SOUL CHAINED') return t.indexOf('soul chained')>=0; if(filter==='DEMOS') return t.indexOf('demo')>=0; if(filter==='BOSSES') return t.indexOf('boss')>=0; if(filter==='SHORTS') return v.url.indexOf('/shorts/')>=0||t.indexOf('short')>=0; return true; }
-function render(){
-  if(!vids) return;
-  var list=$('vidList'); if(list){ var f=vids.filter(match); list.innerHTML=f.length?f.map(card).join(''):'<div style="font-size:14px;color:#a6968f;padding:12px 0">Nothing here yet.</div>'; }
-  var fg=$('freshGrid'); if(fg) fg.innerHTML=vids.slice(0,isPC()?4:2).map(small).join('');
+function matches(v){
+  if(vtype&&v.kind!==vtype) return false;
+  var t=v.title.toLowerCase();
+  if(topic&&t.indexOf(topic)<0) return false;
+  if(query){ var w=query.split(/\s+/); for(var i=0;i<w.length;i++) if(w[i]&&t.indexOf(w[i])<0) return false; }
+  return true;
 }
+function page(){ return isPC()?24:16; }
+function render(reset){
+  var list=$('vidList'), fg=$('freshGrid');
+  if(!vids||!vids.length){ if(list&&!list.children.length) list.innerHTML=new Array(7).join('<div class="skel"></div>'); return; }
+  if(fg){ var latest=vids.filter(function(v){return v.kind!=='s';}); fg.innerHTML=latest.slice(0,isPC()?4:2).map(small).join(''); }
+  if(!list) return;
+  var counts={'':0,v:0,l:0,s:0}, f=[];
+  vids.forEach(function(v){ var k=vtype; vtype=''; var okAll=matches(v); vtype=k; if(okAll){ counts['']++; counts[v.kind]=(counts[v.kind]||0)+1; } if(matches(v)) f.push(v); });
+  [].slice.call($('vidTypes').children).forEach(function(b){ var n=counts[b.getAttribute('data-k')]||0; b.lastChild.textContent=n; b.disabled=!n&&b.getAttribute('data-k')!==vtype; });
+  $('vidCount').textContent=' · '+vids.length+' UPLOADS';
+  if(reset!==false||!shown) shown=page();
+  var showing=f.slice(0,shown);
+  list.innerHTML=showing.length?showing.map(card).join(''):'<div class="vempty">Nothing matches that. Try another search.</div>';
+  $('vidMore').hidden=f.length<=shown;
+  $('vidMore').textContent='SHOW MORE ('+(f.length-shown)+' LEFT)';
+}
+$('vidMore').addEventListener('click',function(){ shown+=page(); render(false); });
+[].slice.call($('vidTypes').children).forEach(function(b){ b.addEventListener('click',function(){
+  vtype=b.getAttribute('data-k'); [].slice.call($('vidTypes').children).forEach(function(o){o.classList.toggle('on',o===b);}); render(); }); });
+var qT; $('vidSearch').addEventListener('input',function(){ clearTimeout(qT); var v=this.value; $('vidClear').hidden=!v; qT=setTimeout(function(){ query=v.trim().toLowerCase(); render(); },120); });
+$('vidClear').addEventListener('click',function(){ $('vidSearch').value=''; this.hidden=true; query=''; render(); $('vidSearch').focus(); });
 var chips=$('chips');
-if(chips){ [].slice.call(chips.children).forEach(function(ch){ ch.style.cursor='pointer'; ch.addEventListener('click',function(){ filter=ch.textContent.trim(); [].slice.call(chips.children).forEach(function(o){ var on=o===ch; o.style.background=on?'#c4121c':'#14090a'; o.style.boxShadow=on?'none':'inset 0 0 0 1px #4a1a1c'; o.style.color=on?'':'#c9bbb6'; }); render(); }); }); }
+[].slice.call(chips.children).forEach(function(ch){ ch.addEventListener('click',function(){ topic=ch.getAttribute('data-f')||''; [].slice.call(chips.children).forEach(function(o){ var on=o===ch; o.style.background=on?'#c4121c':'#14090a'; o.style.boxShadow=on?'none':'inset 0 0 0 1px #4a1a1c'; o.style.color=on?'#f1e7d0':'#c9bbb6'; }); render(); }); });
+render();
 if(!/^#\/(?!play|watch)/.test(location.hash)) location.replace('#/Main');
 route();
 })();
