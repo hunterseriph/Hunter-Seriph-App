@@ -1,7 +1,9 @@
 // Hunter Seriph for PC. A small Electron wrapper around the same www/ files the Android app uses.
 // The page is served from http://localhost:47621 so Twitch embeds work (Twitch allows parent=localhost)
 // and saves (localStorage) stay put between updates because the address never changes.
-const { app, BrowserWindow, shell, session, Menu } = require('electron');
+const { app, BrowserWindow, shell, session, Menu, ipcMain, net } = require('electron');
+const os = require('os');
+const { spawn } = require('child_process');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -44,13 +46,48 @@ function allowFeeds() {
   });
 }
 
+
+// ---------- in-app update ----------
+// The PC app is one portable exe. To update: download the new exe next to it, quit, and let a tiny
+// script swap the files and start the new one. Saves are in %APPDATA%\Hunter Seriph, so they carry over.
+const EXE = process.env.PORTABLE_EXECUTABLE_FILE || '';
+ipcMain.handle('update:can', () => !!EXE);
+ipcMain.handle('update:install', async (ev, url) => {
+  if (!EXE) { shell.openExternal(url); return 'browser'; }
+  if (!/^https:\/\/github\.com\/hunterseriph\//i.test(url)) throw new Error('bad url');
+  const dir = path.dirname(EXE), tmp = path.join(dir, 'Hunter-Seriph-PC.new.exe');
+  const res = await net.fetch(url);
+  if (!res.ok) throw new Error('download failed (' + res.status + ')');
+  const total = +res.headers.get('content-length') || 0;
+  const out = fs.createWriteStream(tmp), reader = res.body.getReader();
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    got += value.length;
+    if (!out.write(Buffer.from(value))) await new Promise((r) => out.once('drain', r));
+    if (total) ev.sender.send('update:progress', Math.floor(got * 100 / total));
+  }
+  await new Promise((r, j) => out.end((e) => (e ? j(e) : r())));
+  if (total && got < total) throw new Error('download incomplete');
+  const bat = path.join(os.tmpdir(), 'hunter-seriph-update.cmd');
+  fs.writeFileSync(bat, [
+    '@echo off', 'set n=0', ':wait', 'timeout /t 1 /nobreak >nul', 'set /a n+=1',
+    'move /y "' + tmp + '" "' + EXE + '" >nul 2>&1 || (if %n% lss 60 goto wait)',
+    'start "" "' + EXE + '"', 'del "%~f0"'
+  ].join('\r\n'));
+  spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  setTimeout(() => app.quit(), 300);
+  return 'ok';
+});
+
 const isLocal = (u) => u.startsWith('http://localhost:' + PORT) || u.startsWith('http://127.0.0.1:' + PORT);
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 760, minWidth: 380, minHeight: 600, backgroundColor: '#070405', title: 'Hunter Seriph', show: !SMOKE,
     icon: path.join(__dirname, 'icon.png'), autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false }
+    webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') }
   });
   // links to the shop, YouTube or Twitch open in the normal browser
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url) && !isLocal(url)) shell.openExternal(url); return { action: 'deny' }; });

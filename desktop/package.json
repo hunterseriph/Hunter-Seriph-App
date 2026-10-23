@@ -18,7 +18,7 @@
   "build": {
     "appId": "com.hunterseriph.app",
     "productName": "Hunter Seriph",
-    "files": ["main.js", "icon.png", "www/**/*"],
+    "files": ["main.js", "preload.js", "icon.png", "www/**/*"],
     "directories": { "output": "dist" },
     "win": { "target": "portable", "icon": "icon.png" },
     "portable": { "artifactName": "Hunter-Seriph-PC.exe" }

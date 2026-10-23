@@ -51,6 +51,14 @@ a{text-decoration:none;color:inherit}
 #twLogin{background:#c4121c!important}
 #twNote{flex:1 1 100%;font-size:12px;color:#a6968f;line-height:1.35}
 
+#upd{position:absolute;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:15;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 14px;background:#0e0708;box-shadow:inset 0 0 0 1px #c4121c,0 6px 24px rgba(0,0,0,.7);clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);max-width:520px;margin:0 auto}
+#upd[hidden]{display:none}
+#updTxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#updTxt b{font:20px 'Pirata One',serif;letter-spacing:.02em;color:#f1e7d0;font-weight:400}
+#updTxt span{font-size:12px;font-weight:600;color:#a6968f;letter-spacing:.04em}
+#updGo{appearance:none;border:0;cursor:pointer;height:40px;padding:0 16px;background:linear-gradient(180deg,#d8141f 0%,#8e0c14 100%);color:#f1e7d0;font:700 13px 'Archivo Narrow',sans-serif;letter-spacing:.16em;display:flex;align-items:center}
+#updGo[disabled]{opacity:.6;cursor:default}
+#updX{appearance:none;border:0;background:none;color:#a6968f;font:700 20px 'Archivo Narrow',sans-serif;width:32px;height:40px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -797,6 +805,52 @@ if(!/^#\/(?!play|watch)/.test(location.hash)) location.replace('#/Main');
 route();
 })();
 
+</script>
+<div id="upd" hidden role="status"><div id="updTxt"><b>New update ready</b><span id="updSub"></span></div><button id="updGo" type="button">UPDATE</button><button id="updX" type="button" aria-label="Not now">&times;</button></div>
+<script src="version.js"></script>
+<script>
+/* ---------- update check: compares this build with the latest GitHub release ---------- */
+(function(){
+'use strict';
+var REPO='hunterseriph/Hunter-Seriph-App';
+var me=+window.HS_BUILD||0; if(!me) return;            // not a real build (testing), so no check
+var desk=window.hsDesktop, cap=window.Capacitor, android=!!(cap&&cap.getPlatform&&cap.getPlatform()==='android');
+if(!desk&&!android) return;
+var want=desk?'Hunter-Seriph-PC.exe':'Hunter-Seriph.apk';
+var box=document.getElementById('upd'), sub=document.getElementById('updSub'), go=document.getElementById('updGo');
+var latest=null, url=null, busy=false;
+function skipped(){try{return +localStorage.getItem('hs-upd-skip')||0;}catch(e){return 0;}}
+function check(){
+  if(busy) return;
+  fetch('https://api.github.com/repos/'+REPO+'/releases/latest',{headers:{'Accept':'application/vnd.github+json'}})
+  .then(function(r){return r.ok?r.json():null;}).then(function(rel){
+    if(!rel) return;
+    var n=parseInt(String(rel.tag_name||'').replace(/\D/g,''),10)||0;
+    var a=(rel.assets||[]).filter(function(x){return x.name===want;})[0];
+    if(n<=me||!a||n<=skipped()) return;                 // up to date, file not uploaded yet, or dismissed
+    latest=n; url=a.browser_download_url;
+    sub.textContent='Build '+n+' is out. You have build '+me+'.';
+    box.hidden=false;
+  }).catch(function(){});
+}
+go.addEventListener('click',function(){
+  if(!url||busy) return;
+  if(android){
+    var l=document.createElement('a'); l.href=url; l.target='_blank'; l.rel='noopener'; document.body.appendChild(l); l.click(); l.remove(); // the browser downloads the APK
+    sub.textContent='Downloading. Open the file when it finishes and tap Install.';
+    return;
+  }
+  busy=true; go.disabled=true; go.textContent='0%'; sub.textContent='Downloading build '+latest+'. The app restarts when done.';
+  desk.install(url).then(function(r){
+    if(r==='browser'){ busy=false; go.disabled=false; go.textContent='UPDATE'; sub.textContent='Downloading in your browser. Swap the old exe for the new one.'; }
+    else { go.textContent='RESTARTING'; }
+  }).catch(function(){ busy=false; go.disabled=false; go.textContent='RETRY'; sub.textContent='Download failed. Check your connection and try again.'; });
+});
+if(desk&&desk.onProgress) desk.onProgress(function(p){ if(busy) go.textContent=p+'%'; });
+document.getElementById('updX').addEventListener('click',function(){ box.hidden=true; try{localStorage.setItem('hs-upd-skip',String(latest||0));}catch(e){} });
+check();
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&box.hidden) check(); });
+})();
 </script>
 </body>
 </html>

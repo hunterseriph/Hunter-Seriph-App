@@ -20,3 +20,8 @@ for (const [pkg, name, weights] of fams) {
 }
 fs.writeFileSync(path.join(out, 'fonts.css'), css);
 console.log('fonts ready:', fs.readdirSync(out).length, 'files');
+
+// Stamp the build number into the app so it can tell when a newer build is out (see the update check in index.html).
+const build = parseInt(process.env.GITHUB_RUN_NUMBER || '0', 10) || 0;
+fs.writeFileSync(path.join('www', 'version.js'), 'window.HS_BUILD=' + build + ';\n');
+console.log('build number:', build);
