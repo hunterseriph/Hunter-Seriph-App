@@ -59,14 +59,108 @@ a{text-decoration:none;color:inherit}
 #updGo{appearance:none;border:0;cursor:pointer;height:40px;padding:0 16px;background:linear-gradient(180deg,#d8141f 0%,#8e0c14 100%);color:#f1e7d0;font:700 13px 'Archivo Narrow',sans-serif;letter-spacing:.16em;display:flex;align-items:center}
 #updGo[disabled]{opacity:.6;cursor:default}
 #updX{appearance:none;border:0;background:none;color:#a6968f;font:700 20px 'Archivo Narrow',sans-serif;width:32px;height:40px;cursor:pointer}
+
+/* ---------- mobile-only bits of the PC layout ---------- */
+.pc-banner,.nav-brand,.nav-foot{display:none}
+/* ---------- PC layout (html.pc: the desktop app, or a wide window with a mouse) ---------- */
+html.pc{--side:232px;--maxw:1240px}
+html.pc ::-webkit-scrollbar{width:10px;height:10px}
+html.pc ::-webkit-scrollbar-track{background:#070405}
+html.pc ::-webkit-scrollbar-thumb{background:#3a1315;border:2px solid #070405}
+html.pc ::-webkit-scrollbar-thumb:hover{background:#c4121c}
+html.pc .m-only{display:none!important}
+html.pc #nav,html.pc #nav[hidden]{top:0;bottom:0;right:auto;width:var(--side);height:auto;padding:0 0 22px;display:flex;flex-direction:column;gap:2px;border-top:0;border-right:1px solid #2c1012;background:#050304 linear-gradient(180deg,rgba(196,18,28,.10) 0,rgba(196,18,28,0) 240px)}
+html.pc .nav-brand{display:block;padding:18px 26px 14px;margin-bottom:8px;border-bottom:1px solid #2c1012}
+html.pc .nav-brand img{display:block;width:100%;height:auto;mix-blend-mode:screen;-webkit-mask-image:radial-gradient(closest-side,#000 70%,transparent 100%);mask-image:radial-gradient(closest-side,#000 70%,transparent 100%)}
+html.pc .tab{flex-direction:row;justify-content:flex-start;gap:16px;height:50px;padding:0 28px;font-size:13px;letter-spacing:.18em;transition:color .15s,background .15s}
+html.pc .tab:hover{color:#f1e7d0;background:#0e0708}
+html.pc .tab.active{color:#ff2630;background:linear-gradient(90deg,rgba(196,18,28,.2),rgba(196,18,28,0) 80%)}
+html.pc .tab.active::before{left:0;right:auto;top:8px;bottom:8px;width:3px;height:auto}
+html.pc .nav-foot{display:flex;flex-direction:column;gap:4px;margin-top:auto;padding:16px 28px 0;border-top:1px solid #2c1012}
+html.pc .nf-live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.18em;color:#c9bbb6;margin-bottom:10px}
+html.pc #navDot{width:8px;height:8px;border-radius:50%;background:#8a7b78}
+html.pc .nf-live.on{color:#ff2630}
+html.pc .nf-live.on #navDot{background:#ff2630;box-shadow:0 0 8px #ff2630}
+html.pc .nf-lbl{font-size:11px;font-weight:700;letter-spacing:.2em;color:#ff2630}
+html.pc .nf-next{font-size:15px;font-weight:700;letter-spacing:.04em}
+html.pc .screen,html.pc .screen.full{left:var(--side);bottom:0;padding:0 max(32px,calc((100vw - var(--side) - var(--maxw))/2)) 48px}
+html.pc .screen>*{padding-left:0!important;padding-right:0!important}
+html.pc .games-list,html.pc .proj-wrap,html.pc .log-body{overflow:visible!important;flex:none!important;min-height:auto!important;padding-bottom:0!important}
+/* home */
+html.pc .home-hero{height:auto!important;aspect-ratio:1400/559;max-height:500px;margin-top:28px;box-shadow:inset 0 0 0 1px #2c1012}
+html.pc .pc-banner{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+html.pc .home-hero>div[style*="linear-gradient"]{background:linear-gradient(to bottom,rgba(7,4,5,.35) 0,rgba(7,4,5,0) 25%,rgba(7,4,5,0) 75%,#070405 100%)!important}
+html.pc .home-info{height:auto!important;margin-top:8px!important;padding:22px 28px!important;background:#0e0708;box-shadow:inset 0 0 0 1px #2c1012}
+html.pc .home-info>div{flex-direction:row!important;align-items:center;gap:32px!important}
+html.pc .home-info>div>div:first-child{font-size:28px!important;flex:1}
+html.pc .home-info a{width:300px;flex:none;height:52px!important}
+html.pc #s-Main>div:nth-of-type(3){padding-top:36px!important}
+html.pc #freshGrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:20px!important}
+html.pc #s-Main>div:nth-of-type(4){padding-top:28px!important}
+html.pc #s-Main>div:nth-of-type(4) a{height:76px!important;padding:0 28px!important}
+/* video thumbnails as cards */
+html.pc #freshGrid a>div:first-child,html.pc #vidList a>div:first-child{width:100%!important;height:auto!important;aspect-ratio:16/9}
+html.pc #freshGrid img,html.pc #vidList img{transition:transform .25s,filter .25s}
+html.pc #freshGrid a:hover img,html.pc #vidList a:hover img{transform:scale(1.04);filter:brightness(1.12)}
+html.pc #freshGrid a>div:last-child,html.pc #vidList a>div:last-child>div:first-child{font-size:15px!important;line-height:1.25!important}
+html.pc #vidList{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:28px 20px!important;padding-top:24px!important}
+html.pc #vidList>a{flex-direction:column!important;gap:10px!important}
+html.pc #vidList>a>div:last-child{width:100%}
+html.pc #chips span{cursor:pointer}
+/* page titles */
+html.pc .screen>div:first-child>div:last-child[style*="40px"],html.pc .proj-wrap>div:first-child>div:last-child{font-size:52px!important}
+html.pc .screen>div:first-child[style*="padding: 20px"],html.pc .proj-wrap>div:first-child{padding-top:40px!important}
+/* live: player and info on the left, chat on the right */
+html.pc #s-Live.on{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-auto-rows:min-content;column-gap:24px;align-content:start;padding-top:28px}
+html.pc #s-Live>*{grid-column:1}
+html.pc #s-Live>.lv-chat{grid-column:2;grid-row:1/span 5;padding:0!important;position:sticky;top:0}
+html.pc .lv-chatbox{height:calc(100vh - 110px)!important;min-height:420px}
+html.pc .lv-player{box-shadow:0 0 0 1px #2c1012}
+html.pc #twBar{padding:12px 0 0;background:none}
+html.pc #twBar a{flex:0 1 260px}
+html.pc .lv-head{padding-top:22px!important}
+html.pc .lv-head>div>div:first-child{font-size:20px!important}
+html.pc .lv-ritual{padding-top:28px!important}
+/* games */
+html.pc .games-list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:20px!important;padding-top:24px!important}
+html.pc .games-list>a{transition:filter .2s,transform .2s}
+html.pc .games-list>a:hover{filter:brightness(1.15);transform:translateY(-2px)}
+html.pc .games-list>.games-more{grid-column:1/-1}
+/* projects: narrower column so the banner stays sharp */
+html.pc #s-Projects,html.pc .screen.full{--maxw:960px}
+html.pc .proj-wrap div[style*="height: 192px"]{height:340px!important}
+html.pc .proj-wrap a[href^="#/DxD-Log"]:hover{background:#1c0b0d!important}
+/* shop */
+html.pc .shop-feature{height:150px!important;padding:0 0 0 32px!important}
+html.pc .shop-feature span[style*="26px"]{font-size:36px!important}
+html.pc .feat-img{width:112px!important;height:150px!important;margin:0!important}
+html.pc .shop-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))!important;gap:28px 20px!important;padding-top:28px!important}
+html.pc .shop-grid img{transition:transform .25s}
+html.pc .shop-grid a:hover img{transform:scale(1.05)}
+html.pc #s-Shop>div:last-child{padding-top:32px!important}
+html.pc #s-Shop>div:last-child a{max-width:420px;margin:0 auto}
+/* video player page: keep the whole video on screen */
+html.pc #vidWrap{flex-direction:column!important;flex-wrap:nowrap!important;overflow-y:auto}
+html.pc #vidBar{width:auto!important;height:52px!important;padding:0 24px 0 12px!important}
+html.pc #vidStage{width:min(calc(100% - 64px),calc((100vh - 200px)*16/9),1400px)!important;margin:24px auto 0;border:0;box-shadow:0 0 0 1px #2c1012,0 0 40px rgba(196,18,28,.18)}
+html.pc #vidInfo{width:min(calc(100% - 64px),calc((100vh - 200px)*16/9),1400px)!important;margin:0 auto;padding:18px 0 32px!important;flex-direction:row!important;flex-wrap:wrap;align-items:center;overflow:visible!important}
+html.pc #vidTitle{flex:1 1 400px;font-size:22px!important}
+html.pc #vidYT{flex:0 0 260px}
+html.pc #vidHint{flex:1 1 100%}
+/* update bar */
+html.pc #upd{left:auto;right:28px;bottom:28px;width:460px;margin:0}
 </style>
+<script>
+(function(){var r=document.documentElement;function f(){var pc=innerWidth>=900&&(!!window.hsDesktop||matchMedia("(pointer:fine)").matches);if(r.classList.contains("pc")!==pc){r.classList.toggle("pc",pc);window.dispatchEvent(new Event("hslayout"));}}f();addEventListener("resize",f);})();
+</script>
 </head>
 <body>
 <div id="app">
 <section id="s-Main" class="screen tab-screen">
 
-<div style="position: relative; height: 300px; flex: none; overflow: hidden">
-<img src="assets/moon.jpg" alt="Hunter Seriph mascot standing in front of a blood red moon" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 10%">
+<div class="home-hero" style="position: relative; height: 300px; flex: none; overflow: hidden">
+<img class="pc-banner" src="assets/banner.jpg" alt="Hunter Seriph" loading="lazy">
+<img class="m-only" src="assets/moon.jpg" alt="Hunter Seriph mascot standing in front of a blood red moon" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 10%">
 <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(7,4,5,0.55) 0%, rgba(7,4,5,0) 28%, rgba(7,4,5,0) 70%, #070405 100%)"></div>
 <div style="position: absolute; top: 16px; left: 16px; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; background: rgba(7,4,5,0.82); border: 1px solid #4a1a1c; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)">
 <span id="liveDot" style="width: 8px; height: 8px; background: #8a7b78; border-radius: 50%"></span>
@@ -75,13 +169,13 @@ a{text-decoration:none;color:inherit}
 <svg aria-hidden="true" viewBox="0 0 390 14" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: -1px; width: 100%; height: 14px; display: block"><polygon fill="#070405" points="0,14 15,3 30,14 45,6 60,14 75,2 90,14 105,7 120,14 135,3 150,14 165,5 180,14 195,2 210,14 225,6 240,14 255,3 270,14 285,7 300,14 315,2 330,14 345,5 360,14 375,3 390,14"></polygon></svg>
 </div>
 
-<div style="display: flex; flex-direction: row; gap: 12px; padding: 0 16px; height: 150px; flex: none; align-items: center; margin-top: -6px">
-<img src="assets/wordmark.jpg" alt="Hunter Seriph wordmark" style="width: 38%; max-width: 148px; height: 134px; object-fit: contain; flex: none; mix-blend-mode: screen">
+<div class="home-info" style="display: flex; flex-direction: row; gap: 12px; padding: 0 16px; height: 150px; flex: none; align-items: center; margin-top: -6px">
+<img class="m-only" src="assets/wordmark.jpg" alt="Hunter Seriph wordmark" style="width: 38%; max-width: 148px; height: 134px; object-fit: contain; flex: none; mix-blend-mode: screen">
 <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1">
 <div style="font-family: 'Pirata One', serif; font-size: 20px; line-height: 1; color: #f1e7d0; letter-spacing: 0.02em">Souls-likes, bosses and bad decisions</div>
 <div style="display: flex; flex-direction: column; gap: 2px">
-<div style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">NEXT STREAM</div>
-<div style="font-size: 16px; font-weight: 700; letter-spacing: 0.04em">WED 7PM – 12AM UK</div>
+<div id="nextLabel" style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">NEXT STREAM</div>
+<div id="nextStream" style="font-size: 16px; font-weight: 700; letter-spacing: 0.04em">WED 7PM – 12AM UK</div>
 </div>
 <a href="#/Live" style="display: flex; align-items: center; justify-content: center; height: 44px; background: linear-gradient(180deg, #d8141f 0%, #8e0c14 100%); color: #f1e7d0; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; white-space: nowrap; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)">ENTER THE STREAM</a>
 </div>
@@ -124,9 +218,9 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-Live" class="screen tab-screen">
 
-<div style="position: relative; width: 100%; aspect-ratio: 16 / 9; flex: none; border-bottom: 2px solid #c4121c; background: #000"><iframe id="twitchPlayer" title="Hunter Seriph on Twitch" allowfullscreen allow="autoplay; fullscreen" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0"></iframe></div>
+<div class="lv-player" style="position: relative; width: 100%; aspect-ratio: 16 / 9; flex: none; border-bottom: 2px solid #c4121c; background: #000"><iframe id="twitchPlayer" title="Hunter Seriph on Twitch" allowfullscreen allow="autoplay; fullscreen" style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0"></iframe></div>
 
-<div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 0; flex: none">
+<div class="lv-head" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 0; flex: none">
 <img src="assets/droplet.webp" alt="Hunter Seriph droplet logo" style="width: 44px; height: 44px; object-fit: contain; flex: none">
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1">
 <div style="font-size: 17px; font-weight: 700; line-height: 1.15"><span id="streamTitle">Hunter Seriph on Twitch</span></div>
@@ -135,12 +229,12 @@ a{text-decoration:none;color:inherit}
 <a href="https://www.twitch.tv/hunterseriph" target="_blank" rel="noopener" style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; background: #14090a; box-shadow: inset 0 0 0 1px #c4121c; font-size: 13px; font-weight: 700; letter-spacing: 0.16em; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)">FOLLOW</a>
 </div>
 
-<div style="padding: 16px 16px 0; display: flex; flex-direction: column; gap: 10px; flex: none">
+<div class="lv-ritual" style="padding: 16px 16px 0; display: flex; flex-direction: column; gap: 10px; flex: none">
 <div style="display: flex; align-items: baseline; justify-content: space-between">
 <div style="font-family: 'Pirata One', serif; font-size: 24px; line-height: 1; letter-spacing: 0.02em">The ritual</div>
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UK TIME</div>
 </div>
-<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<div id="ritual" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
 <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0; background: #c4121c; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)">
 <span style="font-size: 15px; font-weight: 700; letter-spacing: 0.14em">WED</span>
 <span style="font-size: 12px; font-weight: 600">7PM – 12AM</span>
@@ -160,12 +254,12 @@ a{text-decoration:none;color:inherit}
 </div>
 </div>
 
-<div style="flex: none; display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 24px">
+<div class="lv-chat" style="flex: none; display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 24px">
 <div style="display: flex; align-items: baseline; justify-content: space-between">
 <div style="font-family: 'Pirata One', serif; font-size: 24px; line-height: 1; letter-spacing: 0.02em">Chat</div>
 <a href="https://www.twitch.tv/hunterseriph" target="_blank" rel="noopener" style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #ff2630; padding: 6px 0">OPEN IN TWITCH ↗</a>
 </div>
-<div style="height: 460px; flex: none; background: #0e0708; box-shadow: inset 0 0 0 1px #2c1012"><iframe id="twitchChat" title="Twitch chat" style="width: 100%; height: 100%; border: 0"></iframe></div>
+<div class="lv-chatbox" style="height: 460px; flex: none; background: #0e0708; box-shadow: inset 0 0 0 1px #2c1012"><iframe id="twitchChat" title="Twitch chat" style="width: 100%; height: 100%; border: 0"></iframe></div>
 </div>
 
 </section>
@@ -263,7 +357,7 @@ a{text-decoration:none;color:inherit}
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; text-shadow: 0 0 18px rgba(196,18,28,0.55)">The games</div>
 </div>
 
-<div style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 92px; flex: 1; min-height: 0; overflow-y: auto">
+<div class="games-list" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 92px; flex: 1; min-height: 0; overflow-y: auto">
 <a href="#/play" data-game="games/spermhog.html" data-title="Cumhead the Spermhog" style="display: flex; flex-direction: row; height: 138px; flex: none; background: #140809; box-shadow: inset 0 0 0 1px #c4121c, 0 0 18px rgba(196,18,28,0.28); clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)">
 <div style="position: relative; width: 118px; flex: none; overflow: hidden; background-color: #0a0506; background-image: linear-gradient(to top, rgba(196,18,28,0.4) 0, rgba(196,18,28,0) 55%)">
 <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: #2a0a0d; border-top: 2px solid #ff2630"></div>
@@ -359,7 +453,7 @@ a{text-decoration:none;color:inherit}
 </div>
 </div>
 
-<div style="display: flex; align-items: center; justify-content: center; height: 48px; flex: none; box-shadow: inset 0 0 0 1px #3a1315; font-family: 'Pirata One', serif; font-size: 20px; color: #a6968f; letter-spacing: 0.04em">More games are in the crypt</div>
+<div class="games-more" style="display: flex; align-items: center; justify-content: center; height: 48px; flex: none; box-shadow: inset 0 0 0 1px #3a1315; font-family: 'Pirata One', serif; font-size: 20px; color: #a6968f; letter-spacing: 0.04em">More games are in the crypt</div>
 
 </div>
 
@@ -367,7 +461,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-Projects" class="screen tab-screen">
 
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 92px">
+<div class="proj-wrap" style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 92px">
 <div style="display: flex; flex-direction: column; gap: 2px; padding: 20px 16px 0; flex: none">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">WHAT I'M BUILDING</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; text-shadow: 0 0 18px rgba(196,18,28,0.55)">The works</div>
@@ -452,17 +546,17 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <div style="padding: 14px 16px 0; flex: none">
-<a href="https://hunter-seriph-shop.fourthwall.com/en-gbp/products/limited-edition-hunter-seriph-halloween-2026-mug" target="_blank" rel="noopener" style="position: relative; display: flex; flex-direction: row; align-items: center; justify-content: space-between; height: 100px; padding: 0 16px; overflow: hidden; background: radial-gradient(120% 140% at 85% 50%, #8e0c14 0%, #2a080b 55%, #120708 100%); box-shadow: inset 0 0 0 1px #6a1a1e; clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)">
+<a href="https://hunter-seriph-shop.fourthwall.com/en-gbp/products/limited-edition-hunter-seriph-halloween-2026-mug" target="_blank" rel="noopener" class="shop-feature" style="position: relative; display: flex; flex-direction: row; align-items: center; justify-content: space-between; height: 100px; padding: 0 16px; overflow: hidden; background: radial-gradient(120% 140% at 85% 50%, #8e0c14 0%, #2a080b 55%, #120708 100%); box-shadow: inset 0 0 0 1px #6a1a1e; clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)">
 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
 <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; color: #f1e7d0">LIMITED EDITION</span>
 <span style="font-family: 'Pirata One', serif; font-size: 26px; line-height: 1">Halloween 2026 Mug</span>
 <span style="font-size: 16px; font-weight: 700">£9.10</span>
 </div>
-<img src="assets/shop/halloween-mug.webp" alt="" style="width: 75px; height: 100px; object-fit: cover; flex: none; margin: 0 -16px 0 0">
+<img class="feat-img" src="assets/shop/halloween-mug.webp" alt="" style="width: 75px; height: 100px; object-fit: cover; flex: none; margin: 0 -16px 0 0">
 </a>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 0; flex: none">
+<div class="shop-grid" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 0; flex: none">
 
 <a href="https://hunter-seriph-shop.fourthwall.com/en-gbp/products/cumheads-quest-mug" target="_blank" rel="noopener" style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
 <div style="position: relative; aspect-ratio: 3 / 4; display: flex; align-items: center; justify-content: center; background: #2a0c0a; box-shadow: inset 0 0 0 1px #2c1012; overflow: hidden">
@@ -557,7 +651,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-1" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">08/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 1 OF 12</span></div>
@@ -567,7 +661,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-2" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">09/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 2 OF 12</span></div>
@@ -577,7 +671,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-3" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">10/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 3 OF 12</span></div>
@@ -587,7 +681,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-4" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">11/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 4 OF 12</span></div>
@@ -597,7 +691,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-5" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">12/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 5 OF 12</span></div>
@@ -607,7 +701,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-6" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">13/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 6 OF 12</span></div>
@@ -617,7 +711,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-7" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">14/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 7 OF 12</span></div>
@@ -627,7 +721,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-8" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">15/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 8 OF 12</span></div>
@@ -637,7 +731,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-9" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">17/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 9 OF 12</span></div>
@@ -647,7 +741,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-10" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">19/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 10 OF 12</span></div>
@@ -657,7 +751,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-11" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">20/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 11 OF 12</span></div>
@@ -667,7 +761,7 @@ a{text-decoration:none;color:inherit}
 </section>
 <section id="s-DxD-Log-12" class="screen full">
 <a href="#/Projects" style="display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; flex: none; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #ff2630"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>PROJECTS</a>
-<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
+<div class="log-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #ff2630">HIGH SCHOOL DXD: NEW FIGHT</div>
 <div style="font-family: 'Pirata One', serif; font-size: 40px; line-height: 1; letter-spacing: 0.02em; margin-top: 4px; text-shadow: 0 0 18px rgba(196,18,28,0.55)">Update log</div>
 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 18px"><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; color: #f1e7d0; background: #c4121c; padding: 4px 10px 3px">21/10/26</span><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #a6968f">UPDATE 12 OF 12</span></div>
@@ -675,7 +769,7 @@ a{text-decoration:none;color:inherit}
 </div>
 
 </section>
-<nav id="nav" aria-label="Main"><a class="tab" data-tab="Main" href="#/Main"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"></path></svg><span>HOME</span></a><a class="tab" data-tab="Live" href="#/Live"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M6.3 6.3a8 8 0 000 11.4M17.7 6.3a8 8 0 010 11.4"></path></svg><span>LIVE</span></a><a class="tab" data-tab="Videos" href="#/Videos"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg><span>VIDEOS</span></a><a class="tab" data-tab="Games" href="#/Games"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10a4 4 0 014 4v3a3 3 0 01-5.2 2L14.5 14.5h-5L8.2 16A3 3 0 013 14v-3a4 4 0 014-4zM8 10v3M6.5 11.5h3M16 11h.01M18 13h.01"></path></svg><span>GAMES</span></a><a class="tab" data-tab="Projects" href="#/Projects"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"></path></svg><span>PROJECTS</span></a><a class="tab" data-tab="Shop" href="#/Shop"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 016 0v2"></path></svg><span>SHOP</span></a></nav>
+<nav id="nav" aria-label="Main"><a class="nav-brand" href="#/Main"><img src="assets/wordmark.jpg" alt="Hunter Seriph"></a><a class="tab" data-tab="Main" href="#/Main"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"></path></svg><span>HOME</span></a><a class="tab" data-tab="Live" href="#/Live"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M6.3 6.3a8 8 0 000 11.4M17.7 6.3a8 8 0 010 11.4"></path></svg><span>LIVE</span></a><a class="tab" data-tab="Videos" href="#/Videos"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg><span>VIDEOS</span></a><a class="tab" data-tab="Games" href="#/Games"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10a4 4 0 014 4v3a3 3 0 01-5.2 2L14.5 14.5h-5L8.2 16A3 3 0 013 14v-3a4 4 0 014-4zM8 10v3M6.5 11.5h3M16 11h.01M18 13h.01"></path></svg><span>GAMES</span></a><a class="tab" data-tab="Projects" href="#/Projects"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"></path></svg><span>PROJECTS</span></a><a class="tab" data-tab="Shop" href="#/Shop"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 016 0v2"></path></svg><span>SHOP</span></a><div class="nav-foot"><div class="nf-live"><span id="navDot"></span><span id="navLive">OFFLINE</span></div><div class="nf-lbl" id="navNextLbl">NEXT STREAM</div><div class="nf-next" id="navNext">WED 7PM – 12AM UK</div></div></nav>
 <div id="vidWrap" hidden>
 <div id="vidBar"><button id="vidBack" type="button" aria-label="Back">&#8249; BACK</button><span id="vidBarTitle">Video</span></div>
 <div id="vidStage"><iframe id="vidFrame" title="YouTube video" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
@@ -704,7 +798,7 @@ function route(){
   if(h!==cur){ screens.forEach(function(s){s.classList.toggle('on',s.id==='s-'+h);}); var s=$('s-'+h); s.scrollTop=0; }
   cur=h;
   var isTab=TABS.indexOf(h)>=0; $('nav').hidden=!isTab;
-  tabEls.forEach(function(t){t.classList.toggle('active',t.getAttribute('data-tab')===h);});
+  var navOn=/^DxD-Log/.test(h)?'Projects':h; tabEls.forEach(function(t){t.classList.toggle('active',t.getAttribute('data-tab')===navOn);});
   setLive(h==='Live');
   if(h==='Main'||h==='Videos') loadVideos();
 }
@@ -764,7 +858,7 @@ function twitchInfo(){
 function checkLive(){
   getText('https://decapi.me/twitch/uptime/'+TWITCH).then(function(t){
     var live=!/offline|error|not found/i.test(t)&&t.length<60;
-    $('liveTxt').textContent=live?'LIVE NOW':'OFFLINE'; $('liveTxt').style.color=live?'#f1e7d0':'#c9bbb6'; $('liveDot').style.background=live?'#ff2630':'#8a7b78';
+    $('liveTxt').textContent=live?'LIVE NOW':'OFFLINE'; $('navLive').textContent=live?'LIVE NOW':'OFFLINE'; $('navLive').parentNode.classList.toggle('on',live); $('liveTxt').style.color=live?'#f1e7d0':'#c9bbb6'; $('liveDot').style.background=live?'#ff2630':'#8a7b78';
     var box=$('liveTxt').parentNode; box.style.background=live?'#c4121c':'rgba(7,4,5,0.82)';
   }).catch(function(){});
 }
@@ -787,17 +881,43 @@ function loadVideos(){
   try{ var c=JSON.parse(localStorage.getItem('hs-vids')||'null'); if(c&&c.length&&!vids){ vids=c; render(); } }catch(x){}
   getText('https://www.youtube.com/feeds/videos.xml?channel_id='+CHANNEL_ID,12000).then(function(x){ var v=parse(x); if(v.length){ vids=v; lastLoad=Date.now(); try{localStorage.setItem('hs-vids',JSON.stringify(v));}catch(e){} render(); } }).catch(function(){}).then(function(){loading=false;});
 }
+
+function isPC(){ return document.documentElement.classList.contains('pc'); }
+/* thumbnails straight from YouTube: full HD on PC, 640px on phones; falls back if a size doesn't exist */
+function thumbImg(v){
+  var id=esc(v.id), base='https://i.ytimg.com/vi/'+id+'/', first=isPC()?'maxresdefault':'sddefault';
+  var fb="this.onerror=null;this.onload=null;this.src='"+base+"hqdefault.jpg'";
+  return '<img src="'+base+first+'.jpg" alt="" loading="lazy" decoding="async" onerror="'+fb+'" onload="if(this.naturalWidth<=120){'+fb+'}"';
+}
+window.addEventListener('hslayout',function(){ render(); });
+/* ---------- stream schedule (UK time): Wed, Thu, Fri, Sun 7pm to midnight ---------- */
+var SCHED=[3,4,5,0], DAYN=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+function ukNow(){
+  var p={}; new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'short',hour:'numeric',hour12:false}).formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+  return {day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday), hour:+p.hour%24};
+}
+function schedule(){
+  var n=ukNow(), label='NEXT STREAM', txt, nextDay=-1;
+  if(SCHED.indexOf(n.day)>=0&&n.hour>=19){ nextDay=n.day; label='STREAMING TONIGHT'; txt='ON NOW · UNTIL 12AM UK'; }
+  else for(var k=0;k<7;k++){ var d=(n.day+k)%7; if(SCHED.indexOf(d)>=0){ nextDay=d; txt=(k===0?'TONIGHT':k===1?'TOMORROW':DAYN[d])+' 7PM – 12AM UK'; break; } }
+  $('nextLabel').textContent=label; $('nextStream').textContent=txt; $('navNextLbl').textContent=label; $('navNext').textContent=txt;
+  var cells=$('ritual')?$('ritual').children:[];
+  for(var i=0;i<cells.length;i++){ var on=SCHED[i]===nextDay;
+    cells[i].style.background=on?'#c4121c':'#14090a'; cells[i].style.boxShadow=on?'none':'inset 0 0 0 1px #4a1a1c';
+    cells[i].children[1].style.color=on?'#f1e7d0':'#c9bbb6'; }
+}
+schedule(); setInterval(schedule,60000);
 function card(v){
-  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start"><div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a"><img src="'+esc(v.thumb)+'" alt="" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1"><div style="font-size: 14px; font-weight: 600; line-height: 1.2">'+esc(v.title)+'</div><div style="font-size: 12px; font-weight: 500; color: #a6968f">'+(v.views!=null?v.views.toLocaleString('en-GB')+' views · ':'')+ago(v.pub)+'</div></div></a>';
+  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: row; gap: 12px; align-items: flex-start"><div style="position: relative; width: 148px; height: 83px; flex: none; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a">'+thumbImg(v)+' style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1"><div style="font-size: 14px; font-weight: 600; line-height: 1.2">'+esc(v.title)+'</div><div style="font-size: 12px; font-weight: 500; color: #a6968f">'+(v.views!=null?v.views.toLocaleString('en-GB')+' views · ':'')+ago(v.pub)+'</div></div></a>';
 }
 function small(v){
-  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><div style="position: relative; height: 94px; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a"><img src="'+esc(v.thumb)+'" alt="" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="font-size: 13px; font-weight: 600; line-height: 1.2; color: #f1e7d0">'+esc(v.title)+'</div></a>';
+  return '<a href="#/watch" data-vid="'+esc(v.id)+'" data-vtitle="'+esc(v.title)+'" style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><div style="position: relative; height: 94px; border-bottom: 2px solid #c4121c; overflow: hidden;background:#14090a">'+thumbImg(v)+' style="width: 100%; height: 100%; object-fit: cover; display: block"></div><div style="font-size: 13px; font-weight: 600; line-height: 1.2; color: #f1e7d0">'+esc(v.title)+'</div></a>';
 }
 function match(v){ var t=v.title.toLowerCase(); if(filter==='ALL') return true; if(filter==='SOUL CHAINED') return t.indexOf('soul chained')>=0; if(filter==='DEMOS') return t.indexOf('demo')>=0; if(filter==='BOSSES') return t.indexOf('boss')>=0; if(filter==='SHORTS') return v.url.indexOf('/shorts/')>=0||t.indexOf('short')>=0; return true; }
 function render(){
   if(!vids) return;
   var list=$('vidList'); if(list){ var f=vids.filter(match); list.innerHTML=f.length?f.map(card).join(''):'<div style="font-size:14px;color:#a6968f;padding:12px 0">Nothing here yet.</div>'; }
-  var fg=$('freshGrid'); if(fg) fg.innerHTML=vids.slice(0,2).map(small).join('');
+  var fg=$('freshGrid'); if(fg) fg.innerHTML=vids.slice(0,isPC()?4:2).map(small).join('');
 }
 var chips=$('chips');
 if(chips){ [].slice.call(chips.children).forEach(function(ch){ ch.style.cursor='pointer'; ch.addEventListener('click',function(){ filter=ch.textContent.trim(); [].slice.call(chips.children).forEach(function(o){ var on=o===ch; o.style.background=on?'#c4121c':'#14090a'; o.style.boxShadow=on?'none':'inset 0 0 0 1px #4a1a1c'; o.style.color=on?'':'#c9bbb6'; }); render(); }); }); }
