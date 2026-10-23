@@ -157,13 +157,14 @@ var META = (function () { var d = freshMeta(); try { var s = JSON.parse(localSto
 function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(META)); } catch (e) {} }
 
 /* ---------- input: keyboard, touch pad, gamepad ---------- */
-var keys = { l: false, r: false, j: false, a: false, s: false, u: false, d: false }, pad = { l: false, r: false, j: false, a: false, s: false }, gp = { l: false, r: false, j: false, a: false, s: false };
-var input = { l: false, r: false, j: false, a: false, s: false };
+var keys = { l: false, r: false, j: false, a: false, s: false, u: false, d: false }, pad = { l: false, r: false, j: false, a: false, s: false, d: false }, gp = { l: false, r: false, j: false, a: false, s: false, d: false };
+var input = { l: false, r: false, j: false, a: false, s: false, d: false };
 function key(e, down) {
   var k = e.key;
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = down;
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = down;
   else if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'z' || k === 'Z') keys.j = down;
+  else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = down;
   else if (k === 'x' || k === 'X' || k === 'k' || k === 'K' || k === 'e' || k === 'E') keys.a = down;
   else if (k === 'c' || k === 'C' || k === 'Shift' || k === 'l' || k === 'L') keys.s = down;
   else return;
@@ -182,20 +183,21 @@ function bindBtn(node, prop) {
 bindBtn(el('bA'), 'j'); bindBtn(el('bB'), 'a'); bindBtn(el('bC'), 's');
 (function () {
   var dp = el('dpad'), id = null;
-  function setDir(e) { var r = dp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width; pad.l = x < 0.45; pad.r = x > 0.55; dp.setAttribute('data-dir', pad.l ? 'L' : (pad.r ? 'R' : '')); }
+  function setDir(e) { var r = dp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; pad.d = y > 0.62 && x > 0.28 && x < 0.72; pad.l = !pad.d && x < 0.45; pad.r = !pad.d && x > 0.55; dp.setAttribute('data-dir', pad.d ? 'D' : pad.l ? 'L' : (pad.r ? 'R' : '')); }
   dp.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; try { dp.setPointerCapture(id); } catch (x) {} setDir(e); });
   dp.addEventListener('pointermove', function (e) { if (e.pointerId === id) setDir(e); });
-  function up(e) { if (e.pointerId !== id) return; id = null; pad.l = pad.r = false; dp.setAttribute('data-dir', ''); }
+  function up(e) { if (e.pointerId !== id) return; id = null; pad.l = pad.r = pad.d = false; dp.setAttribute('data-dir', ''); }
   dp.addEventListener('pointerup', up); dp.addEventListener('pointercancel', up); dp.addEventListener('lostpointercapture', up);
 })();
 var gpPrev = {};
 function pollPad() {
   var pads = navigator.getGamepads ? navigator.getGamepads() : [], p = null;
   for (var i = 0; i < pads.length; i++) if (pads[i]) { p = pads[i]; break; }
-  if (!p) { gp.l = gp.r = gp.j = gp.a = gp.s = false; return; }
+  if (!p) { gp.l = gp.r = gp.j = gp.a = gp.s = gp.d = false; return; }
   var ax = p.axes[0] || 0, b = function (n) { return !!(p.buttons[n] && p.buttons[n].pressed); };
   gp.l = ax < -0.4 || b(14); gp.r = ax > 0.4 || b(15); gp.j = b(0); gp.a = b(2) || b(1); gp.s = b(3) || b(5);
   var up = (p.axes[1] || 0) < -0.5 || b(12), dn = (p.axes[1] || 0) > 0.5 || b(13);
+  gp.d = dn;
   if (menuOpen()) {
     if (up && !gpPrev.up) menuMove(-1); if (dn && !gpPrev.dn) menuMove(1);
     if (b(0) && !gpPrev.a0) menuPress(); if (b(1) && !gpPrev.b1) menuBackPress();

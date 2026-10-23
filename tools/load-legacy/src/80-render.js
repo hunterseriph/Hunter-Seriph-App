@@ -225,7 +225,7 @@ function drawDeco(e, cx) {
   else if (e.d === 'parkgate') drawParkGate(x, y);
   else if (e.d === 'flumesign') drawFlumeSign(x, y);
   else if (e.d === 'bulbs') { for (var bi = 0; bi < 6; bi++) { ctx.fillStyle = (Math.floor(G.t * 3) + bi) % 2 ? '#ffe36a' : '#ff2630'; ctx.fillRect(x + bi * 9, y + Math.round(Math.sin(bi / 5 * Math.PI) * 6), 3, 3); } }
-  else if (e.d === 'neon') { var col = e.hue < 0.5 ? '#ff2a8a' : '#ff2630'; ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 10 + Math.sin(G.t * 6 + x) * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x, y, 34, 14); ctx.fillStyle = col; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.hue < 0.33 ? 'LOAD' : e.hue < 0.66 ? 'OPEN' : 'XXX', x + 17, y + 10); ctx.restore(); }
+  else if (e.d === 'neon') { if (e.post) { R(ctx, '#12040a', x + 6, y + 14, 3, 10); R(ctx, '#12040a', x + 25, y + 14, 3, 10); R(ctx, '#3a0a10', x + 7, y + 14, 1, 10); R(ctx, '#3a0a10', x + 26, y + 14, 1, 10); } var col = e.hue < 0.5 ? '#ff2a8a' : '#ff2630'; ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 10 + Math.sin(G.t * 6 + x) * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x, y, 34, 14); ctx.fillStyle = col; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.hue < 0.33 ? 'LOAD' : e.hue < 0.66 ? 'OPEN' : 'XXX', x + 17, y + 10); ctx.restore(); }
   else if (e.d === 'throneL' || e.d === 'throneR') { R(ctx, '#1a0507', x - 10, y - 50, 20, 50); R(ctx, '#5a070c', x - 8, y - 48, 16, 46); R(ctx, '#ff2630', x - 8, y - 48, 16, 2); ctx.fillStyle = 'rgba(255,170,60,0.18)'; ctx.beginPath(); ctx.arc(x, y - 58, 12, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x, y - 58 + Math.sin(G.t * 8 + x) * 0.8, 3, 0, 6.28); ctx.fill(); }
 }
 function drawDoor(e, cx) {
@@ -364,7 +364,9 @@ function drawHud() {
   }
 }
 function drawPrompt(cx) {
-  var e = G.near; if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
+  var e = G.near;
+  if (!e && !G.paused && G.mode === 'play' && P.onGround && P.state === 'normal' && tileAt(P.x, P.y + 2) === TG) text('HOLD DOWN + JUMP', Math.round(P.x - cx), P.y - P.h - 16, 'center', '#ffe36a', 6);
+  if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
   var t = e.k === 'grate' ? 'DOWN' : e.k === 'chest' ? 'OPEN' : e.k === 'door' ? 'ENTER' : e.k === 'npc' ? 'TALK' : e.k === 'altar' ? 'TAKE' : e.k === 'gate' ? 'ENTER' : e.k === 'bld' ? (META.built[e.b.id] ? 'ENTER' : 'BUY') : 'USE';
   el('bBt').textContent = t; el('bB').classList.add('use');
   var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';

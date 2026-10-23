@@ -28,7 +28,8 @@ body{margin:0;background:var(--bg);color:var(--bone);overflow:hidden;touch-actio
 .pbtn.cool{opacity:0.45}
 #dpad{width:176px;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none}
 #dpad svg{width:30px;height:30px;fill:var(--ash)}
-#dpad[data-dir="L"] .al,#dpad[data-dir="R"] .ar{fill:var(--bone)}
+#dpad[data-dir="L"] .al,#dpad[data-dir="R"] .ar,#dpad[data-dir="D"] .ad{fill:var(--bone)}
+#dpad .ad{width:26px;height:26px;align-self:flex-end;margin-bottom:4px}
 #acts{display:flex;gap:10px;align-items:flex-end}
 .oct{clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
 #bA{width:84px;height:84px}
@@ -125,8 +126,9 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
  </div>
 
  <div id="pad">
-  <div id="dpad" data-dir="" role="group" aria-label="Move left or right">
+  <div id="dpad" data-dir="" role="group" aria-label="Move left, right or down">
    <svg class="al" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3v18L5 12z"></path></svg>
+   <svg class="ad" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14l-7 9z"></path></svg>
    <svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18l12-9z"></path></svg>
   </div>
   <div id="acts">
@@ -418,13 +420,14 @@ var META = (function () { var d = freshMeta(); try { var s = JSON.parse(localSto
 function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(META)); } catch (e) {} }
 
 /* ---------- input: keyboard, touch pad, gamepad ---------- */
-var keys = { l: false, r: false, j: false, a: false, s: false, u: false, d: false }, pad = { l: false, r: false, j: false, a: false, s: false }, gp = { l: false, r: false, j: false, a: false, s: false };
-var input = { l: false, r: false, j: false, a: false, s: false };
+var keys = { l: false, r: false, j: false, a: false, s: false, u: false, d: false }, pad = { l: false, r: false, j: false, a: false, s: false, d: false }, gp = { l: false, r: false, j: false, a: false, s: false, d: false };
+var input = { l: false, r: false, j: false, a: false, s: false, d: false };
 function key(e, down) {
   var k = e.key;
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.l = down;
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.r = down;
   else if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'z' || k === 'Z') keys.j = down;
+  else if (k === 'ArrowDown' || k === 's' || k === 'S') keys.d = down;
   else if (k === 'x' || k === 'X' || k === 'k' || k === 'K' || k === 'e' || k === 'E') keys.a = down;
   else if (k === 'c' || k === 'C' || k === 'Shift' || k === 'l' || k === 'L') keys.s = down;
   else return;
@@ -443,20 +446,21 @@ function bindBtn(node, prop) {
 bindBtn(el('bA'), 'j'); bindBtn(el('bB'), 'a'); bindBtn(el('bC'), 's');
 (function () {
   var dp = el('dpad'), id = null;
-  function setDir(e) { var r = dp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width; pad.l = x < 0.45; pad.r = x > 0.55; dp.setAttribute('data-dir', pad.l ? 'L' : (pad.r ? 'R' : '')); }
+  function setDir(e) { var r = dp.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; pad.d = y > 0.62 && x > 0.28 && x < 0.72; pad.l = !pad.d && x < 0.45; pad.r = !pad.d && x > 0.55; dp.setAttribute('data-dir', pad.d ? 'D' : pad.l ? 'L' : (pad.r ? 'R' : '')); }
   dp.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; try { dp.setPointerCapture(id); } catch (x) {} setDir(e); });
   dp.addEventListener('pointermove', function (e) { if (e.pointerId === id) setDir(e); });
-  function up(e) { if (e.pointerId !== id) return; id = null; pad.l = pad.r = false; dp.setAttribute('data-dir', ''); }
+  function up(e) { if (e.pointerId !== id) return; id = null; pad.l = pad.r = pad.d = false; dp.setAttribute('data-dir', ''); }
   dp.addEventListener('pointerup', up); dp.addEventListener('pointercancel', up); dp.addEventListener('lostpointercapture', up);
 })();
 var gpPrev = {};
 function pollPad() {
   var pads = navigator.getGamepads ? navigator.getGamepads() : [], p = null;
   for (var i = 0; i < pads.length; i++) if (pads[i]) { p = pads[i]; break; }
-  if (!p) { gp.l = gp.r = gp.j = gp.a = gp.s = false; return; }
+  if (!p) { gp.l = gp.r = gp.j = gp.a = gp.s = gp.d = false; return; }
   var ax = p.axes[0] || 0, b = function (n) { return !!(p.buttons[n] && p.buttons[n].pressed); };
   gp.l = ax < -0.4 || b(14); gp.r = ax > 0.4 || b(15); gp.j = b(0); gp.a = b(2) || b(1); gp.s = b(3) || b(5);
   var up = (p.axes[1] || 0) < -0.5 || b(12), dn = (p.axes[1] || 0) > 0.5 || b(13);
+  gp.d = dn;
   if (menuOpen()) {
     if (up && !gpPrev.up) menuMove(-1); if (dn && !gpPrev.dn) menuMove(1);
     if (b(0) && !gpPrev.a0) menuPress(); if (b(1) && !gpPrev.b1) menuBackPress();
@@ -759,7 +763,33 @@ function buildRoom(rm) {
   for (y = 3; y < H - 1; y++) for (x = 2; x < W - 2; x++) if (G(x, y) === TL && G(x - 1, y) !== TL && r() < 0.6) { var len = 0; while (G(x + len, y) === TL) len++; for (var k = 0; k < len; k += 2) ents.push({ k: 'drop', x: (x + k) * T + 8, y: y * T - 10, di: di++ }); }
   if (t === 'normal' && r() < 0.18 && stands.length) { var cs = stands.pop(); ents.push({ k: 'chest', x: cs[0] * T + 8, y: (cs[1] + 1) * T }); }
   // decorations by area
-  var nd = rn(2, 4); for (var dd = 0; dd < nd; dd++) ents.push({ k: 'deco', d: rm.area === 'city' ? (r() < 0.6 ? 'bulbs' : 'neon') : (r() < 0.5 ? 'candle' : 'banner'), x: rn(3, 28) * T, y: rn(2, 6) * T, hue: r() });
+  // decorations, placed on purpose: hangings in mirrored pairs under the ceiling, candles standing on ledges and the floor
+  function clear(x0, y0, x1, y1) { for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) if (xx < 1 || xx > W - 2 || G(xx, yy) !== TA || res[yy * W + xx]) return false; return true; }
+  function nearEnt(px, py, d) { return ents.some(function (en) { return en.k !== 'enemy' && en.x !== undefined && Math.abs(en.x - px) < d && Math.abs((en.y || 0) - py) < 40; }); }
+  var city = rm.area === 'city', hang = city ? 'bulbs' : 'banner', hw = city ? 3 : 2, hh = city ? 2 : 4;
+  var pairs = city ? [[9, W - 12], [4, W - 7]] : [[8, W - 10], [12, W - 14], [4, W - 6]]; // inner pairs first so the HUD corners stay clear
+  var wantPairs = t === 'start' ? 1 : rn(1, 2), placed = 0;
+  for (var pq = 0; pq < pairs.length && placed < wantPairs; pq++) {
+    var a0 = pairs[pq][0], a1 = pairs[pq][1];
+    if (G(a0, 0) === TW && G(a1, 0) === TW && clear(a0, 1, a0 + hw - 1, hh) && clear(a1, 1, a1 + hw - 1, hh)) {
+      ents.push({ k: 'deco', d: hang, x: a0 * T + (city ? 2 : 6), y: city ? T + 3 : T + 2, hue: r() });
+      ents.push({ k: 'deco', d: hang, x: a1 * T + (city ? 2 : 6), y: city ? T + 3 : T + 2, hue: r() });
+      placed++;
+    }
+  }
+  // ledge tops: candles at both ends of a bare ledge (castle side), or one neon sign on a post (Ejaculand)
+  var ledges = [];
+  for (y = 4; y < H - 2; y++) for (x = 1; x < W - 1; x++) if (G(x, y) === TL && G(x - 1, y) !== TL) { var x1 = x; while (G(x1 + 1, y) === TL) x1++; if (x1 - x >= 3 && clear(x, y - 2, x1, y - 1) && !ents.some(function (en) { return (en.k === 'drop' || en.k === 'chest') && en.y < y * T + 2 && en.y > y * T - 20 && en.x > x * T - 8 && en.x < (x1 + 1) * T + 8; })) ledges.push([x, x1, y]); }
+  shuffle(ledges, r);
+  if (city) { if (ledges.length && r() < 0.7) { var lg = ledges[0], mx = ((lg[0] + lg[1] + 1) / 2) * T; ents.push({ k: 'deco', d: 'neon', x: Math.round(mx - 17), y: lg[2] * T - 24, hue: r(), post: 1 }); } }
+  else {
+    var nl = Math.min(ledges.length, rn(1, 2));
+    for (var li = 0; li < nl; li++) { var L0 = ledges[li]; ents.push({ k: 'deco', d: 'candle', x: L0[0] * T + 3, y: L0[2] * T - 18 }); ents.push({ k: 'deco', d: 'candle', x: L0[1] * T + 7, y: L0[2] * T - 18 }); }
+    // a candle by each side wall on the floor, only where there is no way out on that side
+    if (!ex.l && !ex.r && r() < 0.6 && clear(2, 13, 2, 14) && clear(W - 3, 13, W - 3, 14) && G(2, 15) === TW && G(W - 3, 15) === TW && !nearEnt(2 * T + 8, 15 * T, 24) && !nearEnt((W - 3) * T + 8, 15 * T, 24)) {
+      ents.push({ k: 'deco', d: 'candle', x: 2 * T + 5, y: 15 * T - 18 }); ents.push({ k: 'deco', d: 'candle', x: (W - 3) * T + 5, y: 15 * T - 18 });
+    }
+  }
   ents.forEach(function (en, i) { en.i = i; });
   return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d ? 8 : (t === 'start' ? 10 : 16)) * T };
 }
@@ -910,6 +940,8 @@ function updatePlayer(dt) {
     else { if (dir !== 0) { P.vx += dir * AIRACC * dt; if (Math.abs(P.vx) > mx) P.vx = dir * mx; } else { var f2 = Math.min(Math.abs(P.vx), 70 * dt); P.vx -= sgn * f2; } }
     if (dir !== 0) P.face = dir;
     if (P.onGround) { P.coyote = 0.09; P.jumps = 0; } else P.coyote -= dt;
+    // hold down and press jump to drop through an iron grate or a ledge
+    if (jumpPressed && input.d && P.onGround) { var ft = tileAt(P.x, P.y + 2); if (ft === TG || ft === TL) { P.drop = 0.3; P.onGround = false; P.vy = 80; P.coyote = 0; jumpPressed = false; P.jumpBuf = 0; if (ft === TG) sfx.door(); } }
     if (jumpPressed) P.jumpBuf = 0.1; else P.jumpBuf -= dt;
     if (P.jumpBuf > 0 && P.coyote > 0) { sfx.jump(); P.vy = -JUMPV; P.onGround = false; P.coyote = 0; P.jumpBuf = 0; P.jumpStartT = 0.07; P.jumpHeld = true; P.jumps = 1; }
     else if (P.jumpBuf > 0 && !P.onGround && P.coyote <= 0 && P.jumps < ST.jumps) { if (P.jumps === 0) P.jumps = 1; sfx.dbl(); P.vy = -JUMP2; P.jumpBuf = 0; P.jumpStartT = 0.07; P.jumpHeld = true; P.jumps++; poof(P.x, P.y - 4, 6, ['#f1e7d0', '#ff2630']); }
@@ -933,7 +965,7 @@ function updatePlayer(dt) {
   // spikes
   if (P.state === 'normal' && P.inv <= 0 && P.ooze <= 0) {
     var tx0 = Math.floor((P.x - P.w / 2 + 2) / T), tx1 = Math.floor((P.x + P.w / 2 - 2) / T), ty0 = Math.floor((P.y - 10) / T), ty1 = Math.floor((P.y - 1) / T);
-    for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) if (tx >= 0 && ty >= 0 && tx < L.w && ty < L.h && L.tiles[ty * L.w + tx] === TS) { hurtP(10 + 4 * tierOf(), P.x - P.face, 'spikes'); P.vy = -300; P.state = 'hurt'; return; }
+    for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) if (tx >= 0 && ty >= 0 && tx < L.w && ty < L.h && L.tiles[ty * L.w + tx] === TS) { hurtP(10 + 4 * tierOf(), P.x - P.face, 'spikes'); if (P.state !== 'dead') { P.vy = -300; P.state = 'hurt'; } return; }
   }
   roomEdges();
 }
@@ -1176,7 +1208,6 @@ function findNear() {
     if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
     if (dx < r && dy < 30 && dx < bd) { bd = dx; best = e; }
   });
-  if (!best && P.onGround && (tileAt(P.x, P.y + 2) === TG)) best = { k: 'grate', x: P.x, y: P.y };
   return best;
 }
 function useThing(e) {
@@ -1188,7 +1219,6 @@ function useThing(e) {
   } else if (e.k === 'door') openDoor(e);
   else if (e.k === 'npc') openMerchant(e);
   else if (e.k === 'altar') openAltar(e);
-  else if (e.k === 'grate') { P.drop = 0.3; P.onGround = false; P.vy = 80; sfx.door(); }
 }
 function grantPower(id) {
   var p = powerById(id); RUN.powers.push(id); var oldM = ST.mhp; ST = calcStats();
@@ -1864,7 +1894,7 @@ function drawDeco(e, cx) {
   else if (e.d === 'parkgate') drawParkGate(x, y);
   else if (e.d === 'flumesign') drawFlumeSign(x, y);
   else if (e.d === 'bulbs') { for (var bi = 0; bi < 6; bi++) { ctx.fillStyle = (Math.floor(G.t * 3) + bi) % 2 ? '#ffe36a' : '#ff2630'; ctx.fillRect(x + bi * 9, y + Math.round(Math.sin(bi / 5 * Math.PI) * 6), 3, 3); } }
-  else if (e.d === 'neon') { var col = e.hue < 0.5 ? '#ff2a8a' : '#ff2630'; ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 10 + Math.sin(G.t * 6 + x) * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x, y, 34, 14); ctx.fillStyle = col; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.hue < 0.33 ? 'LOAD' : e.hue < 0.66 ? 'OPEN' : 'XXX', x + 17, y + 10); ctx.restore(); }
+  else if (e.d === 'neon') { if (e.post) { R(ctx, '#12040a', x + 6, y + 14, 3, 10); R(ctx, '#12040a', x + 25, y + 14, 3, 10); R(ctx, '#3a0a10', x + 7, y + 14, 1, 10); R(ctx, '#3a0a10', x + 26, y + 14, 1, 10); } var col = e.hue < 0.5 ? '#ff2a8a' : '#ff2630'; ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 10 + Math.sin(G.t * 6 + x) * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x, y, 34, 14); ctx.fillStyle = col; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.hue < 0.33 ? 'LOAD' : e.hue < 0.66 ? 'OPEN' : 'XXX', x + 17, y + 10); ctx.restore(); }
   else if (e.d === 'throneL' || e.d === 'throneR') { R(ctx, '#1a0507', x - 10, y - 50, 20, 50); R(ctx, '#5a070c', x - 8, y - 48, 16, 46); R(ctx, '#ff2630', x - 8, y - 48, 16, 2); ctx.fillStyle = 'rgba(255,170,60,0.18)'; ctx.beginPath(); ctx.arc(x, y - 58, 12, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x, y - 58 + Math.sin(G.t * 8 + x) * 0.8, 3, 0, 6.28); ctx.fill(); }
 }
 function drawDoor(e, cx) {
@@ -2003,7 +2033,9 @@ function drawHud() {
   }
 }
 function drawPrompt(cx) {
-  var e = G.near; if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
+  var e = G.near;
+  if (!e && !G.paused && G.mode === 'play' && P.onGround && P.state === 'normal' && tileAt(P.x, P.y + 2) === TG) text('HOLD DOWN + JUMP', Math.round(P.x - cx), P.y - P.h - 16, 'center', '#ffe36a', 6);
+  if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
   var t = e.k === 'grate' ? 'DOWN' : e.k === 'chest' ? 'OPEN' : e.k === 'door' ? 'ENTER' : e.k === 'npc' ? 'TALK' : e.k === 'altar' ? 'TAKE' : e.k === 'gate' ? 'ENTER' : e.k === 'bld' ? (META.built[e.b.id] ? 'ENTER' : 'BUY') : 'USE';
   el('bBt').textContent = t; el('bB').classList.add('use');
   var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';
@@ -2088,7 +2120,7 @@ function drawVignette() { if (vignette) { ctx.setTransform(1, 0, 0, 1, 0, 0); ct
    ===================================================================================================== */
 function step(dt) {
   G.t += dt; pollPad();
-  input.l = keys.l || pad.l || gp.l; input.r = keys.r || pad.r || gp.r; input.j = keys.j || pad.j || gp.j; input.a = keys.a || pad.a || gp.a; input.s = keys.s || pad.s || gp.s;
+  input.l = keys.l || pad.l || gp.l; input.r = keys.r || pad.r || gp.r; input.j = keys.j || pad.j || gp.j; input.a = keys.a || pad.a || gp.a; input.s = keys.s || pad.s || gp.s; input.d = keys.d || pad.d || gp.d;
   if (G.banner > 0) G.banner -= dt; if (G.shake > 0) G.shake -= dt * 20; if (G.fade > 0) G.fade -= dt;
   if (G.msg) { G.msg.age += dt; if (G.msg.age > 4) G.msg = null; }
   G.flashT = (G.flashT || 5) - dt; if (G.flashT <= 0) { G.flash = 0.16; G.flashT = 4 + Math.random() * 5; } if (G.flash > 0) G.flash -= dt;

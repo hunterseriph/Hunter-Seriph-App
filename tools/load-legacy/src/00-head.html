@@ -28,7 +28,8 @@ body{margin:0;background:var(--bg);color:var(--bone);overflow:hidden;touch-actio
 .pbtn.cool{opacity:0.45}
 #dpad{width:176px;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none}
 #dpad svg{width:30px;height:30px;fill:var(--ash)}
-#dpad[data-dir="L"] .al,#dpad[data-dir="R"] .ar{fill:var(--bone)}
+#dpad[data-dir="L"] .al,#dpad[data-dir="R"] .ar,#dpad[data-dir="D"] .ad{fill:var(--bone)}
+#dpad .ad{width:26px;height:26px;align-self:flex-end;margin-bottom:4px}
 #acts{display:flex;gap:10px;align-items:flex-end}
 .oct{clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
 #bA{width:84px;height:84px}
@@ -125,8 +126,9 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
  </div>
 
  <div id="pad">
-  <div id="dpad" data-dir="" role="group" aria-label="Move left or right">
+  <div id="dpad" data-dir="" role="group" aria-label="Move left, right or down">
    <svg class="al" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3v18L5 12z"></path></svg>
+   <svg class="ad" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14l-7 9z"></path></svg>
    <svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18l12-9z"></path></svg>
   </div>
   <div id="acts">

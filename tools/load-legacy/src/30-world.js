@@ -154,7 +154,33 @@ function buildRoom(rm) {
   for (y = 3; y < H - 1; y++) for (x = 2; x < W - 2; x++) if (G(x, y) === TL && G(x - 1, y) !== TL && r() < 0.6) { var len = 0; while (G(x + len, y) === TL) len++; for (var k = 0; k < len; k += 2) ents.push({ k: 'drop', x: (x + k) * T + 8, y: y * T - 10, di: di++ }); }
   if (t === 'normal' && r() < 0.18 && stands.length) { var cs = stands.pop(); ents.push({ k: 'chest', x: cs[0] * T + 8, y: (cs[1] + 1) * T }); }
   // decorations by area
-  var nd = rn(2, 4); for (var dd = 0; dd < nd; dd++) ents.push({ k: 'deco', d: rm.area === 'city' ? (r() < 0.6 ? 'bulbs' : 'neon') : (r() < 0.5 ? 'candle' : 'banner'), x: rn(3, 28) * T, y: rn(2, 6) * T, hue: r() });
+  // decorations, placed on purpose: hangings in mirrored pairs under the ceiling, candles standing on ledges and the floor
+  function clear(x0, y0, x1, y1) { for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) if (xx < 1 || xx > W - 2 || G(xx, yy) !== TA || res[yy * W + xx]) return false; return true; }
+  function nearEnt(px, py, d) { return ents.some(function (en) { return en.k !== 'enemy' && en.x !== undefined && Math.abs(en.x - px) < d && Math.abs((en.y || 0) - py) < 40; }); }
+  var city = rm.area === 'city', hang = city ? 'bulbs' : 'banner', hw = city ? 3 : 2, hh = city ? 2 : 4;
+  var pairs = city ? [[9, W - 12], [4, W - 7]] : [[8, W - 10], [12, W - 14], [4, W - 6]]; // inner pairs first so the HUD corners stay clear
+  var wantPairs = t === 'start' ? 1 : rn(1, 2), placed = 0;
+  for (var pq = 0; pq < pairs.length && placed < wantPairs; pq++) {
+    var a0 = pairs[pq][0], a1 = pairs[pq][1];
+    if (G(a0, 0) === TW && G(a1, 0) === TW && clear(a0, 1, a0 + hw - 1, hh) && clear(a1, 1, a1 + hw - 1, hh)) {
+      ents.push({ k: 'deco', d: hang, x: a0 * T + (city ? 2 : 6), y: city ? T + 3 : T + 2, hue: r() });
+      ents.push({ k: 'deco', d: hang, x: a1 * T + (city ? 2 : 6), y: city ? T + 3 : T + 2, hue: r() });
+      placed++;
+    }
+  }
+  // ledge tops: candles at both ends of a bare ledge (castle side), or one neon sign on a post (Ejaculand)
+  var ledges = [];
+  for (y = 4; y < H - 2; y++) for (x = 1; x < W - 1; x++) if (G(x, y) === TL && G(x - 1, y) !== TL) { var x1 = x; while (G(x1 + 1, y) === TL) x1++; if (x1 - x >= 3 && clear(x, y - 2, x1, y - 1) && !ents.some(function (en) { return (en.k === 'drop' || en.k === 'chest') && en.y < y * T + 2 && en.y > y * T - 20 && en.x > x * T - 8 && en.x < (x1 + 1) * T + 8; })) ledges.push([x, x1, y]); }
+  shuffle(ledges, r);
+  if (city) { if (ledges.length && r() < 0.7) { var lg = ledges[0], mx = ((lg[0] + lg[1] + 1) / 2) * T; ents.push({ k: 'deco', d: 'neon', x: Math.round(mx - 17), y: lg[2] * T - 24, hue: r(), post: 1 }); } }
+  else {
+    var nl = Math.min(ledges.length, rn(1, 2));
+    for (var li = 0; li < nl; li++) { var L0 = ledges[li]; ents.push({ k: 'deco', d: 'candle', x: L0[0] * T + 3, y: L0[2] * T - 18 }); ents.push({ k: 'deco', d: 'candle', x: L0[1] * T + 7, y: L0[2] * T - 18 }); }
+    // a candle by each side wall on the floor, only where there is no way out on that side
+    if (!ex.l && !ex.r && r() < 0.6 && clear(2, 13, 2, 14) && clear(W - 3, 13, W - 3, 14) && G(2, 15) === TW && G(W - 3, 15) === TW && !nearEnt(2 * T + 8, 15 * T, 24) && !nearEnt((W - 3) * T + 8, 15 * T, 24)) {
+      ents.push({ k: 'deco', d: 'candle', x: 2 * T + 5, y: 15 * T - 18 }); ents.push({ k: 'deco', d: 'candle', x: (W - 3) * T + 5, y: 15 * T - 18 });
+    }
+  }
   ents.forEach(function (en, i) { en.i = i; });
   return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d ? 8 : (t === 'start' ? 10 : 16)) * T };
 }

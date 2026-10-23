@@ -3,7 +3,7 @@
    ===================================================================================================== */
 function step(dt) {
   G.t += dt; pollPad();
-  input.l = keys.l || pad.l || gp.l; input.r = keys.r || pad.r || gp.r; input.j = keys.j || pad.j || gp.j; input.a = keys.a || pad.a || gp.a; input.s = keys.s || pad.s || gp.s;
+  input.l = keys.l || pad.l || gp.l; input.r = keys.r || pad.r || gp.r; input.j = keys.j || pad.j || gp.j; input.a = keys.a || pad.a || gp.a; input.s = keys.s || pad.s || gp.s; input.d = keys.d || pad.d || gp.d;
   if (G.banner > 0) G.banner -= dt; if (G.shake > 0) G.shake -= dt * 20; if (G.fade > 0) G.fade -= dt;
   if (G.msg) { G.msg.age += dt; if (G.msg.age > 4) G.msg = null; }
   G.flashT = (G.flashT || 5) - dt; if (G.flashT <= 0) { G.flash = 0.16; G.flashT = 4 + Math.random() * 5; } if (G.flash > 0) G.flash -= dt;

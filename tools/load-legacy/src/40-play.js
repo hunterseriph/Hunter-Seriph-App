@@ -133,6 +133,8 @@ function updatePlayer(dt) {
     else { if (dir !== 0) { P.vx += dir * AIRACC * dt; if (Math.abs(P.vx) > mx) P.vx = dir * mx; } else { var f2 = Math.min(Math.abs(P.vx), 70 * dt); P.vx -= sgn * f2; } }
     if (dir !== 0) P.face = dir;
     if (P.onGround) { P.coyote = 0.09; P.jumps = 0; } else P.coyote -= dt;
+    // hold down and press jump to drop through an iron grate or a ledge
+    if (jumpPressed && input.d && P.onGround) { var ft = tileAt(P.x, P.y + 2); if (ft === TG || ft === TL) { P.drop = 0.3; P.onGround = false; P.vy = 80; P.coyote = 0; jumpPressed = false; P.jumpBuf = 0; if (ft === TG) sfx.door(); } }
     if (jumpPressed) P.jumpBuf = 0.1; else P.jumpBuf -= dt;
     if (P.jumpBuf > 0 && P.coyote > 0) { sfx.jump(); P.vy = -JUMPV; P.onGround = false; P.coyote = 0; P.jumpBuf = 0; P.jumpStartT = 0.07; P.jumpHeld = true; P.jumps = 1; }
     else if (P.jumpBuf > 0 && !P.onGround && P.coyote <= 0 && P.jumps < ST.jumps) { if (P.jumps === 0) P.jumps = 1; sfx.dbl(); P.vy = -JUMP2; P.jumpBuf = 0; P.jumpStartT = 0.07; P.jumpHeld = true; P.jumps++; poof(P.x, P.y - 4, 6, ['#f1e7d0', '#ff2630']); }
@@ -156,7 +158,7 @@ function updatePlayer(dt) {
   // spikes
   if (P.state === 'normal' && P.inv <= 0 && P.ooze <= 0) {
     var tx0 = Math.floor((P.x - P.w / 2 + 2) / T), tx1 = Math.floor((P.x + P.w / 2 - 2) / T), ty0 = Math.floor((P.y - 10) / T), ty1 = Math.floor((P.y - 1) / T);
-    for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) if (tx >= 0 && ty >= 0 && tx < L.w && ty < L.h && L.tiles[ty * L.w + tx] === TS) { hurtP(10 + 4 * tierOf(), P.x - P.face, 'spikes'); P.vy = -300; P.state = 'hurt'; return; }
+    for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) if (tx >= 0 && ty >= 0 && tx < L.w && ty < L.h && L.tiles[ty * L.w + tx] === TS) { hurtP(10 + 4 * tierOf(), P.x - P.face, 'spikes'); if (P.state !== 'dead') { P.vy = -300; P.state = 'hurt'; } return; }
   }
   roomEdges();
 }
@@ -399,7 +401,6 @@ function findNear() {
     if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
     if (dx < r && dy < 30 && dx < bd) { bd = dx; best = e; }
   });
-  if (!best && P.onGround && (tileAt(P.x, P.y + 2) === TG)) best = { k: 'grate', x: P.x, y: P.y };
   return best;
 }
 function useThing(e) {
@@ -411,7 +412,6 @@ function useThing(e) {
   } else if (e.k === 'door') openDoor(e);
   else if (e.k === 'npc') openMerchant(e);
   else if (e.k === 'altar') openAltar(e);
-  else if (e.k === 'grate') { P.drop = 0.3; P.onGround = false; P.vy = 80; sfx.door(); }
 }
 function grantPower(id) {
   var p = powerById(id); RUN.powers.push(id); var oldM = ST.mhp; ST = calcStats();
