@@ -63,7 +63,9 @@ g = g.replace(/android\s*\{/, `android {
             keyPassword 'android'
         }
     }`);
-g = g.replace(/versionCode\s+\d+/, 'versionCode Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")');
+// The repo was recreated in Oct 2026 and its build counter restarted at 1, but phones already had build 39
+// from the old repo. Android refuses to install a lower version over a higher one, so add 1000.
+g = g.replace(/versionCode\s+\d+/, 'versionCode (1000 + Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1"))');
 if (!g.includes('hs-debug.keystore') || !g.includes('GITHUB_RUN_NUMBER')) throw new Error('build.gradle patch failed');
 fs.writeFileSync(gp, g);
 console.log('android project patched');
