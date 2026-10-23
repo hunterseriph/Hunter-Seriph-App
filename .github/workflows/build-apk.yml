@@ -1,0 +1,103 @@
+name: Build Android APK and PC app
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Copy fonts into the app
+        run: node tools/prepare.js
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      - name: Apply icon and theme
+        run: node tools/patch-android.js
+
+      - name: Sync web files into Android
+        run: npx cap sync android
+
+      - name: Build the APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Name the APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Hunter-Seriph.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hunter-Seriph-apk
+          path: Hunter-Seriph.apk
+
+      - name: Publish a release with the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" Hunter-Seriph.apk \
+            --title "Hunter Seriph app, build ${{ github.run_number }}" \
+            --notes "Android: download Hunter-Seriph.apk on your phone and tap it to install. PC: download Hunter-Seriph-PC.exe and run it (no install needed; replace the old one to update)." \
+            --latest
+
+  pc:
+    needs: apk
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Copy fonts into the app
+        run: node tools/prepare.js
+
+      - name: Put the app files and icon in the PC wrapper
+        shell: bash
+        run: |
+          rm -rf desktop/www
+          cp -r www desktop/www
+          cp resources/icon-512.png desktop/icon.png
+
+      - name: Install the PC wrapper
+        working-directory: desktop
+        run: npm install
+
+      - name: Check the app and every game load without errors
+        working-directory: desktop
+        run: npx electron . --smoke
+
+      - name: Build the PC app
+        working-directory: desktop
+        run: npm run dist
+
+      - name: Add the PC app to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "build-${{ github.run_number }}" desktop/dist/Hunter-Seriph-PC.exe --clobber
