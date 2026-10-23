@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"><style>html,body{margin:0}body{font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"><style>html,body{margin:0}body{font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}#hsTouchTgl.hs-float{top:auto!important;bottom:calc(10px + env(safe-area-inset-bottom,0px));right:10px}
+</style></head><body>
 <title>Spermaid Survivors</title>
 <link rel="stylesheet" href="../fonts/fonts.css">
 <style>
@@ -211,8 +212,9 @@ function update(dt) {
   g.t += dt;
   if (g.t >= DAWN) { endRun(true); return; }
 
-  var vx = joy.on ? joy.x : ((keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0));
-  var vy = joy.on ? joy.y : ((keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0));
+  var ps = window.HSPad ? HSPad.stick() : { on: false };
+  var vx = joy.on ? joy.x : ps.on ? ps.x : ((keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0));
+  var vy = joy.on ? joy.y : ps.on ? ps.y : ((keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0));
   var vl = Math.hypot(vx, vy);
   if (vl > 1) { vx /= vl; vy /= vl; vl = 1; }
   if (vl < 0.12) { vx = 0; vy = 0; vl = 0; }
@@ -386,7 +388,7 @@ function draw() {
     }
   }
 
-  if (joy.on) {
+  if (joy.on && (!window.HSPad || HSPad.touchOn())) {
     ctx.strokeStyle = 'rgba(241,231,208,0.35)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(joy.ox, joy.oy, R, 0, 6.2832); ctx.stroke();
     ctx.fillStyle = 'rgba(196,18,28,0.6)';
@@ -432,4 +434,10 @@ requestAnimationFrame(frame);
 })();
 </script>
 
+
+<script src="padkit.js"></script>
+<script>
+/* controller in the menus and in play (the stick moves Spermaid), plus the on-screen controls toggle (padkit.js) */
+if (window.HSPad) HSPad.setup({ menu: function () { var ids = ["levelup", "over", "menu"]; for (var i = 0; i < ids.length; i++) { var e = document.getElementById(ids[i]); if (e && !e.hidden) return e; } return null; }, toggle: true });
+</script>
 </body></html>

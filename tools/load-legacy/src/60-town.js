@@ -21,7 +21,7 @@ function goTown(first) {
   var cls = META.last || 'cumhead'; P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
   P.x = first ? 60 : TOWN.gateX - 60; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
-  music.play('b7', false); saveMeta();
+  music.play('town'); saveMeta();
   if (!META.seenTown) { META.seenTown = 1; saveMeta(); toast('WALK RIGHT TO THE CASTLE GATE. SPEND DROPS IN TOWN BETWEEN HEIRS.'); }
 }
 function camSnapTown() { G.cam.x = clamp(P.x - VW / 2, 0, TOWN.w * T - VW); G.cam.y = 0; }

@@ -29,14 +29,14 @@ Object.keys(SRC).forEach(function (k) { var i = new Image(); i.src = SRC[k]; img
 function ok(i) { return i && i.complete && i.naturalWidth > 0; }
 /* draw a sheet sprite with its feet at (x, y), centred */
 function spr(name, x, y, flip, sc, alpha) {
-  var f = SPR[name], a = imgs.sheet; if (!f || !ok(a)) return;
+  var f = SPR[name], a = f && f[4] ? imgs.hom : imgs.sheet; if (!f || !ok(a)) return;
   sc = sc || 1; var w = f[2] * sc, h = f[3] * sc;
   ctx.save(); ctx.translate(Math.round(x), Math.round(y)); if (flip) ctx.scale(-1, 1); if (alpha !== undefined) ctx.globalAlpha = alpha;
   ctx.drawImage(a, f[0], f[1], f[2], f[3], -Math.round(w / 2), -Math.round(h), Math.round(w), Math.round(h));
   ctx.restore();
 }
 function sprCanvas(name, sc) {
-  var f = SPR[name], a = imgs.sheet; if (!f || !ok(a)) return null; sc = sc || 1;
+  var f = SPR[name], a = f && f[4] ? imgs.hom : imgs.sheet; if (!f || !ok(a)) return null; sc = sc || 1;
   var c = mk(Math.round(f[2] * sc), Math.round(f[3] * sc)), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.drawImage(a, f[0], f[1], f[2], f[3], 0, 0, c.width, c.height); return c;
 }
@@ -145,7 +145,7 @@ var sfx = (function () {
   };
 })();
 var OPT = { mus: 1 };
-/*@MUSIC@*/
+/* music: see 15-music.js */
 
 /* ---------- permanent progress ---------- */
 var META_KEY = 'll-meta', RUN_KEY = 'll-run';
@@ -198,9 +198,5 @@ function pollPad() {
   gp.l = ax < -0.4 || b(14); gp.r = ax > 0.4 || b(15); gp.j = b(0); gp.a = b(2) || b(1); gp.s = b(3) || b(5);
   var up = (p.axes[1] || 0) < -0.5 || b(12), dn = (p.axes[1] || 0) > 0.5 || b(13);
   gp.d = dn;
-  if (menuOpen()) {
-    if (up && !gpPrev.up) menuMove(-1); if (dn && !gpPrev.dn) menuMove(1);
-    if (b(0) && !gpPrev.a0) menuPress(); if (b(1) && !gpPrev.b1) menuBackPress();
-  }
-  gpPrev = { up: up, dn: dn, a0: b(0), b1: b(1) };
+  // menus, the title, game over and the cabinet are driven by padkit.js (shared by every game)
 }

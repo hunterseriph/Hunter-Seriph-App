@@ -21,7 +21,7 @@ function enterArena(id) {
   G.superDue = id === 'blum' && META.blumWins >= 5;
   spawnBoss(id);
   G.banner = 3; G.bannerTxt = BOSSDEF[id].name; G.bannerSub = id === 'blum' ? 'THE LOAD AT THE END' : AREAS[BOSSDEF[id].area].name.toUpperCase();
-  music.play(id === 'blum' || id === 'blum2' ? 'b3' : 'b4', true); sfx.roar(); saveRun();
+  music.play(id === 'blum2' ? 'super' : id === 'blum' ? 'blum' : 'boss'); sfx.roar(); saveRun();
 }
 function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } }
 function mkBoss(id, x, y, hpMul) {
@@ -63,7 +63,7 @@ function finishLegacy(kind) {
 /* ---------- boss brains ---------- */
 function bshot(x, y, a, sp, dmg, k, by) { eshots.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: k === 'big' ? 7 : 5, dmg: dmg, k: k || 'fire', by: by }); }
 function updateBosses(dt) {
-  if (G.superIn > 0) { G.superIn -= dt; if (G.superIn <= 0) { var sb = mkBoss('blum2', L.w * T / 2, 140); sb.fly = true; bosses = [sb]; G.bossGroup = 'blum2'; sfx.roar(); G.shake = 12; music.play('b3', true); } }
+  if (G.superIn > 0) { G.superIn -= dt; if (G.superIn <= 0) { var sb = mkBoss('blum2', L.w * T / 2, 140); sb.fly = true; bosses = [sb]; G.bossGroup = 'blum2'; sfx.roar(); G.shake = 12; music.play('super'); } }
   if (G.winT > 0) { G.winT -= dt; if (G.winT <= 0) finishLegacy(G.winKind); }
   var W = L.w * T;
   for (var i = 0; i < bosses.length; i++) {

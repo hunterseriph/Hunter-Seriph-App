@@ -34,14 +34,15 @@ function genWorld(seed) {
     list.forEach(function (q) { ['r', 'd'].forEach(function (d) { var o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])]; if (o && o.area === a && !q.ex[d] && r() < 0.18) link(q, o, d); }); });
     return list;
   }
-  var C = AREAS.castle, start = add('castle', C.ox + 2, C.oy + 2); start.type = 'start';
+  // the start room sits on the castle's left edge: nothing lies to the left of it
+  var C = AREAS.castle, start = add('castle', C.ox, C.oy + 2); start.type = 'start';
   // connectors out of the castle
   var upX = C.ox + 1 + Math.floor(r() * 4), dnX = C.ox + 1 + Math.floor(r() * 4), rtY = C.oy + Math.floor(r() * C.h);
-  // the starting room always opens all four ways, and each way leads on towards its own area
-  var sU = add('castle', start.cx, start.cy - 1), sD = add('castle', start.cx, start.cy + 1), sR = add('castle', start.cx + 1, start.cy), sL = add('castle', start.cx - 1, start.cy);
-  link(start, sU, 'u'); link(start, sD, 'd'); link(start, sR, 'r'); link(start, sL, 'l');
+  // the starting room opens up, down and right, and each way leads on towards its own area
+  var sU = add('castle', start.cx, start.cy - 1), sD = add('castle', start.cx, start.cy + 1), sR = add('castle', start.cx + 1, start.cy);
+  link(start, sU, 'u'); link(start, sD, 'd'); link(start, sR, 'r');
   var cu = walkTo('castle', sU, upX, C.oy), cd = walkTo('castle', sD, dnX, C.oy + C.h - 1), cr = walkTo('castle', sR, C.ox + C.w - 1, rtY);
-  start.signs = { u: 'roof', d: 'dungeon', r: 'city', l: 'castle' };
+  start.signs = { u: 'roof', d: 'dungeon', r: 'city' };
   grow('castle', C.rooms);
   var ru = add('roof', upX, C.oy - 1); link(cu, ru, 'u'); ru.entry = 1;
   var dd = add('dungeon', dnX, C.oy + C.h); link(cd, dd, 'd'); dd.entry = 1;

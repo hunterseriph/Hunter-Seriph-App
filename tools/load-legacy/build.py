@@ -3,8 +3,8 @@
 
 Edit the files in src/, then run:  python3 tools/load-legacy/build.py
 It writes www/games/load-legacy.html. It pulls Cumhead's atlas and the city backdrops from
-www/games/spermhog.html and the music engine from www/games/cumheads-quest.html, so those
-must be present. sprites.png/json and icons.json were rendered from Cumheads Quest's own art.
+www/games/spermhog.html so that
+must be present. The homunculus art comes from tools/homunculus. sprites.png/json and icons.json were rendered from Cumheads Quest's own art.
 """
 import base64, json, os, re, sys
 
@@ -24,11 +24,7 @@ src = dict(re.findall(r"(\w+): '(data:[^']+)'", srcblock))
 assert set(['atlas', 'sky', 'clouds', 'skyline', 'city', 'bricks']) <= set(src), src.keys()
 src['sheet'] = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(HERE, 'sprites.png'), 'rb').read()).decode()
 
-cq = open(os.path.join(GAMES, 'cumheads-quest.html'), encoding='utf-8').read()
-m0 = cq.index('var music = (function () {')
-m1 = cq.index('/* ---------- dungeon generation')
-music = cq[m0:m1].rstrip()
-assert music.endswith('})();'), music[-40:]
+# the soundtrack is Load Legacy's own now: src/15-music.js
 
 def put(s, key, val):
     tag = '/*@' + key + '@*/'
@@ -41,7 +37,13 @@ js = put(js, 'ATLAS', atlas)
 js = put(js, 'SRC', json.dumps(src, separators=(',', ':')))
 js = put(js, 'SPR', open(os.path.join(HERE, 'sprites.json')).read())
 js = put(js, 'ICONS', open(os.path.join(HERE, 'icons.json')).read())
-js = put(js, 'MUSIC', music)
+
+# the homunculus: pixel art from tools/homunculus/gen.py, merged into SPR (5th value 1 = the hom sheet)
+HOMDIR = os.path.join(HERE, '..', 'homunculus')
+hom = json.load(open(os.path.join(HOMDIR, 'hom.json')))
+js = put(js, 'HOM', json.dumps({'breeds': hom['breeds'], 'order': hom['order']}, separators=(',', ':')))
+js = js.replace("Object.keys(SRC).forEach(", "Object.keys(HOMFR).forEach(function (k) { SPR[k] = HOMFR[k]; });\nObject.keys(SRC).forEach(", 1)
+js = js.replace("var imgs = {};", "var imgs = {};\nvar HOMFR = " + json.dumps({k: v + [1] for k, v in hom['frames'].items()}, separators=(',', ':')) + ";\nSRC.hom = 'data:image/png;base64," + base64.b64encode(open(os.path.join(HOMDIR, 'hom.png'), 'rb').read()).decode() + "';", 1)
 
 out = head + "\n<script>\n(function () {\n'use strict';\n" + js + "\n})();\n</script>\n\n</body></html>\n"
 dst = os.path.join(GAMES, 'load-legacy.html')

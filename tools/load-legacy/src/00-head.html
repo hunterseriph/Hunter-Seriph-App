@@ -20,7 +20,8 @@ body{margin:0;background:var(--bg);color:var(--bone);overflow:hidden;touch-actio
 #mute svg{width:20px;height:20px}
 #mute{left:calc(50% - 20px)}
 #pauseBtn{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));left:calc(50% + 24px);transform:translateX(-50%);z-index:6;width:36px;height:36px;padding:0;border:0;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);color:var(--bone);font-family:var(--pixel);font-size:10px;cursor:pointer;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
-#app.menu #pauseBtn{visibility:hidden}
+#app.menu #pauseBtn,#app.menu #hsTouchTgl{visibility:hidden}
+#hsTouchTgl{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));left:calc(50% + 68px);transform:translateX(-50%);z-index:6;width:36px;height:36px;padding:0;border:0;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);color:var(--bone);cursor:pointer}
 #mute .sp{fill:var(--bone)}#mute .wv{stroke:var(--bone)}#mute .xx{stroke:var(--hot);display:none}
 #mute.off .wv{display:none}#mute.off .xx{display:block}#mute.off .sp{fill:var(--ash)}
 .pbtn{appearance:none;border:0;margin:0;color:var(--bone);font-family:var(--pixel);font-size:9px;line-height:1.3;letter-spacing:0.04em;text-align:center;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;padding:0}
@@ -68,6 +69,7 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
 .row .t i{display:block;font-style:normal;font-size:7px;color:var(--ash)}
 .row .p{flex:none;color:var(--gold);font-size:8px;text-align:right}
 .row.off{opacity:0.45;cursor:default}
+.mhead{font-family:var(--pixel);font-size:8px;letter-spacing:.12em;color:var(--gold,#ffe36a);padding:12px 2px 2px;border-bottom:1px solid #4a1a1c}
 .row.own .p{color:#7dff9a}
 .row.sec{background:rgba(60,6,10,0.7)}
 #menuBack{align-self:center;min-width:160px}
@@ -139,3 +141,4 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
   <div id="hint">TURN YOUR PHONE SIDEWAYS FOR A BIGGER SCREEN</div>
  </div>
 </div>
+<script src="padkit.js"></script>

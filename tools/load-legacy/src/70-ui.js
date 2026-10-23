@@ -11,6 +11,8 @@ function openMenu(o) {
 function closeMenu() { el('menu').hidden = true; MENU = null; if (G.mode === 'play' || G.mode === 'town') setMenuMode(false); }
 function renderMenu(keepIdx) {
   var o = MENU; if (!o) return;
+  // menus that change when you buy or equip rebuild their rows every time, so nothing shows stale numbers
+  if (o.rebuild) { var nb = o.rebuild(); o.rows = nb.rows || nb; if (nb.note !== undefined) o.note = nb.note; }
   el('menuTitle').textContent = o.title; el('menuNote').textContent = o.note || '';
   el('menuBank').textContent = o.bank === 'run' ? 'CARRYING ' + fmtN(RUN ? RUN.drops : 0) : (o.bank === 'none' ? '' : 'BANK ' + fmtN(META.bank));
   var pc = el('menuPic'), src = o.pic ? (typeof o.pic === 'string' ? (o.pic === 'cumhead' ? cumCanvas('idle0') : sprCanvas(o.pic, 1)) : o.pic) : null;
@@ -18,6 +20,7 @@ function renderMenu(keepIdx) {
   var list = el('menuList'); list.innerHTML = '';
   if (o.custom) o.custom(list);
   (o.rows || []).forEach(function (r, i) {
+    if (r.cls === 'head') { var hd = document.createElement('div'); hd.className = 'mhead'; hd.textContent = r.name; list.appendChild(hd); return; }
     var b = document.createElement('button'); b.type = 'button'; b.className = 'row' + (r.cls ? ' ' + r.cls : '');
     if (r.icon) { var im = document.createElement('img'); im.alt = ''; im.src = iconURL(r.icon); b.appendChild(im); }
     var t = document.createElement('span'); t.className = 't'; var bb = document.createElement('b'); bb.textContent = r.name; t.appendChild(bb);
@@ -64,14 +67,20 @@ function openBuilding(e) {
   if (b.kind === 'club') openClub(); else if (b.kind === 'gear') openGear(); else if (b.kind === 'fate') openFate(); else if (b.kind === 'runes') openRunes(); else if (b.kind === 'prov') openProv(b); else if (b.kind === 'arcade') openArcadeMenu();
 }
 function openClub() {
+  openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rebuild: clubRows });
+}
+function clubRows() {
   var rows = UPGRADES.map(function (u) {
     var lv = META.up[u.id] || 0, max = lv >= u.max, c = upCost(u, lv);
-    return { icon: u.icon, name: u.name.toUpperCase() + '  ·  ' + lv + '/' + u.max, sub: u.d + ' per level', price: max ? 'MAX' : fmtN(c), cls: max ? 'own' : (META.bank < c ? 'off' : ''), fn: max ? null : function () { if (spend(c)) { META.up[u.id] = lv + 1; saveMeta(); renderMenu(true); } } };
+    return { icon: u.icon, name: u.name.toUpperCase() + '  ·  ' + lv + '/' + u.max, sub: u.d + ' per level', price: max ? 'MAX' : fmtN(c), cls: max ? 'own' : (META.bank < c ? 'off' : ''), fn: max ? null : function () { var now = META.up[u.id] || 0, cc = upCost(u, now); if (now >= u.max) return; if (spend(cc)) { META.up[u.id] = now + 1; saveMeta(); renderMenu(true); } } };
   });
   BUILDINGS.forEach(function (b) { if (!META.built[b.id]) rows.push({ icon: 'coin', name: 'BUILD ' + b.name.toUpperCase(), sub: 'Opens a new building on the street', price: fmtN(b.cost), cls: 'sec' + (META.bank < b.cost ? ' off' : ''), fn: function () { if (spend(b.cost)) { META.built[b.id] = 1; saveMeta(); G.layer = null; renderMenu(true); } } }); });
-  openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rows: rows });
+  return rows;
 }
 function openGear() {
+  openMenu({ title: "Greebo's Gourmet Goonery", note: BUILDINGS[1].quote, pic: 'npc_greebo', rebuild: gearRows });
+}
+function gearRows() {
   var rows = [];
   ['weapon', 'armour', 'helm'].forEach(function (slot) {
     var cur = META.gear[slot], own = META.gearOwn[slot], list = GEAR[slot];
@@ -81,15 +90,18 @@ function openGear() {
       else if (i === own + 1) rows.push({ icon: g.icon, name: 'BUY ' + g.name.toUpperCase(), sub: desc, price: fmtN(g.cost), cls: META.bank < g.cost ? 'off' : '', fn: function () { if (spend(g.cost)) { META.gearOwn[slot] = i; META.gear[slot] = i; saveMeta(); renderMenu(true); } } });
     });
   });
-  openMenu({ title: "Greebo's Gourmet Goonery", note: BUILDINGS[1].quote, pic: 'npc_greebo', rows: rows });
+  return rows;
 }
 function openRunes() {
+  openMenu({ title: 'Spermaid Sanctum', note: '', pic: 'npc_spermaid', rebuild: runeRows });
+}
+function runeRows() {
   var rows = RUNES.map(function (r) {
     var own = META.runes[r.id], on = runeOn(r.id);
     if (!own) return { icon: r.icon, name: 'BUY ' + r.name.toUpperCase(), sub: r.d, price: fmtN(r.cost), cls: META.bank < r.cost ? 'off' : '', fn: function () { if (spend(r.cost)) { META.runes[r.id] = 1; if (META.runeOn.length < 3) META.runeOn.push(r.id); saveMeta(); renderMenu(true); } } };
-    return { icon: r.icon, name: r.name.toUpperCase(), sub: r.d, price: on ? 'ON' : 'OFF', cls: on ? 'own' : '', fn: function () { if (on) META.runeOn.splice(META.runeOn.indexOf(r.id), 1); else { if (META.runeOn.length >= 3) { sfx.no(); toastMenu('THREE RUNES AT A TIME. TURN ONE OFF FIRST.'); return; } META.runeOn.push(r.id); } saveMeta(); sfx.click(); renderMenu(true); } };
+    return { icon: r.icon, name: r.name.toUpperCase(), sub: r.d, price: on ? 'ON' : 'OFF', cls: on ? 'own' : '', fn: function () { if (runeOn(r.id)) META.runeOn.splice(META.runeOn.indexOf(r.id), 1); else { if (META.runeOn.length >= 3) { sfx.no(); toastMenu('THREE RUNES AT A TIME. TURN ONE OFF FIRST.'); return; } META.runeOn.push(r.id); } saveMeta(); sfx.click(); renderMenu(true); } };
   });
-  openMenu({ title: 'Spermaid Sanctum', note: 'Runes on: ' + META.runeOn.length + '/3', pic: 'npc_spermaid', rows: rows });
+  return { rows: rows, note: 'Runes on: ' + META.runeOn.length + '/3' };
 }
 function toastMenu(t) { el('menuNote').textContent = t; }
 function openFate(drawn) {
@@ -103,11 +115,14 @@ function openFate(drawn) {
   openMenu({ title: "Stacked Fate's Table", note: BUILDINGS[2].quote, pic: 'npc_stackedfate', rows: rows, back: drawn ? function () { openFate(); } : null });
 }
 function openProv(b) {
+  openMenu({ title: b.name, note: (b.quote ? b.quote + '  ' : '') + 'One per heir, used up when the next run starts.', pic: b.npc, rebuild: function () { return provRows(b); } });
+}
+function provRows(b) {
   var slot = b.slot, have = META.prov[slot], rows = (PROV[slot] || []).map(function (it) {
     var mine = have === it.id;
     return { icon: it.icon, name: it.name.toUpperCase(), sub: it.d + (have && !mine ? '  (replaces what you bought)' : ''), price: mine ? 'READY' : fmtN(it.cost), cls: mine ? 'own' : (META.bank < it.cost ? 'off' : ''), fn: mine ? null : function () { if (spend(it.cost)) { META.prov[slot] = it.id; saveMeta(); renderMenu(true); } } };
   });
-  openMenu({ title: b.name, note: (b.quote ? b.quote + '  ' : '') + 'One per heir, used up when the next run starts.', pic: b.npc, rows: rows });
+  return rows;
 }
 function openArcadeMenu() {
   var rows = [
@@ -119,14 +134,14 @@ function openArcadeMenu() {
   openMenu({ title: 'Potbelly Arcade', note: BUILDINGS[10].quote, pic: 'npc_potbelly', rows: rows });
 }
 function openLegacy() {
-  var rows = META.legacy.length ? META.legacy.map(function (h, i) { return { icon: h.cls === 'cumhead' ? 'cumface' : (h.cls === 'homunculus' ? 'hom_s0' : h.cls + '_d'), name: (h.win ? 'WON  ·  ' : '') + CLASSES[h.cls].name.toUpperCase() + (h.ng ? '  ·  NG+' + h.ng : ''), sub: (h.win ? 'Finished the legacy' : 'Fell in ' + h.area + ' to ' + h.by) + '  ·  ' + fmtT(h.t) + '  ·  ' + h.kills + ' foes', price: '+' + fmtN(h.d) }; }) : [{ name: 'NO HEIRS YET', sub: 'Go in through the castle gate' }];
+  var rows = META.legacy.length ? META.legacy.map(function (h, i) { return { icon: h.cls === 'cumhead' ? 'cumface' : (h.cls === 'homunculus' ? 'h_' + (h.hb || 'gloop') + '_adult_idle0' : h.cls + '_d'), name: (h.win ? 'WON  ·  ' : '') + CLASSES[h.cls].name.toUpperCase() + (h.ng ? '  ·  NG+' + h.ng : ''), sub: (h.win ? 'Finished the legacy' : 'Fell in ' + h.area + ' to ' + h.by) + '  ·  ' + fmtT(h.t) + '  ·  ' + h.kills + ' foes', price: '+' + fmtN(h.d) }; }) : [{ name: 'NO HEIRS YET', sub: 'Go in through the castle gate' }];
   openMenu({ title: 'The Legacy Board', note: 'Newest first.', pic: 'npc_potbelly', rows: rows, back: openArcadeMenu });
 }
 function openCab(src) { closeMenu(); setMenuMode(true); el('arcFrame').src = src; el('arc').hidden = false; music.stop(0.5); }
-el('arcX').addEventListener('click', function () { el('arc').hidden = true; el('arcFrame').src = 'about:blank'; setMenuMode(false); music.play('b7', false); sfx.init(); });
+el('arcX').addEventListener('click', function () { el('arc').hidden = true; el('arcFrame').src = 'about:blank'; setMenuMode(false); music.play('town'); sfx.init(); });
 
 /* ---------- choosing the next heir ---------- */
-function heirPic(cls) { if (cls === 'cumhead') return cumCanvas('idle0'); if (cls === 'homunculus') return sprCanvas('hom_s0', 1.4); return sprCanvas(cls + '_s0', 1.3); }
+function heirPic(cls) { if (cls === 'cumhead') return cumCanvas('idle0'); if (cls === 'homunculus') return sprCanvas('h_gloop_teen_idle0', 2.6); return sprCanvas(cls + '_s0', 1.3); }
 function openHeirs() {
   var opts;
   if (!META.runs) opts = ['cumhead'];
@@ -167,7 +182,13 @@ function openPause() {
   if (G.mode === 'play') {
     rows.push({ icon: 'deck', name: 'THIS HEIR', sub: CLASSES[RUN.cls].name + '  ·  HP ' + Math.ceil(P.hp) + '/' + ST.mhp + '  ·  DMG ' + Math.round(ST.dmg) + '  ·  ' + (RUN.card ? 'Fate: ' + cardName(RUN.card) : 'No fate card') });
     var counts = {}; RUN.powers.forEach(function (id) { counts[id] = (counts[id] || 0) + 1; });
+    rows.push({ name: 'POWERUPS THIS RUN  ·  ' + RUN.powers.length, cls: 'head' });
+    if (!RUN.powers.length) rows.push({ name: 'NONE YET', sub: 'Altars, merchants and challenge chests give powerups', cls: 'off' });
     Object.keys(counts).forEach(function (id) { var p = powerById(id); rows.push({ icon: p.icon, name: p.name.toUpperCase() + (counts[id] > 1 ? ' x' + counts[id] : ''), sub: p.d }); });
+    rows.push({ name: 'RUNES ON  ·  ' + META.runeOn.length + '/3', cls: 'head' });
+    if (!META.runeOn.length) rows.push({ name: 'NO RUNES ON', sub: 'Equip them at Spermaid Sanctum in town', cls: 'off' });
+    META.runeOn.forEach(function (id) { var r = RUNES.filter(function (x) { return x.id === id; })[0]; if (r) rows.push({ icon: r.icon, name: r.name.toUpperCase(), sub: r.d }); });
+    if (RUN.provNames && RUN.provNames.length) { rows.push({ name: 'PROVISIONS', cls: 'head' }); RUN.provNames.forEach(function (n) { var it = null; for (var sl in PROV) PROV[sl].forEach(function (x) { if (x.name === n) it = x; }); rows.push({ icon: it ? it.icon : 'coin', name: n.toUpperCase(), sub: it ? it.d : '' }); }); }
     rows.push({ icon: 'coin', name: 'SEALS BROKEN ' + sealCount() + '/4', sub: AREAORDER.map(function (a) { return (META.bosses[a] ? '✓ ' : '· ') + BOSSDEF[AREAS[a].boss].name; }).join('   ') });
     rows.push({ icon: 'scrollWarp', name: 'SAVE AND QUIT TO TITLE', sub: 'Carry on later from this room', fn: function () { saveRun(); closeMenu(); toTitle(); } });
   } else rows.push({ icon: 'scrollWarp', name: 'QUIT TO TITLE', fn: function () { closeMenu(); toTitle(); } });

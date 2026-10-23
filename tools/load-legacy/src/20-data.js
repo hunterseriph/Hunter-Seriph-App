@@ -2,26 +2,26 @@
    DATA: classes, areas, enemies, bosses, the town and everything it sells
    ===================================================================================================== */
 var CLASSES = {
-  cumhead: { name: 'Cumhead', hp: 100, mana: 50, dmg: 10, spd: 1, jumps: 2, atk: 'shot', cd: 0.36, spec: 'splash', specCost: 30,
+  cumhead: { name: 'Cumhead', hp: 150, mana: 50, dmg: 10, spd: 1, jumps: 2, atk: 'shot', cd: 0.36, spec: 'splash', specCost: 30,
     pas: 'Second Wind', pd: 'Once per run a killing blow leaves you on 1 HP.', ad: 'Cream Shot: fires a load straight ahead.', sd: 'Spin Splash: eight shots burst out all around you.' },
-  spermaid: { name: 'Spermaid', hp: 85, mana: 60, dmg: 12, spd: 1.05, jumps: 2, atk: 'whip', cd: 0.3, spec: 'song', specCost: 35,
+  spermaid: { name: 'Spermaid', hp: 115, mana: 60, dmg: 12, spd: 1.05, jumps: 2, atk: 'whip', cd: 0.3, spec: 'song', specCost: 35,
     pas: 'Siren Song', pd: 'Every kill heals 3 HP. Longer safety after a hit.', ad: 'Tail Whip: a fast, wide slap in front of you.', sd: 'Siren Song: stuns every foe on screen and heals you.' },
   greebo: { name: 'Greebo', hp: 125, mana: 50, dmg: 15, spd: 0.92, jumps: 2, atk: 'pie', cd: 0.5, spec: 'cat', specCost: 40,
     pas: 'Sticky Fingers', pd: '+30% drops from everything.', ad: 'Cream Pie Blast: a big pie straight ahead, half the reach of Cumhead.', sd: 'Sir Johnathan: the cat tears across the room.' },
-  homunculus: { name: 'Homunculus', hp: 70, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
+  homunculus: { name: 'Homunculus', hp: 100, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
     pas: 'Little Legs', pd: 'Triple jump and a smaller body.', ad: 'Acid Spit: rapid spit that poisons.', sd: 'Ooze Shield: 3 seconds untouchable, healing as it lasts.' }
 };
 var CLASSORDER = ['cumhead', 'spermaid', 'greebo', 'homunculus'];
 
 /* areas: grid offsets are in room cells. The castle is the hub of the map; the roof is above it, the dungeon below, the city to the right. */
 var AREAS = {
-  castle: { name: "Cumhead's Castle", sub: 'WHERE EVERY HEIR BEGINS', tier: 1, ox: 0, oy: 4, w: 6, h: 4, rooms: 16, boss: 'beast', music: 'b0',
+  castle: { name: "Cumhead's Castle", sub: 'WHERE EVERY HEIR BEGINS', tier: 1, ox: 0, oy: 4, w: 6, h: 4, rooms: 16, boss: 'beast', music: 'castle',
     sky: null, tint: 'rgba(90,0,12,0.22)', e1: '#ff3a44', e2: '#7a0a12', wall: '#14060a', wall2: '#22080e', pool: [['crawler', 3], ['bat', 2], ['ghoul', 2]] },
-  roof: { name: 'Castle Roof', sub: 'ABOVE THE RED MOON', tier: 2, ox: 0, oy: 0, w: 6, h: 4, rooms: 14, boss: 'demon', music: 'b2',
+  roof: { name: 'Castle Roof', sub: 'ABOVE THE RED MOON', tier: 2, ox: 0, oy: 0, w: 6, h: 4, rooms: 14, boss: 'demon', music: 'roof',
     sky: 'rgba(40,0,20,0.35)', tint: 'rgba(50,10,60,0.30)', e1: '#ff5a8a', e2: '#5a0a3a', wall: null, pool: [['bat', 3], ['imp', 3], ['crawler', 1], ['ghoul', 1]] },
-  city: { name: 'Ejaculand', sub: 'THE PARK NEVER CLOSES', tier: 3, ox: 6, oy: 4, w: 6, h: 4, rooms: 15, boss: 'sperm', music: 'b8',
+  city: { name: 'Ejaculand', sub: 'THE PARK NEVER CLOSES', tier: 3, ox: 6, oy: 4, w: 6, h: 4, rooms: 15, boss: 'sperm', music: 'park',
     sky: 'rgba(60,0,10,0.25)', tint: 'rgba(120,10,40,0.24)', e1: '#ff2a8a', e2: '#6a0a3a', wall: null, pool: [['crawlerN', 2], ['slimeR', 2], ['imp', 2], ['golem', 1], ['batP', 1]] },
-  dungeon: { name: 'The Dungeon', sub: 'CHAINS IN THE DARK', tier: 4, ox: 0, oy: 8, w: 6, h: 4, rooms: 16, boss: 'pig', music: 'b6',
+  dungeon: { name: 'The Dungeon', sub: 'CHAINS IN THE DARK', tier: 4, ox: 0, oy: 8, w: 6, h: 4, rooms: 16, boss: 'pig', music: 'dungeon',
     sky: null, tint: 'rgba(30,0,0,0.45)', e1: '#c4121c', e2: '#3a0408', wall: '#0a0305', wall2: '#140508', pool: [['ghoul', 2], ['slime', 2], ['vampire', 2], ['golem', 2], ['bat', 1]] }
 };
 var AREAORDER = ['castle', 'roof', 'city', 'dungeon'];

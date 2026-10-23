@@ -15,7 +15,7 @@ function titleInfo() {
   var s = META.started ? 'HEIRS ' + META.runs + '  ·  BANK ' + fmtN(META.bank) + '  ·  SEALS ' + sealCount() + '/4' + (META.blumWins ? '  ·  BLUMHEAD x' + META.blumWins : '') + (META.ng ? '  ·  NG+' + META.ng : '') : 'A NEW LEGACY BEGINS WITH CUMHEAD.';
   el('titleInfo').textContent = s; el('contBtn').disabled = !(readRun() || META.started);
 }
-function toTitle() { G.mode = 'title'; music.stop(0.8); el('title').hidden = false; el('over').hidden = true; setMenuMode(true); titleInfo(); }
+function toTitle() { G.mode = 'title'; music.play('title'); el('title').hidden = false; el('over').hidden = true; setMenuMode(true); titleInfo(); }
 function hideTitle() { el('title').hidden = true; setMenuMode(false); }
 el('contBtn').addEventListener('click', function () { sfx.init(); sfx.click(); hideTitle(); if (!resumeRun()) goTown(false); });
 el('newBtn').addEventListener('click', function () {
@@ -56,3 +56,15 @@ window.__ll = { step: step, G: G, get P() { return P; }, get RUN() { return RUN;
   startRun: startRun, goTown: goTown, enterRoom: enterRoom, enterArena: enterArena, openHeirs: openHeirs, openBuilding: openBuilding, useThing: useThing, hurtE: hurtE, hurtP: hurtP,
   genWorld: genWorld, buildRoom: buildRoom, calcStats: calcStats, resumeRun: resumeRun, readRun: readRun, saveRun: saveRun, closeMenu: closeMenu, menuOpen: menuOpen, toTitle: toTitle,
   get TOWN() { return TOWN; }, moveBody: moveBody, tileAt: tileAt, setL: function (l) { L = l; }, rsOf: rsOf, spawnRoom: spawnRoom, AREAS: AREAS, CLASSES: CLASSES, BOSSDEF: BOSSDEF, music: music, findNear: findNear, special: special, attack: attack, render: render };
+
+/* ---------- controller in every menu + the on-screen controls toggle (padkit.js) ---------- */
+if (window.HSPad) HSPad.setup({
+  menu: function () { if (menuOpen()) return el('menu'); if (!el('over').hidden) return el('over'); if (!el('title').hidden) return el('title'); return null; },
+  back: function (sc) { if (sc.id === 'menu') menuBackPress(); return true; },
+  onStart: function () { if ((G.mode === 'play' || G.mode === 'town') && !G.paused && !menuOpen()) openPause(); },
+  idle: function () { return !el('arc').hidden; },
+  onSelect: function () { if (!el('arc').hidden) el('arcX').click(); },
+  onFocus: function (b) { if (!menuOpen()) return; var i = menuButtons().indexOf(b); if (i >= 0 && i !== menuIdx) { menuIdx = i; paintKb(); } },
+  tick: function () { sfx.click(); },
+  touch: '#pad', toggleAfter: '#pauseBtn'
+});

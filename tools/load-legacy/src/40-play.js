@@ -31,6 +31,7 @@ function calcStats() {
   s.burn = !!pv.burn; s.boom = !!pv.boom; s.ward = !!pv.ward;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
+  homStats(s);
   return s;
 }
 function tierOf() { return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
@@ -44,6 +45,7 @@ function startRun(cls) {
   META.prov = {}; META.card = null; META.runs++; META.started = true; META.last = cls; saveMeta();
   WORLD = genWorld(RUN.seed); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
   newPlayer(); G.mode = 'play'; G.msg = null; enterRoom(WORLD.start, null);
+  if (homOn()) { homHatchStart(); return; }
   G.banner = 3; G.bannerTxt = CLASSES[cls].name.toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + (RUN.card ? '  ·  ' + cardName(RUN.card).toUpperCase() : '');
 }
 function cardName(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i].name; return ''; }
@@ -58,6 +60,8 @@ function resumeRun() {
   var r = readRun(); if (!r) return false;
   RUN = r; WORLD = genWorld(RUN.seed); ST = calcStats(); newPlayer(); P.hp = Math.min(ST.mhp, RUN.hp); P.mana = RUN.mana; G.mode = 'play';
   var pos = RUN.pos; G.retKey = pos.ret;
+  // a save from an older map layout: start this heir again from the first room
+  if (!WORLD.rooms[pos.key] || (pos.ret && !WORLD.rooms[pos.ret])) { RUN.rs = {}; pos = RUN.pos = { key: WORLD.start, arena: null, ret: null, x: 10 * T, y: 15 * T }; G.retKey = null; }
   if (pos.arena) { enterRoom(pos.ret, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } } else enterRoom(pos.key, null, { x: pos.x, y: pos.y });
   P.inv = 1.5; G.banner = 2; G.bannerTxt = 'WELCOME BACK'; G.bannerSub = CLASSES[RUN.cls].name.toUpperCase(); return true;
 }
@@ -65,7 +69,7 @@ function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDr
 function runOver(win) {
   clearRun();
   var area = G.rm ? AREAS[G.rm.area].name : '', d = bankRun();
-  META.legacy.unshift({ cls: RUN.cls, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
+  META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
   META.legacy = META.legacy.slice(0, 30); saveMeta();
   G.mode = 'over'; music.stop(1.2);
   el('overH').textContent = win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
@@ -82,6 +86,7 @@ function newPlayer() {
   P = { x: 0, y: 0, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jumpBuf: 0, jumpHeld: false, jumps: 0, state: 'normal', wasG: true, lsf: 0, hurtT: 0, inv: 0, deadT: 0,
     attackT: 0, atkCd: 0, anim: 0, idleT: 0, jumpStartT: 0, prevJump: false, prevAtk: false, prevSpec: false, w: sm ? 10 : 12, h: sm ? 28 : 36, ooze: 0, oozeT: 0, regenT: 0,
     hp: RUN ? RUN.hp : 100, mana: RUN ? RUN.mana : 50 };
+  if (homOn()) homSize();
 }
 function tileAt(px, py) { var tx = Math.floor(px / T), ty = Math.floor(py / T); if (tx < 0 || ty < 0 || tx >= L.w || ty >= L.h) return TA; return L.tiles[ty * L.w + tx]; }
 function solidT(t) { return t === TW || (t === TB && G.lock); }
@@ -118,6 +123,7 @@ function updatePlayer(dt) {
   if (P.drop > 0) { P.drop -= dt; if (P.drop <= 0) P.drop = 0; }
   if (P.inv > 0) P.inv -= dt; if (P.atkCd > 0) P.atkCd -= dt; if (P.attackT > 0) P.attackT -= dt; if (P.jumpStartT > 0) P.jumpStartT -= dt;
   if (P.ooze > 0) { P.ooze -= dt; P.oozeT -= dt; if (P.oozeT <= 0) { P.oozeT = 0.5; healP(4); } }
+  if (homHatchTick(dt)) return;
   if (P.state === 'dead') {
     P.vy = Math.min(TERM, P.vy + GRAV * dt); P.y += P.vy * dt; P.deadT += dt;
     if (P.deadT > 1.6 && G.mode === 'play') runOver(0);
@@ -177,6 +183,7 @@ function hurtP(dmg, srcx, by) {
 }
 function dmgRoll() { var c = Math.random() < ST.crit; return { v: ST.dmg * (0.9 + Math.random() * 0.2) * (c ? 1.8 : 1), crit: c }; }
 function attack() {
+  if (homOn()) { homAttack(); return; }
   var c = CLASSES[RUN.cls], cd = c.cd * ST.atkMul; P.atkCd = cd; P.attackT = 0.22;
   if (c.atk === 'shot') { sfx.shoot(); pshots.push({ k: 'shot', x: P.x + P.face * 12, y: P.y - P.h * 0.55, vx: P.face * 300, vy: 0, life: 0.55, r: 6, rv: 10, m: 1 }); }
   else if (c.atk === 'whip') { sfx.whip(); pshots.push({ k: 'whip', x: P.x, y: P.y, life: 0.13, m: 1.15, hit: {} }); }
@@ -187,6 +194,7 @@ function special() {
   var c = CLASSES[RUN.cls];
   if (P.mana < c.specCost || P.state !== 'normal') { if (P.mana < c.specCost) sfx.no(); return; }
   P.mana -= c.specCost; P.attackT = 0.3;
+  if (homOn()) { homSpecial(); return; }
   if (c.spec === 'splash') { sfx.magic(); for (var i = 0; i < 8; i++) { var a = i / 8 * Math.PI * 2; pshots.push({ k: 'shot', x: P.x, y: P.y - P.h / 2, vx: Math.cos(a) * 280, vy: Math.sin(a) * 280, life: 0.6, r: 6, m: 1 }); } }
   else if (c.spec === 'song') { sfx.magic(); fx.push({ k: 'ring', x: P.x, y: P.y - 20, age: 0, big: 1, c: '#ff9ad0' }); enemies.forEach(function (e) { e.stun = 3; }); bosses.forEach(function (b) { b.stun = Math.max(b.stun || 0, 0.8); }); healP(Math.round(ST.mhp * 0.12)); }
   else if (c.spec === 'cat') { sfx.roar(); pshots.push({ k: 'cat', x: P.x, y: P.y, vx: P.face * 420, vy: 0, life: 3, m: 3, hit: {}, pass: 0, face: P.face }); }
@@ -216,13 +224,20 @@ function enterRoom(k, from, at) {
 function spawnRoom(rs) {
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {}; G.chal = null;
   L.ents.forEach(function (e) {
-    if (e.k === 'enemy') { if (!rs.k[e.idx]) enemies.push(mkEnemy(e.e, e.x, e.y, e.idx)); }
+    if (e.k === 'enemy') { if (!rs.k[e.idx]) { var me = mkEnemy(e.e, e.x, e.y, e.idx); var ad = ENEMIES[e.e].ai; if (ad === 'fly' || ad === 'shoot') { if (boxSolid(me.x - me.w / 2, me.y - me.h, me.x + me.w / 2, me.y)) unstick(me); } else unstick(me); enemies.push(me); } }
     else if (e.k === 'drop') { if (!rs.d[e.i]) drops.push({ x: e.x, y: e.y, fly: false, vx: 0, vy: 0, age: 0, room: e.i }); }
     else if (e.k === 'chest') e.open = !!rs.c[e.i];
     else if (e.k === 'altar') e.taken = !!rs.taken;
   });
   L.movers = L.ents.filter(function (e) { return e.k === 'log'; }).map(function (e) { return { x: e.x, y: e.y, w: e.w, h: e.h, vx: e.vx }; }); L.water = L.ents.filter(function (e) { return e.k === 'water'; })[0] || null;
-  if (G.rm && G.rm.type === 'challenge' && rs.done && !L.ents.some(function (e) { return e.k === 'chest' && e.chal; })) L.ents.push({ k: 'chest', x: L.cx0 * T, y: 15 * T, big: 1, chal: 1, i: 'ch', open: !!rs.c.ch });
+  if (G.rm && G.rm.type === 'challenge' && rs.done && !L.ents.some(function (e) { return e.k === 'chest' && e.chal; })) L.ents.push({ k: 'chest', x: chestSpot(L.cx0), y: 15 * T, big: 1, chal: 1, i: 'ch', open: !!rs.c.ch });
+}
+/* the challenge reward chest goes on open floor nearest the middle, never inside a block */
+function chestSpot(cx0) {
+  for (var d = 0; d < 14; d++) for (var sgn = -1; sgn <= 1; sgn += 2) { var tx = cx0 + sgn * d; if (tx < 2 || tx > L.w - 3) continue;
+    var ok = true; for (var x = tx - 1; x <= tx + 1; x++) { var a = L.tiles[14 * L.w + x], a2 = L.tiles[13 * L.w + x], f = L.tiles[15 * L.w + x]; if (a !== TA || a2 !== TA || f !== TW) ok = false; }
+    if (ok) return tx * T + 8; }
+  return cx0 * T;
 }
 function roomEdges() {
   if (P.state === 'dead') return;
@@ -240,6 +255,15 @@ function bodyInFake() { var tx0 = Math.floor((P.x - P.w / 2) / T), tx1 = Math.fl
 function crumble(i) { if (G.crumble[i] === undefined) { G.crumble[i] = 0.4; sfx.land(); } }
 
 /* ---------- enemies ---------- */
+/* wide enemies can overlap a wall next to their spawn tile: slide them sideways (then up) into open space */
+function unstick(e) {
+  var hw = e.w / 2 - 2;
+  function hit(x, y) { return boxSolid(x - hw, y - e.h + 2, x + hw, y - 2); }
+  if (!hit(e.x, e.y)) return true;
+  for (var d = 2; d <= 40; d += 2) for (var sgn = -1; sgn <= 1; sgn += 2) { var nx = e.x + sgn * d; if (nx > 12 && nx < L.w * T - 12 && !hit(nx, e.y)) { e.x = nx; return true; } }
+  for (var u = T; u <= 3 * T; u += T) if (!hit(e.x, e.y - u)) { e.y -= u; return true; }
+  return false;
+}
 function mkEnemy(k, x, y, idx, mini) {
   var d = ENEMIES[k], t = tierOf(), hp = Math.round(d.hp * (1 + 0.45 * (t - 1)) * ST.foeHp * (mini ? 0.5 : 1));
   return { k: k, d: d, x: x, y: y, vx: 0, vy: 0, w: d.w * (mini ? 0.7 : 1), h: d.h * (mini ? 0.7 : 1), hp: hp, mhp: hp, dmg: d.dmg * (1 + 0.3 * (t - 1)) * (mini ? 0.7 : 1), face: Math.random() < 0.5 ? -1 : 1,
@@ -291,7 +315,7 @@ function updateEnemies(dt) {
     }
     if (ai === 'fly' || ai === 'shoot' || ai === 'tele') { e.x = clamp(e.x, 20, L.w * T - 20); e.y = clamp(e.y, 30, L.h * T - 20); }
     if (e.y > L.h * T + 40 || e.x < -40 || e.x > L.w * T + 40) { e.alive = false; continue; }
-    if (ai !== 'fly' && ai !== 'shoot' && boxSolid(e.x - e.w / 2 + 2, e.y - e.h + 2, e.x + e.w / 2 - 2, e.y - 2)) { e.stuck = (e.stuck || 0) + dt; if (e.stuck > 1.5) { e.alive = false; poof(e.x, e.y - e.h / 2, 8, ['#ff2630', '#5a0f14']); spill(e.x, e.y - e.h / 2, 2); continue; } } else e.stuck = 0;
+    if (ai !== 'fly' && ai !== 'shoot' && boxSolid(e.x - e.w / 2 + 2, e.y - e.h + 2, e.x + e.w / 2 - 2, e.y - 2)) { e.stuck = (e.stuck || 0) + dt; if (e.stuck > 0.2 && unstick(e)) e.stuck = 0; else if (e.stuck > 1.5) { e.alive = false; poof(e.x, e.y - e.h / 2, 8, ['#ff2630', '#5a0f14']); spill(e.x, e.y - e.h / 2, 2); continue; } } else e.stuck = 0;
     // touch: stomp or get hurt
     if (P.state === 'dead') continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) {
@@ -316,7 +340,7 @@ function hurtE(e, dmg, src) {
     sfx.hit();
   }
   if (e.hp <= 0) {
-    e.alive = false; G.shake = Math.max(G.shake, 3);
+    e.alive = false; G.shake = Math.max(G.shake, 3); homGain(e.boss ? 80 : 10);
     if (e.boss) { bossDown(e); return; }
     sfx.kill(); poof(e.x, e.y - e.h / 2, 10, ['#ff2630', '#b3121c', '#f1e7d0']); RUN.kills++;
     if (e.idx !== undefined && e.idx !== null && e.idx >= 0) rsOf(G.roomKey).k[e.idx] = 1;
@@ -341,11 +365,13 @@ function shotHits(s, x0, y0, x1, y1) {
 function hitShot(s, e) {
   var r = dmgRoll(); hurtE(e, r.v * s.m, 'hit');
   if (s.k === 'acid') e.poison = 3;
+  homHit(s, e);
 }
 function splash(x, y, r, m) { sfx.splat(); fx.push({ k: 'ring', x: x, y: y, age: 0, c: '#f1e7d0' }); poof(x, y, 12, ['#f1e7d0', '#fff6d8', '#d9b36a']); var s = { m: m, k: 'pie' }; enemies.concat(bosses).forEach(function (e) { if (e.alive && Math.hypot(e.x - x, (e.y - e.h / 2) - y) < r + e.w / 2) hitShot(s, e); }); }
 function updateShots(dt) {
   for (var i = 0; i < pshots.length; i++) {
     var s = pshots[i]; s.life -= dt;
+    if (s.k === 'claw') { var cx0 = P.face > 0 ? P.x : P.x - 52, cx1 = P.face > 0 ? P.x + 52 : P.x; shotHits(s, cx0, P.y - P.h - 4, cx1, P.y); continue; }
     if (s.k === 'whip') { var x0 = P.face > 0 ? P.x : P.x - 46, x1 = P.face > 0 ? P.x + 46 : P.x; shotHits(s, x0, P.y - 36, x1, P.y - 2); continue; }
     if (s.k === 'cat') {
       s.x += s.vx * dt; var gx = Math.floor(s.x / T);
@@ -386,7 +412,7 @@ function updateDrops(dt) {
     }
     if (P.state !== 'dead' && (!d.fly || d.age > 0.35)) {
       var dx = d.x - P.x, dy = d.y - (P.y - P.h / 2);
-      if (dx * dx + dy * dy < 17 * 17) { var v = d.val || dropVal(); RUN.drops += v; sfx.pick(G.t); if (d.room !== undefined) rsOf(G.roomKey).d[d.room] = 1; continue; }
+      if (dx * dx + dy * dy < 17 * 17) { var v = d.val || dropVal(); RUN.drops += v; sfx.pick(G.t); homGain(2); if (d.room !== undefined) rsOf(G.roomKey).d[d.room] = 1; continue; }
       if (dx * dx + dy * dy < 50 * 50 && d.fly && d.age > 0.6) { d.x -= dx * 3 * dt; d.y -= dy * 3 * dt; }
     }
     keep.push(d);
@@ -453,7 +479,7 @@ function spawnWave(n) {
     var d = ENEMIES[k], x = (5 + Math.random() * 22) * T, y = d.ai === 'fly' || d.ai === 'shoot' ? (3 + Math.random() * 4) * T : 15 * T;
     if (Math.abs(x - P.x) < 50) x = clamp(x + 100 * (x < P.x ? -1 : 1), 5 * T, 27 * T);
     if (d.ai !== 'fly' && d.ai !== 'shoot') { for (var ty = 15; ty > 1; ty--) { if (boxSolid(x - 6, ty * T - d.h, x + 6, ty * T) === null && (boxSolid(x - 4, ty * T, x + 4, ty * T + 2) || tileAt(x, ty * T + 1) === TL)) { y = ty * T; break; } } }
-    var e = mkEnemy(k, x, y, -1); e.cd = 1; enemies.push(e); poof(x, y - 10, 10, ['#ff2630', '#5a0f14']);
+    var e = mkEnemy(k, x, y, -1); e.cd = 1; unstick(e); enemies.push(e); poof(x, y - 10, 10, ['#ff2630', '#5a0f14']);
   }
 }
 
