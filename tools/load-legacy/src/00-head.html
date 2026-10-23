@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"><style>html,body{margin:0}body{font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Load Legacy</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+/* Load Legacy: a Rogue Legacy style castle crawler on the Cumhead the Spermhog engine. One fixed-height game view (256 logical px), touch pad overlaid in landscape and below in portrait. Blood red on black. */
+:root{--bg:#070405;--ink:#0e0708;--line:#4a1a1c;--red:#c4121c;--hot:#ff2630;--bone:#f1e7d0;--ash:#a6968f;--gold:#ffe36a;--display:'Pirata One',serif;--pixel:'Press Start 2P',monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#app{position:relative;height:100%;display:flex;flex-direction:column;background:var(--bg)}
+#view{position:relative;flex:1 1 auto;min-height:0;min-width:0;background:var(--bg)}
+#c{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+#scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,0.14) 3px)}
+#pad{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));pointer-events:none}
+#pad>*{pointer-events:auto}
+#app.menu #pad{visibility:hidden}
+#hint{display:none}
+#mute{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:12;width:36px;height:36px;padding:0;border:0;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+#mute svg{width:20px;height:20px}
+#mute{left:calc(50% - 20px)}
+#pauseBtn{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));left:calc(50% + 24px);transform:translateX(-50%);z-index:6;width:36px;height:36px;padding:0;border:0;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);color:var(--bone);font-family:var(--pixel);font-size:10px;cursor:pointer;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+#app.menu #pauseBtn{visibility:hidden}
+#mute .sp{fill:var(--bone)}#mute .wv{stroke:var(--bone)}#mute .xx{stroke:var(--hot);display:none}
+#mute.off .wv{display:none}#mute.off .xx{display:block}#mute.off .sp{fill:var(--ash)}
+.pbtn{appearance:none;border:0;margin:0;color:var(--bone);font-family:var(--pixel);font-size:9px;line-height:1.3;letter-spacing:0.04em;text-align:center;background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;padding:0}
+.pbtn.on,#dpad.on{background:rgba(196,18,28,0.82)}
+.pbtn.cool{opacity:0.45}
+#dpad{width:176px;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);background:rgba(14,7,8,0.7);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none}
+#dpad svg{width:30px;height:30px;fill:var(--ash)}
+#dpad[data-dir="L"] .al,#dpad[data-dir="R"] .ar{fill:var(--bone)}
+#acts{display:flex;gap:10px;align-items:flex-end}
+.oct{clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
+#bA{width:84px;height:84px}
+#bB{width:70px;height:70px}
+#bC{width:58px;height:58px}
+#bB.use{background:rgba(160,120,10,0.8);box-shadow:inset 0 0 0 2px rgba(255,227,106,0.8)}
+.screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;background:rgba(7,4,5,0.84);text-align:center;overflow-y:auto}
+.screen[hidden]{display:none}
+h1,h2,p{margin:0}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(38px,10vw,66px);line-height:0.95;color:var(--hot);text-shadow:0 0 22px rgba(196,18,28,0.65)}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);line-height:1;color:var(--hot);text-shadow:0 0 18px rgba(196,18,28,0.55)}
+.px{font-family:var(--pixel);font-size:9px;line-height:1.7;letter-spacing:0.04em;color:var(--bone);max-width:52ch}
+.dim{color:var(--ash)}
+.gold{color:var(--gold)}
+.btn{appearance:none;border:0;min-height:48px;min-width:220px;padding:0 28px;background:linear-gradient(180deg,#d8141f 0%,#8e0c14 100%);color:var(--bone);font-family:var(--pixel);font-size:11px;letter-spacing:0.08em;cursor:pointer;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,12px 50%)}
+.btn.alt{background:linear-gradient(180deg,#3a1418 0%,#1c0a0c 100%)}
+.btn:disabled{opacity:0.4;cursor:default}
+.btn:focus-visible,.pbtn:focus-visible,.row:focus-visible,.heir:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+#title{background:#070405 center/cover no-repeat;image-rendering:pixelated}
+#title .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,4,5,0.15) 0%,rgba(7,4,5,0.55) 45%,rgba(7,4,5,0.92) 75%);pointer-events:none}
+#title .col{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;margin-left:auto;margin-right:4%;max-width:360px}
+/* the shared menu panel: shops, upgrades, heirs, altars */
+#menu{justify-content:flex-start;padding:52px 12px calc(12px + env(safe-area-inset-bottom,0px))}
+#menuBox{width:min(680px,100%);max-height:100%;min-height:0;flex:0 1 auto;display:flex;flex-direction:column;gap:8px;padding:12px;background:linear-gradient(180deg,rgba(40,6,10,0.96),rgba(10,3,5,0.98));box-shadow:inset 0 0 0 2px #f1e7d0,inset 0 0 0 4px #4a1a1c,0 0 30px rgba(196,18,28,0.4)}
+#menuHead{display:flex;align-items:center;gap:10px;text-align:left}
+#menuHead canvas{width:44px;height:auto;image-rendering:pixelated;flex:none}
+#menuTitle{font-family:var(--display);font-size:30px;line-height:1;color:var(--hot)}
+#menuNote{font-family:var(--pixel);font-size:8px;line-height:1.6;color:var(--ash)}
+#menuBank{margin-left:auto;font-family:var(--pixel);font-size:9px;color:var(--gold);white-space:nowrap}
+#menuList{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px}
+.row{appearance:none;border:0;display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:7px 10px;text-align:left;background:rgba(20,8,9,0.9);box-shadow:inset 0 0 0 1px #4a1a1c;color:var(--bone);font-family:var(--pixel);font-size:9px;line-height:1.5;cursor:pointer}
+.row:hover,.row.kb{background:rgba(110,10,18,0.85);box-shadow:inset 0 0 0 1px var(--hot)}
+.row img{width:24px;height:24px;image-rendering:pixelated;flex:none}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font-weight:400;color:var(--bone)}
+.row .t i{display:block;font-style:normal;font-size:7px;color:var(--ash)}
+.row .p{flex:none;color:var(--gold);font-size:8px;text-align:right}
+.row.off{opacity:0.45;cursor:default}
+.row.own .p{color:#7dff9a}
+.row.sec{background:rgba(60,6,10,0.7)}
+#menuBack{align-self:center;min-width:160px}
+.heirs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.heir{appearance:none;border:0;width:min(220px,44vw);padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(20,8,9,0.95);box-shadow:inset 0 0 0 2px #4a1a1c;color:var(--bone);cursor:pointer;font-family:var(--pixel);font-size:8px;line-height:1.6}
+.heir:hover,.heir.kb{box-shadow:inset 0 0 0 2px var(--hot);background:rgba(90,8,14,0.9)}
+.heir canvas{height:clamp(76px,16vh,140px);width:auto;image-rendering:pixelated}
+.heir b{font-family:var(--display);font-weight:400;font-size:26px;color:var(--hot)}
+#arc{z-index:7;padding:0;background:#000}
+#arc iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#arcX{position:absolute;top:6px;right:6px;z-index:2;min-width:0;min-height:36px;padding:0 14px}
+@media (max-aspect-ratio:1/1){
+  #view{flex:none;width:100%;aspect-ratio:5/4}
+  #pad{position:relative;flex:1 1 auto;align-items:center;padding:16px}
+  #hint{display:block;position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom,0px));text-align:center;font-family:var(--pixel);font-size:8px;line-height:1.6;color:var(--ash);pointer-events:none}
+  #title .col{margin:auto}
+}
+@media (max-height:340px){ #bA{width:70px;height:70px} #bB{width:60px;height:60px} #bC{width:50px;height:50px} #dpad{height:66px;width:150px} #menu{padding-top:46px} }
+@media (max-aspect-ratio:1/1){ #title{background-position:32% center} #title .shade{background:linear-gradient(180deg,rgba(7,4,5,0) 0%,rgba(7,4,5,0.25) 45%,rgba(7,4,5,0.92) 78%)} #title .col{margin:auto auto 9vh} #menuBox{flex:1 1 auto;height:100%} .heirs{flex:1;align-content:center} .heir{width:41vw;padding:12px 8px} .heir.solo{width:min(340px,78vw)} .heir canvas{height:clamp(90px,17vh,170px)} .heir.solo canvas{height:clamp(120px,24vh,220px)} .heir b{font-size:30px} .row{min-height:54px;font-size:10px} .row .t i{font-size:8px} #menuTitle{font-size:34px} .heir{font-size:9px} #over .px{font-size:11px} }
+</style>
+
+<div id="app">
+ <div id="view">
+  <canvas id="c" aria-label="Load Legacy game screen"></canvas>
+  <div id="scan"></div>
+  <button id="mute" type="button" aria-label="Sound on"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="sp" d="M3 9h4l5-4v14l-5-4H3z"/><path class="wv" d="M15 8.5a5 5 0 0 1 0 7M17.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke-width="2" stroke-linecap="round"/><path class="xx" d="M15 9l6 6M21 9l-6 6" fill="none" stroke-width="2" stroke-linecap="round"/></svg></button>
+
+  <button id="pauseBtn" type="button" aria-label="Pause">II</button>
+  <div id="title" class="screen">
+   <div class="shade"></div>
+   <div class="col">
+    <h1>Load Legacy</h1>
+    <p class="px dim">EVERY HEIR FALLS. THE LOAD GOES ON.</p>
+    <button id="contBtn" class="btn" type="button">CONTINUE</button>
+    <button id="newBtn" class="btn alt" type="button">NEW GAME</button>
+    <p class="px dim" id="titleInfo"></p>
+   </div>
+  </div>
+
+  <div id="menu" class="screen" hidden>
+   <div id="menuBox">
+    <div id="menuHead"><canvas id="menuPic" width="1" height="1"></canvas><div><div id="menuTitle"></div><div id="menuNote"></div></div><div id="menuBank"></div></div>
+    <div id="menuList"></div>
+    <button id="menuBack" class="btn alt" type="button">BACK</button>
+   </div>
+  </div>
+
+  <div id="over" class="screen" hidden>
+   <h2 id="overH">Your heir has fallen</h2>
+   <p class="px" id="overTxt"></p>
+   <p class="px gold" id="overGold"></p>
+   <button id="overBtn" class="btn" type="button">THE LEGACY CONTINUES</button>
+  </div>
+
+  <div id="arc" class="screen" hidden><iframe id="arcFrame" title="Arcade game" allow="autoplay"></iframe><button id="arcX" class="btn" type="button">LEAVE</button></div>
+ </div>
+
+ <div id="pad">
+  <div id="dpad" data-dir="" role="group" aria-label="Move left or right">
+   <svg class="al" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3v18L5 12z"></path></svg>
+   <svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18l12-9z"></path></svg>
+  </div>
+  <div id="acts">
+   <button id="bC" class="pbtn oct" type="button" aria-label="Special">C<br>SPEC</button>
+   <button id="bB" class="pbtn oct" type="button" aria-label="Attack">B<br><span id="bBt">HIT</span></button>
+   <button id="bA" class="pbtn oct" type="button" aria-label="Jump">A<br>JUMP</button>
+  </div>
+  <div id="hint">TURN YOUR PHONE SIDEWAYS FOR A BIGGER SCREEN</div>
+ </div>
+</div>

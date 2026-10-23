@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 600" width="1040" height="1200">
+<g stroke-linecap="round" stroke-linejoin="round">
+ <!-- legs -->
+ <path d="M222 462 C220 505 206 528 188 540" stroke="#c4121c" stroke-width="26" fill="none"/>
+ <path d="M222 462 C220 505 206 528 188 540" stroke="#0a0506" stroke-width="18" fill="none"/>
+ <path d="M292 462 C312 492 318 520 304 540" stroke="#c4121c" stroke-width="26" fill="none"/>
+ <path d="M292 462 C312 492 318 520 304 540" stroke="#0a0506" stroke-width="18" fill="none"/>
+ <ellipse cx="196" cy="548" rx="36" ry="14" fill="#0a0506" stroke="#c4121c" stroke-width="5"/>
+ <ellipse cx="312" cy="548" rx="36" ry="14" fill="#0a0506" stroke="#c4121c" stroke-width="5"/>
+ <!-- arms -->
+ <path d="M150 372 C108 368 82 336 76 300" stroke="#c4121c" stroke-width="24" fill="none"/>
+ <path d="M150 372 C108 368 82 336 76 300" stroke="#0a0506" stroke-width="16" fill="none"/>
+ <path d="M362 382 C392 392 418 400 444 398" stroke="#c4121c" stroke-width="24" fill="none"/>
+ <path d="M362 382 C392 392 418 400 444 398" stroke="#0a0506" stroke-width="16" fill="none"/>
+ <g transform="translate(74 294) rotate(-32)">
+  <path d="M-14 6 C-20 -8 -16 -22 -8 -26 M-4 2 C-6 -14 -2 -30 6 -32 M6 4 C8 -10 14 -22 22 -22 M-18 10 C-6 22 12 20 18 6" stroke="#c4121c" stroke-width="18" fill="none"/>
+  <path d="M-14 6 C-20 -8 -16 -22 -8 -26 M-4 2 C-6 -14 -2 -30 6 -32 M6 4 C8 -10 14 -22 22 -22 M-18 10 C-6 22 12 20 18 6" stroke="#0a0506" stroke-width="11" fill="none"/>
+  <circle cx="0" cy="4" r="16" fill="#0a0506"/>
+ </g>
+ <g transform="translate(450 398)">
+  <path d="M-4 -2 C8 -16 18 -18 24 -12 M0 2 C14 0 26 2 30 8 M-2 6 C10 10 20 16 22 22" stroke="#c4121c" stroke-width="16" fill="none"/>
+  <path d="M-4 -2 C8 -16 18 -18 24 -12 M0 2 C14 0 26 2 30 8 M-2 6 C10 10 20 16 22 22" stroke="#0a0506" stroke-width="9" fill="none"/>
+  <circle cx="0" cy="2" r="13" fill="#0a0506"/>
+ </g>
+</g>
+<!-- body: the droplet, tip curling up and to the left -->
+<path d="M244 70 C304 112 366 196 376 300 C384 376 352 450 290 476 C232 498 166 470 146 412 C124 350 160 290 198 242 C222 212 248 192 256 160 C262 132 256 100 244 70 Z" fill="#0a0506" stroke="#c4121c" stroke-width="6"/>
+<!-- brows -->
+<path d="M206 290 Q224 274 242 290 M276 290 Q294 274 312 290" stroke="#c4121c" stroke-width="7" fill="none" stroke-linecap="round"/>
+<!-- eyes -->
+<ellipse cx="224" cy="326" rx="15" ry="24" fill="#d01818"/>
+<ellipse cx="294" cy="326" rx="15" ry="24" fill="#d01818"/>
+<!-- smile -->
+<path d="M208 368 Q258 378 312 364 Q302 412 258 414 Q218 412 208 368 Z" fill="#0a0506" stroke="#c4121c" stroke-width="7" stroke-linejoin="round"/>
+<path d="M236 400 Q258 390 282 400 Q270 410 258 410 Q246 410 236 400 Z" fill="#8e0c14"/>
+</svg>
