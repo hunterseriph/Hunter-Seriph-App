@@ -17,7 +17,7 @@ function homPick() { // half the time the classic Gloop; Bloodmoon, the black an
   if (r < 0.06 && HOMDATA.breeds && HOMDATA.breeds.blood) return 'blood';
   return r < 0.53 || !o.length ? 'gloop' : o[Math.floor(Math.random() * o.length)];
 }
-function homNew() { RUN.hom = { b: homPick(), st: 0, g: 0 }; }
+function homNew() { RUN.hom = { b: (!RUN.endless && META.nextHom) || homPick(), st: 0, g: 0 }; if (!RUN.endless) { META.nextHom = null; saveMeta(); } } // hatched at the Hatchery in town
 /* stat changes for his stage and breed, applied at the end of calcStats */
 function homStats(s) {
   if (!homOn()) return; if (!RUN.hom) homNew();

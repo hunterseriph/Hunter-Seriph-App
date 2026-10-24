@@ -66,7 +66,7 @@ function openBuilding(e) {
       { name: 'BUILD ' + b.name.toUpperCase(), sub: b.kind === 'prov' ? 'Sells provisions that power up your next heir' : b.kind === 'runes' ? 'Runes you keep and equip, three at a time' : '', price: fmtN(b.cost) + ' drops', icon: 'coin', fn: function () { if (spend(b.cost)) { META.built[b.id] = 1; saveMeta(); G.layer = null; closeMenu(); G.banner = 2; G.bannerTxt = 'BUILT'; G.bannerSub = b.name.toUpperCase(); } } }] });
     return;
   }
-  if (b.kind === 'club') enterClub(); else if (b.kind === 'gear') openGear(); else if (b.kind === 'fate') openFate(); else if (b.kind === 'runes') openRunes(); else if (b.kind === 'prov') openProv(b); else if (b.kind === 'arcade') openArcadeMenu();
+  if (b.kind === 'hatchery') openHatchery(); else if (b.kind === 'club') enterClub(); else if (b.kind === 'gear') openGear(); else if (b.kind === 'fate') openFate(); else if (b.kind === 'runes') openRunes(); else if (b.kind === 'prov') openProv(b); else if (b.kind === 'arcade') openArcadeMenu();
 }
 function openClub() {
   openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rebuild: clubRows });
@@ -141,7 +141,7 @@ function openArcadeMenu() {
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: function () { openLegacy(); } },
     { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng, fn: null }
   ];
-  openMenu({ title: 'Potbelly Arcade', note: BUILDINGS[10].quote, pic: 'npc_potbelly', rows: rows });
+  openMenu({ title: 'Potbelly Arcade', note: '"Cabinets are free, kid. Play all you like."', pic: 'npc_potbelly', rows: rows });
 }
 function openLegacy(back) {
   var rows = META.legacy.length ? META.legacy.map(function (h, i) { return { icon: h.cls === 'cumhead' ? 'cumface' : (h.cls === 'homunculus' ? 'h_' + (h.hb || 'gloop') + '_adult_idle0' : h.cls + '_d'), name: (h.win ? 'WON  ·  ' : '') + CLASSES[h.cls].name.toUpperCase() + (h.ng ? '  ·  NG+' + h.ng : ''), sub: (h.win ? 'Finished the legacy' : 'Fell in ' + h.area + ' to ' + h.by) + '  ·  ' + fmtT(h.t) + '  ·  ' + h.kills + ' foes', price: '+' + fmtN(h.d) }; }) : [{ name: 'NO HEIRS YET', sub: 'Go in through the castle gate' }];
@@ -173,19 +173,7 @@ function openHeirs() {
 }
 
 /* ---------- inside the castle: merchants, altars, pause ---------- */
-function openMerchant(e) {
-  var rs = rsOf(G.roomKey), t = tierOf(), m = 1 + 0.5 * META.ng, who = MERCHNAME[e.who] || 'A stranger';
-  if (!rs.mp) rs.mp = shuffle(POWERS.slice())[0].id;
-  var pw = powerById(rs.mp), rows = [
-    { icon: 'gtonic', name: 'PATCH UP', sub: 'Heal half your HP', price: fmtN(30 * t * m), fn: function () { if (P.hp >= ST.mhp) { sfx.no(); return; } if (spend(Math.round(30 * t * m), true)) { var keep = ST.noHeal; ST.noHeal = false; healP(Math.round(ST.mhp / 2)); ST.noHeal = keep; renderMenu(true); } } },
-    { icon: 'sage', name: 'TOP UP MANA', sub: 'Fill your mana', price: fmtN(18 * t * m), fn: function () { if (spend(Math.round(18 * t * m), true)) { P.mana = ST.mmana; renderMenu(true); } } },
-    { icon: pw.icon, name: rs.b.p ? 'SOLD OUT' : pw.name.toUpperCase(), sub: rs.b.p ? '' : pw.d + ' for this run', price: rs.b.p ? '' : fmtN(90 * t * m), cls: rs.b.p ? 'off' : 'sec', fn: rs.b.p ? null : function () { if (spend(Math.round(90 * t * m), true)) { rs.b.p = 1; closeMenu(); grantPower(pw.id); } } }
-  ];
-  if (e.who === 'npc_pulsar') rows.unshift({ icon: 'npc_pulsar', name: 'CHANGE UP THE TUNES', sub: 'Pulsar spins a new track for the rest of this area', price: 'FREE', cls: 'sec', fn: function () {
-    var all = ['pulsar1', 'pulsar2', 'pulsar3'].filter(function (t) { return !RUN.tune || t !== RUN.tune.id; }); RUN.tune = { id: all[Math.floor(Math.random() * all.length)], area: G.rm.area };
-    music.play(RUN.tune.id); sfx.magic(); toastMenu('"Just vibes, friend. Free of charge."'); } });
-  openMenu({ title: who + "'s Stall", note: e.who === 'npc_pulsar' ? '"Just vibes, friend. Free of charge."' : '"Drops spend the same in here, love."', pic: e.who, rows: rows, bank: 'run' });
-}
+function openMerchant(e) { openStall(e); } // every shopkeeper has their own stock: src/58-merch.js
 function openAltar(e) {
   var rs = rsOf(G.roomKey); if (!rs.alt) rs.alt = shuffle(POWERS.slice()).slice(0, 2).map(function (p) { return p.id; });
   openMenu({ title: 'Powerup Altar', note: 'Take one. The other fades.', pic: null, bank: 'none', rows: rs.alt.map(function (id) { var p = powerById(id); return { icon: p.icon, name: p.name.toUpperCase(), sub: p.d, price: 'TAKE', cls: 'sec', fn: function () { rs.taken = 1; e.taken = true; closeMenu(); grantPower(id); poof(e.x, e.y - 30, 20, ['#ffe36a', '#f1e7d0', '#7a2aff']); } }; }) });

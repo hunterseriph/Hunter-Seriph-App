@@ -33,7 +33,7 @@ function calcStats() {
   s.soul = cnt(pw, 'soul') * 10; s.berserk = cnt(pw, 'berserk') * 0.4; s.lucky = Math.min(0.5, cnt(pw, 'lucky') * 0.1); s.cold = Math.min(0.5, cnt(pw, 'cold') * 0.12); s.bubble = cnt(pw, 'bubble'); s.slayer = cnt(pw, 'slayer') * 0.35;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
-  pillStats(s); homStats(s);
+  bonusStats(s); pillStats(s); homStats(s);
   return s;
 }
 function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
@@ -47,7 +47,7 @@ function startRun(cls) {
   META.prov = {}; META.card = null; META.runs++; META.started = true; META.last = cls; saveMeta();
   WORLD = genWorld(RUN.seed); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
   newPlayer(); G.mode = 'play'; G.msg = null; enterRoom(WORLD.start, null);
-  if (homOn()) { homHatchStart(); return; }
+  if (homOn()) { G.banner = 2.4; G.bannerTxt = homName().toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + '  ·  ' + (HOMPOW[homBreed()] || '').toUpperCase(); return; } // he already hatched at the Hatchery
   G.banner = 3; G.bannerTxt = CLASSES[cls].name.toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + (RUN.card ? '  ·  ' + cardName(RUN.card).toUpperCase() : '');
 }
 function cardName(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i].name; return ''; }

@@ -317,12 +317,12 @@ var OPT = { mus: 1 };
 /* ---------- permanent progress ---------- */
 var META_KEY = 'll-meta', RUN_KEY = 'll-run';
 function freshMeta() {
-  return { v: 1, bank: 0, up: {}, built: { club: 1, greebo: 1, fate: 1, arcade: 1 }, gear: { weapon: 0, armour: 0, helm: 0 }, gearOwn: { weapon: 0, armour: 0, helm: 0 },
+  return { v: 1, bank: 0, up: {}, built: { club: 1, greebo: 1, fate: 1, arcade: 1, hatch: 1 }, gear: { weapon: 0, armour: 0, helm: 0 }, gearOwn: { weapon: 0, armour: 0, helm: 0 },
     runes: {}, runeOn: [], found: { weapon: 0, armour: 0, helm: 0, runes: {} }, lb: [], bosses: {}, blumWins: 0, superWins: 0, ng: 0, last: null, runs: 0, legacy: [], prov: {}, card: null, started: false, totalDrops: 0, seenTown: 0 };
 }
 var META = (function () { var d = freshMeta(); try { var s = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if (s && s.v === 1) for (var k in s) d[k] = s[k]; } catch (e) {} return d; })();
 // older saves: anything already bought counts as found
-(function () { var f = META.found || (META.found = { weapon: 0, armour: 0, helm: 0, runes: {} }); if (!f.runes) f.runes = {}; ['weapon', 'armour', 'helm'].forEach(function (s) { f[s] = Math.max(f[s] || 0, (META.gearOwn || {})[s] || 0); }); for (var r in META.runes || {}) f.runes[r] = 1; if (!META.lb) META.lb = []; })();
+(function () { var f = META.found || (META.found = { weapon: 0, armour: 0, helm: 0, runes: {} }); if (!f.runes) f.runes = {}; ['weapon', 'armour', 'helm'].forEach(function (s) { f[s] = Math.max(f[s] || 0, (META.gearOwn || {})[s] || 0); }); for (var r in META.runes || {}) f.runes[r] = 1; if (!META.lb) META.lb = []; META.built.hatch = 1; })();
 function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(META)); } catch (e) {} }
 
 /* ---------- input: keyboard, touch pad, gamepad ---------- */
@@ -559,7 +559,7 @@ var CLASSES = {
   greebo: { name: 'Greebo', hp: 125, mana: 50, dmg: 15, spd: 0.92, jumps: 2, atk: 'pie', cd: 0.5, spec: 'cat', specCost: 40,
     pas: 'Sticky Fingers', pd: '+30% drops from everything.', ad: 'Cream Pie Blast: a big pie straight ahead, half the reach of Cumhead.', sd: 'Sir Johnathan: the cat tears across the room.' },
   homunculus: { name: 'Homunculus', hp: 100, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
-    pas: 'Little Legs', pd: 'Triple jump and a smaller body.', ad: 'Acid Spit: rapid spit that poisons.', sd: 'Ooze Shield: 3 seconds untouchable, healing as it lasts.' }
+    pas: 'Little Legs', pd: 'Triple jump and a smaller body. Hatches at the Hatchery in town and grows up during the run.', ad: 'Attack: depends on the breed that hatches.', sd: 'Special: every breed has its own.' }
 };
 var CLASSORDER = ['cumhead', 'spermaid', 'greebo', 'homunculus'];
 
@@ -647,6 +647,7 @@ var BUILDINGS = [
   { id: 'sanct', name: 'Spermaid Sanctum', fac: 'fac_sanct', npc: 'npc_spermaid', cost: 1200, kind: 'runes', quote: '' },
   { id: 'joff', name: "Joff's Pineapple Pizzaria", fac: 'fac_joff', npc: 'npc_joff', cost: 700, kind: 'prov', slot: 'food', quote: '"Pineapple belongs on pizza. Fight me."' },
   { id: 'beebs', name: "Uncle Beeb's Tavern", fac: 'fac_beebs', npc: 'npc_beebs', cost: 1000, kind: 'prov', slot: 'drink', quote: '"Sit down, lad. First one\'s always warm."' },
+  { id: 'hatch', name: 'Homunculus Hatchery', fac: null, npc: null, cost: 0, kind: 'hatchery', quote: '' },
   { id: 'cafe', name: "Kaya & Elden's Cum Café", fac: 'fac_cafe', npc: 'npc_kaya', npc2: 'npc_elden', cost: 1300, kind: 'prov', slot: 'cafe', quote: '"Welcome in! Kaya\'s on the coffee, Elden\'s on the grill."' },
   { id: 'amy', name: "Amy's Willy Chilli", fac: 'fac_amy', npc: 'npc_amy', cost: 1700, kind: 'prov', slot: 'chilli', quote: '"Mild, hot or dynamite?"' },
   { id: 't', name: "T's Hussy House", fac: 'fac_t', npc: 'npc_t', cost: 2400, kind: 'prov', slot: 'revive', quote: '"Come in, darling. I\'ll get the doors."' },
@@ -726,8 +727,8 @@ var POWERS = [
 ];
 function powerById(id) { for (var i = 0; i < POWERS.length; i++) if (POWERS[i].id === id) return POWERS[i]; return null; }
 /* merchant rooms: a random shopkeeper sells these for drops */
-var MERCH = ['npc_joff', 'npc_beebs', 'npc_kaya', 'npc_elden', 'npc_amy', 'npc_t', 'npc_saba', 'npc_tb', 'npc_pulsar', 'npc_bonjo', 'npc_harold', 'npc_ali', 'npc_judgement', 'npc_nattyboro', 'npc_jessiah'];
-var MERCHNAME = { npc_joff: 'Joff', npc_beebs: 'Uncle Beeb', npc_kaya: 'Kaya', npc_elden: 'Elden', npc_amy: 'Amy', npc_t: 'T', npc_saba: 'Saba', npc_tb: 'TB', npc_pulsar: 'Pulsar', npc_bonjo: 'Bonjo', npc_harold: 'Harold', npc_ali: 'Ali', npc_judgement: 'Judgement', npc_nattyboro: 'Nattyboro', npc_jessiah: 'Jessiah' };
+var MERCH = ['npc_joff', 'npc_beebs', 'npc_kaya', 'npc_elden', 'npc_amy', 'npc_t', 'npc_saba', 'npc_tb', 'npc_pulsar', 'npc_bonjo', 'npc_harold', 'npc_ali', 'npc_judgement', 'npc_nattyboro', 'npc_jessiah', 'npc_spermaid'];
+var MERCHNAME = { npc_joff: 'Joff', npc_beebs: 'Uncle Beeb', npc_kaya: 'Kaya', npc_elden: 'Elden', npc_amy: 'Amy', npc_t: 'T', npc_saba: 'Saba', npc_tb: 'TB', npc_pulsar: 'Pulsar', npc_bonjo: 'Bonjo', npc_harold: 'Harold', npc_ali: 'Ali', npc_judgement: 'Judgement', npc_nattyboro: 'Nattyboro', npc_jessiah: 'Jessiah', npc_spermaid: 'Spermaid' };
 
 /* =====================================================================================================
    WORLD: a grid of one-screen rooms (32x16 tiles). Each run gets a new seed, so the castle rebuilds itself.
@@ -873,7 +874,8 @@ function buildRoom(rm) {
   } else if (t === 'bossdoor') {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss }); RS(cx0 - 5, 9, cx0 + 4, 14);
   } else if (t === 'merchant') {
-    ents.push({ k: 'npc', x: cxp, y: 15 * T, who: MERCH[Math.floor(r() * MERCH.length)] }); RS(cx0 - 4, 10, cx0 + 4, 14);
+    var who = MERCH[Math.floor(r() * MERCH.length)]; if (RUN && who === 'npc_' + RUN.cls) who = 'npc_jessiah'; // the heir you are playing does not also run a stall
+    ents.push({ k: 'npc', x: cxp, y: 15 * T, who: who }); RS(cx0 - 4, 10, cx0 + 4, 14);
   } else if (t === 'powerup') {
     ents.push({ k: 'altar', x: cxp, y: 15 * T }); RS(cx0 - 4, 10, cx0 + 4, 14);
   } else if (t === 'challenge') {
@@ -1104,7 +1106,7 @@ function calcStats() {
   s.soul = cnt(pw, 'soul') * 10; s.berserk = cnt(pw, 'berserk') * 0.4; s.lucky = Math.min(0.5, cnt(pw, 'lucky') * 0.1); s.cold = Math.min(0.5, cnt(pw, 'cold') * 0.12); s.bubble = cnt(pw, 'bubble'); s.slayer = cnt(pw, 'slayer') * 0.35;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
-  pillStats(s); homStats(s);
+  bonusStats(s); pillStats(s); homStats(s);
   return s;
 }
 function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
@@ -1118,7 +1120,7 @@ function startRun(cls) {
   META.prov = {}; META.card = null; META.runs++; META.started = true; META.last = cls; saveMeta();
   WORLD = genWorld(RUN.seed); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
   newPlayer(); G.mode = 'play'; G.msg = null; enterRoom(WORLD.start, null);
-  if (homOn()) { homHatchStart(); return; }
+  if (homOn()) { G.banner = 2.4; G.bannerTxt = homName().toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + '  ·  ' + (HOMPOW[homBreed()] || '').toUpperCase(); return; } // he already hatched at the Hatchery
   G.banner = 3; G.bannerTxt = CLASSES[cls].name.toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + (RUN.card ? '  ·  ' + cardName(RUN.card).toUpperCase() : '');
 }
 function cardName(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i].name; return ''; }
@@ -1672,7 +1674,7 @@ function homPick() { // half the time the classic Gloop; Bloodmoon, the black an
   if (r < 0.06 && HOMDATA.breeds && HOMDATA.breeds.blood) return 'blood';
   return r < 0.53 || !o.length ? 'gloop' : o[Math.floor(Math.random() * o.length)];
 }
-function homNew() { RUN.hom = { b: homPick(), st: 0, g: 0 }; }
+function homNew() { RUN.hom = { b: (!RUN.endless && META.nextHom) || homPick(), st: 0, g: 0 }; if (!RUN.endless) { META.nextHom = null; saveMeta(); } } // hatched at the Hatchery in town
 /* stat changes for his stage and breed, applied at the end of calcStats */
 function homStats(s) {
   if (!homOn()) return; if (!RUN.hom) homNew();
@@ -2888,6 +2890,66 @@ function drawGateBig(x, gy) {
 }
 
 /* =====================================================================================================
+   MERCHANTS IN THE CASTLE: each shopkeeper sells their own stock, like in Cumheads Quest.
+   Prices are in the drops you are carrying and go up in deeper areas. Each item sells once per stall.
+   Effects that last the run go into RUN.bonus and are read by calcStats (bonusStats).
+   ===================================================================================================== */
+var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is someone plaything"'];
+function tbQuote() { return TBQUOTES[Math.floor(Math.random() * TBQUOTES.length)]; }
+// item: [icon, name, description, base price, effect]. Effects: heal (fraction), mana, full, or run bonuses
+var STALLS = {
+  npc_joff: { q: '"Pineapple belongs on pizza. Fight me."', items: [['ppz', 'Pineapple Slice', 'Heal 35% of your HP', 30, { heal: 0.35 }], ['hpz', 'Ham and Pineapple', 'Heal 60% of your HP', 50, { heal: 0.6 }], ['cpie', 'Whole Pizza Box', '+20 max HP for this run', 80, { mhp: 20 }]] },
+  npc_beebs: { q: '"Sit down, lad. First one\'s always warm."', items: [['ale', 'Pint of Ale', '+10% damage for this run', 70, { dmgP: 0.1 }], ['stew', "Beeb's Stew", 'Heal 40% of your HP', 35, { heal: 0.4 }], ['brute', 'One for the Road', '+25 max mana for this run', 50, { mana: 25 }]] },
+  npc_kaya: { q: '"Welcome in! Kaya\'s on the coffee, Elden\'s on the grill."', items: [['cumpuccino', 'Cumpuccino', 'Full mana, and it refills faster this run', 50, { full: 1, manaRegen: 0.4 }], ['stim', 'Espresso Shot', '+10% attack speed for this run', 70, { atk: 0.1 }], ['croissant', 'Cream Croissant', 'Heal 30% of your HP', 25, { heal: 0.3 }]] },
+  npc_elden: { q: '"Welcome in! Kaya\'s on the coffee, Elden\'s on the grill."', items: [['stew', 'Grilled Sausage', 'Heal 50% of your HP', 40, { heal: 0.5 }], ['hpz', "Elden's Full Plate", 'Heal 1 HP every 2 seconds this run', 90, { regen: 0.5 }], ['garlicbread', 'Burnt Toast', '+5% critical hits for this run', 60, { crit: 0.05 }]] },
+  npc_amy: { q: '"Mild, hot or dynamite?"', items: [['wchili', 'Mild', 'Heal 25% of your HP', 20, { heal: 0.25 }], ['wchili', 'Hot', 'Your hits set foes on fire this run', 90, { burn: 1 }], ['dchili', 'Dynamite', 'Foes explode when they die this run', 120, { boom: 1 }]] },
+  npc_t: { q: '"Come in, darling. I\'ll get the doors."', items: [['elixir', 'Have the Doors Opened', 'Come back once at full HP if you die this run', 160, { revive: 1 }], ['gtonic', 'A Little Kiss', 'Heal 50% of your HP', 40, { heal: 0.5 }], ['bloodpack', 'Red Lipstick', 'Heal 3% of the damage you deal this run', 90, { leech: 0.03 }]] },
+  npc_saba: { q: '"Hitless runs only. Take a look, my friend."', items: [['iron', 'Hitless Charm', 'The first hit in every room is cancelled this run', 140, { ward: 1 }], ['regen', 'Hemp Wrap', 'Heal 30% and longer safety after a hit this run', 70, { heal: 0.3, iframes: 0.3 }], ['swift', 'Calm Leaf', '+12% move speed for this run', 70, { spd: 0.12 }]] },
+  npc_tb: { q: null, items: [['stim', "TB's Silly Pill", 'Half the time a powerup. Half the time... a pill.', 40, { gamble: 1 }], ['gtonic', 'Sit a While', 'Heal to full. Mind the stains.', 60, { heal: 1 }], ['tonic', 'Stain Remover', "Gets rid of a Silly Pill you are on", 80, { cure: 1 }]] },
+  npc_pulsar: { q: '"Just vibes, friend. Free of charge."', items: [['sage', 'Good Vibes', 'Heal 20% and refill your mana', 0, { heal: 0.2, full: 1 }], ['deck', 'Bass Drop', '+10% damage for this run', 60, { dmgP: 0.1 }]] },
+  npc_bonjo: { q: '"Welcome, welcome. Let me get the door."', items: [['briefs', 'Fancy Briefs', '+6% damage blocked this run', 80, { arm: 0.06 }], ['panties', 'Silk Panties', '+10% move speed this run', 70, { spd: 0.1 }], ['lgloves', 'Leather Gloves', '+10% attack speed this run', 80, { atk: 0.1 }]] },
+  npc_harold: { q: '"Potions? Tea? Same thing, really. Sit, sit!"', items: [['tonic', 'Cup of Tea', 'Heal 35% of your HP', 30, { heal: 0.35 }], ['elixir', 'Mad Potion', 'Something good happens. Probably.', 60, { mad: 1 }], ['gtonic', 'Teacup of Fury', '+15% damage for this run', 90, { dmgP: 0.15 }]] },
+  npc_ali: { q: '"Nuggets? Garlic bread? Everything is better with garlic."', items: [['garlicbread', 'Garlic Bread', 'Heal 40% of your HP', 30, { heal: 0.4 }], ['stew', 'Nuggets', '+15 max HP for this run', 60, { mhp: 15 }], ['garlicbread', 'Garlic Breath', 'Foes that bump into you get hurt this run', 90, { thorns: 1 }]] },
+  npc_judgement: { q: '"Light or shadow. Both have a price."', items: [['holy', 'Light', 'Heal to full, but -10% damage this run', 50, { heal: 1, dmgP: -0.1 }], ['curse', 'Shadow', '+25% damage, but -15% max HP this run', 90, { dmgP: 0.25, mhpP: -0.15 }]] },
+  npc_nattyboro: { q: '"A blade without a bite is merely a stick."', items: [['cleaver', 'Sharpen', '+3 damage for this run', 90, { dmg: 3 }], ['wchili', 'Fire Enchant', 'Your hits set foes on fire this run', 100, { burn: 1 }], ['katana', 'Keen Edge', '+10% critical hits for this run', 100, { crit: 0.1 }]] },
+  npc_jessiah: { q: '"An empty stomach makes a hollow man. Eat."', items: [['stew', 'Hearty Meal', 'Heal 60% of your HP', 45, { heal: 0.6 }], ['garlicbread', 'Bread', 'Heal 25% of your HP', 15, { heal: 0.25 }], ['hpz', 'A Proper Feast', '+25 max HP for this run', 90, { mhp: 25 }]] },
+  npc_spermaid: { q: '"Sweetie! Even down here I keep a little stall."', items: [['sage', 'Siren Tea', 'Refill your mana', 25, { full: 1 }], ['regen', 'Sea Salt', 'Heal 1 HP every 2 seconds this run', 90, { regen: 0.5 }], ['holy', 'Pearl', '+20 max mana for this run', 50, { mana: 20 }]] }
+};
+function bonusStats(s) { // run bonuses bought from merchants
+  var b = RUN && RUN.bonus; if (!b) return;
+  s.mhp = Math.round((s.mhp + (b.mhp || 0)) * (1 + (b.mhpP || 0))); s.dmg = (s.dmg + (b.dmg || 0)) * (1 + (b.dmgP || 0)); s.mmana += b.mana || 0;
+  s.manaRegen *= 1 + (b.manaRegen || 0); s.atkMul /= 1 + (b.atk || 0); s.crit += b.crit || 0; s.spd *= 1 + (b.spd || 0); s.arm = Math.min(0.75, s.arm + (b.arm || 0));
+  s.leech += b.leech || 0; s.regen = (s.regen || 0) + (b.regen || 0); s.iframes += b.iframes || 0; if (b.burn) s.burn = true; if (b.boom) s.boom = true; if (b.ward) s.ward = true; s.thorns = (s.thorns || 0) + (b.thorns || 0);
+}
+function merchBuy(eff) {
+  var b = RUN.bonus || (RUN.bonus = {}), oldM = ST.mhp;
+  if (eff.gamble) { if (Math.random() < 0.5) { grantPower(shuffle(POWERS.slice())[0].id); return; } RUN.pill = PILLORDER[Math.floor(Math.random() * PILLORDER.length)]; ST = calcStats(); P.hp = Math.min(P.hp, ST.mhp); G.banner = 2.4; G.bannerTxt = "TB'S SILLY PILL"; G.bannerSub = PILLS[RUN.pill].name.toUpperCase(); sfx.hurt(); return; }
+  if (eff.cure) { if (RUN.pill) { pop(P.x, P.y - P.h - 6, 'CURED', '#7dff9a'); RUN.pill = null; ST = calcStats(); } else pop(P.x, P.y - P.h - 6, 'NOTHING TO CURE', '#a6968f'); return; }
+  if (eff.mad) { var r = Math.random(); if (r < 0.4) { var k = ST.noHeal; ST.noHeal = false; healP(ST.mhp); ST.noHeal = k; } else if (r < 0.7) { b.dmgP = (b.dmgP || 0) + 0.1; pop(P.x, P.y - P.h - 6, '+10% DAMAGE', '#ffe36a'); } else grantPower(shuffle(POWERS.slice())[0].id); ST = calcStats(); return; }
+  if (eff.revive) RUN.revive = (RUN.revive || 0) + 1;
+  ['mhp', 'mhpP', 'dmg', 'dmgP', 'mana', 'manaRegen', 'atk', 'crit', 'spd', 'arm', 'leech', 'regen', 'iframes', 'thorns'].forEach(function (k) { if (eff[k]) b[k] = (b[k] || 0) + eff[k]; });
+  ['burn', 'boom', 'ward'].forEach(function (k) { if (eff[k]) b[k] = 1; });
+  ST = calcStats(); if (ST.mhp > oldM) P.hp += ST.mhp - oldM; P.hp = Math.min(P.hp, ST.mhp);
+  if (eff.heal) { var keep = ST.noHeal; ST.noHeal = false; healP(Math.round(ST.mhp * eff.heal)); ST.noHeal = keep; }
+  if (eff.full) P.mana = ST.mmana;
+}
+function openStall(e) {
+  var rs = rsOf(G.roomKey), t = tierOf(), m = 1 + 0.5 * META.ng, who = MERCHNAME[e.who] || 'A stranger', st = STALLS[e.who] || STALLS.npc_jessiah;
+  if (!rs.sold) rs.sold = {};
+  var note = e.who === 'npc_tb' ? tbQuote() : st.q;
+  openMenu({ title: who + "'s Stall", note: note, pic: e.who, bank: 'run', rebuild: function () {
+    var rows = st.items.map(function (it, i) {
+      var price = Math.round(it[3] * (0.6 + 0.4 * t) * m), sold = rs.sold[e.who + i];
+      return { icon: it[0], name: sold ? 'SOLD OUT' : it[1].toUpperCase(), sub: sold ? '' : it[2], price: sold ? '' : (price ? fmtN(price) : 'FREE'), cls: sold ? 'off' : (RUN.drops < price ? 'off' : ''), fn: sold ? null : function () { if (price && !spend(price, true)) return; if (!price) sfx.buy(); rs.sold[e.who + i] = 1; merchBuy(it[4]); saveRun(); renderMenu(true); } };
+    });
+    if (e.who === 'npc_pulsar') rows.unshift({ icon: 'npc_pulsar', name: 'CHANGE UP THE TUNES', sub: 'Pulsar spins a new track for the rest of this area', price: 'FREE', cls: 'sec', fn: function () {
+      var all = ['pulsar1', 'pulsar2', 'pulsar3'].filter(function (q) { return !RUN.tune || q !== RUN.tune.id; }); RUN.tune = { id: all[Math.floor(Math.random() * all.length)], area: G.rm.area };
+      music.play(RUN.tune.id); sfx.magic(); toastMenu('"Just vibes, friend. Free of charge."'); } });
+    return rows;
+  } });
+}
+
+/* =====================================================================================================
    TB'S TOLL: TB stands in front of the castle gate and takes your drops to let you in.
    Pay the lot, or make a deal: he takes only 80% but you both swallow one of TB's Silly Pills, and the
    heir goes in with a random bad effect. There is a 1% chance he slips you a pill anyway.
@@ -2910,7 +2972,7 @@ function tbRate() { return (100 - tbLevel() * 5) / 100; } // 100% down to 50%
 function tbToll(deal) { return Math.floor(META.bank * tbRate() * (deal ? 0.8 : 1)); }
 function openToll() {
   var heir = META.nextHeir || 'cumhead', lv = tbLevel(), next = 3 - (META.tbRep || 0) % 3;
-  openMenu({ title: "TB's Toll", note: '"Everything you are carrying, mate. That is the toll. House rules."', pic: 'npc_tb', bank: 'town', rows: [
+  openMenu({ title: "TB's Toll", note: tbQuote() + '  ·  He takes your banked drops to let you in.', pic: 'npc_tb', bank: 'town', rows: [
     { name: 'TB TAKES ' + Math.round(tbRate() * 100) + '% OF YOUR BANK  ·  REPUTATION ' + lv + (lv < 10 ? '  ·  ' + next + ' MORE TRIPS TO THE NEXT' : '  ·  BEST MATES'), cls: 'head' },
     { icon: 'coin', name: 'PAY THE TOLL', sub: CLASSES[heir].name + ' goes in. TB keeps ' + fmtN(tbToll(false)) + ' drops.', price: fmtN(tbToll(false)), cls: 'sec', fn: function () { payToll(false); } },
     { icon: 'stim', name: "MAKE A DEAL", sub: "He only takes 80% (" + fmtN(tbToll(true)) + "), but you take one of TB's Silly Pills with him. Something will go wrong in there.", price: fmtN(tbToll(true)), fn: function () { payToll(true); } },
@@ -2955,7 +3017,40 @@ function drawPillFx() {
 }
 function drawTB(x, gy) { // TB waits by the gate
   spr('npc_tb', x, gy, P.x < x + G.cam.x, 1.15);
-  if (!META.seenTB && Math.abs(P.x - (x + G.cam.x)) < 90) text('"THE TOLL, MATE"', x, gy - 52, 'center', '#ffe36a', 5);
+  if (Math.abs(P.x - (x + G.cam.x)) < 110) { // TB has a lot to say
+    var k = Math.floor(G.t / 4) % TBQUOTES.length, words = TBQUOTES[k].split(' '), lines = [''];
+    words.forEach(function (w) { if ((lines[lines.length - 1] + ' ' + w).length > 26) lines.push(w); else lines[lines.length - 1] = (lines[lines.length - 1] + ' ' + w).trim(); });
+    lines.forEach(function (l, i) { text(l, x, gy - 52 - (lines.length - 1 - i) * 8, 'center', '#ffe36a', 5); });
+  }
+}
+
+/* ---------- the Homunculus Hatchery: a Homunculus heir hatches here in town, before going in ---------- */
+function townHatch(dt) {
+  if (!(P.thatch > 0)) return false;
+  var was = P.thatch; P.thatch -= dt; P.vx = 0;
+  if (!META.nextHom && was >= 2.2 - dt * 1.5) { META.nextHom = homPick(); META.hatched = META.hatched || {}; META.hatched[META.nextHom] = 1; saveMeta(); }
+  if (was > 0.5 && P.thatch <= 0.5) { sfx.splat(); poof(P.x, P.y - 10, 20, ['#f1e7d0', '#fff6d8', HOMDATA.breeds[META.nextHom].ooze]); G.shake = 4; }
+  if (P.thatch <= 0) { P.thatch = 0; var b = META.nextHom; G.banner = 2.6; G.bannerTxt = 'A BABY ' + HOMDATA.breeds[b].name.toUpperCase() + ' HATCHES'; G.bannerSub = (HOMPOW[b] || '').toUpperCase(); sfx.oneup(); }
+  return true;
+}
+function drawTownEgg(x, y) {
+  var t = 2.2 - P.thatch, k = t < 0.6 ? 0 : t < 1.1 ? 1 : t < 1.5 ? 2 : 3, b = META.nextHom || 'gloop', wob = Math.sin(G.t * (10 + k * 6)) * (0.06 + k * 0.05);
+  if (P.thatch < 0.5) { spr('h_' + b + '_baby_idle0', x, y + 1, false, 1); spr('h_' + b + '_egg3', x, y, false, 1.3, P.thatch / 0.5 * 0.8); return; }
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(wob); spr('h_' + b + '_egg' + k, 0, 0, false, 1.3); ctx.restore();
+}
+function drawHatchery(x, gy) { // a low nursery: glass front, a heat lamp, eggs on straw
+  R(ctx, '#12040a', x - 52, gy - 70, 104, 70); R(ctx, '#2a1410', x - 51, gy - 69, 102, 69); for (var i = 0; i < 6; i++) R(ctx, '#3a1c14', x - 51 + i * 17, gy - 69, 2, 69);
+  ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.moveTo(x - 58, gy - 70); ctx.lineTo(x, gy - 92); ctx.lineTo(x + 58, gy - 70); ctx.fill(); ctx.fillStyle = '#3a6a1a'; ctx.beginPath(); ctx.moveTo(x - 52, gy - 71); ctx.lineTo(x, gy - 88); ctx.lineTo(x + 52, gy - 71); ctx.fill();
+  R(ctx, '#12040a', x - 40, gy - 54, 80, 40); R(ctx, 'rgba(120,255,90,0.12)', x - 38, gy - 52, 76, 36); R(ctx, '#c8903a', x - 38, gy - 22, 76, 6);
+  var hl = 0.5 + Math.sin(G.t * 3) * 0.15; ctx.save(); ctx.globalAlpha = hl; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(x - 4, gy - 52); ctx.lineTo(x - 30, gy - 22); ctx.lineTo(x + 30, gy - 22); ctx.lineTo(x + 4, gy - 52); ctx.fill(); ctx.restore(); R(ctx, '#ff7a30', x - 4, gy - 54, 8, 4);
+  ['gloop', 'ember', 'blood', 'frost'].forEach(function (b, i) { spr('h_' + b + '_egg0', x - 27 + i * 18, gy - 22, false, 0.9); });
+  R(ctx, '#12040a', x - 10, gy - 14, 20, 14); R(ctx, '#3a1c14', x - 9, gy - 13, 18, 13);
+}
+function openHatchery() {
+  var mine = townHeir() === 'homunculus' ? META.nextHom : null, seen = META.hatched || {};
+  var rows = [{ name: mine ? 'YOUR HEIR: A BABY ' + HOMDATA.breeds[mine].name.toUpperCase() : 'CHOOSE THE HOMUNCULUS AS YOUR HEIR AND HE HATCHES HERE', cls: 'head' }];
+  (HOMDATA.order || []).forEach(function (b) { var known = seen[b] || b === 'gloop'; rows.push({ icon: 'h_' + b + '_adult_idle0', name: known ? HOMDATA.breeds[b].name.toUpperCase() + (b === mine ? '  ·  YOURS' : '') : '???', sub: known ? HOMMOVE[b][2] : (b === 'blood' ? 'Black and red. Very rare. The best of them.' : 'Not hatched yet'), cls: b === mine ? 'own' : (known ? '' : 'off') }); });
+  openMenu({ title: 'Homunculus Hatchery', note: 'Every breed fights its own way. You never know which one is in the egg.', pic: null, bank: 'none', rows: rows });
 }
 
 /* =====================================================================================================
@@ -2983,6 +3078,7 @@ function goTown(first) {
   P.x = TOWN.gateX - 70; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
   music.play('town'); saveMeta();
+  if (cls === 'homunculus' && !META.nextHom) { var hb = TOWN.ents.filter(function (e) { return e.k === 'bld' && e.b.id === 'hatch'; })[0]; if (hb) { P.x = hb.x; camSnapTown(); P.thatch = 2.2; G.banner = 0; } } // a Homunculus heir hatches here first
   if (!META.seenTown) { META.seenTown = 1; saveMeta(); toast('THE CASTLE GATE IS RIGHT HERE. SPEND DROPS IN TOWN BETWEEN HEIRS.'); }
 }
 function camSnapTown() { G.cam.x = clamp(P.x - VW / 2, 0, TOWN.w * T - VW); G.cam.y = 0; }
@@ -2993,6 +3089,7 @@ function townNear() {
 }
 function stepTown(dt) {
   if (tollStep(dt)) { updateFx(dt); return; }
+  if (townHatch(dt)) { updateFx(dt); return; }
   var dir = (input.r ? 1 : 0) - (input.l ? 1 : 0), jumpPressed = input.j && !P.prevJump, atkPressed = input.a && !P.prevAtk; P.prevJump = input.j; P.prevAtk = input.a; P.prevSpec = input.s;
   if (P.jumpStartT > 0) P.jumpStartT -= dt;
   var mx = MAXV * ST.spd, sgn = P.vx > 0 ? 1 : (P.vx < 0 ? -1 : 0);
@@ -3081,7 +3178,7 @@ function openBuilding(e) {
       { name: 'BUILD ' + b.name.toUpperCase(), sub: b.kind === 'prov' ? 'Sells provisions that power up your next heir' : b.kind === 'runes' ? 'Runes you keep and equip, three at a time' : '', price: fmtN(b.cost) + ' drops', icon: 'coin', fn: function () { if (spend(b.cost)) { META.built[b.id] = 1; saveMeta(); G.layer = null; closeMenu(); G.banner = 2; G.bannerTxt = 'BUILT'; G.bannerSub = b.name.toUpperCase(); } } }] });
     return;
   }
-  if (b.kind === 'club') enterClub(); else if (b.kind === 'gear') openGear(); else if (b.kind === 'fate') openFate(); else if (b.kind === 'runes') openRunes(); else if (b.kind === 'prov') openProv(b); else if (b.kind === 'arcade') openArcadeMenu();
+  if (b.kind === 'hatchery') openHatchery(); else if (b.kind === 'club') enterClub(); else if (b.kind === 'gear') openGear(); else if (b.kind === 'fate') openFate(); else if (b.kind === 'runes') openRunes(); else if (b.kind === 'prov') openProv(b); else if (b.kind === 'arcade') openArcadeMenu();
 }
 function openClub() {
   openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rebuild: clubRows });
@@ -3156,7 +3253,7 @@ function openArcadeMenu() {
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: function () { openLegacy(); } },
     { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng, fn: null }
   ];
-  openMenu({ title: 'Potbelly Arcade', note: BUILDINGS[10].quote, pic: 'npc_potbelly', rows: rows });
+  openMenu({ title: 'Potbelly Arcade', note: '"Cabinets are free, kid. Play all you like."', pic: 'npc_potbelly', rows: rows });
 }
 function openLegacy(back) {
   var rows = META.legacy.length ? META.legacy.map(function (h, i) { return { icon: h.cls === 'cumhead' ? 'cumface' : (h.cls === 'homunculus' ? 'h_' + (h.hb || 'gloop') + '_adult_idle0' : h.cls + '_d'), name: (h.win ? 'WON  ·  ' : '') + CLASSES[h.cls].name.toUpperCase() + (h.ng ? '  ·  NG+' + h.ng : ''), sub: (h.win ? 'Finished the legacy' : 'Fell in ' + h.area + ' to ' + h.by) + '  ·  ' + fmtT(h.t) + '  ·  ' + h.kills + ' foes', price: '+' + fmtN(h.d) }; }) : [{ name: 'NO HEIRS YET', sub: 'Go in through the castle gate' }];
@@ -3188,19 +3285,7 @@ function openHeirs() {
 }
 
 /* ---------- inside the castle: merchants, altars, pause ---------- */
-function openMerchant(e) {
-  var rs = rsOf(G.roomKey), t = tierOf(), m = 1 + 0.5 * META.ng, who = MERCHNAME[e.who] || 'A stranger';
-  if (!rs.mp) rs.mp = shuffle(POWERS.slice())[0].id;
-  var pw = powerById(rs.mp), rows = [
-    { icon: 'gtonic', name: 'PATCH UP', sub: 'Heal half your HP', price: fmtN(30 * t * m), fn: function () { if (P.hp >= ST.mhp) { sfx.no(); return; } if (spend(Math.round(30 * t * m), true)) { var keep = ST.noHeal; ST.noHeal = false; healP(Math.round(ST.mhp / 2)); ST.noHeal = keep; renderMenu(true); } } },
-    { icon: 'sage', name: 'TOP UP MANA', sub: 'Fill your mana', price: fmtN(18 * t * m), fn: function () { if (spend(Math.round(18 * t * m), true)) { P.mana = ST.mmana; renderMenu(true); } } },
-    { icon: pw.icon, name: rs.b.p ? 'SOLD OUT' : pw.name.toUpperCase(), sub: rs.b.p ? '' : pw.d + ' for this run', price: rs.b.p ? '' : fmtN(90 * t * m), cls: rs.b.p ? 'off' : 'sec', fn: rs.b.p ? null : function () { if (spend(Math.round(90 * t * m), true)) { rs.b.p = 1; closeMenu(); grantPower(pw.id); } } }
-  ];
-  if (e.who === 'npc_pulsar') rows.unshift({ icon: 'npc_pulsar', name: 'CHANGE UP THE TUNES', sub: 'Pulsar spins a new track for the rest of this area', price: 'FREE', cls: 'sec', fn: function () {
-    var all = ['pulsar1', 'pulsar2', 'pulsar3'].filter(function (t) { return !RUN.tune || t !== RUN.tune.id; }); RUN.tune = { id: all[Math.floor(Math.random() * all.length)], area: G.rm.area };
-    music.play(RUN.tune.id); sfx.magic(); toastMenu('"Just vibes, friend. Free of charge."'); } });
-  openMenu({ title: who + "'s Stall", note: e.who === 'npc_pulsar' ? '"Just vibes, friend. Free of charge."' : '"Drops spend the same in here, love."', pic: e.who, rows: rows, bank: 'run' });
-}
+function openMerchant(e) { openStall(e); } // every shopkeeper has their own stock: src/58-merch.js
 function openAltar(e) {
   var rs = rsOf(G.roomKey); if (!rs.alt) rs.alt = shuffle(POWERS.slice()).slice(0, 2).map(function (p) { return p.id; });
   openMenu({ title: 'Powerup Altar', note: 'Take one. The other fades.', pic: null, bank: 'none', rows: rs.alt.map(function (id) { var p = powerById(id); return { icon: p.icon, name: p.name.toUpperCase(), sub: p.d, price: 'TAKE', cls: 'sec', fn: function () { rs.taken = 1; e.taken = true; closeMenu(); grantPower(id); poof(e.x, e.y - 30, 20, ['#ffe36a', '#f1e7d0', '#7a2aff']); } }; }) });
@@ -3436,7 +3521,7 @@ var STONE = {
   moon:    { m: '#060204', c: ['#2a0a0e', '#300c12', '#240a0c', '#360e14'], hi: '#5a1a22', lo: '#12040a', cap: ['#8a1a24', '#ff2630', '#3a0a10'], deep: '#0e0306', spot: '#7a0c14', style: 'rough' },
   dungeon: { m: '#060406', c: ['#2c2326', '#30272a', '#272022', '#342a2e'], hi: '#4a3e42', lo: '#160f12', cap: ['#463a3e', '#6a5a5e', '#221a1c'], deep: '#110b0d', spot: '#4a0a10', style: 'rough' }
 };
-function th16() { var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
+function th16() { if (G.mode === 'town' || (L && L.town)) return STONE.castle; /* the town always stays red */ var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
 function hsh(x, y, k) { var h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function stoneTile(g, px, py, tx, ty, S, open) {
   // open: which sides face air {u, d, l, r}
@@ -3627,7 +3712,8 @@ function drawPlayer(cx) {
     cspr(name, x, y, flip);
   } else if (cls === 'homunculus') {
     if (G.mode === 'play' && RUN) drawHom(x, y, flip);
-    else spr('h_gloop_teen_' + (sp > 10 ? 'run' + (Math.floor(P.anim * 0.9) % 4) : 'idle' + (Math.floor(P.idleT * 2.2) % 2)), x, y + 1, flip, 1);
+    else if (P.thatch > 0) drawTownEgg(x, y);
+    else spr('h_' + (META.nextHom || 'gloop') + '_baby_' + (sp > 10 ? 'run' + (Math.floor(P.anim * 0.9) % 4) : 'idle' + (Math.floor(P.idleT * 2.2) % 2)), x, y + 1, flip, 1);
   } else {
     var base = cls === 'homunculus' ? 'hom' : cls, nm = base + '_s0', sc = cls === 'homunculus' ? 0.95 : (cls === 'greebo' ? 1.2 : 1.25), dy = 0, rot = 0;
     if (P.state === 'dead') { nm = SPR[base + '_dead'] ? base + '_dead' : base + '_s0'; if (!SPR[base + '_dead']) rot = flip ? -1.4 : 1.4; }
@@ -3755,6 +3841,7 @@ function drawTown(cx) {
       text('FOR SALE', x, gy - 51, 'center', '#ffe36a', 6); text(fmtN(b.cost), x, gy - 42, 'center', '#f1e7d0', 6); return; }
     var topY = gy - 96;
     if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); topY = gy - f[3] * sc; }
+    else if (b.kind === 'hatchery') drawHatchery(x, gy);
     else drawTent(x, gy);
     if (SHOPSIGN[b.id]) shopSign(x, topY - 6, SHOPSIGN[b.id]);
     if (b.npc && b.npc !== 'npc_' + townHeir()) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15); // the heir you are playing is not also standing in their shop
@@ -3840,7 +3927,7 @@ function drawHomMelee(s) {
 }
 
 /* neon name signs for the shops whose fronts have no name painted on */
-var SHOPSIGN = { joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
+var SHOPSIGN = { hatch: ['Homunculus', 'Hatchery', '#7dff3a'], joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
 function shopSign(x, by, s) {
   var w = 112, h = 34, y = Math.round(by - h);
   R(ctx, '#12040a', x - 2, y + h, 4, 8);
@@ -3877,7 +3964,7 @@ el('newBtn').addEventListener('click', function () {
     { icon: 'curse', name: 'YES, BURN THE LEGACY', sub: 'Start again with Cumhead', fn: fresh },
     { icon: 'elixir', name: 'NO, KEEP IT', fn: function () { closeMenu(); setMenuMode(true); } }], back: function () { closeMenu(); setMenuMode(true); } });
 });
-el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); openHeirs(); }); // straight on to choosing who goes next
+el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); el('over').hidden = true; openHeirs(); }); // straight on to choosing who goes next
 (function () {
   var b = el('mute');
   function paint() { b.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); b.setAttribute('aria-label', sfx.muted ? 'Sound off' : 'Sound on'); b.classList.toggle('off', sfx.muted); }

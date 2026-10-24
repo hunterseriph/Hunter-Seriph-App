@@ -142,7 +142,8 @@ function buildRoom(rm) {
   } else if (t === 'bossdoor') {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss }); RS(cx0 - 5, 9, cx0 + 4, 14);
   } else if (t === 'merchant') {
-    ents.push({ k: 'npc', x: cxp, y: 15 * T, who: MERCH[Math.floor(r() * MERCH.length)] }); RS(cx0 - 4, 10, cx0 + 4, 14);
+    var who = MERCH[Math.floor(r() * MERCH.length)]; if (RUN && who === 'npc_' + RUN.cls) who = 'npc_jessiah'; // the heir you are playing does not also run a stall
+    ents.push({ k: 'npc', x: cxp, y: 15 * T, who: who }); RS(cx0 - 4, 10, cx0 + 4, 14);
   } else if (t === 'powerup') {
     ents.push({ k: 'altar', x: cxp, y: 15 * T }); RS(cx0 - 4, 10, cx0 + 4, 14);
   } else if (t === 'challenge') {

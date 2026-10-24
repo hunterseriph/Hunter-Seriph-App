@@ -23,6 +23,7 @@ function goTown(first) {
   P.x = TOWN.gateX - 70; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
   music.play('town'); saveMeta();
+  if (cls === 'homunculus' && !META.nextHom) { var hb = TOWN.ents.filter(function (e) { return e.k === 'bld' && e.b.id === 'hatch'; })[0]; if (hb) { P.x = hb.x; camSnapTown(); P.thatch = 2.2; G.banner = 0; } } // a Homunculus heir hatches here first
   if (!META.seenTown) { META.seenTown = 1; saveMeta(); toast('THE CASTLE GATE IS RIGHT HERE. SPEND DROPS IN TOWN BETWEEN HEIRS.'); }
 }
 function camSnapTown() { G.cam.x = clamp(P.x - VW / 2, 0, TOWN.w * T - VW); G.cam.y = 0; }
@@ -33,6 +34,7 @@ function townNear() {
 }
 function stepTown(dt) {
   if (tollStep(dt)) { updateFx(dt); return; }
+  if (townHatch(dt)) { updateFx(dt); return; }
   var dir = (input.r ? 1 : 0) - (input.l ? 1 : 0), jumpPressed = input.j && !P.prevJump, atkPressed = input.a && !P.prevAtk; P.prevJump = input.j; P.prevAtk = input.a; P.prevSpec = input.s;
   if (P.jumpStartT > 0) P.jumpStartT -= dt;
   var mx = MAXV * ST.spd, sgn = P.vx > 0 ? 1 : (P.vx < 0 ? -1 : 0);

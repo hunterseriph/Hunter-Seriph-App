@@ -9,7 +9,7 @@ var CLASSES = {
   greebo: { name: 'Greebo', hp: 125, mana: 50, dmg: 15, spd: 0.92, jumps: 2, atk: 'pie', cd: 0.5, spec: 'cat', specCost: 40,
     pas: 'Sticky Fingers', pd: '+30% drops from everything.', ad: 'Cream Pie Blast: a big pie straight ahead, half the reach of Cumhead.', sd: 'Sir Johnathan: the cat tears across the room.' },
   homunculus: { name: 'Homunculus', hp: 100, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
-    pas: 'Little Legs', pd: 'Triple jump and a smaller body.', ad: 'Acid Spit: rapid spit that poisons.', sd: 'Ooze Shield: 3 seconds untouchable, healing as it lasts.' }
+    pas: 'Little Legs', pd: 'Triple jump and a smaller body. Hatches at the Hatchery in town and grows up during the run.', ad: 'Attack: depends on the breed that hatches.', sd: 'Special: every breed has its own.' }
 };
 var CLASSORDER = ['cumhead', 'spermaid', 'greebo', 'homunculus'];
 
@@ -97,6 +97,7 @@ var BUILDINGS = [
   { id: 'sanct', name: 'Spermaid Sanctum', fac: 'fac_sanct', npc: 'npc_spermaid', cost: 1200, kind: 'runes', quote: '' },
   { id: 'joff', name: "Joff's Pineapple Pizzaria", fac: 'fac_joff', npc: 'npc_joff', cost: 700, kind: 'prov', slot: 'food', quote: '"Pineapple belongs on pizza. Fight me."' },
   { id: 'beebs', name: "Uncle Beeb's Tavern", fac: 'fac_beebs', npc: 'npc_beebs', cost: 1000, kind: 'prov', slot: 'drink', quote: '"Sit down, lad. First one\'s always warm."' },
+  { id: 'hatch', name: 'Homunculus Hatchery', fac: null, npc: null, cost: 0, kind: 'hatchery', quote: '' },
   { id: 'cafe', name: "Kaya & Elden's Cum Café", fac: 'fac_cafe', npc: 'npc_kaya', npc2: 'npc_elden', cost: 1300, kind: 'prov', slot: 'cafe', quote: '"Welcome in! Kaya\'s on the coffee, Elden\'s on the grill."' },
   { id: 'amy', name: "Amy's Willy Chilli", fac: 'fac_amy', npc: 'npc_amy', cost: 1700, kind: 'prov', slot: 'chilli', quote: '"Mild, hot or dynamite?"' },
   { id: 't', name: "T's Hussy House", fac: 'fac_t', npc: 'npc_t', cost: 2400, kind: 'prov', slot: 'revive', quote: '"Come in, darling. I\'ll get the doors."' },
@@ -176,5 +177,5 @@ var POWERS = [
 ];
 function powerById(id) { for (var i = 0; i < POWERS.length; i++) if (POWERS[i].id === id) return POWERS[i]; return null; }
 /* merchant rooms: a random shopkeeper sells these for drops */
-var MERCH = ['npc_joff', 'npc_beebs', 'npc_kaya', 'npc_elden', 'npc_amy', 'npc_t', 'npc_saba', 'npc_tb', 'npc_pulsar', 'npc_bonjo', 'npc_harold', 'npc_ali', 'npc_judgement', 'npc_nattyboro', 'npc_jessiah'];
-var MERCHNAME = { npc_joff: 'Joff', npc_beebs: 'Uncle Beeb', npc_kaya: 'Kaya', npc_elden: 'Elden', npc_amy: 'Amy', npc_t: 'T', npc_saba: 'Saba', npc_tb: 'TB', npc_pulsar: 'Pulsar', npc_bonjo: 'Bonjo', npc_harold: 'Harold', npc_ali: 'Ali', npc_judgement: 'Judgement', npc_nattyboro: 'Nattyboro', npc_jessiah: 'Jessiah' };
+var MERCH = ['npc_joff', 'npc_beebs', 'npc_kaya', 'npc_elden', 'npc_amy', 'npc_t', 'npc_saba', 'npc_tb', 'npc_pulsar', 'npc_bonjo', 'npc_harold', 'npc_ali', 'npc_judgement', 'npc_nattyboro', 'npc_jessiah', 'npc_spermaid'];
+var MERCHNAME = { npc_joff: 'Joff', npc_beebs: 'Uncle Beeb', npc_kaya: 'Kaya', npc_elden: 'Elden', npc_amy: 'Amy', npc_t: 'T', npc_saba: 'Saba', npc_tb: 'TB', npc_pulsar: 'Pulsar', npc_bonjo: 'Bonjo', npc_harold: 'Harold', npc_ali: 'Ali', npc_judgement: 'Judgement', npc_nattyboro: 'Nattyboro', npc_jessiah: 'Jessiah', npc_spermaid: 'Spermaid' };

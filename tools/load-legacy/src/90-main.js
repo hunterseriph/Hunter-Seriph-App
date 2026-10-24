@@ -26,7 +26,7 @@ el('newBtn').addEventListener('click', function () {
     { icon: 'curse', name: 'YES, BURN THE LEGACY', sub: 'Start again with Cumhead', fn: fresh },
     { icon: 'elixir', name: 'NO, KEEP IT', fn: function () { closeMenu(); setMenuMode(true); } }], back: function () { closeMenu(); setMenuMode(true); } });
 });
-el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); openHeirs(); }); // straight on to choosing who goes next
+el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); el('over').hidden = true; openHeirs(); }); // straight on to choosing who goes next
 (function () {
   var b = el('mute');
   function paint() { b.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); b.setAttribute('aria-label', sfx.muted ? 'Sound off' : 'Sound on'); b.classList.toggle('off', sfx.muted); }

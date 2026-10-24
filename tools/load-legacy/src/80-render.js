@@ -210,7 +210,7 @@ var STONE = {
   moon:    { m: '#060204', c: ['#2a0a0e', '#300c12', '#240a0c', '#360e14'], hi: '#5a1a22', lo: '#12040a', cap: ['#8a1a24', '#ff2630', '#3a0a10'], deep: '#0e0306', spot: '#7a0c14', style: 'rough' },
   dungeon: { m: '#060406', c: ['#2c2326', '#30272a', '#272022', '#342a2e'], hi: '#4a3e42', lo: '#160f12', cap: ['#463a3e', '#6a5a5e', '#221a1c'], deep: '#110b0d', spot: '#4a0a10', style: 'rough' }
 };
-function th16() { var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
+function th16() { if (G.mode === 'town' || (L && L.town)) return STONE.castle; /* the town always stays red */ var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
 function hsh(x, y, k) { var h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function stoneTile(g, px, py, tx, ty, S, open) {
   // open: which sides face air {u, d, l, r}
@@ -401,7 +401,8 @@ function drawPlayer(cx) {
     cspr(name, x, y, flip);
   } else if (cls === 'homunculus') {
     if (G.mode === 'play' && RUN) drawHom(x, y, flip);
-    else spr('h_gloop_teen_' + (sp > 10 ? 'run' + (Math.floor(P.anim * 0.9) % 4) : 'idle' + (Math.floor(P.idleT * 2.2) % 2)), x, y + 1, flip, 1);
+    else if (P.thatch > 0) drawTownEgg(x, y);
+    else spr('h_' + (META.nextHom || 'gloop') + '_baby_' + (sp > 10 ? 'run' + (Math.floor(P.anim * 0.9) % 4) : 'idle' + (Math.floor(P.idleT * 2.2) % 2)), x, y + 1, flip, 1);
   } else {
     var base = cls === 'homunculus' ? 'hom' : cls, nm = base + '_s0', sc = cls === 'homunculus' ? 0.95 : (cls === 'greebo' ? 1.2 : 1.25), dy = 0, rot = 0;
     if (P.state === 'dead') { nm = SPR[base + '_dead'] ? base + '_dead' : base + '_s0'; if (!SPR[base + '_dead']) rot = flip ? -1.4 : 1.4; }
@@ -529,6 +530,7 @@ function drawTown(cx) {
       text('FOR SALE', x, gy - 51, 'center', '#ffe36a', 6); text(fmtN(b.cost), x, gy - 42, 'center', '#f1e7d0', 6); return; }
     var topY = gy - 96;
     if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); topY = gy - f[3] * sc; }
+    else if (b.kind === 'hatchery') drawHatchery(x, gy);
     else drawTent(x, gy);
     if (SHOPSIGN[b.id]) shopSign(x, topY - 6, SHOPSIGN[b.id]);
     if (b.npc && b.npc !== 'npc_' + townHeir()) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15); // the heir you are playing is not also standing in their shop
@@ -614,7 +616,7 @@ function drawHomMelee(s) {
 }
 
 /* neon name signs for the shops whose fronts have no name painted on */
-var SHOPSIGN = { joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
+var SHOPSIGN = { hatch: ['Homunculus', 'Hatchery', '#7dff3a'], joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
 function shopSign(x, by, s) {
   var w = 112, h = 34, y = Math.round(by - h);
   R(ctx, '#12040a', x - 2, y + h, 4, 8);

@@ -21,7 +21,7 @@ function tbRate() { return (100 - tbLevel() * 5) / 100; } // 100% down to 50%
 function tbToll(deal) { return Math.floor(META.bank * tbRate() * (deal ? 0.8 : 1)); }
 function openToll() {
   var heir = META.nextHeir || 'cumhead', lv = tbLevel(), next = 3 - (META.tbRep || 0) % 3;
-  openMenu({ title: "TB's Toll", note: '"Everything you are carrying, mate. That is the toll. House rules."', pic: 'npc_tb', bank: 'town', rows: [
+  openMenu({ title: "TB's Toll", note: tbQuote() + '  ·  He takes your banked drops to let you in.', pic: 'npc_tb', bank: 'town', rows: [
     { name: 'TB TAKES ' + Math.round(tbRate() * 100) + '% OF YOUR BANK  ·  REPUTATION ' + lv + (lv < 10 ? '  ·  ' + next + ' MORE TRIPS TO THE NEXT' : '  ·  BEST MATES'), cls: 'head' },
     { icon: 'coin', name: 'PAY THE TOLL', sub: CLASSES[heir].name + ' goes in. TB keeps ' + fmtN(tbToll(false)) + ' drops.', price: fmtN(tbToll(false)), cls: 'sec', fn: function () { payToll(false); } },
     { icon: 'stim', name: "MAKE A DEAL", sub: "He only takes 80% (" + fmtN(tbToll(true)) + "), but you take one of TB's Silly Pills with him. Something will go wrong in there.", price: fmtN(tbToll(true)), fn: function () { payToll(true); } },
@@ -66,5 +66,38 @@ function drawPillFx() {
 }
 function drawTB(x, gy) { // TB waits by the gate
   spr('npc_tb', x, gy, P.x < x + G.cam.x, 1.15);
-  if (!META.seenTB && Math.abs(P.x - (x + G.cam.x)) < 90) text('"THE TOLL, MATE"', x, gy - 52, 'center', '#ffe36a', 5);
+  if (Math.abs(P.x - (x + G.cam.x)) < 110) { // TB has a lot to say
+    var k = Math.floor(G.t / 4) % TBQUOTES.length, words = TBQUOTES[k].split(' '), lines = [''];
+    words.forEach(function (w) { if ((lines[lines.length - 1] + ' ' + w).length > 26) lines.push(w); else lines[lines.length - 1] = (lines[lines.length - 1] + ' ' + w).trim(); });
+    lines.forEach(function (l, i) { text(l, x, gy - 52 - (lines.length - 1 - i) * 8, 'center', '#ffe36a', 5); });
+  }
+}
+
+/* ---------- the Homunculus Hatchery: a Homunculus heir hatches here in town, before going in ---------- */
+function townHatch(dt) {
+  if (!(P.thatch > 0)) return false;
+  var was = P.thatch; P.thatch -= dt; P.vx = 0;
+  if (!META.nextHom && was >= 2.2 - dt * 1.5) { META.nextHom = homPick(); META.hatched = META.hatched || {}; META.hatched[META.nextHom] = 1; saveMeta(); }
+  if (was > 0.5 && P.thatch <= 0.5) { sfx.splat(); poof(P.x, P.y - 10, 20, ['#f1e7d0', '#fff6d8', HOMDATA.breeds[META.nextHom].ooze]); G.shake = 4; }
+  if (P.thatch <= 0) { P.thatch = 0; var b = META.nextHom; G.banner = 2.6; G.bannerTxt = 'A BABY ' + HOMDATA.breeds[b].name.toUpperCase() + ' HATCHES'; G.bannerSub = (HOMPOW[b] || '').toUpperCase(); sfx.oneup(); }
+  return true;
+}
+function drawTownEgg(x, y) {
+  var t = 2.2 - P.thatch, k = t < 0.6 ? 0 : t < 1.1 ? 1 : t < 1.5 ? 2 : 3, b = META.nextHom || 'gloop', wob = Math.sin(G.t * (10 + k * 6)) * (0.06 + k * 0.05);
+  if (P.thatch < 0.5) { spr('h_' + b + '_baby_idle0', x, y + 1, false, 1); spr('h_' + b + '_egg3', x, y, false, 1.3, P.thatch / 0.5 * 0.8); return; }
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(wob); spr('h_' + b + '_egg' + k, 0, 0, false, 1.3); ctx.restore();
+}
+function drawHatchery(x, gy) { // a low nursery: glass front, a heat lamp, eggs on straw
+  R(ctx, '#12040a', x - 52, gy - 70, 104, 70); R(ctx, '#2a1410', x - 51, gy - 69, 102, 69); for (var i = 0; i < 6; i++) R(ctx, '#3a1c14', x - 51 + i * 17, gy - 69, 2, 69);
+  ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.moveTo(x - 58, gy - 70); ctx.lineTo(x, gy - 92); ctx.lineTo(x + 58, gy - 70); ctx.fill(); ctx.fillStyle = '#3a6a1a'; ctx.beginPath(); ctx.moveTo(x - 52, gy - 71); ctx.lineTo(x, gy - 88); ctx.lineTo(x + 52, gy - 71); ctx.fill();
+  R(ctx, '#12040a', x - 40, gy - 54, 80, 40); R(ctx, 'rgba(120,255,90,0.12)', x - 38, gy - 52, 76, 36); R(ctx, '#c8903a', x - 38, gy - 22, 76, 6);
+  var hl = 0.5 + Math.sin(G.t * 3) * 0.15; ctx.save(); ctx.globalAlpha = hl; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(x - 4, gy - 52); ctx.lineTo(x - 30, gy - 22); ctx.lineTo(x + 30, gy - 22); ctx.lineTo(x + 4, gy - 52); ctx.fill(); ctx.restore(); R(ctx, '#ff7a30', x - 4, gy - 54, 8, 4);
+  ['gloop', 'ember', 'blood', 'frost'].forEach(function (b, i) { spr('h_' + b + '_egg0', x - 27 + i * 18, gy - 22, false, 0.9); });
+  R(ctx, '#12040a', x - 10, gy - 14, 20, 14); R(ctx, '#3a1c14', x - 9, gy - 13, 18, 13);
+}
+function openHatchery() {
+  var mine = townHeir() === 'homunculus' ? META.nextHom : null, seen = META.hatched || {};
+  var rows = [{ name: mine ? 'YOUR HEIR: A BABY ' + HOMDATA.breeds[mine].name.toUpperCase() : 'CHOOSE THE HOMUNCULUS AS YOUR HEIR AND HE HATCHES HERE', cls: 'head' }];
+  (HOMDATA.order || []).forEach(function (b) { var known = seen[b] || b === 'gloop'; rows.push({ icon: 'h_' + b + '_adult_idle0', name: known ? HOMDATA.breeds[b].name.toUpperCase() + (b === mine ? '  ·  YOURS' : '') : '???', sub: known ? HOMMOVE[b][2] : (b === 'blood' ? 'Black and red. Very rare. The best of them.' : 'Not hatched yet'), cls: b === mine ? 'own' : (known ? '' : 'off') }); });
+  openMenu({ title: 'Homunculus Hatchery', note: 'Every breed fights its own way. You never know which one is in the egg.', pic: null, bank: 'none', rows: rows });
 }
