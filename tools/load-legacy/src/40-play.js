@@ -123,7 +123,7 @@ function moveBody(b, dt, grav) {
       var t = L.tiles[ty * L.w + tx], top = ty * T;
       if (solidT(t) || ((t === TL || t === TV || t === TG) && prevY <= top + 0.5 && !b.drop)) { b.y = top; b.vy = 0; b.onGround = true; if (t === TV) b.stand = ty * L.w + tx; break; }
     }
-    if (!b.onGround && b === P && L.movers) for (var mi = 0; mi < L.movers.length; mi++) { var mv = L.movers[mi], mt = mv.y - mv.h; if (prevY <= mt + 0.5 && b.y >= mt && Math.abs(b.x - mv.x) < mv.w / 2 + hw - 2) { b.y = mt; b.vy = 0; b.onGround = true; b.mover = mv; break; } }
+    if (!b.onGround && b === P && L.movers) for (var mi = 0; mi < L.movers.length; mi++) { var mv = L.movers[mi], mt = mv.y - mv.h; if (mv.under) continue; if (prevY <= mt + 0.5 && b.y >= mt && Math.abs(b.x - mv.x) < mv.w / 2 + hw - 2) { b.y = mt; b.vy = 0; b.onGround = true; b.mover = mv; break; } }
     if (!b.onGround) { hit = boxSolid(b.x - hw, b.y - 1, b.x + hw, b.y); if (hit) { b.y = hit.ty * T; b.vy = 0; b.onGround = true; } }
   }
 }
@@ -265,7 +265,7 @@ function spawnRoom(rs) {
     else if (e.k === 'chest') e.open = !!rs.c[e.i];
     else if (e.k === 'altar') e.taken = !!rs.taken;
   });
-  L.movers = L.ents.filter(function (e) { return e.k === 'log'; }).map(function (e) { return { x: e.x, y: e.y, w: e.w, h: e.h, vx: e.vx }; }); L.water = L.ents.filter(function (e) { return e.k === 'water'; })[0] || null;
+  L.movers = L.ents.filter(function (e) { return e.k === 'log'; }).map(function (e) { return { x: e.x, y: e.y, w: e.w, h: e.h, vx: e.vx, v0: e.vx, sink: e.sink, st: Math.random() * 3 }; }); L.flumeT = 0; L.water = L.ents.filter(function (e) { return e.k === 'water'; })[0] || null;
   if (G.rm && G.rm.type === 'challenge' && rs.done && !L.ents.some(function (e) { return e.k === 'chest' && e.chal; })) L.ents.push({ k: 'chest', x: chestSpot(L.cx0), y: 15 * T, big: 1, chal: 1, i: 'ch', open: !!rs.c.ch });
 }
 /* the challenge reward chest goes on open floor nearest the middle, never inside a block */
@@ -338,6 +338,7 @@ function updateEnemies(dt) {
       if (adx > 260) { tx = e.bx + Math.sin(e.t + e.ph) * 50; ty = e.by; }
       e.vx += clamp(tx - e.x, -1, 1) * 120 * dt; e.vy += clamp(ty - e.y, -1, 1) * 120 * dt; e.vx = clamp(e.vx, -sp, sp); e.vy = clamp(e.vy, -sp, sp);
       e.x += e.vx * dt; e.y += e.vy * dt; e.face = e.vx >= 0 ? 1 : -1;
+      if (e.d.embers) { e.cd -= dt; if (e.cd <= 0 && adx < 90 && dy > 10) { e.cd = 1.6 + Math.random(); eshots.push({ x: e.x, y: e.y, vx: 0, vy: 40, g: 300, life: 2, r: 3, dmg: e.dmg * 0.7, k: 'ember', by: 'an ember' }); } }
     } else if (ai === 'shoot') {
       var want = P.x + (e.x < P.x ? -110 : 110), wy = P.y - 70 + Math.sin(e.t * 2 + e.ph) * 18;
       e.x += clamp(want - e.x, -sp * dt, sp * dt); e.y += clamp(wy - e.y, -sp * dt, sp * dt); e.face = dx >= 0 ? 1 : -1;
@@ -446,7 +447,7 @@ function updateShots(dt) {
     var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt;
     if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } /* swimmers home in */
     b.x += b.vx * dt; b.y += b.vy * dt;
-    if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? ['#7dff3a', '#3ab43a'] : ['#ff9a40', '#ff2630']); continue; }
+    if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? dripC() : b.k === 'dagger' || b.k === 'bone' ? ['#f1e7d0', '#a6968f'] : ['#ff9a40', '#ff2630']); continue; }
     if (b.safe > 0) { b.safe -= dt; continue; }
     if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
   }
@@ -516,7 +517,11 @@ function updateRoomThings(dt) {
   // illusion ledges giving way
   for (var k in G.crumble) { G.crumble[k] -= dt; if (G.crumble[k] <= 0) { var i = +k; if (L.tiles[i] === TV) { L.tiles[i] = TA; G.layer = null; poof((i % L.w) * T + 8, Math.floor(i / L.w) * T + 4, 8, ['#4a1a1c', '#2a0509']); } delete G.crumble[k]; } }
   // logs drift down the flume and go round again
-  if (L.movers) L.movers.forEach(function (m) { m.x += m.vx * dt; if (m.x > L.water.x1 - m.w / 2) { m.x = L.water.x0 + m.w / 2; if (P.mover === m) P.mover = null; } });
+  if (L.movers && L.water) { L.flumeT += dt; var cyc = L.flumeT % 9; L.surge = cyc > 6.4 ? 1 : cyc > 5.6 ? 0.5 : 0; if (L.surge === 1 && cyc - dt <= 6.4) { sfx.splat(); pop(P.x, P.y - P.h - 8, 'SURGE!', '#fff6d8'); } } /* every 9 s the cream surges and the boats speed up */
+  if (L.movers) L.movers.forEach(function (m) {
+    m.vx = m.v0 * (L.surge === 1 ? 1.8 : 1);
+    if (m.sink) { m.st = (m.st + dt) % 6.5; m.warn = m.st > 4.2 && m.st < 5.2; var was = m.under; m.under = m.st >= 5.2; if (m.under && !was) { sfx.splat(); poof(m.x, m.y - 2, 10, ['#fff6d8', '#e6cf98']); if (P.mover === m) { P.mover = null; P.onGround = false; } } }
+    m.x += m.vx * dt; if (m.x > L.water.x1 - m.w / 2) { m.x = L.water.x0 + m.w / 2; if (P.mover === m) P.mover = null; } });
   // trap turrets
   L.ents.forEach(function (e) {
     if (e.k !== 'turret') return; e.cd -= dt;

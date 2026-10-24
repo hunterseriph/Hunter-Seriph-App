@@ -23,7 +23,7 @@ function enterArena(id) {
   G.superDue = id === 'blum' && META.blumWins >= 5; G.broSpawned = 0; MOONFX = []; G.eclipse = 0;
   spawnBoss(id);
   G.banner = 0; bossIntro(id);
-  music.play(id === 'blum2' ? 'super' : id === 'blum' ? 'blum' : 'boss'); saveRun();
+  music.play(BOSSMUSIC[id] || 'boss'); saveRun();
 }
 function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } }
 function mkBoss(id, x, y, hpMul) {

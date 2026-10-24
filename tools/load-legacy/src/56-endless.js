@@ -187,22 +187,39 @@ BRAIN.hotload = function (b, dt, W, ph) {
 };
 
 /* ---------- the endless areas' backdrops ---------- */
-function sewerBack(gx) {
-  var sp = 150, x0 = -((gx * 0.6) % sp) - sp;
+function sewerBack(gx) { // brick arches, rusty outfall pipes pouring cream, a cream river below, cream dripping off the vaults
+  var sp = 180, x0 = -((gx * 0.5) % sp) - sp, t = G.t;
   for (var x = x0; x < VW + sp; x += sp) {
     var px = Math.round(x);
-    R(ctx, '#0a1206', px + 20, 40, 18, VH); R(ctx, '#1e2a14', px + 22, 40, 4, VH); R(ctx, '#0a1206', px + 10, 60, 38, 8); R(ctx, '#2a3a1a', px + 11, 61, 36, 2); // a pipe down the wall
-    R(ctx, '#050803', px + 70, 150, 50, 40); R(ctx, '#121c0a', px + 72, 152, 46, 36); for (var b = 0; b < 5; b++) R(ctx, '#2a3a1a', px + 74 + b * 9, 152, 3, 36); // a grate
-    var d = (G.t * 30 + px) % 90; R(ctx, '#a6e83a', px + 28, 68 + d, 2, 4);
+    // a brick arch: dark recess with a lighter brick rim, stepped (no smooth curves)
+    for (var st = 0; st < 8; st++) { var ah = Math.round(Math.sqrt(1 - Math.pow((st - 3.5) / 4, 2)) * 26); R(ctx, '#1e1812', px + 40 + st * 12, 40 - ah, 12, VH); R(ctx, '#0c0a08', px + 42 + st * 12, 44 - ah, 8, VH); }
+    for (var st2 = 0; st2 < 8; st2++) { var ah2 = Math.round(Math.sqrt(1 - Math.pow((st2 - 3.5) / 4, 2)) * 26); R(ctx, '#4a3e30', px + 40 + st2 * 12, 38 - ah2, 11, 3); R(ctx, '#6a5a44', px + 40 + st2 * 12, 38 - ah2, 11, 1); }
+    // cream stalactites off the vault, one of them dripping
+    for (var c = 0; c < 4; c++) { var cx2 = px + 52 + c * 22, cl = 4 + (c * 7) % 9; R(ctx, '#12040a', cx2 - 1, 40, 5, cl + 1); R(ctx, '#e6cf98', cx2, 40, 3, cl); R(ctx, '#fff6d8', cx2, 40, 1, cl - 1); }
+    var dd = (t * 50 + px * 3) % 160; R(ctx, '#fff6d8', px + 75, 52 + dd, 2, 3);
+    // an outfall pipe in the wall pouring a stream of cream
+    var py = 110 + (Math.abs(px) % 3) * 12, pxx = px + 20;
+    R(ctx, '#12040a', pxx - 2, py - 2, 26, 22); R(ctx, '#5a4632', pxx, py, 22, 18); R(ctx, '#8a6a46', pxx, py, 22, 3); R(ctx, '#3a2a1c', pxx, py + 15, 22, 3); R(ctx, '#12040a', pxx + 4, py + 4, 14, 10); R(ctx, '#e6cf98', pxx + 5, py + 10, 12, 4);
+    for (var r2 = 0; r2 < 3; r2++) R(ctx, '#c8903a', pxx + 2 + r2 * 8, py + 1, 2, 2);
+    for (var fy = py + 14; fy < VH - 30; fy += 3) { var wob = Math.round(Math.sin(fy * 0.3 - t * 14) * 1); R(ctx, ((fy / 3) | 0) % 2 ? '#fff6d8' : '#f1e0b0', pxx + 7 + wob, fy, 8, 3); R(ctx, '#ffffff', pxx + 8 + wob, fy, 2, 3); }
+    // a grate low in the wall, cream oozing out under it
+    R(ctx, '#12040a', px + 120, 170, 40, 30); R(ctx, '#2a2218', px + 122, 172, 36, 26); for (var b = 0; b < 5; b++) R(ctx, '#5a4a3a', px + 124 + b * 7, 172, 3, 26); R(ctx, '#e6cf98', px + 122, 194, 36, 4);
   }
+  // the cream river along the bottom of the backdrop, in bands with moving crests
+  var ry = VH - 34; R(ctx, '#d4b878', 0, ry, VW, 34); R(ctx, '#e6cf98', 0, ry, VW, 8); R(ctx, '#f4e4b8', 0, ry, VW, 3);
+  for (var wx = 0; wx < VW; wx += 4) { var wv = Math.sin((wx + gx * 0.5) * 0.09 - t * 3); if (wv > 0.6) R(ctx, '#ffffff', wx, ry - 1, 4, 2); }
+  ctx.fillStyle = 'rgba(30,20,10,0.15)'; ctx.fillRect(0, 0, VW, VH); // push it all back behind the play area
 }
 function boneBack(gx) {
   var sp = 120, x0 = -((gx * 0.6) % sp) - sp;
   for (var x = x0; x < VW + sp; x += sp) {
     var px = Math.round(x);
+    // a giant ribcage half-buried in the wall behind the niches
+    if ((Math.round(x - x0) / sp) % 2 === 0) { for (var rb = 0; rb < 5; rb++) { var rx = px + 20 + rb * 18, top = 34 + Math.abs(rb - 2) * 10; R(ctx, '#12040a', rx - 1, top - 1, 8, VH - top + 1); R(ctx, '#4a4234', rx, top, 6, VH - top); R(ctx, '#6a604e', rx + 1, top, 2, VH - top); } R(ctx, '#12040a', px + 13, 29, 92, 8); R(ctx, '#4a4234', px + 14, 30, 90, 6); R(ctx, '#6a604e', px + 14, 30, 90, 2); }
     for (var row = 0; row < 3; row++) { var y = 50 + row * 50; R(ctx, '#060402', px + 10, y, 90, 34); for (var k = 0; k < 4; k++) { var sx = px + 16 + k * 22, sy = y + 10 + ((k + row) % 2) * 4; R(ctx, '#3a342a', sx, sy, 14, 12); R(ctx, '#0a0806', sx + 3, sy + 4, 3, 3); R(ctx, '#0a0806', sx + 8, sy + 4, 3, 3); R(ctx, '#2a2620', sx + 3, sy + 10, 8, 2); } }
   }
 }
+function boneChains(gx) { var sp = 140, x0 = -((gx * 0.8) % sp) - sp; for (var x = x0; x < VW + sp; x += sp) { var px = Math.round(x) + 60, len = 30 + (Math.abs(Math.round(x)) % 4) * 12; for (var cy = 0; cy < len; cy += 4) R(ctx, cy % 8 ? '#3a342a' : '#5a5040', px, cy, 2, 3); R(ctx, '#12040a', px - 5, len, 12, 11); R(ctx, '#e8dcc0', px - 4, len + 1, 10, 9); R(ctx, '#12040a', px - 2, len + 4, 2, 2); R(ctx, '#12040a', px + 2, len + 4, 2, 2); R(ctx, '#9a8a6a', px - 2, len + 8, 6, 1); } }
 function furnaceBack(gx) {
   var g = ctx.createLinearGradient(0, VH * 0.5, 0, VH); g.addColorStop(0, 'rgba(255,90,20,0)'); g.addColorStop(1, 'rgba(255,90,20,0.28)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   var sp = 170, x0 = -((gx * 0.6) % sp) - sp;
@@ -215,7 +232,7 @@ function ventStep(e, dt) {
   if (e.t > 2.6 && P.state !== 'dead' && Math.abs(P.x - e.x) < 11 && P.y > e.y - 56) hurtP(10 + 4 * tierOf(), e.x, 'a furnace vent');
 }
 function drawVent(x, e) {
-  var y = e.y; R(ctx, '#12040a', x - 9, y - 4, 18, 4); R(ctx, '#4a2a20', x - 8, y - 3, 16, 2); for (var i = -6; i <= 4; i += 4) R(ctx, '#ff5a20', x + i, y - 3, 2, 1);
+  var y = e.y; spr('p_vent', x, y + 1, false, 1);
   if (e.t > 2.2 && e.t <= 2.6) { if (Math.random() < 0.5) parts.push({ x: e.x + (Math.random() - 0.5) * 8, y: y - 4, vx: 0, vy: -50, life: 0.5, c: '#5a4a4a', spark: 0 }); }
-  else if (e.t > 2.6) { var h = 56 + Math.sin(G.t * 30) * 4; ctx.save(); ctx.shadowColor = '#ff7a30'; ctx.shadowBlur = 12; R(ctx, '#ff5a20', x - 7, y - h, 14, h); R(ctx, '#ffb040', x - 4, y - h + 6, 8, h - 6); R(ctx, '#fff09a', x - 2, y - h + 14, 4, h - 14); ctx.restore(); }
+  else if (e.t > 2.6) { var h = 56 + Math.round(Math.sin(G.t * 30) * 4); ctx.save(); ctx.shadowColor = '#ff7a30'; ctx.shadowBlur = 12; R(ctx, '#12040a', x - 8, y - h - 1, 16, h); R(ctx, '#c4121c', x - 7, y - h, 14, h); R(ctx, '#ff5a20', x - 6, y - h + 3, 12, h - 3); R(ctx, '#ffb040', x - 4, y - h + 8, 8, h - 8); R(ctx, '#fff09a', x - 2, y - h + 16, 4, h - 16); ctx.restore(); }
 }

@@ -66,11 +66,16 @@ function drawPillFx() {
 }
 function drawTB(x, gy) { // TB waits by the gate
   spr('npc_tb', x, gy, P.x < x + G.cam.x, 1.15);
-  if (Math.abs(P.x - (x + G.cam.x)) < 110) { // TB has a lot to say
-    var k = Math.floor(G.t / 4) % TBQUOTES.length, words = TBQUOTES[k].split(' '), lines = [''];
+  // TB says one thing each time you walk up to him (a new one next time), not a running stream
+  var near = Math.abs(P.x - (x + G.cam.x)) < 110;
+  if (near && !G.tbSaid) G.tbSaid = TBQUOTES[Math.floor(Math.random() * TBQUOTES.length)];
+  if (!near && Math.abs(P.x - (x + G.cam.x)) > 160) G.tbSaid = null;
+  if (near && G.tbSaid) {
+    var words = G.tbSaid.split(' '), lines = [''];
     words.forEach(function (w) { if ((lines[lines.length - 1] + ' ' + w).length > 26) lines.push(w); else lines[lines.length - 1] = (lines[lines.length - 1] + ' ' + w).trim(); });
     lines.forEach(function (l, i) { text(l, x, gy - 52 - (lines.length - 1 - i) * 8, 'center', '#ffe36a', 5); });
   }
+
 }
 
 /* ---------- the Homunculus Hatchery: a Homunculus heir hatches here in town, before going in ---------- */
@@ -87,13 +92,10 @@ function drawTownEgg(x, y) {
   if (P.thatch < 0.5) { spr('h_' + b + '_baby_idle0', x, y + 1, false, 1); spr('h_' + b + '_egg3', x, y, false, 1.3, P.thatch / 0.5 * 0.8); return; }
   ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(wob); spr('h_' + b + '_egg' + k, 0, 0, false, 1.3); ctx.restore();
 }
-function drawHatchery(x, gy) { // a low nursery: glass front, a heat lamp, eggs on straw
-  R(ctx, '#12040a', x - 52, gy - 70, 104, 70); R(ctx, '#2a1410', x - 51, gy - 69, 102, 69); for (var i = 0; i < 6; i++) R(ctx, '#3a1c14', x - 51 + i * 17, gy - 69, 2, 69);
-  ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.moveTo(x - 58, gy - 70); ctx.lineTo(x, gy - 92); ctx.lineTo(x + 58, gy - 70); ctx.fill(); ctx.fillStyle = '#3a6a1a'; ctx.beginPath(); ctx.moveTo(x - 52, gy - 71); ctx.lineTo(x, gy - 88); ctx.lineTo(x + 52, gy - 71); ctx.fill();
-  R(ctx, '#12040a', x - 40, gy - 54, 80, 40); R(ctx, 'rgba(120,255,90,0.12)', x - 38, gy - 52, 76, 36); R(ctx, '#c8903a', x - 38, gy - 22, 76, 6);
-  var hl = 0.5 + Math.sin(G.t * 3) * 0.15; ctx.save(); ctx.globalAlpha = hl; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(x - 4, gy - 52); ctx.lineTo(x - 30, gy - 22); ctx.lineTo(x + 30, gy - 22); ctx.lineTo(x + 4, gy - 52); ctx.fill(); ctx.restore(); R(ctx, '#ff7a30', x - 4, gy - 54, 8, 4);
-  ['gloop', 'ember', 'blood', 'frost'].forEach(function (b, i) { spr('h_' + b + '_egg0', x - 27 + i * 18, gy - 22, false, 0.9); });
-  R(ctx, '#12040a', x - 10, gy - 14, 20, 14); R(ctx, '#3a1c14', x - 9, gy - 13, 18, 13);
+function drawHatchery(x, gy) { // a low brick nursery: glass front, a heat lamp, eggs on straw (shaded sprite from tools/foes/props.py)
+  spr('p_hatchery', x, gy, false, 1);
+  var hl = 0.35 + Math.sin(G.t * 3) * 0.1; ctx.save(); ctx.globalAlpha = hl; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(x - 6, gy - 48); ctx.lineTo(x - 34, gy - 22); ctx.lineTo(x + 34, gy - 22); ctx.lineTo(x + 6, gy - 48); ctx.fill(); ctx.restore();
+  ['gloop', 'ember', 'blood', 'frost'].forEach(function (b, i) { var wob = Math.sin(G.t * 2 + i * 1.7) > 0.93 ? 1 : 0; spr('h_' + b + '_egg0', x - 28 + i * 19 + wob, gy - 24, false, 0.9); });
 }
 function openHatchery() {
   var mine = townHeir() === 'homunculus' ? META.nextHom : null, seen = META.hatched || {};

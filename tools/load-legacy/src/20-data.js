@@ -24,15 +24,16 @@ var AREAS = {
   dungeon: { name: 'The Dungeon', sub: 'CHAINS IN THE DARK', tier: 4, ox: 0, oy: 10, w: 7, h: 5, rooms: 22, boss: 'pig', music: 'dungeon',
     sky: null, tint: 'rgba(30,0,0,0.45)', e1: '#c4121c', e2: '#3a0408', wall: '#0a0305', wall2: '#140508', pool: [['ghoul', 2], ['slime', 2], ['vampire', 2], ['golem', 1], ['bat', 1], ['jailer', 2], ['rat', 2]] }
 };
-AREAS.moon = { name: 'The Crimson Moon', sub: 'BEYOND THE PORTAL', tier: 5, ox: 20, oy: 0, w: 5, h: 4, rooms: 13, boss: 'moon', music: 'roof', secret: 1,
+AREAS.moon = { name: 'The Crimson Moon', sub: 'BEYOND THE PORTAL', tier: 5, ox: 20, oy: 0, w: 5, h: 4, rooms: 13, boss: 'moon', music: 'moonarea', secret: 1,
   sky: 'rgba(80,0,10,0.18)', tint: 'rgba(140,0,20,0.26)', e1: '#ff2630', e2: '#6a0a10', wall: '#0a0204', pool: [['vampire', 2], ['wraith', 2], ['gargoyle', 2], ['knight', 2], ['jailer', 1], ['clown', 1], ['imp', 1]] };
 /* areas that only show up in Endless mode */
-AREAS.sewer = { name: 'The Cream Sewers', sub: 'ENDLESS', tier: 2, ox: 40, oy: 0, w: 1, h: 1, rooms: 0, boss: 'ratking', music: 'dungeon', endless: 1,
-  sky: null, tint: 'rgba(30,60,10,0.22)', e1: '#a6e83a', e2: '#2a4a0a', wall: '#060a04', pool: [['slime', 3], ['rat', 3], ['crawler', 1], ['imp', 1], ['jailer', 1]] };
-AREAS.bone = { name: 'The Bone Pit', sub: 'ENDLESS', tier: 3, ox: 41, oy: 0, w: 1, h: 1, rooms: 0, boss: 'boner', music: 'castle', endless: 1,
-  sky: null, tint: 'rgba(60,50,40,0.22)', e1: '#f1e7d0', e2: '#5a4a3a', wall: '#0c0a08', pool: [['ghoul', 3], ['knight', 2], ['wraith', 2], ['golem', 1], ['bat', 1]] };
-AREAS.furnace = { name: 'The Furnace', sub: 'ENDLESS', tier: 4, ox: 42, oy: 0, w: 1, h: 1, rooms: 0, boss: 'hotload', music: 'boss', endless: 1,
-  sky: null, tint: 'rgba(120,40,0,0.22)', e1: '#ffb040', e2: '#6a2000', wall: '#0c0402', pool: [['slimeR', 3], ['imp', 2], ['golem', 1], ['crawlerN', 1], ['batP', 2]] };
+AREAS.sewer = { name: 'The Cream Sewers', sub: 'ENDLESS', tier: 2, ox: 40, oy: 0, w: 1, h: 1, rooms: 0, boss: 'ratking', music: 'sewer', endless: 1,
+  sky: null, tint: 'rgba(60,46,20,0.08)', e1: '#f1e7d0', e2: '#5a4a2a', wall: '#0a0806', pool: [['creamblob', 3], ['cultrat', 3], ['rat', 2], ['jailer', 1]] };
+AREAS.bone = { name: 'The Bone Pit', sub: 'ENDLESS', tier: 3, ox: 41, oy: 0, w: 1, h: 1, rooms: 0, boss: 'boner', music: 'bone', endless: 1,
+  sky: null, tint: 'rgba(60,50,40,0.22)', e1: '#f1e7d0', e2: '#5a4a3a', wall: '#0c0a08', pool: [['skeleton', 3], ['bonehound', 3], ['knight', 1], ['wraith', 2], ['ghoul', 1]] };
+AREAS.furnace = { name: 'The Furnace', sub: 'ENDLESS', tier: 4, ox: 42, oy: 0, w: 1, h: 1, rooms: 0, boss: 'hotload', music: 'furnace', endless: 1,
+  sky: null, tint: 'rgba(120,40,0,0.22)', e1: '#ffb040', e2: '#6a2000', wall: '#0c0402', pool: [['magmaslug', 3], ['emberbat', 3], ['slimeR', 2], ['imp', 1], ['golem', 1]] };
+var BOSSMUSIC = { beast: 'bbeast', demon: 'bdemon', sperm: 'bsperm', pig: 'bpig', moon: 'bmoon', ratking: 'brat', boner: 'bboner', hotload: 'bhot', blum: 'blum', blum2: 'super' }; // every boss has its own theme
 var ENDLESSAREAS = ['castle', 'roof', 'city', 'dungeon', 'moon', 'sewer', 'bone', 'furnace'];
 var AREAORDER = ['castle', 'roof', 'city', 'dungeon'];
 
@@ -56,7 +57,14 @@ var ENEMIES = {
   clown: { name: 'Pie Clown', ai: 'lob', hp: 22, dmg: 11, spd: 30, w: 16, h: 32, fsp: 'clown', nf: 3, sc: 1, drops: 4 },
   balloon: { name: 'Steve Balloon', ai: 'float', hp: 4, dmg: 12, spd: 22, w: 16, h: 30, fsp: 'balloon', nf: 4, sc: 1, drops: 2, fly: 1, burst: 1 },
   jailer: { name: 'Jailer', ai: 'flail', hp: 70, dmg: 18, spd: 22, w: 22, h: 36, fsp: 'jailer', nf: 4, sc: 1, drops: 7, heavy: 1 },
-  rat: { name: 'Rat', ai: 'walk', hp: 6, dmg: 7, spd: 88, w: 18, h: 10, fsp: 'rat', nf: 4, sc: 1, drops: 1, pack: 3 }
+  rat: { name: 'Rat', ai: 'walk', hp: 6, dmg: 7, spd: 88, w: 18, h: 10, fsp: 'rat', nf: 4, sc: 1, drops: 1, pack: 3 },
+  /* the endless areas' own foes */
+  cultrat: { name: 'Rat Cultist', ai: 'lob', hp: 20, dmg: 11, spd: 34, w: 18, h: 28, fsp: 'cultrat', nf: 3, sc: 1, drops: 4, shot: 'dagger' },
+  creamblob: { name: 'Cream Blob', ai: 'hop', hp: 22, dmg: 12, spd: 74, w: 20, h: 14, fsp: 'creamblob', nf: 4, sc: 1, drops: 3, split: 1 },
+  skeleton: { name: 'Skeleton', ai: 'lob', hp: 24, dmg: 12, spd: 32, w: 14, h: 32, fsp: 'skeleton', nf: 3, sc: 1, drops: 4, shot: 'bone' },
+  bonehound: { name: 'Bone Hound', ai: 'charge', hp: 22, dmg: 13, spd: 48, w: 28, h: 18, fsp: 'bonehound', nf: 3, sc: 1, drops: 3 },
+  magmaslug: { name: 'Magma Slug', ai: 'slug', hp: 48, dmg: 14, spd: 18, w: 28, h: 14, fsp: 'magmaslug', nf: 4, sc: 1, drops: 5 },
+  emberbat: { name: 'Ember Bat', ai: 'fly', hp: 12, dmg: 11, spd: 64, w: 24, h: 15, fsp: 'emberbat', nf: 4, sc: 1, drops: 2, embers: 1 }
 };
 function isFlyer(d) { return d.ai === 'fly' || d.ai === 'shoot' || !!d.fly; }
 

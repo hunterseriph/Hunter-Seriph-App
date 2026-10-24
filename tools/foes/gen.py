@@ -37,7 +37,7 @@ def crawler(f, neon=False):
 def bat(f, purple=False):
     """black bat with a red rim, four wing beats"""
     g = Grid(30, 20); up = [-6, -2, 3, -1][f]
-    wing = BLACK if not purple else ('#4a2a5a', '#2a1236', '#140a1c')
+    wing = BLACK if not purple else (('#ff9a40', '#c4421c', '#6a1a08') if purple == 'ember' else ('#4a2a5a', '#2a1236', '#140a1c'))
     for side in (-1, 1):
         tip = (15 + side * 14, 9 + up); mid = (15 + side * 8, 7 + up * 0.6)
         g.poly([(15 + side * 2, 8), mid, tip, (15 + side * 10, 12 + up * 0.3), (15 + side * 6, 13), (15 + side * 3, 12)], 'wing')
@@ -45,7 +45,7 @@ def bat(f, purple=False):
     g.ellipse(15, 11, 3.6, 4.2, 'body')
     g.poly([(12, 8), (13, 4), (14, 8)], 'body'); g.poly([(16, 8), (17, 4), (18, 8)], 'body')  # ears
     g.put(13, 10, 'eye'); g.put(17, 10, 'eye'); g.put(14, 13, 'fang'); g.put(16, 13, 'fang')
-    rim = '#c4121c' if not purple else '#ff3a9a'
+    rim = '#c4121c' if not purple else ('#ffe36a' if purple == 'ember' else '#ff3a9a')
     pal = {'wing': wing, 'body': ('#3a2a30', '#1e1216', '#0c0608'), 'bone': rim, 'eye': '#ff2630', 'fang': '#f1e7d0'}
     return g, pal
 
@@ -106,7 +106,7 @@ def golem(f):
 def slime(f, col='green'):
     """a wobbling blob with a shine and a face"""
     cols = {'green': ('#8aff6a', '#3ab43a', '#1a6a1a'), 'red': ('#ff8a6a', '#e0402a', '#7a1a10'), 'blue': ('#8ac8ff', '#3a6ae0', '#1a2a7a'),
-            'yellow': ('#fff07a', '#d8b42a', '#7a5a10'), 'purple': ('#d08aff', '#8a3ad8', '#4a1a7a')}[col]
+            'yellow': ('#fff07a', '#d8b42a', '#7a5a10'), 'purple': ('#d08aff', '#8a3ad8', '#4a1a7a'), 'cream': ('#fffbe8', '#f1e0b0', '#b8a070')}[col]
     g = Grid(22, 18); sq = [0, 1, 2, 1][f]
     g.ellipse(11, 11 + sq * 0.5, 9 + sq * 0.6, 6.5 - sq * 0.6, 'goo')
     g.ellipse(11, 8 + sq, 5, 3, 'goo')
@@ -270,15 +270,68 @@ def rat(f):
     pal = {'fur': ('#6a5a5a', '#3e3232', '#1e1616'), 'ear': '#c47a7a', 'eye': '#ff2630', 'nose': '#ff8a9a', 'tail': '#c47a7a', 'leg': '#c47a7a', 'tooth': '#f1e7d0'}
     return g, pal
 
+def cultrat(f):
+    """a rat in a red cult robe and hood, holding a dagger of cream"""
+    g = Grid(24, 30); step = [0, 1, 0, -1][f]; throw = f == 3
+    g.poly([(6, 12), (17, 12), (20, 28), (3, 28)], 'robe')
+    for x in (5, 9, 13, 17): g.put(x, 28, 'robe')
+    g.line(4, 26, 1, 27 - step, 'tail', 0.5); g.line(1, 27 - step, -1, 24, 'tail', 0.5)
+    g.ellipse(12, 8, 6, 6, 'hood'); g.poly([(6, 6), (12, -1), (18, 6)], 'hood')
+    g.ellipse(15, 9, 3.5, 3, 'fur'); g.poly([(17, 8), (22, 10), (17, 11)], 'fur'); g.put(21, 10, 'nose'); g.put(16, 8, 'eye')
+    g.rect(8, 18, 8, 2, 'sash'); g.put(12, 19, 'gold')
+    if throw: g.line(16, 14, 21, 9, 'fur', 0.7); g.line(21, 9, 23, 5, 'blade', 0.6)
+    else: g.line(16, 15, 20, 19, 'fur', 0.7); g.line(20, 19, 23, 21, 'blade', 0.6)
+    pal = {'robe': ('#a8202a', '#6a0c14', '#3a060a'), 'hood': ('#8a1a24', '#5a0a12', '#2a0408'), 'fur': ('#8a7a7a', '#4e4242', '#241c1c'), 'tail': '#c47a7a', 'nose': '#ff8a9a', 'eye': '#ffe36a',
+           'sash': '#2a0408', 'gold': '#ffe36a', 'blade': '#fff6d8'}
+    return g, pal
+
+def skeleton(f):
+    """a skeleton warrior that lobs bones"""
+    g = Grid(22, 34); step = [0, 1, 0, -1][f]; throw = f == 3
+    for side, ph in ((-1, step), (1, -step)): g.line(11 + side * 2, 21, 11 + side * 2 + ph * 2, 27, 'bone', 0.6); g.line(11 + side * 2 + ph * 2, 27, 11 + side * 2 + ph * 3, 33, 'bone', 0.6); g.put(11 + side * 2 + ph * 3 + 1, 33, 'bone')
+    g.rect(10, 11, 2, 10, 'bone'); g.ellipse(11, 21, 4, 1.6, 'bone')
+    for i in range(3): g.line(7, 12 + i * 3, 15, 12 + i * 3, 'bone', 0.5)
+    g.ellipse(12, 6, 5, 5, 'bone'); g.rect(9, 9, 6, 3, 'bone'); g.ellipse(10, 6, 1.4, 1.6, 'void'); g.ellipse(14, 6, 1.4, 1.6, 'void'); g.put(10, 6, 'eye'); g.put(14, 6, 'eye')
+    for x in (10, 12, 14): g.put(x, 10, 'void')
+    if throw: g.line(15, 12, 19, 7, 'bone', 0.5); g.line(19, 7, 21, 2, 'bone', 0.5); g.ellipse(21, 2, 1.5, 1.5, 'bone')
+    else: g.line(15, 12, 18, 18, 'bone', 0.5)
+    g.line(7, 12, 5, 19 + step, 'bone', 0.5)
+    pal = {'bone': ('#ffffff', '#e8dcc0', '#9a8a6a'), 'void': '#12040a', 'eye': '#ff2630'}
+    return g, pal
+
+def bonehound(f):
+    """a skeletal hound; frame 3 is the lunge"""
+    g = Grid(32, 20); step = [0, 2, 0, -2][f]; lunge = f == 3
+    g.line(6, 8, 22, 8, 'bone', 0.7)
+    for i in range(5): g.line(9 + i * 3, 8, 9 + i * 3 + 1, 13, 'bone', 0.5)
+    for lx, ph in ((8, step), (20, -step)): g.line(lx, 9, lx + ph, 15, 'bone', 0.6); g.line(lx + ph, 15, lx + ph + 1, 19, 'bone', 0.6)
+    g.line(6, 8, 1, 4 - (f % 2), 'bone', 0.5)
+    hx_ = 26 + (2 if lunge else 0); g.ellipse(hx_, 7, 4.5, 3.5, 'bone'); g.poly([(hx_ + 2, 6), (hx_ + 7, 8), (hx_ + 2, 10)], 'bone'); g.poly([(hx_ - 2, 4), (hx_ - 1, 0), (hx_ + 1, 4)], 'bone')
+    g.put(hx_ + 1, 6, 'eye'); g.line(hx_ + 2, 9, hx_ + 6, 9, 'void', 0.4)
+    pal = {'bone': ('#ffffff', '#e0d4b8', '#8a7a5a'), 'eye': '#ff2630', 'void': '#12040a'}
+    return g, pal
+
+def magmaslug(f):
+    """a slow slug of molten rock with a cracked shell"""
+    g = Grid(30, 16); w = [0, 1, 2, 1][f]
+    g.ellipse(14, 11 - w * 0.3, 13 + w * 0.5, 4.5, 'magma')
+    g.ellipse(12, 7 - w * 0.3, 8, 5, 'crust')
+    for (x0, y0, x1, y1) in ((8, 5, 11, 9), (13, 4, 15, 8), (17, 6, 14, 10)): g.line(x0, y0, x1, y1, 'glow', 0.4)
+    g.line(24, 8, 27, 3 + (f % 2), 'magma', 0.5); g.line(26, 9, 29, 5 - (f % 2), 'magma', 0.5); g.put(27, 3 + (f % 2), 'eye'); g.put(29, 5 - (f % 2), 'eye')
+    pal = {'magma': ('#ffd060', '#ff7a20', '#a8300a'), 'crust': ('#4a2a20', '#2a1410', '#120604'), 'glow': '#ffb040', 'eye': '#12040a'}
+    return g, pal
+
+
 ENEMIES = {
     'crawler': (lambda f: crawler(f), 4), 'crawlerN': (lambda f: crawler(f, True), 4),
     'bat': (lambda f: bat(f), 4), 'batP': (lambda f: bat(f, True), 4),
     'ghoul': (ghoul, 4), 'imp': (imp, 4), 'golem': (golem, 4),
     'slime': (lambda f: slime(f), 4), 'slimeR': (lambda f: slime(f, 'red'), 4), 'slimeB': (lambda f: slime(f, 'blue'), 4),
-    'slimeY': (lambda f: slime(f, 'yellow'), 4), 'slimeP': (lambda f: slime(f, 'purple'), 4),
+    'slimeY': (lambda f: slime(f, 'yellow'), 4), 'creamblob': (lambda f: slime(f, 'cream'), 4), 'emberbat': (lambda f: bat(f, 'ember'), 4), 'slimeP': (lambda f: slime(f, 'purple'), 4),
     'vampire': (vampire, 4),
     'knight': (knight, 4), 'wraith': (wraith, 4), 'gargoyle': (gargoyle, 4), 'crow': (crow, 4),
     'clown': (clown, 4), 'balloon': (balloon, 4), 'jailer': (jailer, 4), 'rat': (rat, 4),
+    'cultrat': (cultrat, 4), 'skeleton': (skeleton, 4), 'bonehound': (bonehound, 4), 'magmaslug': (magmaslug, 4),
 }
 
 # ------------------------------------------------------------------ bosses
@@ -513,8 +566,12 @@ BOSSES = {
 }
 LEFTY = {'pig': pig, 'cowpig': cowpig}  # writing on them: separate left-facing frames
 
+from props import PROPS
+
 def main():
     frames = {}; rows = []
+    for k, fn in PROPS.items():
+        g, pal = fn(); frames['p_' + k] = render(g, pal)
     for k, (fn, n) in ENEMIES.items():
         row = []
         for i in range(n):
@@ -537,6 +594,7 @@ def main():
     if cur: flat.append(cur)
     preview(flat, os.path.join(HERE, 'preview.png'), 4)
     preview([brow[:6], brow[6:10] + [frames['f_pig_0L'], frames['f_cowpig_0L']], brow[10:]], os.path.join(HERE, 'preview_bosses.png'), 3)
+    pk = [frames['p_' + k] for k in PROPS]; preview([pk[:8], pk[8:16], pk[16:]], os.path.join(HERE, 'preview_props.png'), 3)
     print('frames', len(frames), 'sheet', sheet.size)
 
 if __name__ == '__main__':

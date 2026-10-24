@@ -159,8 +159,9 @@ function buildRoom(rm) {
   } else if (t === 'flume') {
     // the Load Flume: a channel of cream with logs drifting left to right. Ride them across; falling in hurts.
     ents.push({ k: 'water', x0: 4 * T, x1: 28 * T, y: 13 * T + 6 });
-    for (var lg = 0; lg < 3; lg++) ents.push({ k: 'log', x: 4 * T + 34 + lg * 8 * T, y: 13 * T + 15, w: 52, h: 11, vx: 52 });
+    var sinker = rn(0, 2); for (var lg = 0; lg < 3; lg++) ents.push({ k: 'log', x: 4 * T + 34 + lg * 8 * T, y: 13 * T + 15, w: 52, h: 11, vx: 52, sink: lg === sinker ? 1 : 0 }); /* one boat is leaky and goes under now and then */
     ents.push({ k: 'deco', d: 'flumesign', x: 16 * T, y: 2 * T + 4 });
+    for (var qy = 6; qy < H - 1; qy++) if (G(2, qy) === TA && G(2, qy + 1) === TW) { ents.push({ k: 'deco', d: 'tallsign', x: 3 * T + 4, y: (qy + 1) * T }); break; } /* Steve checks your height, by the queue rails */
     RS(3, 11, 28, 15);
     plat(5, 7, 12); plat(24, 26, 12); /* low steps off the banks, so nothing needs a perfect double jump */
     [[5, 8, 9], [12, 16, 7], [19, 20, 8], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 3) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
@@ -277,8 +278,13 @@ function buildRoom(rm) {
   if ((rm.area === 'dungeon' || rm.area === 'sewer') && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
     var ndr = rn(1, 3);
     for (var dq = 0; dq < ndr; dq++) { var drx = rn(3, W - 4); if (G(drx, 0) === TW && G(drx, 1) === TA) ents.push({ k: 'drip', x: drx * T + 8, y: T, cd: 1 + r() * 3 }); }
-    dark = fights && r() < 0.5;
+    dark = rm.area === 'dungeon' && fights && r() < 0.5; /* the sewers stay lit so you can see the cream */
   }
+  var DECO = { sewer: [['creampool', 3, 3]], bone: [['skulls', 2, 3], ['ribs', 1, 4]], furnace: [['crucible', 2, 2]] }[rm.area];
+  if (DECO && t !== 'flume') DECO.forEach(function (dd) { // each endless area dresses its floors: cream puddles, skull piles and ribcages, crucibles of lava
+    var n = rn(1, dd[1]), tr = 0, half = Math.ceil(dd[2] / 2);
+    while (n > 0 && tr++ < 40) { var qx = rn(3, W - 4), qy = rn(2, H - 2); if (G(qx, qy) === TA && G(qx, qy + 1) === TW && G(qx - half, qy + 1) === TW && G(qx + half, qy + 1) === TW && !res[qy * W + qx] && !ents.some(function (o) { return o.k === 'adeco' && Math.abs(o.x - (qx * T + 8)) < 40 && Math.abs(o.y - (qy + 1) * T) < 8; })) { ents.push({ k: 'adeco', s: dd[0], x: qx * T + 8, y: (qy + 1) * T, fl: r() < 0.5 }); n--; } }
+  });
   if (rm.area === 'roof' && fights && r() < 0.6) wind = r() < 0.5 ? -1 : 1; // gusts across the rooftops
   // stand spots for enemies and drops
   var stands = [];

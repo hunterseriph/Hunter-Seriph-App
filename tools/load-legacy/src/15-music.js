@@ -44,6 +44,31 @@ var music = (function () {
     mel: 'e5 - a5 - c6 - b5 a5 | c6 - - - a5 - - - | g5 - e5 - g5 - c6 - | b5 - - - g5 - - - | e5 - a5 - c6 - e6 - | f6 - e6 - c6 - a5 - | g5 - c6 - e6 - g6 - | g#5 - b5 - e6 - - -' };
   SONGS.pulsar3 = { bpm: 76, beats: 4, vol: 1, wet: 0.7, lead: 'soft', bass: 'walk', acc: 'bell', drums: 'slow', chords: 'Dm Dm Gm A Dm Bb Gm A',
     mel: 'd5 - - - f5 - a5 - | . . c6 - a5 - - - | bb5 - - - g5 - d5 - | e5 - - - c#5 - - - | d5 - f5 - a5 - d6 - | . . bb5 - f5 - - - | g5 - bb5 - d6 - g5 - | a5 - - - - - . .' };
+  /* the newer areas and every boss's own theme. 'fm' leads and the slap bass are FM synth, like a Mega Drive */
+  SONGS.sewer = { bpm: 104, beats: 4, vol: 0.9, wet: 0.55, lead: 'fm', fmbass: 1, bass: 'walk', acc: 'bell', drums: 'shuffle', chords: 'Em Em Am B Em C Am B',
+    mel: 'e4 - g4 a4 b4 - a4 g4 | e4 - - - . . b3 - | a4 - c5 - e5 - d5 c5 | b4 - - - d#5 - - - | e5 - d5 b4 g4 - e4 - | c5 - b4 - g4 - e4 - | a4 - - c5 b4 a4 g4 a4 | b4 - - - - - . .' };
+  SONGS.bone = { bpm: 168, beats: 3, vol: 0.85, wet: 0.35, lead: 'xylo', bass: 'waltz', acc: 'stabs', drums: 'waltz', chords: 'Am Am E E Am Am Dm E Am C G E Am Dm E Am',
+    mel: 'a5 - c6 - e6 - | d6 c6 b5 - a5 - | g#5 - b5 - e6 - | d6 - - - - - | a5 - c6 - e6 - | a6 - g6 - e6 - | f6 - e6 d6 c6 - | b5 - - - - - | c6 - e6 - a6 - | g6 - e6 - c6 - | b5 - d6 - g6 - | g#6 - - - e6 - | a6 - e6 - c6 - | d6 - f6 - a6 - | g#6 - e6 - b5 - | a5 - - - - -' };
+  SONGS.furnace = { bpm: 150, beats: 4, vol: 0.9, wet: 0.25, lead: 'fm', fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'industrial', chords: 'Dm Dm Bb C Dm Dm G A',
+    mel: 'd5 . d5 . f5 . d5 a5 | g5 f5 e5 f5 d5 - - - | bb5 - a5 - g5 - f5 - | e5 - g5 - c6 - - - | d6 . d6 . c6 . a5 f5 | g5 a5 f5 g5 d5 - - - | b5 - g5 - d5 - b4 - | c#5 - e5 - a5 - - -' };
+  SONGS.moonarea = { bpm: 88, beats: 4, vol: 0.95, wet: 0.65, lead: 'organlead', bass: 'drone', acc: 'bell', drums: 'slow', chords: 'C#m A F#m G# C#m A F#m G#',
+    mel: 'c#5 - - - g#5 - - - | a5 - g#5 - e5 - - - | f#5 - - - a5 - c#6 - | b5 - - - g#5 - - - | e5 - - - c#6 - - - | b5 - a5 - g#5 - e5 - | f#5 - a5 - c#6 - e6 - | d#6 - - - g#5 - - -' };
+  SONGS.bbeast = { bpm: 140, beats: 4, vol: 0.9, wet: 0.25, lead: 'fm', fmbass: 1, bass: 'gallop', acc: 'stabs', drums: 'boss', chords: 'Em C D B Em C Am B',
+    mel: 'e5 - e5 - g5 - f#5 e5 | c5 - - - e5 - - - | d5 - f#5 - a5 - g5 f#5 | d#5 - - - b4 - - - | e5 g5 b5 e6 d6 b5 g5 e5 | c6 - b5 - g5 - e5 - | a5 - c6 - e6 - d6 c6 | b5 - - - d#6 - - -' };
+  SONGS.bdemon = { bpm: 176, beats: 4, vol: 0.88, wet: 0.22, lead: 'pulse', harm: 1, bass: 'pulse16', acc: 'arp16', drums: 'fast', chords: 'Gm Gm Eb D Gm Gm C# D',
+    mel: 'g5 a5 bb5 g5 d6 - c#6 d6 | bb5 a5 g5 a5 d5 - - - | eb5 g5 bb5 eb6 d6 - c6 bb5 | a5 - f#5 - d5 - - - | g5 - d6 - g6 - f6 - | eb6 d6 c6 bb5 a5 - g5 - | g#5 - c#6 - f6 - e6 - | d6 - c6 - a5 - f#5 -' };
+  SONGS.bsperm = { bpm: 128, beats: 4, vol: 0.9, wet: 0.2, lead: 'fm', fmbass: 1, bass: 'drive', acc: 'arp16', drums: 'industrial', chords: 'Am Am G G F F E E',
+    mel: 'a4 . a4 . a4 . c5 . | a4 . a4 . g4 . e4 . | g4 . g4 . g4 . b4 . | g4 . g4 . d5 . b4 . | f4 . a4 . c5 . f5 . | e5 . c5 . a4 . f4 . | e4 . g#4 . b4 . e5 . | g#5 - - - e5 - b4 -' };
+  SONGS.bpig = { bpm: 152, beats: 4, vol: 0.88, wet: 0.25, lead: 'pulse', bass: 'walk', acc: 'arp8', drums: 'shuffle', chords: 'G G C D G Em C D',
+    mel: 'd5 - g5 - b5 - a5 g5 | e5 - d5 - b4 - g4 - | c5 - e5 - g5 - e5 c5 | d5 - f#5 - a5 - - - | b5 - a5 g5 d5 - g5 - | e5 - g5 - b5 - e6 - | c6 - b5 a5 g5 - e5 - | d5 - f#5 - g5 - - -' };
+  SONGS.bmoon = { bpm: 120, beats: 4, vol: 0.92, wet: 0.45, lead: 'organlead', harm: 1, bass: 'drive', acc: 'organ', drums: 'boss', chords: 'C#m C#m A B C#m G#m A G#',
+    mel: 'c#5 - e5 - g#5 - c#6 - | b5 - a5 - g#5 - e5 - | a5 - c#6 - e6 - d#6 c#6 | d#6 - - - f#5 - b5 - | c#6 - - - e6 - - - | d#6 - b5 - g#5 - d#5 - | e5 - a5 - c#6 - e6 - | g#6 - - - c6 - d#6 -' };
+  SONGS.brat = { bpm: 136, beats: 4, vol: 0.9, wet: 0.4, lead: 'xylo', bass: 'drone', acc: 'bell', drums: 'tribal', chords: 'Bm Bm G F# Bm Bm Em F#',
+    mel: 'b4 - d5 - f#5 - b5 - | a5 - f#5 - d5 - c#5 - | d5 - g5 - b5 - d6 - | c#6 - - - a#5 - - - | b5 - b5 - b5 - a5 b5 | f#5 - d5 - b4 - - - | e5 - g5 - b5 - e6 - | c#6 - a#5 - f#5 - - -' };
+  SONGS.bboner = { bpm: 120, beats: 4, vol: 0.9, wet: 0.35, lead: 'xylo', bass: 'walk', acc: 'stabs', drums: 'shuffle', chords: 'Dm Dm A A Dm Dm Gm A',
+    mel: 'd5 - f5 a5 d6 - a5 - | f5 - d5 - a4 - - - | c#5 - e5 a5 c#6 - a5 - | e5 - c#5 - a4 - - - | d5 f5 a5 d6 f6 - d6 - | a5 - f5 - d5 - - - | g5 - bb5 - d6 - bb5 g5 | a5 - c#6 - e6 - - -' };
+  SONGS.bhot = { bpm: 160, beats: 4, vol: 0.9, wet: 0.2, lead: 'fm', harm: 1, fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'industrial', chords: 'Fm Fm Db Eb Fm Fm Bbm C',
+    mel: 'f5 . f5 ab5 . c6 . f6 | eb6 . db6 . c6 - ab5 - | db6 - c6 - bb5 - ab5 - | g5 - bb5 - eb6 - - - | f6 . f6 . eb6 . c6 ab5 | bb5 c6 ab5 bb5 f5 - - - | bb5 - db6 - f6 - bb6 - | e6 - - - c6 - - -' };
   SONGS.super = (function () { var s = {}; for (var k in SONGS.blum) s[k] = SONGS.blum[k]; s.bpm = 166; s.shift = 1; s.harm = 1; return s; })();
   // drum kits: one bar each, 16th notes (12 for a waltz). k kick, s snare, h hat, o open hat, t tom, '.' nothing
   var KITS = {
@@ -52,7 +77,9 @@ var music = (function () {
     fast: ['khhhshhhkhkhshhh', 'khhhshhhkhkhshto'],
     slow: ['k.......s.......', 'k.......s...t.t.'],
     boss: ['kkhkskhkkkhkskhk', 'kkhkskhkkkhkstto'],
-    waltz: ['k...h...h...', 'k...h.h.h...']
+    waltz: ['k...h...h...', 'k...h.h.h...'],
+    industrial: ['k.hsk.hkk.hsk.hs', 'k.hsk.hkk.hstsst'],
+    tribal: ['t.t.k.t.t.tk.t..', 't.t.k.t.ttk.tkt.']
   };
   var NOTE = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
   function midi(tok) { var m = /^([a-g])(#|b)?(-?\d)$/.exec(tok); if (!m) return null; return 12 * (+m[3] + 1) + NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); }
@@ -110,16 +137,27 @@ var music = (function () {
     env(g, t, o.atk || 0.008, vol, dur, o.rel || Math.min(0.12, dur * 0.4));
     out.connect(o.dest || tg); os.start(t); os.stop(t + dur + 0.08);
   }
+  // two-operator FM: a modulator bends the carrier's pitch; its depth falls away after the attack, like a YM2612 patch
+  function fm(f, t, dur, vol, ratio, idx, vib, fall) {
+    var c = A.createOscillator(), m = A.createOscillator(), mg = A.createGain(), g = A.createGain();
+    c.frequency.value = f; m.frequency.value = f * ratio;
+    mg.gain.setValueAtTime(f * idx, t); mg.gain.exponentialRampToValueAtTime(Math.max(1, f * idx * 0.18), t + (fall || Math.min(0.35, dur)));
+    m.connect(mg); mg.connect(c.frequency); c.connect(g);
+    if (vib) { var lf = A.createOscillator(), lg = A.createGain(); lf.frequency.value = 5.8; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(vib, t + Math.min(0.3, dur * 0.6)); lf.connect(lg); lg.connect(c.detune); lf.start(t); lf.stop(t + dur + 0.1); }
+    env(g, t, 0.004, vol, dur, Math.min(0.1, dur * 0.4)); g.connect(tg); c.start(t); m.start(t); c.stop(t + dur + 0.08); m.stop(t + dur + 0.08);
+  }
   function play1(e, t, sd) {
     var d = e.d * sd, kind = song.sp.lead;
     if (e.k === 'lead' || e.k === 'harm') {
       var v = e.k === 'harm' ? 0.6 : 1, f = mf(e.n);
       if (kind === 'pulse') { osc('p25', f, t, d * 0.95, 0.05 * v, { vib: 9, det: -4 }); osc('p12', f, t, d * 0.95, 0.03 * v, { det: 5, vib: 7 }); }
       else if (kind === 'calliope') { osc('sine', f, t, d * 0.9, 0.07 * v, { vib: 22, vibF: 7.5, atk: 0.02 }); osc('triangle', f * 2, t, d * 0.9, 0.025 * v, { vib: 20, vibF: 7.5 }); }
+      else if (kind === 'fm') { fm(f, t, d * 0.95, 0.06 * v, 1, 2.4, 9); fm(f * 2, t, d * 0.6, 0.012 * v, 3, 1.2, 0); }
+      else if (kind === 'xylo') { osc('sine', f, t, Math.min(d, 0.4), 0.075 * v, { atk: 0.002, rel: 0.32 }); osc('sine', f * 3.93, t, 0.07, 0.022 * v, { atk: 0.002, rel: 0.06 }); }
       else if (kind === 'organlead') { [1, 2, 4].forEach(function (h, i) { osc('sine', f * h, t, d, [0.05, 0.025, 0.012][i] * v, { atk: 0.04, vib: 5 }); }); }
       else { osc('triangle', f, t, d, 0.07 * v, { atk: 0.05, vib: 12, rel: 0.3 }); osc('sine', f * 2, t, d, 0.015 * v, { atk: 0.06 }); }
     } else if (e.k === 'counter') osc('triangle', mf(e.n), t, d * 0.9, 0.045, { atk: 0.02, vib: 6 });
-    else if (e.k === 'bass') { osc('triangle', mf(e.n), t, d, 0.11, { atk: 0.005 }); osc('p25', mf(e.n), t, d * 0.9, 0.025, { lp: 700 }); }
+    else if (e.k === 'bass') { if (song.sp.fmbass) fm(mf(e.n), t, d * 0.9, 0.12, 1, 3.5, 0, 0.08); else { osc('triangle', mf(e.n), t, d, 0.11, { atk: 0.005 }); osc('p25', mf(e.n), t, d * 0.9, 0.025, { lp: 700 }); } }
     else if (e.k === 'arp') osc('p12', mf(e.n), t, d, 0.016, { lp: 3200 });
     else if (e.k === 'organ') e.ns.forEach(function (n) { [1, 2, 3].forEach(function (h, i) { osc('sine', mf(n) * h, t, d, [0.022, 0.012, 0.006][i], { atk: 0.12, rel: 0.4 }); }); });
     else if (e.k === 'stab') e.ns.forEach(function (n) { osc('sine', mf(n), t, d, 0.03, { atk: 0.01, vib: 18, vibF: 7.5 }); osc('square', mf(n), t, d * 0.5, 0.008, { lp: 1800 }); });
