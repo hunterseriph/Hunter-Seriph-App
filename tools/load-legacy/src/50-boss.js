@@ -5,6 +5,7 @@
 function toast(t) { G.msg = { t: t, age: 0 }; }
 function sealCount() { var n = 0; AREAORDER.forEach(function (a) { if (META.bosses[a]) n++; }); return n; }
 function openDoor(e) {
+  if (RUN && RUN.endless) { if (rsOf(G.roomKey).bossDone) { sfx.click(); toast('IT IS DEAD. KEEP GOING RIGHT.'); return; } sfx.door(); enterArena(e.boss); return; }
   if (e.boss === 'blum') {
     var n = sealCount();
     if (n < 4) { sfx.lock(); toast('THE BLUMHEAD DOOR  ·  SEALS BROKEN ' + n + '/4'); return; }
@@ -27,7 +28,7 @@ function enterArena(id) {
 function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } }
 function mkBoss(id, x, y, hpMul) {
   // bosses keep up with how strong the heir is, so a fight never melts in seconds
-  var d = BOSSDEF[id], pw = Math.max(1, Math.pow(ST.dmg / Math.max(1, CLASSES[RUN.cls].dmg), 0.7));
+  var d = BOSSDEF[id], en = RUN && RUN.endless ? 1 + 0.35 * Math.max(0, RUN.endless.n / 10 - 1) : 1, pw = en * Math.max(1, Math.pow(ST.dmg / Math.max(1, CLASSES[RUN.cls].dmg), 0.7));
   var hp = Math.round(d.hp * (hpMul || 1) * pw * (1 + 0.6 * META.ng) * (RUN.card === 'bigload' ? 1.5 : 1));
   return { boss: true, id: id, d: d, x: x, y: y, vx: 0, vy: 0, w: d.w, h: d.h, hp: hp, mhp: hp, dmg: d.dmg * (1 + 0.35 * META.ng), face: -1, st: 'intro', t: 0, cd: 1.6, flash: 0, stun: 0, alive: true, burn: 0, poison: 0, ph: 1 };
 }
@@ -53,6 +54,8 @@ function bossDown(b) {
   var t = b.id === 'blum2' ? 6 : (b.id === 'blum' ? 5 : AREAS[BOSSDEF[b.id].area].tier);
   for (var i = 0; i < 40; i++) { var a = -Math.PI * (0.1 + 0.8 * (i / 39)), sp = 90 + Math.random() * 140; drops.push({ x: b.x, y: b.y - b.h / 2, fly: true, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, age: 0, val: Math.round(dropVal() * 2) }); }
   RUN.drops += 120 * t * (1 + 0.3 * META.ng);
+  G.findDue = 3.2; // a boss always leaves a blueprint or rune behind (shown once its own banner is done)
+  if (RUN.endless) { endlessBossDown(b); return; }
   if (b.id === 'blum') {
     META.blumWins++; saveMeta();
     if (G.superDue) { superTransform(b); return; } // a secret: nothing tells you he is coming

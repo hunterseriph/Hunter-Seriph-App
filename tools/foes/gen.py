@@ -456,9 +456,60 @@ def moon(f):
            'eye': '#ffe36a', 'eye2': '#ffffff', 'glint': '#ffffff', 'tooth': ('#ffffff', '#f1e7d0', '#a6968f'), 'drip': '#ff2630'}
     return g, pal
 
+def ratking(f):
+    """The Rat King: a huge sewer rat in a dented gold crown, tail curling behind him"""
+    g = Grid(92, 52); st = [0, 2][f]
+    for i in range(16): g.put(14 - i * 0.8, 34 - S(i * 0.5 + f) * 3 - i * 0.6, 'tail')
+    g.ellipse(40, 32, 26, 15, 'fur'); g.ellipse(30, 36, 14, 10, 'fur')
+    for lx, ph in ((24, st), (40, -st), (54, st)): g.rect(lx + ph, 42, 6, 9, 'fur2'); g.line(lx + ph, 50, lx + ph + 7, 50, 'claw', 0.6)
+    g.ellipse(68, 28, 15, 12, 'fur'); g.poly([(78, 24), (91, 31), (78, 36)], 'fur'); g.ellipse(90, 31, 2, 2, 'nose')
+    g.ellipse(62, 15, 5, 6, 'ear'); g.ellipse(62, 16, 3, 4, 'ear2')
+    g.rect(70, 23, 4, 3, 'eye'); g.put(72, 23, 'glint')
+    g.poly([(80, 35), (84, 35), (82, 41)], 'tooth'); g.poly([(85, 35), (88, 35), (86, 40)], 'tooth')
+    g.poly([(58, 14), (76, 14), (78, 4), (73, 9), (67, 2), (62, 9), (57, 4)], 'gold'); g.put(67, 9, 'gem'); g.put(62, 11, 'gem2'); g.put(73, 11, 'gem2')
+    for (x, y) in ((30, 24), (44, 22), (36, 30)): g.put(x, y, 'scar')
+    pal = {'fur': ('#8a7a7a', '#4e4242', '#241c1c'), 'fur2': ('#6a5a5a', '#3e3232', '#1e1616'), 'tail': '#c47a7a', 'claw': '#d8c8a8', 'nose': '#ff8a9a', 'ear': ('#8a7a7a', '#4e4242', '#241c1c'), 'ear2': '#c47a7a',
+           'eye': '#ff2630', 'glint': '#ffffff', 'tooth': ('#ffffff', '#f1e7d0', '#a6968f'), 'gold': ('#fff09a', '#ffc840', '#a8741a'), 'gem': '#ff2630', 'gem2': '#7a8aff', 'scar': '#2a1418'}
+    return g, pal
+
+def boner(f):
+    """The Big Boner: a towering skeleton with a red cape and a club made of a femur"""
+    g = Grid(64, 92); sw = [0, 1][f]
+    for side in (-1, 1):  # legs
+        g.line(30 + side * 5, 58, 30 + side * 7, 74, 'bone', 1.3); g.line(30 + side * 7, 74, 30 + side * 6, 89, 'bone', 1.3); g.rect(30 + side * 6 - 3, 88, 8, 3, 'bone')
+    g.poly([(18, 26), (42, 26), (48, 70), (12, 70)], 'cape')
+    g.rect(29, 28, 3, 30, 'bone')  # spine
+    for i in range(5): g.line(21, 30 + i * 5, 39, 30 + i * 5, 'bone', 0.7); g.line(21, 30 + i * 5, 23, 33 + i * 5, 'bone', 0.5); g.line(39, 30 + i * 5, 37, 33 + i * 5, 'bone', 0.5)
+    g.ellipse(30, 58, 9, 4, 'bone')  # pelvis
+    g.ellipse(30, 14, 11, 12, 'bone'); g.rect(24, 22, 12, 6, 'bone')
+    g.ellipse(26, 13, 3, 3.4, 'void'); g.ellipse(35, 13, 3, 3.4, 'void'); g.put(26, 13, 'eye'); g.put(35, 13, 'eye')
+    g.poly([(30, 17), (28, 20), (32, 20)], 'void'); g.rect(25, 23, 11, 2, 'void')
+    for x in range(25, 36, 2): g.put(x, 23, 'bone')
+    g.poly([(19, 4), (16, -2), (24, 3)], 'horn'); g.poly([(41, 4), (44, -2), (36, 3)], 'horn')
+    g.line(18, 30, 10, 46, 'bone', 1); g.line(10, 46, 12 + sw * 2, 58, 'bone', 1)  # back arm
+    a = 0.3 + sw * 0.6; hx_, hy_ = 44 + C(a) * 8, 46 + S(a) * 6
+    g.line(42, 30, 48, 42, 'bone', 1); g.line(48, 42, hx_, hy_, 'bone', 1)
+    g.line(hx_, hy_, hx_ + 12, hy_ - 22 + sw * 6, 'club', 2.4); g.ellipse(hx_ + 13, hy_ - 24 + sw * 6, 4, 4, 'club')
+    pal = {'bone': ('#ffffff', '#e8dcc0', '#9a8a6a'), 'void': '#12040a', 'eye': '#ff2630', 'cape': ('#a8202a', '#6a0c14', '#3a060a'), 'horn': ('#3a3440', '#1a1420', '#0a080c'), 'club': ('#fff6e0', '#d8c8a0', '#8a7a5a')}
+    return g, pal
+
+def hotload(f):
+    """The Hot Load: a blob of molten cream with a cracked black crust, dripping fire"""
+    g = Grid(78, 74); wob = [0, 1.5][f]
+    g.ellipse(39, 44, 32 + wob, 28 - wob, 'magma')
+    for (x, y, rx, ry) in ((15, 34, 7, 8), (63, 34, 7, 8), (20, 60, 8, 5), (58, 62, 8, 5), (39, 22, 9, 4)): g.ellipse(x, y, rx, ry, 'crust')
+    for (x0, y0, x1, y1) in ((12, 30, 18, 40), (66, 30, 60, 40), (34, 22, 44, 23), (18, 60, 24, 61)): g.line(x0, y0, x1, y1, 'magma', 0.5)
+    g.poly([(24, 33), (35, 36), (34, 41), (25, 41)], 'void'); g.poly([(54, 33), (43, 36), (44, 41), (53, 41)], 'void'); g.put(30, 38, 'eye'); g.put(48, 38, 'eye'); g.put(31, 37, 'eye'); g.put(49, 37, 'eye')
+    g.poly([(26, 48), (52, 48), (46, 56), (32, 56)], 'void'); g.put(39, 54, 'magma')
+    for x in (30, 36, 42, 48): g.poly([(x, 48), (x + 3, 48), (x + 1.5, 51)], 'tooth')
+    for i, x in enumerate((20, 34, 46, 60)): g.poly([(x - 3, 20 - (i % 2) * 2 - f * 2), (x, 6 + (i % 2) * 4 - f * 3), (x + 3, 20 - (i % 2) * 2 - f * 2)], 'flame')
+    for x in (22, 40, 58): g.line(x, 70, x + (f * 2 - 1), 73, 'drip', 0.6)
+    pal = {'magma': ('#fff09a', '#ffb040', '#ff5a20'), 'crust': ('#4a2a20', '#2a1410', '#120604'), 'void': '#12040a', 'eye': '#fff6d8', 'tooth': '#f1e7d0', 'flame': ('#ffe36a', '#ff7a30', '#c4121c'), 'drip': '#ffb040'}
+    return g, pal
+
 BOSSES = {
     'beast': (beast, 2), 'demon': (demon, 2), 'sperm': (sperm, 2), 'pig': (pig, 2), 'cowpig': (cowpig, 2),
-    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2),
+    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2), 'ratking': (ratking, 2), 'boner': (boner, 2), 'hotload': (hotload, 2),
 }
 LEFTY = {'pig': pig, 'cowpig': cowpig}  # writing on them: separate left-facing frames
 

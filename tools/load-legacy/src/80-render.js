@@ -190,12 +190,12 @@ function drawFlumeSign(x, y) {
 }
 function drawBack() {
   var a = areaNow(), gx = (G.mode === 'town' ? 0 : (L && L.arena ? 0 : (G.rm ? G.rm.cx * CW * T : 0))) + G.cam.x;
-  if (G.mode === 'town') { outdoorSky(gx, false); return; } // just the far skyline: the shops are all on the street itself
+  if (G.mode === 'town') { if (TOWN && TOWN.inside) clubBack(); else outdoorSky(gx, false); return; } // just the far skyline: the shops are all on the street itself
   var A = AREAS[a];
   if (a === 'moon') moonBack(gx);
   else if (a === 'roof') { outdoorSky(gx, false); roofSpires(gx); }
   else if (a === 'city') parkBack(gx);
-  else { wallBack(gx, A); if (a === 'castle') castleWindows(gx); else dungeonChains(gx); }
+  else { wallBack(gx, A); if (a === 'castle') castleWindows(gx); else if (a === 'sewer') sewerBack(gx); else if (a === 'bone') boneBack(gx); else if (a === 'furnace') furnaceBack(gx); else dungeonChains(gx); }
   if (A.sky) { ctx.fillStyle = A.sky; ctx.fillRect(0, 0, VW, VH); }
 }
 /* the room's static tiles, rendered once into a layer */
@@ -204,6 +204,9 @@ var STONE = {
   castle:  { m: '#12040a', c: ['#3e0f16', '#45121a', '#381016', '#4c141c'], hi: '#6a2028', lo: '#22070b', cap: ['#7a2430', '#a83440', '#4a1018'], deep: '#1c0609', spot: '#5a1820', style: 'brick' },
   roof:    { m: '#0a0610', c: ['#2c1c3c', '#33204a', '#281836', '#3a2650'], hi: '#55406e', lo: '#160c22', cap: ['#5a3a74', '#8a64a8', '#2a1838'], deep: '#120a1a', spot: '#4a2e62', style: 'shingle' },
   city:    { m: '#060204', c: ['#1a0a10', '#1e0c14', '#160810', '#220e16'], hi: '#3a1622', lo: '#0a0306', cap: ['#2a0e18', '#ff2a8a', '#14060a'], deep: '#0c0408', spot: '#6a1a2a', style: 'panel' },
+  sewer:   { m: '#040602', c: ['#1a2214', '#1e2818', '#161e10', '#222c1a'], hi: '#3a4a2a', lo: '#0a0e06', cap: ['#2a3a1a', '#6a8a3a', '#141c0c'], deep: '#0a0e06', spot: '#4a6a1a', style: 'brick' },
+  bone:    { m: '#080604', c: ['#3a342a', '#423a2e', '#342e24', '#4a4234'], hi: '#6a604e', lo: '#1a1612', cap: ['#8a7e66', '#e8dcc0', '#3a342a'], deep: '#14100c', spot: '#5a5040', style: 'rough' },
+  furnace: { m: '#080200', c: ['#2a0e06', '#321208', '#240c04', '#3a160a'], hi: '#6a2a10', lo: '#120402', cap: ['#8a3a10', '#ffb040', '#3a1004'], deep: '#120402', spot: '#ff5a20', style: 'brick' },
   moon:    { m: '#060204', c: ['#2a0a0e', '#300c12', '#240a0c', '#360e14'], hi: '#5a1a22', lo: '#12040a', cap: ['#8a1a24', '#ff2630', '#3a0a10'], deep: '#0e0306', spot: '#7a0c14', style: 'rough' },
   dungeon: { m: '#060406', c: ['#2c2326', '#30272a', '#272022', '#342a2e'], hi: '#4a3e42', lo: '#160f12', cap: ['#463a3e', '#6a5a5e', '#221a1c'], deep: '#110b0d', spot: '#4a0a10', style: 'rough' }
 };
@@ -325,6 +328,7 @@ function drawDeco(e, cx) {
   if (e.d === 'candle') { R(ctx, '#12040a', x, y + 6, 6, 12); R(ctx, '#f1e7d0', x + 1, y + 7, 4, 10); ctx.fillStyle = 'rgba(255,170,60,0.22)'; ctx.beginPath(); ctx.arc(x + 3, y + 2, 10, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x + 3, y + 2 + Math.sin(G.t * 9 + x) * 0.8, 2.2, 0, 6.28); ctx.fill(); }
   else if (e.d === 'banner') { R(ctx, '#2a0509', x - 1, y - 2, 22, 3); R(ctx, '#8e0c14', x, y, 20, 34); ctx.fillStyle = '#8e0c14'; ctx.beginPath(); ctx.moveTo(x, y + 34); ctx.lineTo(x + 10, y + 42); ctx.lineTo(x + 20, y + 34); ctx.fill(); R(ctx, '#ff2630', x + 2, y + 2, 1, 32); R(ctx, '#ff2630', x + 17, y + 2, 1, 32); ctx.drawImage(dropImg, x + 5, y + 10, 10, 12); }
   else if (e.d === 'parkgate') drawParkGate(x, y);
+  else if (e.d === 'esign') { ctx.save(); ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 12 + Math.sin(G.t * 5) * 3; ctx.strokeStyle = '#ff2630'; ctx.lineWidth = 2; ctx.strokeRect(x - 80, y, 160, 30); ctx.restore(); R(ctx, 'rgba(10,2,4,0.85)', x - 79, y + 1, 158, 28); ctx.save(); ctx.font = '22px "Pirata One", serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff2630'; ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 8; ctx.fillText('ENDLESS', x, y + 22, 150); ctx.restore(); text('ONLY ONE WAY  >>', x, y + 44, 'center', '#ffe36a', 6); }
   else if (e.d === 'flumesign') drawFlumeSign(x, y);
   else if (e.d === 'bulbs') { for (var bi = 0; bi < 6; bi++) { ctx.fillStyle = (Math.floor(G.t * 3) + bi) % 2 ? '#ffe36a' : '#ff2630'; ctx.fillRect(x + bi * 9, y + Math.round(Math.sin(bi / 5 * Math.PI) * 6), 3, 3); } }
   else if (e.d === 'neon') { if (e.post) { R(ctx, '#12040a', x + 6, y + 14, 3, 10); R(ctx, '#12040a', x + 25, y + 14, 3, 10); R(ctx, '#3a0a10', x + 7, y + 14, 1, 10); R(ctx, '#3a0a10', x + 26, y + 14, 1, 10); } var col = e.hue < 0.5 ? '#ff2a8a' : '#ff2630'; ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 10 + Math.sin(G.t * 6 + x) * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x, y, 34, 14); ctx.fillStyle = col; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.hue < 0.33 ? 'LOAD' : e.hue < 0.66 ? 'OPEN' : 'XXX', x + 17, y + 10); ctx.restore(); }
@@ -433,6 +437,7 @@ function drawShots(cx) {
     if (b.k === 'laser') { ctx.save(); ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 8; R(ctx, '#ff2630', x - 10, y - 2, 20, 4); R(ctx, '#ffd0d0', x - 8, y - 1, 16, 2); ctx.restore(); }
     else if (b.k === 'coin') { R(ctx, '#7a5a10', x - 4, y - 4, 8, 8); R(ctx, '#ffe36a', x - 3, y - 3, 6, 6); R(ctx, '#fff6d8', x - 2, y - 2, 2, 2); }
     else if (b.k === 'pie') { R(ctx, '#12040a', x - 6, y - 4, 12, 8); R(ctx, '#c8903a', x - 5, y - 2, 10, 5); R(ctx, '#f1e7d0', x - 5, y - 4, 10, 3); R(ctx, '#ff2630', x - 1, y - 6, 2, 2); }
+    else if (b.k === 'bone') { ctx.save(); ctx.translate(x, y); ctx.rotate(G.t * 12); R(ctx, '#12040a', -7, -2, 14, 4); R(ctx, '#e8dcc0', -6, -1, 12, 2); R(ctx, '#12040a', -8, -3, 4, 6); R(ctx, '#12040a', 4, -3, 4, 6); R(ctx, '#fff6e0', -7, -2, 2, 4); R(ctx, '#fff6e0', 5, -2, 2, 4); ctx.restore(); }
     else if (b.k === 'shard') { R(ctx, '#12040a', x - 2, y - 2, 5, 5); R(ctx, '#ff2630', x - 1, y - 1, 3, 3); }
     else if (b.k === 'drip') { R(ctx, '#12040a', x - 2, y - 4, 5, 7); R(ctx, '#7dff3a', x - 1, y - 2, 3, 4); R(ctx, '#3ab43a', x, y - 3, 1, 1); }
     else if (b.k === 'blob') { ctx.fillStyle = '#2a0509'; ctx.beginPath(); ctx.arc(x, y, 6, 0, 6.28); ctx.fill(); ctx.fillStyle = G.bossGroup === 'blum2' ? '#9a4aff' : '#ff3a44'; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd0d0'; ctx.fillRect(x - 2, y - 2, 2, 2); }
@@ -443,6 +448,7 @@ function drawShots(cx) {
 function bar(x, y, w, h, fr, col, bg) { R(ctx, '#000', x - 1, y - 1, w + 2, h + 2); R(ctx, bg || '#2a0509', x, y, w, h); R(ctx, col, x, y, Math.round(w * clamp(fr, 0, 1)), h); }
 function drawMinimap() {
   if (!WORLD || !G.rm) return;
+  if (RUN && RUN.endless) { endlessHud(); return; }
   var a = G.rm.area, A = AREAS[a], cw = 7, chh = 5, w = A.w * cw, h = A.h * chh, x0 = VW - w - 8, y0 = 6;
   ctx.fillStyle = 'rgba(7,4,5,0.75)'; ctx.fillRect(x0 - 3, y0 - 3, w + 6, h + 6); ctx.strokeStyle = '#4a1a1c'; ctx.strokeRect(x0 - 3.5, y0 - 3.5, w + 7, h + 7);
   (WORLD.list || []).forEach(function (r) {
@@ -495,14 +501,15 @@ function drawPrompt(cx) {
   var e = G.near;
   if (!e && !G.paused && G.mode === 'play' && P.onGround && P.state === 'normal' && tileAt(P.x, P.y + 2) === TG) text('HOLD DOWN + JUMP', Math.round(P.x - cx), P.y - P.h - 16, 'center', '#ffe36a', 6);
   if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
-  var t = e.k === 'grate' ? 'DOWN' : e.k === 'chest' ? 'OPEN' : e.k === 'door' ? 'ENTER' : e.k === 'npc' ? 'TALK' : e.k === 'altar' ? 'TAKE' : e.k === 'shrine' ? 'PRAY' : e.k === 'portal' ? 'ENTER' : e.k === 'cell' ? 'FREE' : e.k === 'feast' ? 'EAT' : e.k === 'gamble' ? 'PLAY' : e.k === 'gate' ? 'ENTER' : e.k === 'bld' ? (META.built[e.b.id] ? 'ENTER' : 'BUY') : 'USE';
+  var t = e.k === 'grate' ? 'DOWN' : e.k === 'chest' ? 'OPEN' : e.k === 'door' ? 'ENTER' : e.k === 'npc' ? 'TALK' : e.k === 'altar' ? 'TAKE' : e.k === 'shrine' ? 'PRAY' : e.k === 'portal' ? 'ENTER' : e.k === 'cell' ? 'FREE' : e.k === 'feast' ? 'EAT' : e.k === 'gamble' ? 'PLAY' : e.k === 'gate' ? 'ENTER' : e.k === 'exit' ? 'LEAVE' : e.k === 'st' ? 'USE' : e.k === 'bld' ? (META.built[e.b.id] ? 'ENTER' : 'BUY') : 'USE';
   el('bBt').textContent = t; el('bB').classList.add('use');
-  var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';
-  var y = e.k === 'bld' || e.k === 'gate' ? 66 : e.y - (e.k === 'door' ? 92 : 44);
+  var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'st' || e.k === 'exit' ? e.name : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';
+  var y = e.k === 'st' || e.k === 'exit' ? 40 : e.k === 'bld' || e.k === 'gate' ? 66 : e.y - (e.k === 'door' ? 92 : 44);
   text('B ' + t, Math.round(e.x - cx), y, 'center', '#ffe36a', 7); if (lbl) text(lbl.toUpperCase(), Math.round(e.x - cx), y + 11, 'center', '#f1e7d0', 6);
 }
 /* town street */
 function drawTown(cx) {
+  if (TOWN.inside) { drawClubInside(cx); return; }
   var gy = 15 * T;
   // an iron railing behind the street, and a lamp between every pair of buildings
   var fx0 = -((cx * 0.9) % 12); for (var fx = fx0; fx < VW + 12; fx += 12) { R(ctx, '#12040a', Math.round(fx), gy - 34, 2, 34); R(ctx, '#2a1014', Math.round(fx), gy - 34, 1, 34); }
@@ -513,7 +520,7 @@ function drawTown(cx) {
     ctx.save(); ctx.globalAlpha = 0.12 + Math.sin(G.t * 3 + li) * 0.02; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(lx - 5, gy - 60); ctx.lineTo(lx - 22, gy); ctx.lineTo(lx + 22, gy); ctx.lineTo(lx + 5, gy - 60); ctx.fill(); ctx.restore(); }
   TOWN.ents.forEach(function (e) {
     var x = Math.round(e.x - cx); if (x < -160 || x > VW + 160) return;
-    if (e.k === 'gate') { drawGate(x, gy); return; }
+    if (e.k === 'gate') { G.gateX0 = e.x; drawGate(x, gy); return; }
     var b = e.b, built = META.built[b.id];
     if (!built) { // an empty lot: bare ground behind a little picket fence and a sign
       R(ctx, '#12040a', x - 40, gy - 4, 80, 4); R(ctx, '#1e0e0a', x - 39, gy - 3, 78, 3);
@@ -532,15 +539,6 @@ function drawTent(x, gy) {
   ctx.fillStyle = '#1a0624'; ctx.beginPath(); ctx.moveTo(x - 22, gy); ctx.lineTo(x, gy - 60); ctx.lineTo(x + 22, gy); ctx.fill();
   R(ctx, '#12040a', x - 28, gy - 18, 56, 4); R(ctx, '#5a1a8a', x - 27, gy - 17, 54, 2); R(ctx, '#12040a', x - 24, gy - 14, 3, 14); R(ctx, '#12040a', x + 21, gy - 14, 3, 14);
   ctx.fillStyle = '#7dff9a'; ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText('FATE', x, gy - 76);
-}
-function drawGate(x, gy) {
-  ctx.fillStyle = '#0c0306'; ctx.fillRect(x - 90, gy - 200, 180, 200);
-  ctx.beginPath(); ctx.moveTo(x - 100, gy - 200); ctx.lineTo(x - 70, gy - 236); ctx.lineTo(x - 40, gy - 200); ctx.fill(); ctx.beginPath(); ctx.moveTo(x + 40, gy - 200); ctx.lineTo(x + 70, gy - 236); ctx.lineTo(x + 100, gy - 200); ctx.fill();
-  for (var i = -4; i <= 4; i++) R(ctx, '#0c0306', x + i * 20 - 6, gy - 212, 12, 12);
-  ctx.fillStyle = '#1a0507'; ctx.beginPath(); ctx.moveTo(x - 40, gy); ctx.lineTo(x - 40, gy - 80); ctx.arc(x, gy - 80, 40, Math.PI, 0); ctx.lineTo(x + 40, gy); ctx.fill();
-  ctx.save(); ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 20; ctx.strokeStyle = '#ff2630'; ctx.lineWidth = 2; for (var b = -32; b <= 32; b += 10) { ctx.beginPath(); ctx.moveTo(x + b, gy); ctx.lineTo(x + b, gy - 80 - Math.sqrt(Math.max(0, 1600 - b * b)) + 4); ctx.stroke(); } ctx.restore();
-  R(ctx, '#ff2630', x - 70, gy - 160, 10, 14); R(ctx, '#ff2630', x + 60, gy - 160, 10, 14); moon(x, gy - 150, 14);
-  text('THE CASTLE', x, gy - 100, 'center', '#ffe36a', 7);
 }
 
 function render() {

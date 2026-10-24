@@ -28,7 +28,7 @@ function goTown(first) {
 function camSnapTown() { G.cam.x = clamp(P.x - VW / 2, 0, TOWN.w * T - VW); G.cam.y = 0; }
 function townNear() {
   var best = null, bd = 1e9;
-  TOWN.ents.forEach(function (e) { var r = e.k === 'gate' ? 60 : 50, dx = Math.abs(e.x - P.x); if (dx < r && dx < bd) { bd = dx; best = e; } });
+  TOWN.ents.forEach(function (e) { var r = e.k === 'gate' ? 60 : e.k === 'st' || e.k === 'exit' ? 22 : 50, dx = Math.abs(e.x - P.x); if (dx < r && dx < bd) { bd = dx; best = e; } });
   return best;
 }
 function stepTown(dt) {

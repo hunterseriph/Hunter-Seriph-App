@@ -18,13 +18,13 @@ function calcStats() {
   var dm = 1 + (RUN.feastDmg || 0) + (pv.dmgP || 0) + cnt(pw, 'thick') * 0.2 + (card === 'glass' ? 0.6 : 0); if (card === 'allin') dm *= 2;
   s.dmg = (c.dmg + (up.str || 0) * 2 + (wpn.dmg || 0)) * dm;
   s.mmana = c.mana + (up.spi || 0) * 10 + (helm.mana || 0) + (pv.mana || 0);
-  s.arm = Math.min(0.6, (up.arm || 0) * 0.03 + (arm.arm || 0) + cnt(pw, 'iron') * 0.08);
-  s.spd = c.spd * (1 + 0.04 * (up.agi || 0)) * (runeOn('haste') ? 1.12 : 1) * Math.pow(1.1, cnt(pw, 'swift')) * (card === 'speed' ? 1.3 : 1) * (card === 'tiny' ? 1.12 : 1);
+  s.arm = Math.min(0.7, upArm(up.arm) + (arm.arm || 0) + cnt(pw, 'iron') * 0.08);
+  s.spd = c.spd * (1 + upAgi(up.agi)) * (runeOn('haste') ? 1.12 : 1) * Math.pow(1.1, cnt(pw, 'swift')) * (card === 'speed' ? 1.3 : 1) * (card === 'tiny' ? 1.12 : 1);
   s.jumps = c.jumps + (runeOn('vault') ? 1 : 0) + cnt(pw, 'jump');
   s.atkMul = 1 / (1 + cnt(pw, 'quick') * 0.2 + (runeOn('fury') ? 0.15 : 0) + (card === 'speed' ? 0.2 : 0));
   s.crit = 0.05 + (helm.crit || 0) + cnt(pw, 'crit') * 0.1;
   s.leech = (runeOn('vamp') ? 0.03 : 0) + cnt(pw, 'leech') * 0.03 + (card === 'vampnight' ? 0.06 : 0);
-  s.dropMul = (1 + (up.gre || 0) * 0.08 + (runeOn('greed') ? 0.15 : 0) + cnt(pw, 'greedy') * 0.25 + (RUN.cls === 'greebo' ? 0.3 : 0)) * (card === 'bigload' ? 2 : 1) * (card === 'hard' ? 1.6 : 1) * (1 + 0.3 * META.ng);
+  s.dropMul = (1 + (up.gre || 0) * 0.06 + (runeOn('greed') ? 0.15 : 0) + cnt(pw, 'greedy') * 0.25 + (RUN.cls === 'greebo' ? 0.3 : 0)) * (card === 'bigload' ? 2 : 1) * (card === 'hard' ? 1.6 : 1) * (1 + 0.3 * META.ng);
   s.manaRegen = 1.6 * (pv.manaRegen || 1) * (1 + 0.6 * cnt(pw, 'flow'));
   s.regen = pv.regen || 0; s.siphon = runeOn('siphon') ? 2 : 0;
   s.iframes = 1.0 + (RUN.cls === 'spermaid' ? 0.4 : 0) + (runeOn('grace') ? 0.5 : 0);
@@ -36,7 +36,7 @@ function calcStats() {
   homStats(s);
   return s;
 }
-function tierOf() { return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
+function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
 function dropVal() { return Math.max(1, Math.round((3 + tierOf() * 2) * ST.dropMul)); }
 
 /* ---------- starting, saving and ending runs ---------- */
@@ -60,7 +60,7 @@ function clearRun() { try { localStorage.removeItem(RUN_KEY); } catch (e) {} }
 function readRun() { try { var r = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); if (r && r.v === 1 && r.cls && r.pos) return r; } catch (e) {} return null; }
 function resumeRun() {
   var r = readRun(); if (!r) return false;
-  RUN = r; WORLD = genWorld(RUN.seed); ST = calcStats(); newPlayer(); P.hp = Math.min(ST.mhp, RUN.hp); P.mana = RUN.mana; G.mode = 'play';
+  RUN = r; if (RUN.endless) { genEndless(RUN.seed); for (var gi = 0; gi < 3000 && !WORLD.rooms[RUN.pos.key] && !WORLD.rooms[RUN.pos.ret]; gi++) ensureEndless(WORLD.count + 1); ensureEndless(WORLD.count + 3); } else WORLD = genWorld(RUN.seed); ST = calcStats(); newPlayer(); P.hp = Math.min(ST.mhp, RUN.hp); P.mana = RUN.mana; G.mode = 'play';
   var pos = RUN.pos; G.retKey = pos.ret;
   // a save from an older map layout: start this heir again from the first room
   if (!WORLD.rooms[pos.key] || (pos.ret && !WORLD.rooms[pos.ret])) { RUN.rs = {}; pos = RUN.pos = { key: WORLD.start, arena: null, ret: null, x: 10 * T, y: 15 * T }; G.retKey = null; }
@@ -69,7 +69,7 @@ function resumeRun() {
 }
 function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDrops = (META.totalDrops || 0) + d; RUN.drops = 0; return d; }
 function runOver(win) {
-  clearRun();
+  clearRun(); var erec = RUN.endless ? recordEndless() : null;
   var area = G.rm ? AREAS[G.rm.area].name : '', d = bankRun();
   META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
   META.legacy = META.legacy.slice(0, 30); saveMeta();
@@ -77,6 +77,7 @@ function runOver(win) {
   el('overH').textContent = win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
   el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills;
   el('overGold').textContent = '+' + fmtN(d) + ' DROPS banked.  Total: ' + fmtN(META.bank) + (win ? '   ·   NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '');
+  if (erec) { el('overH').textContent = 'Endless: screen ' + erec.screen; el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + ' was slain by ' + (RUN.by || 'the castle') + ' on screen ' + RUN.endless.n + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills + '  ·  PROOF ' + erec.sig; }
   el('overBtn').textContent = win ? 'BACK TO TOWN' : 'THE LEGACY CONTINUES';
   el('over').hidden = false; setMenuMode(true);
 }
@@ -240,6 +241,7 @@ function enterRoom(k, from, at) {
   if (area !== prevArea) { G.banner = 2.6; G.bannerTxt = AREAS[area].name; G.bannerSub = AREAS[area].sub; if (!RUN.seenArea) RUN.seenArea = {}; RUN.seenArea[area] = 1; }
   if (RUN.tune && RUN.tune.area !== area) RUN.tune = null; // Pulsar's track lasts until you leave his area
   music.play(RUN.tune ? RUN.tune.id : AREAS[area].music, false);
+  endlessEnter();
   saveRun();
 }
 function spawnRoom(rs) {
@@ -269,6 +271,7 @@ function roomEdges() {
   if (L.arena) { if (P.x < -2) leaveArena(); return; }
   var rm = G.rm, d = null, i = 0;
   var row = clamp(Math.floor((P.y - 1) / (CH * T)), 0, (rm.ch || 1) - 1), col = clamp(Math.floor(P.x / (CW * T)), 0, (rm.cw || 1) - 1);
+  if (RUN && RUN.endless && P.x < 6) { P.x = 6; return; } // Endless: no way back
   if (P.x < -2) { d = 'l'; i = row; } else if (P.x > W + 2) { d = 'r'; i = row; } else if (P.y - P.h / 2 < 0 && P.vy < 0) { d = 'u'; i = col; } else if (P.y - P.h / 2 > H) { d = 'd'; i = col; }
   var exit = d && hasExit(rm, d, i), cell = exit ? exitCell(rm, d, i) : null, nk = cell ? key2(cell[0], cell[1]) : null;
   if (nk && WORLD.rooms[nk]) { G.fade = 0.18; enterRoom(nk, { dir: d, x: P.x, y: P.y, cell: cell }); }
@@ -425,7 +428,8 @@ function updateShots(dt) {
   pshots = pshots.filter(function (q) { return q.life > 0; });
   for (i = 0; i < eshots.length; i++) {
     var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt;
-    if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } // swimmers home in b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } /* swimmers home in */
+    b.x += b.vx * dt; b.y += b.vy * dt;
     if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? ['#7dff3a', '#3ab43a'] : ['#ff9a40', '#ff2630']); continue; }
     if (b.safe > 0) { b.safe -= dt; continue; }
     if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
@@ -476,6 +480,7 @@ function useThing(e) {
     e.open = true; rs.c[e.i] = 1; sfx.chest(); spill(e.x, e.y - 10, e.big ? 22 : 12); poof(e.x, e.y - 8, 14, ['#ffe36a', '#f1e7d0']);
     if (e.chal || (e.secret && Math.random() < 0.5)) { var pw = shuffle(POWERS.slice())[0]; grantPower(pw.id); }
     if (e.ambush && !rs.amb) startAmbush(rs);
+    findBlueprint(e.chal ? 0.45 : e.secret ? 0.6 : e.big ? 0.3 : 0.06);
     saveRun();
   } else if (e.k === 'door') openDoor(e);
   else if (e.k === 'npc') openMerchant(e);
@@ -554,6 +559,8 @@ function stepPlay(dt) {
   G.inFake = bodyInFake(); if (G.inFake && Math.random() < 0.7) parts.push({ x: P.x + (Math.random() - 0.5) * 22, y: P.y - Math.random() * P.h, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 40, life: 0.45, c: pick(['#ffe36a', '#fff6d8', '#d878ff', '#f1e7d0']), spark: 1 });
   updateEnemies(dt); updateBosses(dt); moonFxStep(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
   var c = camTarget(); G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7); G.cam.y += (c.y - G.cam.y) * Math.min(1, dt * 6);
+  endlessStep(dt);
+  if (G.findDue > 0) { G.findDue -= dt; if (G.findDue <= 0) findBlueprint(1); }
   if (G.sealDue) { G.sealDue.t -= dt; if (G.sealDue.t <= 0) { var sn = G.sealDue.n; G.sealDue = null; sealScene(sn); } }
   if (G.rm && G.rm.entry && G.rm.area === 'city' && !META.metSteve && !L.arena) { var stv = L.ents.filter(function (e) { return e.k === 'steve'; })[0]; if (stv && Math.abs(P.x - stv.x) < 90 && P.onGround) steveScene(stv); }
   if (P.state !== 'dead' && P.hp < ST.mhp * 0.25 && !G.lowWarn) { G.lowWarn = 1; } else if (P.hp >= ST.mhp * 0.25) G.lowWarn = 0;

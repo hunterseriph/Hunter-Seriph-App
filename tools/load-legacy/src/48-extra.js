@@ -163,7 +163,8 @@ function quirkStep(dt) {
       if (P.state === 'normal' && P.onGround && Math.abs(P.y - e.y) < 2 && Math.abs(P.x - e.x) < 13) { P.vy = -600; P.onGround = false; P.jumps = 1; P.jumpHeld = false; P.coyote = 0; e.sq = 0.25; sfx.stomp(); poof(e.x, e.y - 4, 6, ['#ff2630', '#ffe36a']); }
     } else if (e.k === 'drip') {
       e.cd -= dt; if (e.cd <= 0) { e.cd = 2.6 + Math.random() * 2.4; eshots.push({ x: e.x, y: e.y + 3, vx: 0, vy: 30, g: 600, life: 3, r: 3, dmg: 6 + 2 * t, k: 'drip', by: 'a drip from the ceiling' }); }
-    } else if (e.k === 'saw') { // back and forth along its rail
+    } else if (e.k === 'vent') ventStep(e, dt);
+    else if (e.k === 'saw') { // back and forth along its rail
       e.ph += dt * e.sp / Math.max(1, e.x1 - e.x0) * 0.5; var u = e.ph % 1, tri = u < 0.5 ? u * 2 : 2 - u * 2; e.x = e.x0 + (e.x1 - e.x0) * tri;
       if (P.state !== 'dead' && Math.hypot(P.x - e.x, (P.y - P.h / 2) - e.y) < 12 + P.w / 2) hurtP(10 + 4 * t, e.x, 'a saw blade');
       if (Math.random() < 0.2) parts.push({ x: e.x + (Math.random() - 0.5) * 6, y: e.y + 8, vx: (Math.random() - 0.5) * 80, vy: -60, life: 0.25, c: '#ffe36a', spark: 0 });
@@ -206,6 +207,7 @@ function drawQuirks(cx) {
     else if (e.k === 'drip') { var g = clamp(1 - e.cd / 0.7, 0, 1); R(ctx, '#2a0509', x - 3, e.y, 6, 2); if (g > 0) { R(ctx, '#12040a', x - 2, e.y + 1, 4, 2 + Math.round(g * 3)); R(ctx, '#7dff3a', x - 1, e.y + 1, 2, 1 + Math.round(g * 3)); } }
     else if (e.k === 'shrine') drawShrine(x, e);
     else if (e.k === 'saw') drawSaw(x, e);
+    else if (e.k === 'vent') drawVent(x, e);
     else if (e.k === 'cell') drawCell(x, e);
     else if (e.k === 'feast') drawFeast(x, e);
     else if (e.k === 'gamble') { if (rsOf(G.roomKey).broke) drawWreck(x, e); else if (e.park) drawWheel(x, e); else drawSlot(x, e); }
@@ -319,4 +321,23 @@ function drawFoeExtra(e, x) {
     ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.arc(bx, by, 7, 0, 6.28); ctx.fill(); ctx.fillStyle = '#5a5058'; ctx.beginPath(); ctx.arc(bx, by, 5.5, 0, 6.28); ctx.fill(); R(ctx, '#8a8088', bx - 3, by - 3, 2, 2);
     [[0, -9], [0, 7], [-9, 0], [7, 0]].forEach(function (s) { R(ctx, '#12040a', bx + s[0], by + s[1], 3, 3); });
   }
+}
+
+/* ---------- blueprints and runes found in the castle ----------
+   Greebo can only make gear whose blueprint you have found, and Spermaid only binds runes you have brought her.
+   Finds are kept for good the moment you pick them up, even if the heir dies. Deeper areas hold the better gear. */
+function findBlueprint(chance) {
+  if (Math.random() > chance) return false;
+  var f = META.found, t = tierOf(), pool = [];
+  ['weapon', 'armour', 'helm'].forEach(function (slot) { var nx = f[slot] + 1; if (nx < GEAR[slot].length && nx - 1 <= t) pool.push({ slot: slot, i: nx, w: 3 }); });
+  RUNES.forEach(function (r) { if (!f.runes[r.id]) pool.push({ rune: r, w: 2 }); });
+  if (!pool.length) return false;
+  var tot = 0; pool.forEach(function (p) { tot += p.w; }); var v = Math.random() * tot, pk = pool[0];
+  for (var i = 0; i < pool.length; i++) { v -= pool[i].w; if (v <= 0) { pk = pool[i]; break; } }
+  var nm;
+  if (pk.rune) { f.runes[pk.rune.id] = 1; nm = pk.rune.name; G.bannerTxt = 'RUNE FOUND'; G.bannerSub = nm.toUpperCase() + '  ·  TAKE IT TO SPERMAID SANCTUM'; }
+  else { f[pk.slot] = pk.i; nm = GEAR[pk.slot][pk.i].name; G.bannerTxt = 'BLUEPRINT FOUND'; G.bannerSub = nm.toUpperCase() + '  ·  GREEBO CAN MAKE IT NOW'; }
+  G.banner = 2.6; sfx.oneup(); saveMeta(); if (RUN) { RUN.finds = RUN.finds || []; RUN.finds.push(nm); }
+  poof(P.x, P.y - P.h, 18, ['#ffe36a', '#f1e7d0', '#7a8aff']);
+  return true;
 }

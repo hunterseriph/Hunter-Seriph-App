@@ -26,6 +26,14 @@ var AREAS = {
 };
 AREAS.moon = { name: 'The Crimson Moon', sub: 'BEYOND THE PORTAL', tier: 5, ox: 20, oy: 0, w: 5, h: 4, rooms: 13, boss: 'moon', music: 'roof', secret: 1,
   sky: 'rgba(80,0,10,0.18)', tint: 'rgba(140,0,20,0.26)', e1: '#ff2630', e2: '#6a0a10', wall: '#0a0204', pool: [['vampire', 2], ['wraith', 2], ['gargoyle', 2], ['knight', 2], ['jailer', 1], ['clown', 1], ['imp', 1]] };
+/* areas that only show up in Endless mode */
+AREAS.sewer = { name: 'The Cream Sewers', sub: 'ENDLESS', tier: 2, ox: 40, oy: 0, w: 1, h: 1, rooms: 0, boss: 'ratking', music: 'dungeon', endless: 1,
+  sky: null, tint: 'rgba(30,60,10,0.22)', e1: '#a6e83a', e2: '#2a4a0a', wall: '#060a04', pool: [['slime', 3], ['rat', 3], ['crawler', 1], ['imp', 1], ['jailer', 1]] };
+AREAS.bone = { name: 'The Bone Pit', sub: 'ENDLESS', tier: 3, ox: 41, oy: 0, w: 1, h: 1, rooms: 0, boss: 'boner', music: 'castle', endless: 1,
+  sky: null, tint: 'rgba(60,50,40,0.22)', e1: '#f1e7d0', e2: '#5a4a3a', wall: '#0c0a08', pool: [['ghoul', 3], ['knight', 2], ['wraith', 2], ['golem', 1], ['bat', 1]] };
+AREAS.furnace = { name: 'The Furnace', sub: 'ENDLESS', tier: 4, ox: 42, oy: 0, w: 1, h: 1, rooms: 0, boss: 'hotload', music: 'boss', endless: 1,
+  sky: null, tint: 'rgba(120,40,0,0.22)', e1: '#ffb040', e2: '#6a2000', wall: '#0c0402', pool: [['slimeR', 3], ['imp', 2], ['golem', 1], ['crawlerN', 1], ['batP', 2]] };
+var ENDLESSAREAS = ['castle', 'roof', 'city', 'dungeon', 'moon', 'sewer', 'bone', 'furnace'];
 var AREAORDER = ['castle', 'roof', 'city', 'dungeon'];
 
 /* enemies: hp/dmg are tier 1 values, scaled by the area tier and New Game+ */
@@ -58,20 +66,28 @@ var BOSSDEF = {
   sperm: { name: 'The Sperminator', area: 'city', hp: 1000, dmg: 22, sp: 'f_sperm_', sc: 1, w: 36, h: 76 },
   pig: { name: 'Brothers Load Piggy', area: 'dungeon', hp: 900, dmg: 24, sp: 'f_pig_', sc: 1, w: 80, h: 48 },
   blum: { name: 'Blumhead', area: 'castle', hp: 1300, dmg: 24, sp: 'f_blum_', sc: 1, w: 56, h: 64 },
+  ratking: { name: 'The Rat King', area: 'sewer', hp: 1100, dmg: 22, sp: 'f_ratking_', sc: 1, w: 80, h: 46 },
+  boner: { name: 'The Big Boner', area: 'bone', hp: 1300, dmg: 24, sp: 'f_boner_', sc: 1, w: 50, h: 88 },
+  hotload: { name: 'The Hot Load', area: 'furnace', hp: 1400, dmg: 26, sp: 'f_hotload_', sc: 1, w: 66, h: 66 },
   moon: { name: 'The Crimson Moon', area: 'moon', hp: 2000, dmg: 26, sp: 'f_moon_', sc: 1, w: 70, h: 76 },
   blum2: { name: 'Super Blumhead', area: 'castle', hp: 2000, dmg: 28, sp: 'f_blum2_', sc: 1, w: 70, h: 80 }
 };
 
 /* ---------- the town ---------- */
+/* the Clubhouse levels: one stat per level, and every level makes the next one dearer whichever stat it went into,
+   so stats rise together. No caps: the costs and the castle keep climbing for as long as you play. */
 var UPGRADES = [
-  { id: 'vit', name: 'Vitality', d: '+12 max HP', base: 60, max: 25, icon: 'elixir' },
-  { id: 'str', name: 'Strength', d: '+2 damage', base: 70, max: 25, icon: 'cleaver' },
-  { id: 'spi', name: 'Spirit', d: '+10 max mana', base: 60, max: 15, icon: 'sage' },
-  { id: 'arm', name: 'Armour', d: '+3% damage blocked', base: 90, max: 15, icon: 'kite' },
-  { id: 'gre', name: 'Greed', d: '+8% drops', base: 80, max: 12, icon: 'luck' },
-  { id: 'agi', name: 'Agility', d: '+4% move speed', base: 100, max: 8, icon: 'swift' }
+  { id: 'vit', name: 'Vitality', d: '+12 max HP', icon: 'elixir' },
+  { id: 'str', name: 'Strength', d: '+2 damage', icon: 'cleaver' },
+  { id: 'spi', name: 'Spirit', d: '+10 max mana', icon: 'sage' },
+  { id: 'arm', name: 'Armour', d: 'blocks more damage (less each level)', icon: 'kite' },
+  { id: 'gre', name: 'Greed', d: '+6% drops', icon: 'luck' },
+  { id: 'agi', name: 'Agility', d: 'faster (less each level)', icon: 'swift' }
 ];
-function upCost(u, lvl) { return Math.round(u.base * 2 * Math.pow(1.36, lvl) + lvl * 35); } // slower levelling
+function heirLevel() { var n = 0; for (var k in META.up) n += META.up[k] || 0; return n; }
+function upCost(u, lvl) { var L = heirLevel(); return Math.round((120 + 18 * L) * Math.pow(1.02, L) / 5) * 5; }
+function upArm(l) { return 0.45 * (1 - Math.pow(0.96, l || 0)); }   // tends towards 45%
+function upAgi(l) { return 0.3 * (1 - Math.pow(0.92, l || 0)); }    // tends towards +30%
 
 /* buildings in the town street, left to right. cost 0 = there from the start */
 var BUILDINGS = [

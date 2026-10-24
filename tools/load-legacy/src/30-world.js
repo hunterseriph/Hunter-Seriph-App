@@ -140,7 +140,7 @@ function buildRoom(rm) {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: 'blum' }); RS(cx0 - 5, 9, cx0 + 4, 14);
     ents.push({ k: 'deco', d: 'throneL', x: 6 * T, y: 15 * T }); ents.push({ k: 'deco', d: 'throneR', x: 26 * T, y: 15 * T });
   } else if (t === 'bossdoor') {
-    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: A.boss }); RS(cx0 - 5, 9, cx0 + 4, 14);
+    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss }); RS(cx0 - 5, 9, cx0 + 4, 14);
   } else if (t === 'merchant') {
     ents.push({ k: 'npc', x: cxp, y: 15 * T, who: MERCH[Math.floor(r() * MERCH.length)] }); RS(cx0 - 4, 10, cx0 + 4, 14);
   } else if (t === 'powerup') {
@@ -164,6 +164,8 @@ function buildRoom(rm) {
     plat(5, 7, 12); plat(24, 26, 12); /* low steps off the banks, so nothing needs a perfect double jump */
     [[5, 8, 9], [12, 16, 7], [19, 20, 8], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 3) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
     nE = 2;
+  } else if (t === 'egate') { // the first screen of Endless: a sign, nothing to fight
+    ents.push({ k: 'deco', d: 'esign', x: 16 * T, y: 4 * T }); nE = 0;
   } else if (t === 'moongate') {
     ents.push({ k: 'portal', x: cxp, y: 15 * T, back: 1 }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 0;
   } else if (t === 'saws') {
@@ -262,7 +264,7 @@ function buildRoom(rm) {
   if (rm.entry && rm.area === 'city') { ents.push({ k: 'deco', d: 'parkgate', x: 6 * T, y: 15 * T }); ents.push({ k: 'steve', x: 11 * T, y: 15 * T }); nE = 0; }
   // area quirks
   var fights = t === 'normal' || t === 'big', dark = false, wind = 0;
-  if (fights && rm.area === 'castle' && r() < 0.55) { // chandeliers that drop when you walk under them
+  if (fights && (rm.area === 'castle' || rm.area === 'bone') && r() < 0.55) { // chandeliers that drop when you walk under them
     var nc = rn(1, rm.big === 'wide' ? 3 : 2), tries = 0;
     while (nc > 0 && tries++ < 20) { var chx = rn(4, W - 5); if (G(chx, 0) === TW && free(chx - 1, 1, chx + 1, 5)) { ents.push({ k: 'chand', x: chx * T + 8, y: T, st: 'hang' }); RS(chx - 2, 1, chx + 2, 5); nc--; } }
   }
@@ -270,7 +272,8 @@ function buildRoom(rm) {
     var npd = rn(1, 2), tries2 = 0;
     while (npd > 0 && tries2++ < 30) { var pdx = rn(4, W - 5), fy = H - 2; if (G(pdx, fy + 1) === TW && free(pdx - 1, fy - 3, pdx + 1, fy)) { ents.push({ k: 'pad', x: pdx * T + 8, y: (fy + 1) * T }); RS(pdx - 1, fy - 3, pdx + 1, fy); npd--; } }
   }
-  if (rm.area === 'dungeon' && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
+  if (rm.area === 'furnace' && t !== 'flume') { var nv = rn(1, 3), tv = 0; while (nv > 0 && tv++ < 30) { var vx = rn(5, W - 6); if (G(vx, H - 1) === TW && free(vx - 1, H - 4, vx + 1, H - 2)) { ents.push({ k: 'vent', x: vx * T + 8, y: (H - 1) * T, t: r() * 3.4 }); RS(vx - 1, H - 5, vx + 1, H - 2); nv--; } } }
+  if ((rm.area === 'dungeon' || rm.area === 'sewer') && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
     var ndr = rn(1, 3);
     for (var dq = 0; dq < ndr; dq++) { var drx = rn(3, W - 4); if (G(drx, 0) === TW && G(drx, 1) === TA) ents.push({ k: 'drip', x: drx * T + 8, y: T, cd: 1 + r() * 3 }); }
     dark = fights && r() < 0.5;
