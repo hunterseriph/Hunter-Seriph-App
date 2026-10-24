@@ -861,18 +861,19 @@ function buildRoom(rm) {
     for (var lg = 0; lg < 3; lg++) ents.push({ k: 'log', x: 4 * T + 34 + lg * 8 * T, y: 13 * T + 15, w: 52, h: 11, vx: 52 });
     ents.push({ k: 'deco', d: 'flumesign', x: 16 * T, y: 2 * T + 4 });
     RS(3, 11, 28, 15);
-    [[5, 8, 9], [12, 16, 7], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 2) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
+    plat(5, 7, 12); plat(24, 26, 12); /* low steps off the banks, so nothing needs a perfect double jump */
+    [[5, 8, 9], [12, 16, 7], [19, 20, 8], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 3) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
     nE = 2;
   } else if (t === 'moongate') {
     ents.push({ k: 'portal', x: cxp, y: 15 * T, back: 1 }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 0;
   } else if (t === 'saws') {
     // saw blades running back and forth on rails; a chest waits at the far end
     var far = ex.r && !ex.l ? 3 : 28;
-    plat(5, 10, 10); plat(21, 26, 10); plat(13, 18, 7);
+    plat(5, 10, 11); plat(21, 26, 11); plat(13, 18, 8); /* every climb in here is 3 tiles or less */
     ents.push({ k: 'saw', x: 6 * T, x0: 6 * T, x1: 26 * T, y: 14 * T + 6, sp: 70 + 15 * A.tier, ph: 0 });
     ents.push({ k: 'saw', x: 5 * T, x0: 5 * T, x1: 26 * T, y: 9 * T - 2, sp: 50 + 10 * A.tier, ph: 0.5 });
-    if (r() < 0.6) ents.push({ k: 'saw', x: 13 * T, x0: 13 * T, x1: 18 * T + 8, y: 6 * T - 2, sp: 40, ph: 0.25 });
-    ents.push({ k: 'chest', x: 16 * T, y: 7 * T, big: 1 }); nE = 1;
+    if (r() < 0.6) ents.push({ k: 'saw', x: 13 * T, x0: 13 * T, x1: 18 * T + 8, y: 7 * T - 2, sp: 40, ph: 0.25 });
+    ents.push({ k: 'chest', x: 16 * T, y: 8 * T, big: 1 }); nE = 1;
   } else if (t === 'crumble') {
     // a floor of spikes, and above it a long run of ledges that give way under you. Do not stop.
     for (x = 5; x <= W - 6; x++) if (!res[14 * W + x] && G(x, 15) === TW) S(x, 14, TS);
@@ -931,13 +932,14 @@ function buildRoom(rm) {
       return ok && i >= 3;
     }
     if (st === 'pillars') { // tall stone pillars; their tops are the platforms
-      [6, 12, 19, 25].forEach(function (px) { var ph = rn(3, 6); if (free(px, 15 - ph - 2, px + 1, 14)) { for (y = 15 - ph; y <= 14; y++) { S(px, y, TW); S(px + 1, y, TW); } RS(px - 1, 15 - ph - 2, px + 2, 14); ok = true; } });
-      if (ok && free(13, 4, 18, 6)) plat(14, 17, 6); return ok;
+      [6, 12, 19, 25].forEach(function (px) { var ph = rn(2, 4); /* low enough to hop over */ if (free(px, 15 - ph - 2, px + 1, 14)) { for (y = 15 - ph; y <= 14; y++) { S(px, y, TW); S(px + 1, y, TW); } RS(px - 1, 15 - ph - 2, px + 2, 14); ok = true; } });
+      if (ok && free(13, 7, 18, 9)) plat(14, 17, 9); return ok;
     }
     if (st === 'tower') { // a column in the middle with ledges climbing round it
-      if (!free(14, 5, 17, 14)) return false;
-      for (y = 6; y <= 14; y++) for (x = 15; x <= 16; x++) S(x, y, TW); RS(13, 5, 18, 14);
-      if (free(9, 10, 14, 12)) plat(10, 14, 12); if (free(17, 7, 22, 9)) plat(17, 21, 9); if (free(9, 3, 14, 5)) plat(10, 14, 5); return true;
+      // the column is low enough to get over with a step ledge either side (every climb here is 3 tiles at most)
+      if (!free(9, 7, 22, 14)) return false;
+      for (y = 9; y <= 14; y++) for (x = 15; x <= 16; x++) S(x, y, TW); RS(13, 8, 18, 14);
+      plat(10, 13, 12); plat(18, 21, 12); if (free(9, 4, 14, 6)) plat(10, 14, 6); return true;
     }
     if (st === 'bridge') { // a long high walkway across the room, broken in the middle
       var nb2 = 0; for (x = 4; x <= W - 5; x++) if ((x < 14 || x > 17) && G(x, 9) === TA && !res[9 * W + x]) { S(x, 9, TL); nb2++; }
@@ -1019,7 +1021,7 @@ function buildRoom(rm) {
     }
   }
   ents.forEach(function (en, i) { en.i = i; });
-  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d ? 8 : (t === 'start' ? 10 : 16)) * T, dark: dark, wind: wind, storm: rm.area === 'roof' };
+  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d || style === 'tower' ? 8 : (t === 'start' ? 10 : 16)) * T, dark: dark, wind: wind, storm: rm.area === 'roof' };
 }
 
 /* ---------- boss arenas (two screens wide). Reached through a boss door. ---------- */
