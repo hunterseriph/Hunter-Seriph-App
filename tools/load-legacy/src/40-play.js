@@ -33,7 +33,7 @@ function calcStats() {
   s.soul = cnt(pw, 'soul') * 10; s.berserk = cnt(pw, 'berserk') * 0.4; s.lucky = Math.min(0.5, cnt(pw, 'lucky') * 0.1); s.cold = Math.min(0.5, cnt(pw, 'cold') * 0.12); s.bubble = cnt(pw, 'bubble'); s.slayer = cnt(pw, 'slayer') * 0.35;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
-  homStats(s);
+  pillStats(s); homStats(s);
   return s;
 }
 function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
@@ -70,15 +70,25 @@ function resumeRun() {
 function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDrops = (META.totalDrops || 0) + d; RUN.drops = 0; return d; }
 function runOver(win) {
   clearRun(); var erec = RUN.endless ? recordEndless() : null;
-  var area = G.rm ? AREAS[G.rm.area].name : '', d = bankRun();
+  var area = G.rm ? AREAS[G.rm.area].name : '', got = Math.floor(RUN.drops), d = bankRun();
   META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
-  META.legacy = META.legacy.slice(0, 30); saveMeta();
+  META.legacy = META.legacy.slice(0, 30); META.nextHeir = null; saveMeta();
   G.mode = 'over'; music.stop(1.2);
-  el('overH').textContent = win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
-  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills;
-  el('overGold').textContent = '+' + fmtN(d) + ' DROPS banked.  Total: ' + fmtN(META.bank) + (win ? '   ·   NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '');
-  if (erec) { el('overH').textContent = 'Endless: screen ' + erec.screen; el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + ' was slain by ' + (RUN.by || 'the castle') + ' on screen ' + RUN.endless.n + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills + '  ·  PROOF ' + erec.sig; }
-  el('overBtn').textContent = win ? 'BACK TO TOWN' : 'THE LEGACY CONTINUES';
+  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
+  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (RUN.hom ? ' (' + homName().toUpperCase() + ')' : '') + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.';
+  // the stats of the run
+  var st = [['TIME', fmtT(RUN.t)], ['FOES KILLED', RUN.kills], ['FELL IN', L && L.arena ? BOSSDEF[L.arena].name : area], ['POWERUPS', RUN.powers.length], ['FOUND', (RUN.finds || []).length ? RUN.finds.join(', ') : 'nothing'], ['FATE', RUN.card ? cardName(RUN.card) : 'none']];
+  if (RUN.pill) st.push(["TB'S PILL", PILLS[RUN.pill].name]);
+  if (erec) st.push(['SCREEN', erec.screen], ['PROOF', erec.sig]);
+  if (RUN.hom) st.push(['GREW TO', HOMSTNAME[RUN.hom.st]]);
+  var box = el('overStats'); box.innerHTML = ''; st.forEach(function (q) { var d2 = document.createElement('div'); var a = document.createElement('span'); a.textContent = q[0]; var b2 = document.createElement('b'); b2.textContent = String(q[1]); d2.appendChild(a); d2.appendChild(b2); box.appendChild(d2); });
+  // the drops count up into the inheritance for the next heir
+  var n0 = META.bank - d, t0 = performance.now(), dur = Math.min(2200, 600 + d * 2), ticks = 0;
+  el('overInhN').textContent = fmtN(n0);
+  (function tick(now) { var k = Math.min(1, (now - t0) / dur), v = Math.round(n0 + d * (1 - Math.pow(1 - k, 2))); el('overInhN').textContent = fmtN(v); if (Math.floor(k * 20) > ticks) { ticks = Math.floor(k * 20); sfx.pick(G.t + ticks); } if (k < 1 && G.mode === 'over') requestAnimationFrame(tick); })(t0);
+  el('overInhS').textContent = '+' + fmtN(got) + ' DROPS CARRIED  ·  PASSED TO THE NEXT HEIR';
+  el('overGold').textContent = win ? 'NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '';
+  el('overBtn').textContent = 'CHOOSE THE NEXT HEIR';
   el('over').hidden = false; setMenuMode(true);
 }
 function fmtT(s) { s = Math.max(0, Math.floor(s)); var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
@@ -127,7 +137,7 @@ function updatePlayer(dt) {
   if (P.inv > 0) P.inv -= dt; if (P.atkCd > 0) P.atkCd -= dt; if (P.attackT > 0) P.attackT -= dt; if (P.jumpStartT > 0) P.jumpStartT -= dt;
   if (P.ooze > 0) { P.ooze -= dt; P.oozeT -= dt; if (P.oozeT <= 0) { P.oozeT = 0.5; healP(4); } }
   if (homHatchTick(dt)) return;
-  homTick(dt);
+  homTick(dt); pillTick(dt);
   if (P.echoT > 0) { P.echoT -= dt; if (P.echoT <= 0 && P.state === 'normal') { var cd0 = P.atkCd; attack(true); P.atkCd = cd0; } }
   if (ST.bubble && !P.bubbleOn) { P.bubbleT = (P.bubbleT || 0) - dt; if (P.bubbleT <= 0) { P.bubbleOn = 1; } }
   if (P.state === 'dead') {
@@ -302,12 +312,13 @@ function mkEnemy(k, x, y, idx, mini) {
 function updateEnemies(dt) {
   var t = tierOf();
   for (var i = 0; i < enemies.length; i++) {
-    var e = enemies[i]; if (!e.alive) continue; e.t += dt; if (e.flash > 0) e.flash -= dt;
+    var e = enemies[i]; if (!e.alive) continue; e.t += dt; if (e.flash > 0) e.flash -= dt; if (e.safe > 0) e.safe -= dt;
     if (e.burn > 0) { e.burnT = (e.burnT || 0) - dt; if (e.burnT <= 0) { e.burnT = 0.5; e.burn--; hurtE(e, Math.max(1, ST.dmg * 0.25), 'burn'); if (!e.alive) continue; } }
     if (e.poison > 0) { e.poisT = (e.poisT || 0) - dt; if (e.poisT <= 0) { e.poisT = 0.5; e.poison--; hurtE(e, Math.max(1, ST.dmg * 0.3), 'poison'); if (!e.alive) continue; } }
     if (e.stun > 0) { e.stun -= dt; e.ghost = false; if (!isFlyer(e.d)) { e.vx = 0; moveBody(e, dt, GRAV); } continue; }
     var dx = P.x - e.x, dy = (P.y - P.h / 2) - (e.y - e.h / 2), adx = Math.abs(dx), ai = e.d.ai, sp = e.d.spd * (1 + 0.1 * (t - 1));
-    if (ai === 'walk' || ai === 'charge' || ai === 'heavy' || ai === 'guard') {
+    if (e.swarm) { e.face = e.swarm; e.vx = e.swarm * 175; moveBody(e, dt, GRAV); if (e.swarm > 0 ? e.x > L.w * T - 34 : e.x < 34) { e.alive = false; continue; } } // a swarming rat runs straight across and is gone
+    else if (ai === 'walk' || ai === 'charge' || ai === 'heavy' || ai === 'guard') {
       if (ai === 'charge' && e.st === 'go' && adx < 170 && Math.abs(dy) < 34 && (dx > 0) === (e.face > 0) && e.cd <= 0) { e.st = 'tell'; e.st2 = 0.35; }
       if (e.st === 'tell') { e.vx = 0; e.st2 -= dt; if (e.st2 <= 0) { e.st = 'rush'; e.st2 = 0.8; } }
       else if (e.st === 'rush') { e.vx = e.face * sp * 3.4; e.st2 -= dt; if (e.st2 <= 0 || e.hitWall) { e.st = 'go'; e.cd = 1.4; } }
@@ -351,14 +362,19 @@ function updateEnemies(dt) {
     if (P.state === 'dead' || e.ghost) continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) {
       if (e.d.burst) { hurtE(e, 999, 'pop'); continue; }
-      if (P.vy > 30 && P.y - 6 < e.y - e.h + 8 && P.state === 'normal') { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
+      // a stomp: falling onto the top of a foe (judged from where your feet were last frame, so hopping slimes count),
+      // or landing on a second foe in the same moment as the first
+      var feet0 = P.y - P.vy / 60, top = e.y - e.h, recent = G.t - (P.stompT || -9) < 0.15;
+      if (e.safe > 0) continue;
+      if (P.state === 'normal' && ((P.vy > 0 && feet0 <= top + 10) || (recent && P.y <= e.y - e.h * 0.4))) { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
       else if (P.ooze > 0) { if (!e.oozeHit || G.t - e.oozeHit > 0.5) { e.oozeHit = G.t; hurtE(e, ST.dmg * 0.6, 'ooze'); } }
+      else if (recent) continue; // no hurting the heir in the moment after a stomp
       else { if (ST.thorns && P.inv <= 0 && G.t - (e.thornT || -9) > 1) { e.thornT = G.t; hurtE(e, ST.dmg * 0.8 * ST.thorns, 'thorns'); } hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase()); }
     }
   }
   enemies = enemies.filter(function (q) { return q.alive; });
 }
-function stompBounce() { sfx.stomp(); P.vy = input.j ? -320 : -235; P.onGround = false; P.jumpHeld = input.j; P.jumps = 1; }
+function stompBounce() { P.stompT = G.t; sfx.stomp(); P.vy = input.j ? -320 : -235; P.onGround = false; P.jumpHeld = input.j; P.jumps = 1; }
 function hurtE(e, dmg, src) {
   if (!e.alive) return;
   var crit = false; if (src === 'hit' || src === 'stomp') { crit = Math.random() < ST.crit; if (crit) dmg *= 1.8; }
@@ -379,12 +395,12 @@ function hurtE(e, dmg, src) {
     sfx.kill(); poof(e.x, e.y - e.h / 2, 10, ['#ff2630', '#b3121c', '#f1e7d0']); RUN.kills++;
     if (e.idx !== undefined && e.idx !== null && (typeof e.idx === 'string' || e.idx >= 0)) rsOf(G.roomKey).k[e.idx] = 1;
     if (e.d.burst) burstShards(e);
-    spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
+    if (!e.swarm) spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
     P.mana = Math.min(ST.mmana, P.mana + 4 + (ST.soul || 0));
     if (ST.lucky && Math.random() < ST.lucky) { healP(Math.round(ST.mhp * 0.1)); pop(e.x, e.y - e.h - 12, 'LUCKY', '#7dff9a'); }
     if (RUN.cls === 'spermaid') healP(3);
     if (ST.boom) { fx.push({ k: 'ring', x: e.x, y: e.y - e.h / 2, age: 0, c: '#ffb040' }); enemies.forEach(function (o) { if (o.alive && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 50) hurtE(o, ST.dmg * 0.8, 'boom'); }); }
-    if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; enemies.push(m); } }
+    if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; m.safe = 0.5; enemies.push(m); } }
   }
 }
 function spill(x, y, n) {

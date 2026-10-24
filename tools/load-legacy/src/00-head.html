@@ -83,6 +83,12 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
 .llinput:focus{outline:none;box-shadow:inset 0 0 0 2px var(--hot)}
 .llfield{display:flex;gap:10px;align-items:center}.llfield span{font-family:var(--pixel);font-size:8px;color:#a6968f;width:70px;flex:none}
 .llres{font-family:var(--pixel);font-size:9px;margin:10px 2px;line-height:1.6}
+#overStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;width:min(520px,90vw);margin:6px auto 10px}
+#overStats div{display:flex;justify-content:space-between;gap:8px;font-family:var(--pixel);font-size:8px;color:#a6968f;border-bottom:1px solid #2a0c10;padding:4px 0}
+#overStats div b{color:#f1e7d0;font-weight:400;text-align:right}
+#overInh{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0 10px}
+#overInh b{font-family:var(--display);font-weight:400;font-size:44px;color:var(--gold,#ffe36a);text-shadow:0 0 14px rgba(255,200,60,.45)}
+#overInh .dim{color:#a6968f;font-size:7px}
 #arc{z-index:7;padding:0;background:#000}
 #arc iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 #arcX{position:absolute;top:6px;right:6px;z-index:2;min-width:0;min-height:36px;padding:0 14px}
@@ -125,8 +131,10 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
   <div id="over" class="screen" hidden>
    <h2 id="overH">Your heir has fallen</h2>
    <p class="px" id="overTxt"></p>
+   <div id="overStats"></div>
+   <div id="overInh"><span class="px">INHERITANCE</span><b id="overInhN">0</b><span class="px dim" id="overInhS">THE DROPS PASS TO THE NEXT HEIR</span></div>
    <p class="px gold" id="overGold"></p>
-   <button id="overBtn" class="btn" type="button">THE LEGACY CONTINUES</button>
+   <button id="overBtn" class="btn" type="button">CHOOSE THE NEXT HEIR</button>
   </div>
 
   <div id="arc" class="screen" hidden><iframe id="arcFrame" title="Arcade game" allow="autoplay"></iframe><button id="arcX" class="btn" type="button">LEAVE</button></div>

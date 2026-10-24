@@ -83,6 +83,12 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
 .llinput:focus{outline:none;box-shadow:inset 0 0 0 2px var(--hot)}
 .llfield{display:flex;gap:10px;align-items:center}.llfield span{font-family:var(--pixel);font-size:8px;color:#a6968f;width:70px;flex:none}
 .llres{font-family:var(--pixel);font-size:9px;margin:10px 2px;line-height:1.6}
+#overStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;width:min(520px,90vw);margin:6px auto 10px}
+#overStats div{display:flex;justify-content:space-between;gap:8px;font-family:var(--pixel);font-size:8px;color:#a6968f;border-bottom:1px solid #2a0c10;padding:4px 0}
+#overStats div b{color:#f1e7d0;font-weight:400;text-align:right}
+#overInh{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0 10px}
+#overInh b{font-family:var(--display);font-weight:400;font-size:44px;color:var(--gold,#ffe36a);text-shadow:0 0 14px rgba(255,200,60,.45)}
+#overInh .dim{color:#a6968f;font-size:7px}
 #arc{z-index:7;padding:0;background:#000}
 #arc iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 #arcX{position:absolute;top:6px;right:6px;z-index:2;min-width:0;min-height:36px;padding:0 14px}
@@ -125,8 +131,10 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,7vw,44px);lin
   <div id="over" class="screen" hidden>
    <h2 id="overH">Your heir has fallen</h2>
    <p class="px" id="overTxt"></p>
+   <div id="overStats"></div>
+   <div id="overInh"><span class="px">INHERITANCE</span><b id="overInhN">0</b><span class="px dim" id="overInhS">THE DROPS PASS TO THE NEXT HEIR</span></div>
    <p class="px gold" id="overGold"></p>
-   <button id="overBtn" class="btn" type="button">THE LEGACY CONTINUES</button>
+   <button id="overBtn" class="btn" type="button">CHOOSE THE NEXT HEIR</button>
   </div>
 
   <div id="arc" class="screen" hidden><iframe id="arcFrame" title="Arcade game" allow="autoplay"></iframe><button id="arcX" class="btn" type="button">LEAVE</button></div>
@@ -608,7 +616,7 @@ var BOSSDEF = {
   sperm: { name: 'The Sperminator', area: 'city', hp: 1000, dmg: 22, sp: 'f_sperm_', sc: 1, w: 36, h: 76 },
   pig: { name: 'Brothers Load Piggy', area: 'dungeon', hp: 900, dmg: 24, sp: 'f_pig_', sc: 1, w: 80, h: 48 },
   blum: { name: 'Blumhead', area: 'castle', hp: 1300, dmg: 24, sp: 'f_blum_', sc: 1, w: 56, h: 64 },
-  ratking: { name: 'The Rat King', area: 'sewer', hp: 1100, dmg: 22, sp: 'f_ratking_', sc: 1, w: 80, h: 46 },
+  ratking: { name: 'Cult of the Rat', area: 'sewer', hp: 1100, dmg: 22, sp: 'f_ratking_', sc: 1, w: 80, h: 46 },
   boner: { name: 'The Big Boner', area: 'bone', hp: 1300, dmg: 24, sp: 'f_boner_', sc: 1, w: 50, h: 88 },
   hotload: { name: 'The Hot Load', area: 'furnace', hp: 1400, dmg: 26, sp: 'f_hotload_', sc: 1, w: 66, h: 66 },
   moon: { name: 'The Crimson Moon', area: 'moon', hp: 2000, dmg: 26, sp: 'f_moon_', sc: 1, w: 70, h: 76 },
@@ -1096,7 +1104,7 @@ function calcStats() {
   s.soul = cnt(pw, 'soul') * 10; s.berserk = cnt(pw, 'berserk') * 0.4; s.lucky = Math.min(0.5, cnt(pw, 'lucky') * 0.1); s.cold = Math.min(0.5, cnt(pw, 'cold') * 0.12); s.bubble = cnt(pw, 'bubble'); s.slayer = cnt(pw, 'slayer') * 0.35;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
-  homStats(s);
+  pillStats(s); homStats(s);
   return s;
 }
 function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
@@ -1133,15 +1141,25 @@ function resumeRun() {
 function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDrops = (META.totalDrops || 0) + d; RUN.drops = 0; return d; }
 function runOver(win) {
   clearRun(); var erec = RUN.endless ? recordEndless() : null;
-  var area = G.rm ? AREAS[G.rm.area].name : '', d = bankRun();
+  var area = G.rm ? AREAS[G.rm.area].name : '', got = Math.floor(RUN.drops), d = bankRun();
   META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
-  META.legacy = META.legacy.slice(0, 30); saveMeta();
+  META.legacy = META.legacy.slice(0, 30); META.nextHeir = null; saveMeta();
   G.mode = 'over'; music.stop(1.2);
-  el('overH').textContent = win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
-  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills;
-  el('overGold').textContent = '+' + fmtN(d) + ' DROPS banked.  Total: ' + fmtN(META.bank) + (win ? '   ·   NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '');
-  if (erec) { el('overH').textContent = 'Endless: screen ' + erec.screen; el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + ' was slain by ' + (RUN.by || 'the castle') + ' on screen ' + RUN.endless.n + '.  TIME ' + fmtT(RUN.t) + '  ·  FOES ' + RUN.kills + '  ·  PROOF ' + erec.sig; }
-  el('overBtn').textContent = win ? 'BACK TO TOWN' : 'THE LEGACY CONTINUES';
+  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
+  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (RUN.hom ? ' (' + homName().toUpperCase() + ')' : '') + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.';
+  // the stats of the run
+  var st = [['TIME', fmtT(RUN.t)], ['FOES KILLED', RUN.kills], ['FELL IN', L && L.arena ? BOSSDEF[L.arena].name : area], ['POWERUPS', RUN.powers.length], ['FOUND', (RUN.finds || []).length ? RUN.finds.join(', ') : 'nothing'], ['FATE', RUN.card ? cardName(RUN.card) : 'none']];
+  if (RUN.pill) st.push(["TB'S PILL", PILLS[RUN.pill].name]);
+  if (erec) st.push(['SCREEN', erec.screen], ['PROOF', erec.sig]);
+  if (RUN.hom) st.push(['GREW TO', HOMSTNAME[RUN.hom.st]]);
+  var box = el('overStats'); box.innerHTML = ''; st.forEach(function (q) { var d2 = document.createElement('div'); var a = document.createElement('span'); a.textContent = q[0]; var b2 = document.createElement('b'); b2.textContent = String(q[1]); d2.appendChild(a); d2.appendChild(b2); box.appendChild(d2); });
+  // the drops count up into the inheritance for the next heir
+  var n0 = META.bank - d, t0 = performance.now(), dur = Math.min(2200, 600 + d * 2), ticks = 0;
+  el('overInhN').textContent = fmtN(n0);
+  (function tick(now) { var k = Math.min(1, (now - t0) / dur), v = Math.round(n0 + d * (1 - Math.pow(1 - k, 2))); el('overInhN').textContent = fmtN(v); if (Math.floor(k * 20) > ticks) { ticks = Math.floor(k * 20); sfx.pick(G.t + ticks); } if (k < 1 && G.mode === 'over') requestAnimationFrame(tick); })(t0);
+  el('overInhS').textContent = '+' + fmtN(got) + ' DROPS CARRIED  ·  PASSED TO THE NEXT HEIR';
+  el('overGold').textContent = win ? 'NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '';
+  el('overBtn').textContent = 'CHOOSE THE NEXT HEIR';
   el('over').hidden = false; setMenuMode(true);
 }
 function fmtT(s) { s = Math.max(0, Math.floor(s)); var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
@@ -1190,7 +1208,7 @@ function updatePlayer(dt) {
   if (P.inv > 0) P.inv -= dt; if (P.atkCd > 0) P.atkCd -= dt; if (P.attackT > 0) P.attackT -= dt; if (P.jumpStartT > 0) P.jumpStartT -= dt;
   if (P.ooze > 0) { P.ooze -= dt; P.oozeT -= dt; if (P.oozeT <= 0) { P.oozeT = 0.5; healP(4); } }
   if (homHatchTick(dt)) return;
-  homTick(dt);
+  homTick(dt); pillTick(dt);
   if (P.echoT > 0) { P.echoT -= dt; if (P.echoT <= 0 && P.state === 'normal') { var cd0 = P.atkCd; attack(true); P.atkCd = cd0; } }
   if (ST.bubble && !P.bubbleOn) { P.bubbleT = (P.bubbleT || 0) - dt; if (P.bubbleT <= 0) { P.bubbleOn = 1; } }
   if (P.state === 'dead') {
@@ -1365,12 +1383,13 @@ function mkEnemy(k, x, y, idx, mini) {
 function updateEnemies(dt) {
   var t = tierOf();
   for (var i = 0; i < enemies.length; i++) {
-    var e = enemies[i]; if (!e.alive) continue; e.t += dt; if (e.flash > 0) e.flash -= dt;
+    var e = enemies[i]; if (!e.alive) continue; e.t += dt; if (e.flash > 0) e.flash -= dt; if (e.safe > 0) e.safe -= dt;
     if (e.burn > 0) { e.burnT = (e.burnT || 0) - dt; if (e.burnT <= 0) { e.burnT = 0.5; e.burn--; hurtE(e, Math.max(1, ST.dmg * 0.25), 'burn'); if (!e.alive) continue; } }
     if (e.poison > 0) { e.poisT = (e.poisT || 0) - dt; if (e.poisT <= 0) { e.poisT = 0.5; e.poison--; hurtE(e, Math.max(1, ST.dmg * 0.3), 'poison'); if (!e.alive) continue; } }
     if (e.stun > 0) { e.stun -= dt; e.ghost = false; if (!isFlyer(e.d)) { e.vx = 0; moveBody(e, dt, GRAV); } continue; }
     var dx = P.x - e.x, dy = (P.y - P.h / 2) - (e.y - e.h / 2), adx = Math.abs(dx), ai = e.d.ai, sp = e.d.spd * (1 + 0.1 * (t - 1));
-    if (ai === 'walk' || ai === 'charge' || ai === 'heavy' || ai === 'guard') {
+    if (e.swarm) { e.face = e.swarm; e.vx = e.swarm * 175; moveBody(e, dt, GRAV); if (e.swarm > 0 ? e.x > L.w * T - 34 : e.x < 34) { e.alive = false; continue; } } // a swarming rat runs straight across and is gone
+    else if (ai === 'walk' || ai === 'charge' || ai === 'heavy' || ai === 'guard') {
       if (ai === 'charge' && e.st === 'go' && adx < 170 && Math.abs(dy) < 34 && (dx > 0) === (e.face > 0) && e.cd <= 0) { e.st = 'tell'; e.st2 = 0.35; }
       if (e.st === 'tell') { e.vx = 0; e.st2 -= dt; if (e.st2 <= 0) { e.st = 'rush'; e.st2 = 0.8; } }
       else if (e.st === 'rush') { e.vx = e.face * sp * 3.4; e.st2 -= dt; if (e.st2 <= 0 || e.hitWall) { e.st = 'go'; e.cd = 1.4; } }
@@ -1414,14 +1433,19 @@ function updateEnemies(dt) {
     if (P.state === 'dead' || e.ghost) continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) {
       if (e.d.burst) { hurtE(e, 999, 'pop'); continue; }
-      if (P.vy > 30 && P.y - 6 < e.y - e.h + 8 && P.state === 'normal') { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
+      // a stomp: falling onto the top of a foe (judged from where your feet were last frame, so hopping slimes count),
+      // or landing on a second foe in the same moment as the first
+      var feet0 = P.y - P.vy / 60, top = e.y - e.h, recent = G.t - (P.stompT || -9) < 0.15;
+      if (e.safe > 0) continue;
+      if (P.state === 'normal' && ((P.vy > 0 && feet0 <= top + 10) || (recent && P.y <= e.y - e.h * 0.4))) { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
       else if (P.ooze > 0) { if (!e.oozeHit || G.t - e.oozeHit > 0.5) { e.oozeHit = G.t; hurtE(e, ST.dmg * 0.6, 'ooze'); } }
+      else if (recent) continue; // no hurting the heir in the moment after a stomp
       else { if (ST.thorns && P.inv <= 0 && G.t - (e.thornT || -9) > 1) { e.thornT = G.t; hurtE(e, ST.dmg * 0.8 * ST.thorns, 'thorns'); } hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase()); }
     }
   }
   enemies = enemies.filter(function (q) { return q.alive; });
 }
-function stompBounce() { sfx.stomp(); P.vy = input.j ? -320 : -235; P.onGround = false; P.jumpHeld = input.j; P.jumps = 1; }
+function stompBounce() { P.stompT = G.t; sfx.stomp(); P.vy = input.j ? -320 : -235; P.onGround = false; P.jumpHeld = input.j; P.jumps = 1; }
 function hurtE(e, dmg, src) {
   if (!e.alive) return;
   var crit = false; if (src === 'hit' || src === 'stomp') { crit = Math.random() < ST.crit; if (crit) dmg *= 1.8; }
@@ -1442,12 +1466,12 @@ function hurtE(e, dmg, src) {
     sfx.kill(); poof(e.x, e.y - e.h / 2, 10, ['#ff2630', '#b3121c', '#f1e7d0']); RUN.kills++;
     if (e.idx !== undefined && e.idx !== null && (typeof e.idx === 'string' || e.idx >= 0)) rsOf(G.roomKey).k[e.idx] = 1;
     if (e.d.burst) burstShards(e);
-    spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
+    if (!e.swarm) spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
     P.mana = Math.min(ST.mmana, P.mana + 4 + (ST.soul || 0));
     if (ST.lucky && Math.random() < ST.lucky) { healP(Math.round(ST.mhp * 0.1)); pop(e.x, e.y - e.h - 12, 'LUCKY', '#7dff9a'); }
     if (RUN.cls === 'spermaid') healP(3);
     if (ST.boom) { fx.push({ k: 'ring', x: e.x, y: e.y - e.h / 2, age: 0, c: '#ffb040' }); enemies.forEach(function (o) { if (o.alive && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 50) hurtE(o, ST.dmg * 0.8, 'boom'); }); }
-    if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; enemies.push(m); } }
+    if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; m.safe = 0.5; enemies.push(m); } }
   }
 }
 function spill(x, y, n) {
@@ -2531,12 +2555,13 @@ function endlessEnter() {
   RUN.endless.n = rm.idx; RUN.endless.tier = endlessTier(rm.idx); if (rm.idx > (RUN.endless.max || 0)) RUN.endless.max = rm.idx;
   ST = calcStats();
   G.banner = 1.6; G.bannerTxt = 'SCREEN ' + rm.idx; G.bannerSub = AREAS[rm.area].name.toUpperCase() + (rm.type === 'bossdoor' && !rs.bossDone ? '  ·  ' + BOSSDEF[rm.boss].name.toUpperCase() : '');
-  G.eLock = false;
+  G.eLock = false; G.eLockDue = false;
   if (rm.type === 'bossdoor' && !rs.bossDone) { for (var y = 12; y <= 14; y++) L.tiles[y * L.w + L.w - 1] = TW; G.layer = null; } // the way on opens when the boss is dead
-  else if (enemies.length && rm.type !== 'challenge') { G.eLock = true; G.lock = true; G.layer = null; lockExits(true); }
+  else if (enemies.length && rm.type !== 'challenge') G.eLockDue = true; // the doors shut once you are properly inside, not on top of you
 }
 function endlessStep(dt) {
   if (!RUN || !RUN.endless || L.arena) return;
+  if (G.eLockDue) { if (!enemies.length) G.eLockDue = false; else if (P.x > 5 * T && P.x < L.w * T - 5 * T && P.onGround) { G.eLockDue = false; G.eLock = true; G.lock = true; G.layer = null; lockExits(true); sfx.lock(); } }
   if (G.eLock && !G.chal && !enemies.length) { G.eLock = false; G.lock = false; lockExits(false); G.layer = null; sfx.goal(); G.banner = 1.2; G.bannerTxt = 'CLEAR'; G.bannerSub = 'KEEP GOING RIGHT'; }
 }
 function endlessBossDown(b) {
@@ -2628,17 +2653,20 @@ function openEndlessHeirs() {
 }
 
 /* ---------- the three endless bosses ---------- */
-BOSSLINES.ratking = ['SQUEAK. YOU ARE IN MY SEWER NOW.', 'MY CHILDREN ARE HUNGRY. SO AM I.'];
+BOSSLINES.ratking = ['THE CULT OF THE RAT WELCOMES YOU. SQUEAK.', 'BROTHERS! SISTERS! THE FLOOR IS YOURS!'];
 BOSSLINES.boner = ['I HAVE BEEN WAITING DOWN HERE A LONG TIME.', 'TIME TO PICK A BONE WITH YOU.'];
 BOSSLINES.hotload = ['HOT. HOT. HOT.', 'COME CLOSER, LITTLE DROP. LET ME WARM YOU UP.'];
 BRAIN.ratking = function (b, dt, W, ph) {
   var f = towardP(b);
-  if (b.st === 'idle') { b.face = f; b.vx = f * 80; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'rats', 'charge', 'tail']; if (enemies.length >= 5) o = ['charge', 'leap', 'tail']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
+  if (b.st === 'idle') { b.face = f; b.vx = f * 80; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'rats', 'swarm', 'tail', 'swarm']; if (enemies.length >= 5) o = ['charge', 'leap', 'tail']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
   else if (b.st === 'tell') { b.vx = 0; b.face = f; b.t2 -= dt; if (b.t2 <= 0) {
     if (b.nx === 'charge') { b.st = 'charge'; sfx.roar(); }
     else if (b.nx === 'leap') { b.st = 'air'; b.vy = -440; b.vx = clamp((P.x - b.x) * 1.1, -260, 260); }
+    else if (b.nx === 'swarm') { b.st = 'swarm'; b.t2 = 0; b.n = 0; b.sdir = P.x < W / 2 ? 1 : -1; sfx.roar(); G.banner = 1; G.bannerTxt = 'THE SWARM'; G.bannerSub = 'JUMP!'; }
     else if (b.nx === 'rats') { for (var k = 0; k < (ph === 2 ? 4 : 3); k++) { var e = mkEnemy('rat', clamp(b.x + (k - 1.5) * 30, 40, W - 40), b.y, -1); e.vy = -200; enemies.push(e); } sfx.roar(); b.st = 'idle'; b.cd = 1.4; }
     else { b.st = 'idle'; b.cd = 1.2; G.shake = 6; sfx.whip(); for (var s = -1; s <= 1; s += 2) waves.push({ x: b.x + s * 40, y: b.y, dir: s, life: 1.8, dmg: b.dmg * 0.7, by: 'the Rat King\'s tail' }); } } }
+  else if (b.st === 'swarm') { // the cult pours across the floor from one wall to the other: jump it
+    b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.t2 = 0.07; b.n++; var sr = mkEnemy('rat', b.sdir > 0 ? 40 : W - 40, 15 * T, -1); sr.swarm = b.sdir; sr.hp = sr.mhp = Math.max(1, Math.round(sr.mhp * 0.5)); enemies.push(sr); if (b.n % 4 === 0) sfx.step(G.t + b.n); if (b.n >= (ph === 2 ? 22 : 15)) { b.st = 'idle'; b.cd = 1.6; } } }
   else if (b.st === 'charge') { b.vx = b.face * (ph === 2 ? 320 : 270); if (b.hitWall || b.x <= b.w / 2 + 18 || b.x >= W - b.w / 2 - 18) { b.st = 'stun'; b.t2 = 0.8; G.shake = 8; sfx.land(); } }
   else if (b.st === 'stun') { b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.st = 'idle'; b.cd = ph === 2 ? 0.8 : 1.2; } }
   var wasG = b.onGround; moveBody(b, dt, GRAV);
@@ -2799,6 +2827,7 @@ function drawClubInside(cx) {
     var x = Math.round(e.x - cx); if (x < -60 || x > VW + 60) return; if (e.sh > 0) { e.sh -= 1 / 60; x += Math.round((Math.random() - 0.5) * 3); }
     if (e.k === 'exit') { R(ctx, '#12040a', x - 18, gy - 58, 36, 58); R(ctx, '#3a1a0c', x - 16, gy - 56, 32, 56); R(ctx, '#2a1208', x - 13, gy - 52, 11, 22); R(ctx, '#2a1208', x + 2, gy - 52, 11, 22); R(ctx, '#2a1208', x - 13, gy - 26, 11, 22); R(ctx, '#2a1208', x + 2, gy - 26, 11, 22); R(ctx, '#ffe36a', x + 10, gy - 30, 3, 3); return; }
     var id = e.id;
+    if (id === 'desk' && townHeir() !== 'cumhead') { cspr('idle' + (Math.floor(G.t * 4) % 7), x - 40, gy, P.x > e.x - 40); if (Math.abs(P.x - (e.x - 40)) < 60) text('"MAKE YOURSELF AT HOME"', x - 40, gy - 62, 'center', '#ffe36a', 5); } // Cumhead waits at home when someone else is out
     if (id === 'desk') { R(ctx, '#12040a', x - 26, gy - 26, 52, 26); R(ctx, '#5a2a10', x - 25, gy - 25, 50, 6); R(ctx, '#3a1a0c', x - 25, gy - 19, 50, 19); R(ctx, '#f1e7d0', x - 16, gy - 30, 14, 4); R(ctx, '#12040a', x + 6, gy - 34, 6, 8); R(ctx, '#c4121c', x + 7, gy - 33, 4, 6); R(ctx, '#ffe36a', x - 4, gy - 36, 2, 6); text('LEVEL ' + heirLevel(), x, gy - 44, 'center', '#ffe36a', 6); }
     else if (id === 'wardrobe') { R(ctx, '#12040a', x - 20, gy - 70, 40, 70); R(ctx, '#3a1a0c', x - 19, gy - 69, 38, 69); R(ctx, '#2a1208', x - 17, gy - 66, 16, 62); R(ctx, '#2a1208', x + 1, gy - 66, 16, 62); R(ctx, '#c8903a', x - 3, gy - 36, 2, 4); R(ctx, '#c8903a', x + 2, gy - 36, 2, 4); R(ctx, '#5a2a10', x - 22, gy - 72, 44, 4); }
     else if (id === 'trophy') { R(ctx, '#12040a', x - 28, gy - 88, 56, 40); R(ctx, '#3a1a0c', x - 27, gy - 87, 54, 38); for (var t = 0; t < Math.min(6, META.blumWins + (META.moonWins || 0) + sealCount()); t++) { var tx = x - 22 + (t % 3) * 17, ty = gy - 84 + Math.floor(t / 3) * 18; R(ctx, '#ffc840', tx + 2, ty + 2, 8, 7); R(ctx, '#a8741a', tx + 4, ty + 9, 4, 3); R(ctx, '#ffc840', tx + 2, ty + 12, 8, 2); } R(ctx, '#12040a', x - 12, gy - 30, 24, 30); R(ctx, '#2a1208', x - 11, gy - 29, 22, 29); spr('f_blum_0', x, gy - 32, false, 0.35); }
@@ -2859,6 +2888,77 @@ function drawGateBig(x, gy) {
 }
 
 /* =====================================================================================================
+   TB'S TOLL: TB stands in front of the castle gate and takes your drops to let you in.
+   Pay the lot, or make a deal: he takes only 80% but you both swallow one of TB's Silly Pills, and the
+   heir goes in with a random bad effect. There is a 1% chance he slips you a pill anyway.
+   Every trip through raises your reputation with him, and the better you know him the less he takes.
+   ===================================================================================================== */
+var PILLS = {
+  heavy: { name: 'Heavy Legs', d: 'You move 20% slower' },
+  butter: { name: 'Butterfingers', d: 'Attacks are 25% slower' },
+  glass: { name: 'Glass Jaw', d: 'You take 30% more damage' },
+  tiny: { name: 'Tiny Heart', d: '25% less max HP' },
+  blurry: { name: 'Blurry Eyes', d: 'You can barely see past the end of your nose' },
+  leaky: { name: 'Leaky Pockets', d: 'Drops are worth 25% less' },
+  hiccup: { name: 'The Hiccups', d: 'You hop about when you least want to' },
+  fog: { name: 'Brain Fog', d: 'Mana refills half as fast' }
+};
+var PILLORDER = Object.keys(PILLS);
+function townHeir() { return META.nextHeir || META.last || 'cumhead'; } // who you walk the town as: the heir chosen for the next run
+function tbLevel() { return Math.min(10, Math.floor((META.tbRep || 0) / 3)); }
+function tbRate() { return (100 - tbLevel() * 5) / 100; } // 100% down to 50%
+function tbToll(deal) { return Math.floor(META.bank * tbRate() * (deal ? 0.8 : 1)); }
+function openToll() {
+  var heir = META.nextHeir || 'cumhead', lv = tbLevel(), next = 3 - (META.tbRep || 0) % 3;
+  openMenu({ title: "TB's Toll", note: '"Everything you are carrying, mate. That is the toll. House rules."', pic: 'npc_tb', bank: 'town', rows: [
+    { name: 'TB TAKES ' + Math.round(tbRate() * 100) + '% OF YOUR BANK  ·  REPUTATION ' + lv + (lv < 10 ? '  ·  ' + next + ' MORE TRIPS TO THE NEXT' : '  ·  BEST MATES'), cls: 'head' },
+    { icon: 'coin', name: 'PAY THE TOLL', sub: CLASSES[heir].name + ' goes in. TB keeps ' + fmtN(tbToll(false)) + ' drops.', price: fmtN(tbToll(false)), cls: 'sec', fn: function () { payToll(false); } },
+    { icon: 'stim', name: "MAKE A DEAL", sub: "He only takes 80% (" + fmtN(tbToll(true)) + "), but you take one of TB's Silly Pills with him. Something will go wrong in there.", price: fmtN(tbToll(true)), fn: function () { payToll(true); } },
+    { icon: 'curse', name: 'NOT YET', sub: 'Spend your drops in town first. Whatever is left, he takes.', fn: closeMenu }
+  ] });
+}
+function payToll(deal) {
+  var toll = tbToll(deal); META.bank -= toll; META.tbRep = (META.tbRep || 0) + (deal ? 2 : 1); saveMeta(); closeMenu();
+  var pill = deal || Math.random() < 0.01 ? PILLORDER[Math.floor(Math.random() * PILLORDER.length)] : null, sneaky = pill && !deal;
+  G.banner = 0; G.msg = null;
+  G.pillFade = { t: pill ? 3.2 : 1.2, pill: pill, sneaky: sneaky, heir: META.nextHeir || 'cumhead', toll: toll }; sfx.door();
+}
+/* the walk through the gate: a fade to black, then the run starts (with a pill, if he gave you one) */
+function tollStep(dt) {
+  var f = G.pillFade; if (!f) return false;
+  f.t -= dt; if (f.t <= 0) { G.pillFade = null; startRun(f.heir); if (f.pill) { RUN.pill = f.pill; ST = calcStats(); P.hp = Math.min(P.hp, ST.mhp); G.banner = 3.2; G.bannerTxt = "TB'S SILLY PILL"; G.bannerSub = PILLS[f.pill].name.toUpperCase() + ': ' + PILLS[f.pill].d.toUpperCase(); saveRun(); } }
+  return true;
+}
+function drawToll() {
+  var f = G.pillFade; if (!f) return; var a = Math.min(1, (f.pill ? 3.2 : 1.2) - f.t) * 1.4;
+  ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, a).toFixed(2) + ')'; ctx.fillRect(0, 0, VW, VH);
+  if (a > 0.9) {
+    text('TB TAKES ' + fmtN(f.toll) + ' DROPS', VW / 2, VH / 2 - 26, 'center', '#ffe36a', 7);
+    if (f.pill) text(f.sneaky ? 'HE SLIPS SOMETHING INTO YOUR HAND. YOU SWALLOW IT BEFORE YOU THINK.' : 'YOU SWALLOW THE PILL. TB SWALLOWS TWO.', VW / 2, VH / 2 - 8, 'center', '#f1e7d0', 5);
+    if (f.pill && f.t < 1.6) text('...THE ROOM TILTS.', VW / 2, VH / 2 + 10, 'center', '#ff2630', 6);
+  }
+}
+/* what the pills do, applied at the end of calcStats */
+function pillStats(s) {
+  var p = RUN && RUN.pill; if (!p) return;
+  if (p === 'heavy') s.spd *= 0.8; else if (p === 'butter') s.atkMul *= 1.25; else if (p === 'glass') s.takeMul *= 1.3;
+  else if (p === 'tiny') s.mhp = Math.round(s.mhp * 0.75); else if (p === 'leaky') s.dropMul *= 0.75; else if (p === 'fog') s.manaRegen *= 0.5;
+}
+function pillTick(dt) {
+  if (!RUN || RUN.pill !== 'hiccup' || P.state !== 'normal') return;
+  P.hicT = (P.hicT || 3) - dt; if (P.hicT <= 0) { P.hicT = 2 + Math.random() * 4; if (P.onGround) { P.vy = -200; P.onGround = false; pop(P.x, P.y - P.h - 6, 'HIC!', '#ff9ad0'); sfx.jump(); } }
+}
+function drawPillFx() {
+  if (!RUN || RUN.pill !== 'blurry' || G.mode !== 'play') return;
+  var x = P.x - G.cam.x, y = P.y - P.h / 2 - (G.cam.y || 0), g = ctx.createRadialGradient(x, y, 50, x, y, 190);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.88)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+}
+function drawTB(x, gy) { // TB waits by the gate
+  spr('npc_tb', x, gy, P.x < x + G.cam.x, 1.15);
+  if (!META.seenTB && Math.abs(P.x - (x + G.cam.x)) < 90) text('"THE TOLL, MATE"', x, gy - 52, 'center', '#ffe36a', 5);
+}
+
+/* =====================================================================================================
    TOWN: Clubhouse Row. Walk the street, step up to a building and press B. Empty lots can be bought.
    The castle gate is in the middle of the street, shops either side.
    ===================================================================================================== */
@@ -2873,13 +2973,13 @@ function buildTown() {
   return { w: W, h: H, tiles: tl, ents: ents, town: true, gateX: gateX };
 }
 function townStats() {
-  var cls = META.last || 'cumhead', c = CLASSES[cls];
+  var cls = townHeir(), c = CLASSES[cls];
   return { mhp: 1, mmana: 1, manaRegen: 0, regen: 0, spd: c.spd * 1.15, jumps: c.jumps, grav: 1, small: cls === 'homunculus', dmg: 0, crit: 0, iframes: 1, arm: 0, foeDmg: 1, takeMul: 1, foeHp: 1, dropMul: 1, atkMul: 1 };
 }
 function goTown(first) {
   clearRun(); RUN = null; G.mode = 'town'; G.lock = false; G.layer = null; L = TOWN = buildTown(); ST = townStats();
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = [];
-  var cls = META.last || 'cumhead'; P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
+  var cls = townHeir(); P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
   P.x = TOWN.gateX - 70; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
   music.play('town'); saveMeta();
@@ -2892,6 +2992,7 @@ function townNear() {
   return best;
 }
 function stepTown(dt) {
+  if (tollStep(dt)) { updateFx(dt); return; }
   var dir = (input.r ? 1 : 0) - (input.l ? 1 : 0), jumpPressed = input.j && !P.prevJump, atkPressed = input.a && !P.prevAtk; P.prevJump = input.j; P.prevAtk = input.a; P.prevSpec = input.s;
   if (P.jumpStartT > 0) P.jumpStartT -= dt;
   var mx = MAXV * ST.spd, sgn = P.vx > 0 ? 1 : (P.vx < 0 ? -1 : 0);
@@ -2971,7 +3072,7 @@ function spend(n, fromRun) { if (fromRun) { if (RUN.drops < n) { sfx.no(); retur
 
 /* ---------- town buildings ---------- */
 function openBuilding(e) {
-  if (e.k === 'gate') { openHeirs(); return; }
+  if (e.k === 'gate') { META.seenTB = 1; openToll(); return; }
   if (e.k === 'exit') { leaveClub(); return; }
   if (e.k === 'st') { clubStation(e); return; }
   var b = e.b;
@@ -2985,15 +3086,16 @@ function openBuilding(e) {
 function openClub() {
   openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rebuild: clubRows });
 }
-function clubRows() { // the Level Desk: one stat per level, every level dearer than the last
-  var L = heirLevel(), c = upCost(null), rows = [{ name: 'HEIR LEVEL ' + L + '  ·  NEXT LEVEL ' + fmtN(c) + ' DROPS', cls: 'head' }];
-  UPGRADES.forEach(function (u) {
-    var lv = META.up[u.id] || 0, now = u.id === 'vit' ? '+' + lv * 12 + ' HP' : u.id === 'str' ? '+' + lv * 2 + ' damage' : u.id === 'spi' ? '+' + lv * 10 + ' mana' : u.id === 'arm' ? Math.round(upArm(lv) * 100) + '% blocked' : u.id === 'gre' ? '+' + lv * 6 + '% drops' : '+' + Math.round(upAgi(lv) * 100) + '% speed';
-    rows.push({ icon: u.icon, name: u.name.toUpperCase() + '  ·  LV ' + lv, sub: u.d + '  ·  now ' + now, price: fmtN(c), cls: META.bank < c ? 'off' : '', fn: function () { var cc = upCost(null); if (spend(cc)) { META.up[u.id] = (META.up[u.id] || 0) + 1; saveMeta(); G.banner = 1.2; G.bannerTxt = 'LEVEL ' + heirLevel(); G.bannerSub = u.name.toUpperCase() + ' UP'; renderMenu(true); } } });
-  });
+function statNow(u, lv) { return u.id === 'vit' ? '+' + lv * 12 + ' HP' : u.id === 'str' ? '+' + lv * 2 + ' damage' : u.id === 'spi' ? '+' + lv * 10 + ' mana' : u.id === 'arm' ? Math.round(upArm(lv) * 100) + '% blocked' : u.id === 'gre' ? '+' + lv * 6 + '% drops' : '+' + Math.round(upAgi(lv) * 100) + '% speed'; }
+function nextStat() { return UPGRADES[heirLevel() % UPGRADES.length]; } // the stats take turns, so they rise together
+function clubRows() { // the Level Desk: one button. Each level goes into the next stat in turn, and costs more than the last
+  var L = heirLevel(), c = upCost(null), nx = nextStat(), nl = META.up[nx.id] || 0;
+  var rows = [{ icon: nx.icon, name: 'LEVEL UP  ·  ' + L + ' > ' + (L + 1), sub: 'This level goes into ' + nx.name + ': ' + statNow(nx, nl) + ' > ' + statNow(nx, nl + 1), price: fmtN(c), cls: 'sec' + (META.bank < c ? ' off' : ''), fn: function () { var cc = upCost(null), u = nextStat(); if (spend(cc)) { META.up[u.id] = (META.up[u.id] || 0) + 1; saveMeta(); G.banner = 1.2; G.bannerTxt = 'LEVEL ' + heirLevel(); G.bannerSub = u.name.toUpperCase() + ' UP'; renderMenu(true); } } }];
+  rows.push({ name: 'YOUR STATS  ·  HEIR LEVEL ' + L, cls: 'head' });
+  UPGRADES.forEach(function (u) { var lv = META.up[u.id] || 0; rows.push({ icon: u.icon, name: u.name.toUpperCase() + '  ·  LV ' + lv + (u === nx ? '  ·  NEXT' : ''), sub: statNow(u, lv), cls: u === nx ? 'own' : '' }); });
   var built = []; BUILDINGS.forEach(function (b) { if (!META.built[b.id]) built.push(b); });
   if (built.length) { rows.push({ name: 'EMPTY LOTS ON THE STREET', cls: 'head' }); built.forEach(function (b) { rows.push({ icon: 'coin', name: 'BUILD ' + b.name.toUpperCase(), sub: 'Opens a new building on the street', price: fmtN(b.cost), cls: 'sec' + (META.bank < b.cost ? ' off' : ''), fn: function () { if (spend(b.cost)) { META.built[b.id] = 1; saveMeta(); G.layer = null; renderMenu(true); } } }); }); }
-  return { rows: rows, note: 'Each level raises one stat. Every level costs more than the last, whichever stat you pick.' };
+  return { rows: rows, note: 'One button. Each level raises the next stat in turn, and every level costs more than the last.' };
 }
 function openGear() {
   openMenu({ title: "Greebo's Gourmet Goonery", note: BUILDINGS[1].quote, pic: 'npc_greebo', rebuild: gearRows });
@@ -3070,7 +3172,7 @@ function openHeirs() {
   if (!META.runs) opts = ['cumhead'];
   else opts = shuffle(CLASSORDER.filter(function (c) { return c !== META.last; })).slice(0, 2);
   var pv = []; for (var s in META.prov) PROV[s].forEach(function (it) { if (it.id === META.prov[s]) pv.push(it.name); });
-  openMenu({ title: META.runs ? 'Choose Your Heir' : 'Your First Heir', note: (META.runs ? 'Two heirs step up. ' + CLASSES[META.last].name + ' went in last time and stays home.' : 'Every legacy starts with Cumhead.') + (META.card ? '  Fate: ' + cardName(META.card) + '.' : '') + (pv.length ? '  Provisions: ' + pv.join(', ') + '.' : ''), pic: null, rows: [],
+  openMenu({ noBack: true, title: META.runs ? 'Choose Your Heir' : 'Your First Heir', note: (META.runs ? 'Two heirs step up. ' + CLASSES[META.last].name + ' went in last time and stays home.' : 'Every legacy starts with Cumhead.') + (META.card ? '  Fate: ' + cardName(META.card) + '.' : '') + (pv.length ? '  Provisions: ' + pv.join(', ') + '.' : ''), pic: null, rows: [],
     custom: function (list) {
       var wrap = document.createElement('div'); wrap.className = 'heirs';
       opts.forEach(function (cls) {
@@ -3078,7 +3180,7 @@ function openHeirs() {
         var cv2 = heirPic(cls) || mk(1, 1); b.appendChild(cv2);
         var h = document.createElement('b'); h.textContent = c.name; b.appendChild(h);
         [['HP ' + c.hp + '  ·  DMG ' + c.dmg + '  ·  MANA ' + c.mana], [c.pas.toUpperCase() + ': ' + c.pd], ['B: ' + c.ad], ['C: ' + c.sd]].forEach(function (l) { var p = document.createElement('span'); p.textContent = l[0]; b.appendChild(p); });
-        b.addEventListener('click', function () { sfx.goal(); closeMenu(); startRun(cls); });
+        b.addEventListener('click', function () { sfx.goal(); META.nextHeir = cls; saveMeta(); closeMenu(); hideTitle(); el('over').hidden = true; goTown(false); }); // pick first, then walk the town as them
         wrap.appendChild(b);
       });
       list.appendChild(wrap); list.style.display = 'flex';
@@ -3509,7 +3611,7 @@ function drawBoss(b, cx) {
 }
 function drawPlayer(cx) {
   if (P.inv > 0 && P.state !== 'dead' && Math.floor(G.t * 20) % 2 === 0) return;
-  var x = P.x - cx, y = P.y, cls = G.mode === 'town' ? (META.last || 'cumhead') : RUN.cls, flip = P.face < 0, sp = Math.abs(P.vx), dirIn = (input.r ? 1 : 0) - (input.l ? 1 : 0);
+  var x = P.x - cx, y = P.y, cls = G.mode === 'town' ? townHeir() : RUN.cls, flip = P.face < 0, sp = Math.abs(P.vx), dirIn = (input.r ? 1 : 0) - (input.l ? 1 : 0);
   var small = ST.small && RUN && RUN.card === 'tiny';
   ctx.save(); if (P.ooze > 0) { ctx.shadowColor = '#7dff3a'; ctx.shadowBlur = 16; }
   if (small) { ctx.translate(x, y); ctx.scale(0.75, 0.75); ctx.translate(-x, -y); }
@@ -3644,16 +3746,18 @@ function drawTown(cx) {
     ctx.save(); ctx.globalAlpha = 0.12 + Math.sin(G.t * 3 + li) * 0.02; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(lx - 5, gy - 60); ctx.lineTo(lx - 22, gy); ctx.lineTo(lx + 22, gy); ctx.lineTo(lx + 5, gy - 60); ctx.fill(); ctx.restore(); }
   TOWN.ents.forEach(function (e) {
     var x = Math.round(e.x - cx); if (x < -160 || x > VW + 160) return;
-    if (e.k === 'gate') { G.gateX0 = e.x; drawGate(x, gy); return; }
+    if (e.k === 'gate') { G.gateX0 = e.x; drawGate(x, gy); drawTB(x - 52, gy); return; }
     var b = e.b, built = META.built[b.id];
     if (!built) { // an empty lot: bare ground behind a little picket fence and a sign
       R(ctx, '#12040a', x - 40, gy - 4, 80, 4); R(ctx, '#1e0e0a', x - 39, gy - 3, 78, 3);
       for (var pk = -36; pk <= 36; pk += 8) { R(ctx, '#12040a', x + pk - 1, gy - 16, 4, 14); R(ctx, '#4a3a2a', x + pk, gy - 15, 2, 12); } R(ctx, '#12040a', x - 38, gy - 12, 76, 3); R(ctx, '#4a3a2a', x - 37, gy - 11, 74, 1);
       R(ctx, '#12040a', x - 2, gy - 40, 4, 26); R(ctx, '#3a2a1a', x - 1, gy - 39, 2, 24); R(ctx, '#12040a', x - 30, gy - 62, 60, 24); R(ctx, '#5a3a1a', x - 29, gy - 61, 58, 22); R(ctx, '#7a5a2a', x - 29, gy - 61, 58, 2);
       text('FOR SALE', x, gy - 51, 'center', '#ffe36a', 6); text(fmtN(b.cost), x, gy - 42, 'center', '#f1e7d0', 6); return; }
-    if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); }
+    var topY = gy - 96;
+    if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); topY = gy - f[3] * sc; }
     else drawTent(x, gy);
-    if (b.npc) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15);
+    if (SHOPSIGN[b.id]) shopSign(x, topY - 6, SHOPSIGN[b.id]);
+    if (b.npc && b.npc !== 'npc_' + townHeir()) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15); // the heir you are playing is not also standing in their shop
     if (b.npc2) spr(b.npc2, x + 14, gy, P.x < e.x, 1.15);
   });
 }
@@ -3698,11 +3802,11 @@ function render() {
   pops.forEach(function (p) { ctx.globalAlpha = 1 - p.age / 0.8; text(p.t, Math.round(p.x - cx), Math.round(p.y), 'center', p.c, 6); ctx.globalAlpha = 1; });
   ctx.imageSmoothingEnabled = true;
   if (sh || camy) ctx.setTransform(M, 0, 0, M, 0, 0);
-  if (G.mode === 'play') drawDark(cx, camy);
+  if (G.mode === 'play') { drawDark(cx, camy); drawPillFx(); }
   if (G.strike > 0) { ctx.fillStyle = 'rgba(255,250,220,' + (G.strike / 0.18 * 0.5).toFixed(3) + ')'; ctx.fillRect(0, 0, VW, VH); }
   if (G.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + clamp(G.fade / 0.18, 0, 1) + ')'; ctx.fillRect(0, 0, VW, VH); }
   drawVignette();
-  ctx.imageSmoothingEnabled = false; if (!CUT) { drawHud(); drawPrompt(cx); } drawCut(); ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingEnabled = false; if (!CUT) { drawHud(); drawPrompt(cx); } drawCut(); if (G.mode === 'town') drawToll(); ctx.imageSmoothingEnabled = true;
   if (G.banner > 0) {
     ctx.globalAlpha = Math.min(1, G.banner / 0.5); ctx.font = '30px "Pirata One", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#000'; ctx.fillText(G.bannerTxt, VW / 2 + 1, 92); ctx.save(); ctx.shadowColor = '#c4121c'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff2630'; ctx.fillText(G.bannerTxt, VW / 2, 91); ctx.restore();
@@ -3735,6 +3839,16 @@ function drawHomMelee(s) {
   ctx.restore();
 }
 
+/* neon name signs for the shops whose fronts have no name painted on */
+var SHOPSIGN = { joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
+function shopSign(x, by, s) {
+  var w = 112, h = 34, y = Math.round(by - h);
+  R(ctx, '#12040a', x - 2, y + h, 4, 8);
+  R(ctx, '#12040a', x - w / 2 - 2, y - 2, w + 4, h + 4); R(ctx, 'rgba(10,2,4,0.92)', x - w / 2, y, w, h);
+  ctx.save(); ctx.shadowColor = s[2]; ctx.shadowBlur = 8 + Math.sin(G.t * 4 + x) * 2; ctx.strokeStyle = s[2]; ctx.lineWidth = 1; ctx.strokeRect(x - w / 2 + 2.5, y + 2.5, w - 5, h - 5);
+  ctx.textAlign = 'center'; ctx.fillStyle = s[2]; ctx.font = '13px "Pirata One", serif'; ctx.fillText(s[0], x, y + 15, w - 10); ctx.font = '11px "Pirata One", serif'; ctx.fillText(s[1], x, y + 28, w - 10); ctx.restore();
+}
+
 /* =====================================================================================================
    LOOP, TITLE AND BUTTONS
    ===================================================================================================== */
@@ -3754,16 +3868,16 @@ function titleInfo() {
 }
 function toTitle() { G.mode = 'title'; music.play('title'); el('title').hidden = false; el('over').hidden = true; setMenuMode(true); titleInfo(); }
 function hideTitle() { el('title').hidden = true; setMenuMode(false); }
-el('contBtn').addEventListener('click', function () { sfx.init(); sfx.click(); hideTitle(); if (!resumeRun()) goTown(false); });
+el('contBtn').addEventListener('click', function () { sfx.init(); sfx.click(); hideTitle(); if (!resumeRun()) { if (META.runs && !META.nextHeir) openHeirs(); else goTown(false); } });
 el('newBtn').addEventListener('click', function () {
   sfx.init(); sfx.click();
-  function fresh() { META = freshMeta(); saveMeta(); clearRun(); closeMenu(); hideTitle(); goTown(true); }
+  function fresh() { META = freshMeta(); META.nextHeir = 'cumhead'; saveMeta(); clearRun(); closeMenu(); hideTitle(); goTown(true); }
   if (!META.started) { fresh(); return; }
   openMenu({ title: 'Start Over?', note: 'This wipes your town, gear, runes, seals and every heir. It cannot be undone.', bank: 'none', rows: [
     { icon: 'curse', name: 'YES, BURN THE LEGACY', sub: 'Start again with Cumhead', fn: fresh },
     { icon: 'elixir', name: 'NO, KEEP IT', fn: function () { closeMenu(); setMenuMode(true); } }], back: function () { closeMenu(); setMenuMode(true); } });
 });
-el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); el('over').hidden = true; setMenuMode(false); goTown(false); });
+el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); openHeirs(); }); // straight on to choosing who goes next
 (function () {
   var b = el('mute');
   function paint() { b.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); b.setAttribute('aria-label', sfx.muted ? 'Sound off' : 'Sound on'); b.classList.toggle('off', sfx.muted); }

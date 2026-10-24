@@ -57,7 +57,7 @@ function spend(n, fromRun) { if (fromRun) { if (RUN.drops < n) { sfx.no(); retur
 
 /* ---------- town buildings ---------- */
 function openBuilding(e) {
-  if (e.k === 'gate') { openHeirs(); return; }
+  if (e.k === 'gate') { META.seenTB = 1; openToll(); return; }
   if (e.k === 'exit') { leaveClub(); return; }
   if (e.k === 'st') { clubStation(e); return; }
   var b = e.b;
@@ -71,15 +71,16 @@ function openBuilding(e) {
 function openClub() {
   openMenu({ title: "Cumhead's Clubhouse", note: BUILDINGS[0].quote, pic: 'cumhead', rebuild: clubRows });
 }
-function clubRows() { // the Level Desk: one stat per level, every level dearer than the last
-  var L = heirLevel(), c = upCost(null), rows = [{ name: 'HEIR LEVEL ' + L + '  ·  NEXT LEVEL ' + fmtN(c) + ' DROPS', cls: 'head' }];
-  UPGRADES.forEach(function (u) {
-    var lv = META.up[u.id] || 0, now = u.id === 'vit' ? '+' + lv * 12 + ' HP' : u.id === 'str' ? '+' + lv * 2 + ' damage' : u.id === 'spi' ? '+' + lv * 10 + ' mana' : u.id === 'arm' ? Math.round(upArm(lv) * 100) + '% blocked' : u.id === 'gre' ? '+' + lv * 6 + '% drops' : '+' + Math.round(upAgi(lv) * 100) + '% speed';
-    rows.push({ icon: u.icon, name: u.name.toUpperCase() + '  ·  LV ' + lv, sub: u.d + '  ·  now ' + now, price: fmtN(c), cls: META.bank < c ? 'off' : '', fn: function () { var cc = upCost(null); if (spend(cc)) { META.up[u.id] = (META.up[u.id] || 0) + 1; saveMeta(); G.banner = 1.2; G.bannerTxt = 'LEVEL ' + heirLevel(); G.bannerSub = u.name.toUpperCase() + ' UP'; renderMenu(true); } } });
-  });
+function statNow(u, lv) { return u.id === 'vit' ? '+' + lv * 12 + ' HP' : u.id === 'str' ? '+' + lv * 2 + ' damage' : u.id === 'spi' ? '+' + lv * 10 + ' mana' : u.id === 'arm' ? Math.round(upArm(lv) * 100) + '% blocked' : u.id === 'gre' ? '+' + lv * 6 + '% drops' : '+' + Math.round(upAgi(lv) * 100) + '% speed'; }
+function nextStat() { return UPGRADES[heirLevel() % UPGRADES.length]; } // the stats take turns, so they rise together
+function clubRows() { // the Level Desk: one button. Each level goes into the next stat in turn, and costs more than the last
+  var L = heirLevel(), c = upCost(null), nx = nextStat(), nl = META.up[nx.id] || 0;
+  var rows = [{ icon: nx.icon, name: 'LEVEL UP  ·  ' + L + ' > ' + (L + 1), sub: 'This level goes into ' + nx.name + ': ' + statNow(nx, nl) + ' > ' + statNow(nx, nl + 1), price: fmtN(c), cls: 'sec' + (META.bank < c ? ' off' : ''), fn: function () { var cc = upCost(null), u = nextStat(); if (spend(cc)) { META.up[u.id] = (META.up[u.id] || 0) + 1; saveMeta(); G.banner = 1.2; G.bannerTxt = 'LEVEL ' + heirLevel(); G.bannerSub = u.name.toUpperCase() + ' UP'; renderMenu(true); } } }];
+  rows.push({ name: 'YOUR STATS  ·  HEIR LEVEL ' + L, cls: 'head' });
+  UPGRADES.forEach(function (u) { var lv = META.up[u.id] || 0; rows.push({ icon: u.icon, name: u.name.toUpperCase() + '  ·  LV ' + lv + (u === nx ? '  ·  NEXT' : ''), sub: statNow(u, lv), cls: u === nx ? 'own' : '' }); });
   var built = []; BUILDINGS.forEach(function (b) { if (!META.built[b.id]) built.push(b); });
   if (built.length) { rows.push({ name: 'EMPTY LOTS ON THE STREET', cls: 'head' }); built.forEach(function (b) { rows.push({ icon: 'coin', name: 'BUILD ' + b.name.toUpperCase(), sub: 'Opens a new building on the street', price: fmtN(b.cost), cls: 'sec' + (META.bank < b.cost ? ' off' : ''), fn: function () { if (spend(b.cost)) { META.built[b.id] = 1; saveMeta(); G.layer = null; renderMenu(true); } } }); }); }
-  return { rows: rows, note: 'Each level raises one stat. Every level costs more than the last, whichever stat you pick.' };
+  return { rows: rows, note: 'One button. Each level raises the next stat in turn, and every level costs more than the last.' };
 }
 function openGear() {
   openMenu({ title: "Greebo's Gourmet Goonery", note: BUILDINGS[1].quote, pic: 'npc_greebo', rebuild: gearRows });
@@ -156,7 +157,7 @@ function openHeirs() {
   if (!META.runs) opts = ['cumhead'];
   else opts = shuffle(CLASSORDER.filter(function (c) { return c !== META.last; })).slice(0, 2);
   var pv = []; for (var s in META.prov) PROV[s].forEach(function (it) { if (it.id === META.prov[s]) pv.push(it.name); });
-  openMenu({ title: META.runs ? 'Choose Your Heir' : 'Your First Heir', note: (META.runs ? 'Two heirs step up. ' + CLASSES[META.last].name + ' went in last time and stays home.' : 'Every legacy starts with Cumhead.') + (META.card ? '  Fate: ' + cardName(META.card) + '.' : '') + (pv.length ? '  Provisions: ' + pv.join(', ') + '.' : ''), pic: null, rows: [],
+  openMenu({ noBack: true, title: META.runs ? 'Choose Your Heir' : 'Your First Heir', note: (META.runs ? 'Two heirs step up. ' + CLASSES[META.last].name + ' went in last time and stays home.' : 'Every legacy starts with Cumhead.') + (META.card ? '  Fate: ' + cardName(META.card) + '.' : '') + (pv.length ? '  Provisions: ' + pv.join(', ') + '.' : ''), pic: null, rows: [],
     custom: function (list) {
       var wrap = document.createElement('div'); wrap.className = 'heirs';
       opts.forEach(function (cls) {
@@ -164,7 +165,7 @@ function openHeirs() {
         var cv2 = heirPic(cls) || mk(1, 1); b.appendChild(cv2);
         var h = document.createElement('b'); h.textContent = c.name; b.appendChild(h);
         [['HP ' + c.hp + '  ·  DMG ' + c.dmg + '  ·  MANA ' + c.mana], [c.pas.toUpperCase() + ': ' + c.pd], ['B: ' + c.ad], ['C: ' + c.sd]].forEach(function (l) { var p = document.createElement('span'); p.textContent = l[0]; b.appendChild(p); });
-        b.addEventListener('click', function () { sfx.goal(); closeMenu(); startRun(cls); });
+        b.addEventListener('click', function () { sfx.goal(); META.nextHeir = cls; saveMeta(); closeMenu(); hideTitle(); el('over').hidden = true; goTown(false); }); // pick first, then walk the town as them
         wrap.appendChild(b);
       });
       list.appendChild(wrap); list.style.display = 'flex';

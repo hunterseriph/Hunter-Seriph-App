@@ -945,9 +945,10 @@ var want=desk?'Hunter-Seriph-PC.exe':'Hunter-Seriph.apk';
 var box=document.getElementById('upd'), sub=document.getElementById('updSub'), go=document.getElementById('updGo');
 var latest=null, url=null, busy=false;
 function skipped(){try{return +localStorage.getItem('hs-upd-skip')||0;}catch(e){return 0;}}
+var lastCheck=0;
 function check(){
-  if(busy) return;
-  fetch('https://api.github.com/repos/'+REPO+'/releases/latest',{headers:{'Accept':'application/vnd.github+json'}})
+  if(busy||Date.now()-lastCheck<90000) return; lastCheck=Date.now(); // GitHub allows 60 checks an hour, so at most one every 90 seconds
+  fetch('https://api.github.com/repos/'+REPO+'/releases/latest',{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}})
   .then(function(r){return r.ok?r.json():null;}).then(function(rel){
     if(!rel) return;
     var n=parseInt(String(rel.tag_name||'').replace(/\D/g,''),10)||0;
@@ -975,6 +976,8 @@ if(desk&&desk.onProgress) desk.onProgress(function(p){ if(busy) go.textContent=p
 document.getElementById('updX').addEventListener('click',function(){ box.hidden=true; try{localStorage.setItem('hs-upd-skip',String(latest||0));}catch(e){} });
 check();
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&box.hidden) check(); });
+window.addEventListener('focus',function(){ if(box.hidden) check(); });      // coming back to the window
+setInterval(function(){ if(box.hidden&&!document.hidden) check(); },5*60*1000); // and every five minutes while it is open
 })();
 </script>
 </body>

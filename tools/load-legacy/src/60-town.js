@@ -13,13 +13,13 @@ function buildTown() {
   return { w: W, h: H, tiles: tl, ents: ents, town: true, gateX: gateX };
 }
 function townStats() {
-  var cls = META.last || 'cumhead', c = CLASSES[cls];
+  var cls = townHeir(), c = CLASSES[cls];
   return { mhp: 1, mmana: 1, manaRegen: 0, regen: 0, spd: c.spd * 1.15, jumps: c.jumps, grav: 1, small: cls === 'homunculus', dmg: 0, crit: 0, iframes: 1, arm: 0, foeDmg: 1, takeMul: 1, foeHp: 1, dropMul: 1, atkMul: 1 };
 }
 function goTown(first) {
   clearRun(); RUN = null; G.mode = 'town'; G.lock = false; G.layer = null; L = TOWN = buildTown(); ST = townStats();
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = [];
-  var cls = META.last || 'cumhead'; P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
+  var cls = townHeir(); P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
   P.x = TOWN.gateX - 70; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
   music.play('town'); saveMeta();
@@ -32,6 +32,7 @@ function townNear() {
   return best;
 }
 function stepTown(dt) {
+  if (tollStep(dt)) { updateFx(dt); return; }
   var dir = (input.r ? 1 : 0) - (input.l ? 1 : 0), jumpPressed = input.j && !P.prevJump, atkPressed = input.a && !P.prevAtk; P.prevJump = input.j; P.prevAtk = input.a; P.prevSpec = input.s;
   if (P.jumpStartT > 0) P.jumpStartT -= dt;
   var mx = MAXV * ST.spd, sgn = P.vx > 0 ? 1 : (P.vx < 0 ? -1 : 0);

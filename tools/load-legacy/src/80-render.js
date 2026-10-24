@@ -385,7 +385,7 @@ function drawBoss(b, cx) {
 }
 function drawPlayer(cx) {
   if (P.inv > 0 && P.state !== 'dead' && Math.floor(G.t * 20) % 2 === 0) return;
-  var x = P.x - cx, y = P.y, cls = G.mode === 'town' ? (META.last || 'cumhead') : RUN.cls, flip = P.face < 0, sp = Math.abs(P.vx), dirIn = (input.r ? 1 : 0) - (input.l ? 1 : 0);
+  var x = P.x - cx, y = P.y, cls = G.mode === 'town' ? townHeir() : RUN.cls, flip = P.face < 0, sp = Math.abs(P.vx), dirIn = (input.r ? 1 : 0) - (input.l ? 1 : 0);
   var small = ST.small && RUN && RUN.card === 'tiny';
   ctx.save(); if (P.ooze > 0) { ctx.shadowColor = '#7dff3a'; ctx.shadowBlur = 16; }
   if (small) { ctx.translate(x, y); ctx.scale(0.75, 0.75); ctx.translate(-x, -y); }
@@ -520,16 +520,18 @@ function drawTown(cx) {
     ctx.save(); ctx.globalAlpha = 0.12 + Math.sin(G.t * 3 + li) * 0.02; ctx.fillStyle = '#ffb040'; ctx.beginPath(); ctx.moveTo(lx - 5, gy - 60); ctx.lineTo(lx - 22, gy); ctx.lineTo(lx + 22, gy); ctx.lineTo(lx + 5, gy - 60); ctx.fill(); ctx.restore(); }
   TOWN.ents.forEach(function (e) {
     var x = Math.round(e.x - cx); if (x < -160 || x > VW + 160) return;
-    if (e.k === 'gate') { G.gateX0 = e.x; drawGate(x, gy); return; }
+    if (e.k === 'gate') { G.gateX0 = e.x; drawGate(x, gy); drawTB(x - 52, gy); return; }
     var b = e.b, built = META.built[b.id];
     if (!built) { // an empty lot: bare ground behind a little picket fence and a sign
       R(ctx, '#12040a', x - 40, gy - 4, 80, 4); R(ctx, '#1e0e0a', x - 39, gy - 3, 78, 3);
       for (var pk = -36; pk <= 36; pk += 8) { R(ctx, '#12040a', x + pk - 1, gy - 16, 4, 14); R(ctx, '#4a3a2a', x + pk, gy - 15, 2, 12); } R(ctx, '#12040a', x - 38, gy - 12, 76, 3); R(ctx, '#4a3a2a', x - 37, gy - 11, 74, 1);
       R(ctx, '#12040a', x - 2, gy - 40, 4, 26); R(ctx, '#3a2a1a', x - 1, gy - 39, 2, 24); R(ctx, '#12040a', x - 30, gy - 62, 60, 24); R(ctx, '#5a3a1a', x - 29, gy - 61, 58, 22); R(ctx, '#7a5a2a', x - 29, gy - 61, 58, 2);
       text('FOR SALE', x, gy - 51, 'center', '#ffe36a', 6); text(fmtN(b.cost), x, gy - 42, 'center', '#f1e7d0', 6); return; }
-    if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); }
+    var topY = gy - 96;
+    if (b.fac && SPR[b.fac]) { var f = SPR[b.fac], sc = Math.min(1.7, 150 / f[3], 112 / f[2]); spr(b.fac, x, gy, false, sc); topY = gy - f[3] * sc; }
     else drawTent(x, gy);
-    if (b.npc) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15);
+    if (SHOPSIGN[b.id]) shopSign(x, topY - 6, SHOPSIGN[b.id]);
+    if (b.npc && b.npc !== 'npc_' + townHeir()) spr(b.npc, x + (b.npc2 ? -14 : 0), gy, P.x < e.x, 1.15); // the heir you are playing is not also standing in their shop
     if (b.npc2) spr(b.npc2, x + 14, gy, P.x < e.x, 1.15);
   });
 }
@@ -574,11 +576,11 @@ function render() {
   pops.forEach(function (p) { ctx.globalAlpha = 1 - p.age / 0.8; text(p.t, Math.round(p.x - cx), Math.round(p.y), 'center', p.c, 6); ctx.globalAlpha = 1; });
   ctx.imageSmoothingEnabled = true;
   if (sh || camy) ctx.setTransform(M, 0, 0, M, 0, 0);
-  if (G.mode === 'play') drawDark(cx, camy);
+  if (G.mode === 'play') { drawDark(cx, camy); drawPillFx(); }
   if (G.strike > 0) { ctx.fillStyle = 'rgba(255,250,220,' + (G.strike / 0.18 * 0.5).toFixed(3) + ')'; ctx.fillRect(0, 0, VW, VH); }
   if (G.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + clamp(G.fade / 0.18, 0, 1) + ')'; ctx.fillRect(0, 0, VW, VH); }
   drawVignette();
-  ctx.imageSmoothingEnabled = false; if (!CUT) { drawHud(); drawPrompt(cx); } drawCut(); ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingEnabled = false; if (!CUT) { drawHud(); drawPrompt(cx); } drawCut(); if (G.mode === 'town') drawToll(); ctx.imageSmoothingEnabled = true;
   if (G.banner > 0) {
     ctx.globalAlpha = Math.min(1, G.banner / 0.5); ctx.font = '30px "Pirata One", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#000'; ctx.fillText(G.bannerTxt, VW / 2 + 1, 92); ctx.save(); ctx.shadowColor = '#c4121c'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff2630'; ctx.fillText(G.bannerTxt, VW / 2, 91); ctx.restore();
@@ -609,4 +611,14 @@ function drawHomMelee(s) {
   else if (s.look === 'quake' || s.look === 'bone') { ctx.strokeStyle = s.look === 'bone' ? '#e9dcbc' : '#8a8a9a'; ctx.lineWidth = 3; for (var k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(2, s.h * 0.3, 8 + k * 7 + a * 8, -1.1, 0.4); ctx.stroke(); } }
   else { ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(4, 0, s.reach * 0.7, -1.0 + a * 0.6, 0.6 + a * 0.6); ctx.stroke(); }
   ctx.restore();
+}
+
+/* neon name signs for the shops whose fronts have no name painted on */
+var SHOPSIGN = { joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
+function shopSign(x, by, s) {
+  var w = 112, h = 34, y = Math.round(by - h);
+  R(ctx, '#12040a', x - 2, y + h, 4, 8);
+  R(ctx, '#12040a', x - w / 2 - 2, y - 2, w + 4, h + 4); R(ctx, 'rgba(10,2,4,0.92)', x - w / 2, y, w, h);
+  ctx.save(); ctx.shadowColor = s[2]; ctx.shadowBlur = 8 + Math.sin(G.t * 4 + x) * 2; ctx.strokeStyle = s[2]; ctx.lineWidth = 1; ctx.strokeRect(x - w / 2 + 2.5, y + 2.5, w - 5, h - 5);
+  ctx.textAlign = 'center'; ctx.fillStyle = s[2]; ctx.font = '13px "Pirata One", serif'; ctx.fillText(s[0], x, y + 15, w - 10); ctx.font = '11px "Pirata One", serif'; ctx.fillText(s[1], x, y + 28, w - 10); ctx.restore();
 }

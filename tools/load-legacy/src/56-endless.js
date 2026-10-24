@@ -45,12 +45,13 @@ function endlessEnter() {
   RUN.endless.n = rm.idx; RUN.endless.tier = endlessTier(rm.idx); if (rm.idx > (RUN.endless.max || 0)) RUN.endless.max = rm.idx;
   ST = calcStats();
   G.banner = 1.6; G.bannerTxt = 'SCREEN ' + rm.idx; G.bannerSub = AREAS[rm.area].name.toUpperCase() + (rm.type === 'bossdoor' && !rs.bossDone ? '  ·  ' + BOSSDEF[rm.boss].name.toUpperCase() : '');
-  G.eLock = false;
+  G.eLock = false; G.eLockDue = false;
   if (rm.type === 'bossdoor' && !rs.bossDone) { for (var y = 12; y <= 14; y++) L.tiles[y * L.w + L.w - 1] = TW; G.layer = null; } // the way on opens when the boss is dead
-  else if (enemies.length && rm.type !== 'challenge') { G.eLock = true; G.lock = true; G.layer = null; lockExits(true); }
+  else if (enemies.length && rm.type !== 'challenge') G.eLockDue = true; // the doors shut once you are properly inside, not on top of you
 }
 function endlessStep(dt) {
   if (!RUN || !RUN.endless || L.arena) return;
+  if (G.eLockDue) { if (!enemies.length) G.eLockDue = false; else if (P.x > 5 * T && P.x < L.w * T - 5 * T && P.onGround) { G.eLockDue = false; G.eLock = true; G.lock = true; G.layer = null; lockExits(true); sfx.lock(); } }
   if (G.eLock && !G.chal && !enemies.length) { G.eLock = false; G.lock = false; lockExits(false); G.layer = null; sfx.goal(); G.banner = 1.2; G.bannerTxt = 'CLEAR'; G.bannerSub = 'KEEP GOING RIGHT'; }
 }
 function endlessBossDown(b) {
@@ -142,17 +143,20 @@ function openEndlessHeirs() {
 }
 
 /* ---------- the three endless bosses ---------- */
-BOSSLINES.ratking = ['SQUEAK. YOU ARE IN MY SEWER NOW.', 'MY CHILDREN ARE HUNGRY. SO AM I.'];
+BOSSLINES.ratking = ['THE CULT OF THE RAT WELCOMES YOU. SQUEAK.', 'BROTHERS! SISTERS! THE FLOOR IS YOURS!'];
 BOSSLINES.boner = ['I HAVE BEEN WAITING DOWN HERE A LONG TIME.', 'TIME TO PICK A BONE WITH YOU.'];
 BOSSLINES.hotload = ['HOT. HOT. HOT.', 'COME CLOSER, LITTLE DROP. LET ME WARM YOU UP.'];
 BRAIN.ratking = function (b, dt, W, ph) {
   var f = towardP(b);
-  if (b.st === 'idle') { b.face = f; b.vx = f * 80; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'rats', 'charge', 'tail']; if (enemies.length >= 5) o = ['charge', 'leap', 'tail']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
+  if (b.st === 'idle') { b.face = f; b.vx = f * 80; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'rats', 'swarm', 'tail', 'swarm']; if (enemies.length >= 5) o = ['charge', 'leap', 'tail']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
   else if (b.st === 'tell') { b.vx = 0; b.face = f; b.t2 -= dt; if (b.t2 <= 0) {
     if (b.nx === 'charge') { b.st = 'charge'; sfx.roar(); }
     else if (b.nx === 'leap') { b.st = 'air'; b.vy = -440; b.vx = clamp((P.x - b.x) * 1.1, -260, 260); }
+    else if (b.nx === 'swarm') { b.st = 'swarm'; b.t2 = 0; b.n = 0; b.sdir = P.x < W / 2 ? 1 : -1; sfx.roar(); G.banner = 1; G.bannerTxt = 'THE SWARM'; G.bannerSub = 'JUMP!'; }
     else if (b.nx === 'rats') { for (var k = 0; k < (ph === 2 ? 4 : 3); k++) { var e = mkEnemy('rat', clamp(b.x + (k - 1.5) * 30, 40, W - 40), b.y, -1); e.vy = -200; enemies.push(e); } sfx.roar(); b.st = 'idle'; b.cd = 1.4; }
     else { b.st = 'idle'; b.cd = 1.2; G.shake = 6; sfx.whip(); for (var s = -1; s <= 1; s += 2) waves.push({ x: b.x + s * 40, y: b.y, dir: s, life: 1.8, dmg: b.dmg * 0.7, by: 'the Rat King\'s tail' }); } } }
+  else if (b.st === 'swarm') { // the cult pours across the floor from one wall to the other: jump it
+    b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.t2 = 0.07; b.n++; var sr = mkEnemy('rat', b.sdir > 0 ? 40 : W - 40, 15 * T, -1); sr.swarm = b.sdir; sr.hp = sr.mhp = Math.max(1, Math.round(sr.mhp * 0.5)); enemies.push(sr); if (b.n % 4 === 0) sfx.step(G.t + b.n); if (b.n >= (ph === 2 ? 22 : 15)) { b.st = 'idle'; b.cd = 1.6; } } }
   else if (b.st === 'charge') { b.vx = b.face * (ph === 2 ? 320 : 270); if (b.hitWall || b.x <= b.w / 2 + 18 || b.x >= W - b.w / 2 - 18) { b.st = 'stun'; b.t2 = 0.8; G.shake = 8; sfx.land(); } }
   else if (b.st === 'stun') { b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.st = 'idle'; b.cd = ph === 2 ? 0.8 : 1.2; } }
   var wasG = b.onGround; moveBody(b, dt, GRAV);

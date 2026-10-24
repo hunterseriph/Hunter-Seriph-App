@@ -17,16 +17,16 @@ function titleInfo() {
 }
 function toTitle() { G.mode = 'title'; music.play('title'); el('title').hidden = false; el('over').hidden = true; setMenuMode(true); titleInfo(); }
 function hideTitle() { el('title').hidden = true; setMenuMode(false); }
-el('contBtn').addEventListener('click', function () { sfx.init(); sfx.click(); hideTitle(); if (!resumeRun()) goTown(false); });
+el('contBtn').addEventListener('click', function () { sfx.init(); sfx.click(); hideTitle(); if (!resumeRun()) { if (META.runs && !META.nextHeir) openHeirs(); else goTown(false); } });
 el('newBtn').addEventListener('click', function () {
   sfx.init(); sfx.click();
-  function fresh() { META = freshMeta(); saveMeta(); clearRun(); closeMenu(); hideTitle(); goTown(true); }
+  function fresh() { META = freshMeta(); META.nextHeir = 'cumhead'; saveMeta(); clearRun(); closeMenu(); hideTitle(); goTown(true); }
   if (!META.started) { fresh(); return; }
   openMenu({ title: 'Start Over?', note: 'This wipes your town, gear, runes, seals and every heir. It cannot be undone.', bank: 'none', rows: [
     { icon: 'curse', name: 'YES, BURN THE LEGACY', sub: 'Start again with Cumhead', fn: fresh },
     { icon: 'elixir', name: 'NO, KEEP IT', fn: function () { closeMenu(); setMenuMode(true); } }], back: function () { closeMenu(); setMenuMode(true); } });
 });
-el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); el('over').hidden = true; setMenuMode(false); goTown(false); });
+el('overBtn').addEventListener('click', function () { sfx.init(); sfx.click(); openHeirs(); }); // straight on to choosing who goes next
 (function () {
   var b = el('mute');
   function paint() { b.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); b.setAttribute('aria-label', sfx.muted ? 'Sound off' : 'Sound on'); b.classList.toggle('off', sfx.muted); }

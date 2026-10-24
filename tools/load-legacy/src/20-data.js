@@ -66,7 +66,7 @@ var BOSSDEF = {
   sperm: { name: 'The Sperminator', area: 'city', hp: 1000, dmg: 22, sp: 'f_sperm_', sc: 1, w: 36, h: 76 },
   pig: { name: 'Brothers Load Piggy', area: 'dungeon', hp: 900, dmg: 24, sp: 'f_pig_', sc: 1, w: 80, h: 48 },
   blum: { name: 'Blumhead', area: 'castle', hp: 1300, dmg: 24, sp: 'f_blum_', sc: 1, w: 56, h: 64 },
-  ratking: { name: 'The Rat King', area: 'sewer', hp: 1100, dmg: 22, sp: 'f_ratking_', sc: 1, w: 80, h: 46 },
+  ratking: { name: 'Cult of the Rat', area: 'sewer', hp: 1100, dmg: 22, sp: 'f_ratking_', sc: 1, w: 80, h: 46 },
   boner: { name: 'The Big Boner', area: 'bone', hp: 1300, dmg: 24, sp: 'f_boner_', sc: 1, w: 50, h: 88 },
   hotload: { name: 'The Hot Load', area: 'furnace', hp: 1400, dmg: 26, sp: 'f_hotload_', sc: 1, w: 66, h: 66 },
   moon: { name: 'The Crimson Moon', area: 'moon', hp: 2000, dmg: 26, sp: 'f_moon_', sc: 1, w: 70, h: 76 },
