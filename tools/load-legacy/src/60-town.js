@@ -1,13 +1,14 @@
 /* =====================================================================================================
    TOWN: Clubhouse Row. Walk the street, step up to a building and press B. Empty lots can be bought.
-   The castle gate is at the far right end.
+   The castle gate is in the middle of the street, shops either side.
    ===================================================================================================== */
 var TOWN = null, BLD_X0 = 100, BLD_GAP = 124; // a tighter street than before
 function buildTown() {
-  var n = BUILDINGS.length, gateX = BLD_X0 + n * BLD_GAP + 90, W = Math.ceil((gateX + 220) / T), H = CH, tl = new Uint8Array(W * H);
+  // the castle gate stands in the middle of the street, with shops on both sides of it, so nothing is far away
+  var n = BUILDINGS.length, half = Math.ceil(n / 2), gateX = BLD_X0 + half * BLD_GAP + 70, last = gateX + 140 + (n - half - 1) * BLD_GAP, W = Math.ceil((last + 110) / T), H = CH, tl = new Uint8Array(W * H);
   for (var x = 0; x < W; x++) tl[(H - 1) * W + x] = TW;
   for (var y = 0; y < H; y++) { tl[y * W] = TW; tl[y * W + W - 1] = TW; }
-  var ents = BUILDINGS.map(function (b, i) { return { k: 'bld', b: b, x: BLD_X0 + i * BLD_GAP, y: 15 * T }; });
+  var ents = BUILDINGS.map(function (b, i) { return { k: 'bld', b: b, x: i < half ? BLD_X0 + i * BLD_GAP : gateX + 140 + (i - half) * BLD_GAP, y: 15 * T }; });
   ents.push({ k: 'gate', x: gateX, y: 15 * T });
   return { w: W, h: H, tiles: tl, ents: ents, town: true, gateX: gateX };
 }
@@ -19,10 +20,10 @@ function goTown(first) {
   clearRun(); RUN = null; G.mode = 'town'; G.lock = false; G.layer = null; L = TOWN = buildTown(); ST = townStats();
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = [];
   var cls = META.last || 'cumhead'; P = {}; RUN = null; newPlayer(); P.cls = cls; P.w = ST.small ? 10 : 12; P.h = ST.small ? 28 : 36;
-  P.x = first ? 60 : TOWN.gateX - 60; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
+  P.x = TOWN.gateX - 70; P.y = 15 * T; P.face = first ? 1 : -1; camSnapTown();
   G.banner = 2.6; G.bannerTxt = 'Clubhouse Row'; G.bannerSub = 'BANK  ' + fmtN(META.bank) + ' DROPS';
   music.play('town'); saveMeta();
-  if (!META.seenTown) { META.seenTown = 1; saveMeta(); toast('WALK RIGHT TO THE CASTLE GATE. SPEND DROPS IN TOWN BETWEEN HEIRS.'); }
+  if (!META.seenTown) { META.seenTown = 1; saveMeta(); toast('THE CASTLE GATE IS RIGHT HERE. SPEND DROPS IN TOWN BETWEEN HEIRS.'); }
 }
 function camSnapTown() { G.cam.x = clamp(P.x - VW / 2, 0, TOWN.w * T - VW); G.cam.y = 0; }
 function townNear() {

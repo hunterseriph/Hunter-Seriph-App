@@ -30,8 +30,9 @@ BREEDS = {
     'scout':  dict(name='Peeper',    skin=('#c4e070', '#8aa83a', '#4e6a1a'), brain=('#c8987a', '#94664e', '#5a3c2c'), eye='#ffe36a', ooze='#a6e83a', acc='#12040a'),
     'goldie': dict(name='Goldie',    skin=('#ffd870', '#c8962a', '#7a5a10'), brain=('#d89a7a', '#a8684e', '#643a2a'), eye='#8dff4a', ooze='#ffd040', acc='#3a2410'),
     'titan':  dict(name='Titan',     skin=('#8a8a9a', '#565466', '#2e2c3a'), brain=('#c07a6a', '#8a4a40', '#542a24'), eye='#ff3a2a', ooze='#ff5a90', acc='#2a1a1a'),
+    'blood':  dict(name='Bloodmoon', skin=('#5a4650', '#2e2228', '#150d10'), brain=('#ff3a44', '#c4121c', '#6a0a10'), eye='#ff2630', ooze='#ff2630', acc='#ff2630'),
 }
-ORDER = ['gloop', 'guard', 'ember', 'frost', 'volt', 'medic', 'leech', 'scout', 'goldie', 'titan']
+ORDER = ['gloop', 'guard', 'ember', 'frost', 'volt', 'medic', 'leech', 'scout', 'goldie', 'titan', 'blood']
 
 # ---------------------------------------------------------------- grid painting
 class Grid:
@@ -253,6 +254,16 @@ def creature(stage, breed, frame):
             g.line(base[0], base[1], base[0] - 2, base[1] - 3, 'horn', 0.9 if stage != 'baby' else 0.5)
             g.line(base[0] - 2, base[1] - 3, base[0] + (0 if side < 0 else 1), base[1] - 5, 'horn', 0.5)
         g.line(ex - 2, ey - 2, ex + 1, ey + 3, 'scar', 0.5)
+    elif breed == 'blood':  # the rare one: black and red, horns like a crescent moon, red spines down the back
+        for side in (-1, 1):
+            base = (hxc + side * 2 - 0.5, top + 1)
+            g.line(base[0], base[1], base[0] + side * 2, base[1] - 3, 'red', 0.6 if stage != 'baby' else 0.5)
+            g.line(base[0] + side * 2, base[1] - 3, base[0] + side * 1, base[1] - 5, 'red', 0.5)
+        for k in range(3 if stage == 'baby' else 4):  # spines
+            g.put(bk - 1 - k * 0.6, top + 3 + k * 2, 'red')
+        if stage != 'baby':
+            for k in range(3): g.put(bx - brx - 0.5 + k * 0.4, by - bry * 0.4 + k * 2 + bob, 'red')
+        g.put(ex - 2, ey + 2, 'red'); g.put(ex - 3, ey + 3, 'red'); g.put(ex - 2, ey + 3, 'red')  # a red crescent under the eye
     # ---- front arm, over everything
     sh2 = (bx + brx * 0.35 + (2 if stage == 'adult' else 0), by - bry * 0.5 + bob)
     arm(sh2, p['arms'][0] + (0.5 if frame == 'atk' else 0), True)
@@ -261,7 +272,7 @@ def creature(stage, breed, frame):
 def egg(breed, crack):
     """the egg he hatches from: cream with spots in his breed's ooze colour, cracking 0..3"""
     g = Grid(16, 18); B = BREEDS[breed]
-    g.ellipse(8, 10, 6.2, 7.6, 'bone')
+    g.ellipse(8, 10, 6.2, 7.6, 'skin' if breed == 'blood' else 'bone')  # the Bloodmoon egg is black
     for (x, y) in ((5, 7), (10, 6), (8, 12), (11, 13), (5, 13)): g.put(x, y, 'ooze'); g.put(x + 1, y, 'ooze')
     cracks = [[], [(8, 4), (9, 5), (8, 6)], [(8, 4), (9, 5), (8, 6), (7, 7), (8, 8), (10, 6), (11, 7)], [(8, 4), (9, 5), (8, 6), (7, 7), (8, 8), (10, 6), (11, 7), (6, 8), (5, 9), (12, 8), (9, 9)]]
     for (x, y) in cracks[crack]: g.put(x, y, 'mouth')

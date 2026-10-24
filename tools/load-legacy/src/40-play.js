@@ -13,9 +13,9 @@ function calcStats() {
   var c = CLASSES[RUN.cls], up = META.up, pw = RUN.powers, card = RUN.card, pv = RUN.provEff || {};
   var wpn = GEAR.weapon[META.gear.weapon] || GEAR.weapon[0], arm = GEAR.armour[META.gear.armour] || GEAR.armour[0], helm = GEAR.helm[META.gear.helm] || GEAR.helm[0];
   var s = {};
-  s.mhp = c.hp + (up.vit || 0) * 12 + (arm.hp || 0) + (pv.hp || 0) + cnt(pw, 'heart') * 25 + (card === 'blessed' ? 20 : 0);
+  s.mhp = (RUN.feastHp || 0) + c.hp + (up.vit || 0) * 12 + (arm.hp || 0) + (pv.hp || 0) + cnt(pw, 'heart') * 25 + (card === 'blessed' ? 20 : 0);
   if (card === 'glass') s.mhp *= 0.6; if (card === 'tiny') s.mhp *= 0.8; if (card === 'speed') s.mhp *= 0.85; s.mhp = Math.round(s.mhp);
-  var dm = 1 + (pv.dmgP || 0) + cnt(pw, 'thick') * 0.2 + (card === 'glass' ? 0.6 : 0); if (card === 'allin') dm *= 2;
+  var dm = 1 + (RUN.feastDmg || 0) + (pv.dmgP || 0) + cnt(pw, 'thick') * 0.2 + (card === 'glass' ? 0.6 : 0); if (card === 'allin') dm *= 2;
   s.dmg = (c.dmg + (up.str || 0) * 2 + (wpn.dmg || 0)) * dm;
   s.mmana = c.mana + (up.spi || 0) * 10 + (helm.mana || 0) + (pv.mana || 0);
   s.arm = Math.min(0.6, (up.arm || 0) * 0.03 + (arm.arm || 0) + cnt(pw, 'iron') * 0.08);
@@ -28,7 +28,9 @@ function calcStats() {
   s.manaRegen = 1.6 * (pv.manaRegen || 1) * (1 + 0.6 * cnt(pw, 'flow'));
   s.regen = pv.regen || 0; s.siphon = runeOn('siphon') ? 2 : 0;
   s.iframes = 1.0 + (RUN.cls === 'spermaid' ? 0.4 : 0) + (runeOn('grace') ? 0.5 : 0);
-  s.burn = !!pv.burn; s.boom = !!pv.boom; s.ward = !!pv.ward;
+  s.burn = !!pv.burn; s.boom = !!pv.boom || cnt(pw, 'volatile') > 0; s.ward = !!pv.ward;
+  s.thorns = cnt(pw, 'thorns'); s.magnet = cnt(pw, 'magnet'); s.snack = cnt(pw, 'snack') * 4; s.stompMul = 1 + cnt(pw, 'boots'); s.big = cnt(pw, 'bigshot'); s.echo = Math.min(0.75, cnt(pw, 'echo') * 0.25);
+  s.soul = cnt(pw, 'soul') * 10; s.berserk = cnt(pw, 'berserk') * 0.4; s.lucky = Math.min(0.5, cnt(pw, 'lucky') * 0.1); s.cold = Math.min(0.5, cnt(pw, 'cold') * 0.12); s.bubble = cnt(pw, 'bubble'); s.slayer = cnt(pw, 'slayer') * 0.35;
   s.takeMul = (card === 'allin' ? 2 : 1); s.foeDmg = (card === 'hard' ? 1.3 : 1) * (1 + 0.35 * META.ng); s.foeHp = (card === 'bigload' ? 1.5 : 1) * (1 + 0.6 * META.ng);
   s.grav = card === 'moon' ? 0.62 : 1; s.small = card === 'tiny' || RUN.cls === 'homunculus'; s.noHeal = card === 'vampnight';
   homStats(s);
@@ -124,6 +126,9 @@ function updatePlayer(dt) {
   if (P.inv > 0) P.inv -= dt; if (P.atkCd > 0) P.atkCd -= dt; if (P.attackT > 0) P.attackT -= dt; if (P.jumpStartT > 0) P.jumpStartT -= dt;
   if (P.ooze > 0) { P.ooze -= dt; P.oozeT -= dt; if (P.oozeT <= 0) { P.oozeT = 0.5; healP(4); } }
   if (homHatchTick(dt)) return;
+  homTick(dt);
+  if (P.echoT > 0) { P.echoT -= dt; if (P.echoT <= 0 && P.state === 'normal') { var cd0 = P.atkCd; attack(true); P.atkCd = cd0; } }
+  if (ST.bubble && !P.bubbleOn) { P.bubbleT = (P.bubbleT || 0) - dt; if (P.bubbleT <= 0) { P.bubbleOn = 1; } }
   if (P.state === 'dead') {
     P.vy = Math.min(TERM, P.vy + GRAV * dt); P.y += P.vy * dt; P.deadT += dt;
     if (P.deadT > 1.6 && G.mode === 'play') runOver(0);
@@ -149,6 +154,8 @@ function updatePlayer(dt) {
     var near = G.near;
     if (atkPressed) { if (near) useThing(near); else if (P.atkCd <= 0) attack(); }
     if (specPressed) special();
+    // Spermaid floats: hold jump while falling and she drifts down slowly, trailing bubbles
+    if (RUN.cls === 'spermaid' && input.j && !P.onGround && P.vy > 55) { P.vy = 55; P.floatT = (P.floatT || 0) + dt; if (Math.random() < 0.3) parts.push({ x: P.x + (Math.random() - 0.5) * 14, y: P.y - 6, vx: 0, vy: -40, life: 0.5, c: '#9adfff', spark: 0 }); }
     moveBody(P, dt, g);
     if (P.stand >= 0) crumble(P.stand);
     if (P.mover && P.onGround) P.x += P.mover.vx * dt;
@@ -171,8 +178,9 @@ function updatePlayer(dt) {
 function healP(n, quiet) { if (ST.noHeal && !quiet) return; var b = P.hp; P.hp = Math.min(ST.mhp, P.hp + n); if (P.hp > b && !quiet) pop(P.x, P.y - P.h - 6, '+' + Math.round(P.hp - b), '#7dff9a'); }
 function hurtP(dmg, srcx, by) {
   if (P.inv > 0 || P.state === 'dead' || P.ooze > 0) return;
+  if (P.bubbleOn) { P.bubbleOn = 0; P.bubbleT = 12; P.inv = 0.6; pop(P.x, P.y - 40, 'POP', '#9adfff'); sfx.splat(); poof(P.x, P.y - P.h / 2, 12, ['#9adfff', '#ffffff']); return; }
   if (ST.ward && RUN.wardRoom !== G.roomKey + (L.arena || '')) { RUN.wardRoom = G.roomKey + (L.arena || ''); P.inv = 0.6; pop(P.x, P.y - 40, 'WARDED', '#7dff9a'); sfx.click(); return; }
-  dmg = Math.max(1, Math.round(dmg * ST.foeDmg * ST.takeMul * (1 - ST.arm)));
+  dmg = Math.max(1, Math.round(dmg * ST.foeDmg * ST.takeMul * (1 - ST.arm) * (P.plates > 0 ? 0.25 : 1)));
   P.hp -= dmg; G.shake = Math.max(G.shake, 5); sfx.hurt(); pop(P.x, P.y - P.h - 4, '-' + dmg, '#ff5a60');
   P.state = 'hurt'; P.hurtT = 0.35; P.vy = -200; P.vx = (P.x < srcx ? -1 : 1) * 120; P.inv = ST.iframes; P.onGround = false;
   if (P.hp <= 0) {
@@ -181,13 +189,22 @@ function hurtP(dmg, srcx, by) {
     P.hp = 0; P.state = 'dead'; P.vy = -270; P.vx = 0; P.deadT = 0; RUN.by = by || 'the castle'; sfx.die(); clearRun();
   }
 }
-function dmgRoll() { var c = Math.random() < ST.crit; return { v: ST.dmg * (0.9 + Math.random() * 0.2) * (c ? 1.8 : 1), crit: c }; }
-function attack() {
+function dmgRoll(bonus) { var c = Math.random() < ST.crit + (bonus || 0); return { v: ST.dmg * (0.9 + Math.random() * 0.2) * (c ? 1.8 : 1), crit: c }; }
+function attack(echoed) {
+  var n0 = pshots.length; attack0();
+  for (var i = n0; i < pshots.length; i++) { var q = pshots[i]; if (ST.big) { if (q.r) q.r *= 1 + 0.4 * ST.big; if (q.rv) q.rv *= 1 + 0.4 * ST.big; if (q.reach) q.reach *= 1 + 0.25 * ST.big; q.m *= 1 + 0.1 * ST.big; q.bigS = 1 + 0.4 * ST.big; } }
+  if (!echoed && ST.echo && Math.random() < ST.echo) P.echoT = 0.13;
+}
+function attack0() {
   if (homOn()) { homAttack(); return; }
   var c = CLASSES[RUN.cls], cd = c.cd * ST.atkMul; P.atkCd = cd; P.attackT = 0.22;
   if (c.atk === 'shot') { sfx.shoot(); pshots.push({ k: 'shot', x: P.x + P.face * 12, y: P.y - P.h * 0.55, vx: P.face * 300, vy: 0, life: 0.55, r: 6, rv: 10, m: 1 }); }
-  else if (c.atk === 'whip') { sfx.whip(); pshots.push({ k: 'whip', x: P.x, y: P.y, life: 0.13, m: 1.15, hit: {} }); }
-  else if (c.atk === 'pie') { sfx.lob(); pshots.push({ k: 'pie', x: P.x + P.face * 12, y: P.y - P.h * 0.62, vx: P.face * 260, vy: 0, life: 0.32, r: 10, m: 1.5 }); }
+  else if (c.atk === 'whip') { // a three-hit combo: slap, slap, then a tail spin that throws a wave
+    P.combo = G.t - (P.lastAtk || -9) < 0.7 ? (P.combo || 0) + 1 : 0; P.lastAtk = G.t;
+    sfx.whip(); pshots.push({ k: 'whip', x: P.x, y: P.y, life: 0.13, m: 1.0, hit: {}, x2: P.x });
+    if (P.combo % 3 === 2) { P.spin = 0.32; sfx.splat(); pshots.push({ k: 'acid', look: 'wave', x: P.x + P.face * 14, y: P.y - 14, vx: P.face * 280, vy: 0, life: 0.55, r: 8, rv: 12, m: 1.1, pierce: 1, hit: {}, col: '#9adfff' }); P.atkCd = cd * 1.4; }
+  }
+  else if (c.atk === 'pie') { sfx.lob(); pshots.push({ k: 'pie', x: P.x + P.face * 12, y: P.y - P.h * 0.62, vx: P.face * 260, vy: 0, life: 0.32, r: 10, m: 1.0 }); }
   else { sfx.spit(); pshots.push({ k: 'acid', x: P.x + P.face * 8, y: P.y - P.h * 0.6, vx: P.face * 360, vy: 0, life: 0.5, r: 4, m: 0.7 }); }
 }
 function special() {
@@ -196,7 +213,7 @@ function special() {
   P.mana -= c.specCost; P.attackT = 0.3;
   if (homOn()) { homSpecial(); return; }
   if (c.spec === 'splash') { sfx.magic(); for (var i = 0; i < 8; i++) { var a = i / 8 * Math.PI * 2; pshots.push({ k: 'shot', x: P.x, y: P.y - P.h / 2, vx: Math.cos(a) * 280, vy: Math.sin(a) * 280, life: 0.6, r: 6, m: 1 }); } }
-  else if (c.spec === 'song') { sfx.magic(); fx.push({ k: 'ring', x: P.x, y: P.y - 20, age: 0, big: 1, c: '#ff9ad0' }); enemies.forEach(function (e) { e.stun = 3; }); bosses.forEach(function (b) { b.stun = Math.max(b.stun || 0, 0.8); }); healP(Math.round(ST.mhp * 0.12)); }
+  else if (c.spec === 'song') { sfx.magic(); fx.push({ k: 'ring', x: P.x, y: P.y - 20, age: 0, big: 1, c: '#ff9ad0' }); enemies.forEach(function (e) { e.stun = 3; }); bosses.forEach(function (b) { b.stun = Math.max(b.stun || 0, 0.8); }); healP(Math.round(ST.mhp * 0.12)); for (var nn = 0; nn < 10; nn++) { var na = nn / 10 * 6.283; pops.push({ x: P.x + Math.cos(na) * 30, y: P.y - 24 + Math.sin(na) * 18, t: nn % 2 ? '♪' : '♫', c: '#ff9ad0', age: 0 }); } }
   else if (c.spec === 'cat') { sfx.roar(); pshots.push({ k: 'cat', x: P.x, y: P.y, vx: P.face * 420, vy: 0, life: 3, m: 3, hit: {}, pass: 0, face: P.face }); }
   else { sfx.magic(); P.ooze = 3; P.oozeT = 0.5; fx.push({ k: 'ring', x: P.x, y: P.y - 14, age: 0, c: '#7dff3a' }); }
 }
@@ -206,7 +223,7 @@ function rsOf(k) { return RUN.rs[k] || (RUN.rs[k] = { k: {}, c: {}, d: {}, b: {}
 function enterRoom(k, from, at) {
   var prevArea = G.rm && !(L && L.arena) ? G.rm.area : null;
   G.rm = WORLD.rooms[k]; k = key2(G.rm.cx, G.rm.cy); G.roomKey = k; L = buildRoom(G.rm); G.lock = false; G.near = null; G.layer = null;
-  var rs = rsOf(k); rs.v = 1;
+  var rs = rsOf(k); if (ST.snack && rs.v !== 1) healP(ST.snack); rs.v = 1;
   spawnRoom(rs);
   // which screen of a big room we come in through
   var ox = from && from.cell ? (from.cell[0] - G.rm.cx) * CW * T : 0, oy = from && from.cell ? (from.cell[1] - G.rm.cy) * CH * T : 0;
@@ -331,9 +348,9 @@ function updateEnemies(dt) {
     if (P.state === 'dead' || e.ghost) continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, e.x - e.w / 2, e.y - e.h, e.x + e.w / 2, e.y)) {
       if (e.d.burst) { hurtE(e, 999, 'pop'); continue; }
-      if (P.vy > 30 && P.y - 6 < e.y - e.h + 8 && P.state === 'normal') { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5), 'stomp'); }
+      if (P.vy > 30 && P.y - 6 < e.y - e.h + 8 && P.state === 'normal') { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
       else if (P.ooze > 0) { if (!e.oozeHit || G.t - e.oozeHit > 0.5) { e.oozeHit = G.t; hurtE(e, ST.dmg * 0.6, 'ooze'); } }
-      else hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase());
+      else { if (ST.thorns && P.inv <= 0 && G.t - (e.thornT || -9) > 1) { e.thornT = G.t; hurtE(e, ST.dmg * 0.8 * ST.thorns, 'thorns'); } hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase()); }
     }
   }
   enemies = enemies.filter(function (q) { return q.alive; });
@@ -342,6 +359,8 @@ function stompBounce() { sfx.stomp(); P.vy = input.j ? -320 : -235; P.onGround =
 function hurtE(e, dmg, src) {
   if (!e.alive) return;
   var crit = false; if (src === 'hit' || src === 'stomp') { crit = Math.random() < ST.crit; if (crit) dmg *= 1.8; }
+  if (e.marked > G.t) dmg *= 1.5; // Peeper's Third Eye
+  if (src !== 'burn' && src !== 'poison') { if (ST.berserk && P.hp < ST.mhp * 0.4) dmg *= 1 + ST.berserk; if (ST.slayer && e.boss) dmg *= 1 + ST.slayer; if (ST.cold && !e.boss && Math.random() < ST.cold) e.stun = Math.max(e.stun || 0, 1.2); }
   dmg = Math.max(1, Math.round(dmg)); e.hp -= dmg; e.flash = 0.15;
   pop(e.x, e.y - e.h - 4, String(dmg) + (crit ? '!' : ''), crit ? '#ffe36a' : (src === 'poison' ? '#7dff3a' : src === 'burn' ? '#ffb040' : '#fff'));
   if (src !== 'burn' && src !== 'poison') {
@@ -358,7 +377,8 @@ function hurtE(e, dmg, src) {
     if (e.idx !== undefined && e.idx !== null && (typeof e.idx === 'string' || e.idx >= 0)) rsOf(G.roomKey).k[e.idx] = 1;
     if (e.d.burst) burstShards(e);
     spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
-    P.mana = Math.min(ST.mmana, P.mana + 4);
+    P.mana = Math.min(ST.mmana, P.mana + 4 + (ST.soul || 0));
+    if (ST.lucky && Math.random() < ST.lucky) { healP(Math.round(ST.mhp * 0.1)); pop(e.x, e.y - e.h - 12, 'LUCKY', '#7dff9a'); }
     if (RUN.cls === 'spermaid') healP(3);
     if (ST.boom) { fx.push({ k: 'ring', x: e.x, y: e.y - e.h / 2, age: 0, c: '#ffb040' }); enemies.forEach(function (o) { if (o.alive && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 50) hurtE(o, ST.dmg * 0.8, 'boom'); }); }
     if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; enemies.push(m); } }
@@ -377,7 +397,7 @@ function shotHits(s, x0, y0, x1, y1) {
 }
 function hitShot(s, e) {
   if (shieldBlock(s, e)) return;
-  var r = dmgRoll(); hurtE(e, r.v * s.m, 'hit');
+  var r = dmgRoll(s.crit); hurtE(e, r.v * s.m, 'hit');
   if (s.k === 'acid') e.poison = 3;
   homHit(s, e);
 }
@@ -386,6 +406,7 @@ function updateShots(dt) {
   for (var i = 0; i < pshots.length; i++) {
     var s = pshots[i]; s.life -= dt;
     if (s.k === 'claw') { var cx0 = P.face > 0 ? P.x : P.x - 52, cx1 = P.face > 0 ? P.x + 52 : P.x; shotHits(s, cx0, P.y - P.h - 4, cx1, P.y); continue; }
+    if (s.k === 'melee') { var mx0 = P.face > 0 ? P.x - (s.back || 0) : P.x - s.reach, mx1 = P.face > 0 ? P.x + s.reach : P.x + (s.back || 0); shotHits(s, mx0, P.y - s.h, mx1, P.y); continue; }
     if (s.k === 'whip') { var x0 = P.face > 0 ? P.x : P.x - 46, x1 = P.face > 0 ? P.x + 46 : P.x; shotHits(s, x0, P.y - 36, x1, P.y - 2); continue; }
     if (s.k === 'cat') {
       s.x += s.vx * dt; var gx = Math.floor(s.x / T);
@@ -394,13 +415,17 @@ function updateShots(dt) {
     }
     if (s.g) s.vy += s.g * dt; s.x += s.vx * dt; s.y += s.vy * dt;
     var tt = tileAt(s.x, s.y);
-    if (solidT(tt) || s.y > L.h * T) { if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.5); else poof(s.x, s.y, 4, ['#f1e7d0']); s.life = 0; continue; }
-    if (shotHits(s, s.x - s.r, s.y - (s.rv || s.r), s.x + s.r, s.y + (s.rv || s.r))) { if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.5); s.life = 0; }
+    if (s.ground && !solidT(tileAt(s.x, s.y + 10)) && tileAt(s.x, s.y + 10) !== TL) { s.life = 0; continue; } // shockwaves stop at a drop
+    if (solidT(tt) || s.y > L.h * T) {
+      if (s.bounce > 0 && s.vy > 0) { s.bounce--; s.y = Math.floor(s.y / T) * T - 1; s.vy = -Math.abs(s.vy) * 0.55; continue; }
+      if (s.boom) homBlast(s); else if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.5); else poof(s.x, s.y, 4, [s.col || '#f1e7d0']); s.life = 0; continue; }
+    if (shotHits(s, s.x - s.r, s.y - (s.rv || s.r), s.x + s.r, s.y + (s.rv || s.r))) { if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.4); if (!s.pierce) s.life = 0; }
     else if (s.k === 'pie' && s.life <= 0) poof(s.x, s.y, 8, ['#f1e7d0', '#fff6d8', '#c8903a']);
   }
   pshots = pshots.filter(function (q) { return q.life > 0; });
   for (i = 0; i < eshots.length; i++) {
-    var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt; b.x += b.vx * dt; b.y += b.vy * dt;
+    var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt;
+    if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } // swimmers home in b.x += b.vx * dt; b.y += b.vy * dt;
     if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? ['#7dff3a', '#3ab43a'] : ['#ff9a40', '#ff2630']); continue; }
     if (b.safe > 0) { b.safe -= dt; continue; }
     if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
@@ -428,7 +453,8 @@ function updateDrops(dt) {
     if (P.state !== 'dead' && (!d.fly || d.age > 0.35)) {
       var dx = d.x - P.x, dy = d.y - (P.y - P.h / 2);
       if (dx * dx + dy * dy < 17 * 17) { var v = d.val || dropVal(); RUN.drops += v; sfx.pick(G.t); homGain(2); if (d.room !== undefined) rsOf(G.roomKey).d[d.room] = 1; continue; }
-      if (dx * dx + dy * dy < 50 * 50 && d.fly && d.age > 0.6) { d.x -= dx * 3 * dt; d.y -= dy * 3 * dt; }
+      var mr = ST.magnet ? 50 + 70 * ST.magnet : 50;
+      if (dx * dx + dy * dy < mr * mr && (d.fly || ST.magnet) && d.age > 0.6) { d.x -= dx * 3 * dt; d.y -= dy * 3 * dt; }
     }
     keep.push(d);
   }
@@ -439,7 +465,7 @@ function findNear() {
   var best = null, bd = 1e9;
   L.ents.forEach(function (e) {
     var dx = Math.abs(e.x - P.x), dy = Math.abs(e.y - P.y), r = 0;
-    if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'shrine' && !rsOf(G.roomKey).prayed) r = 24; else if (e.k === 'gamble') r = 24; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
+    if (e.k === 'chest' && !e.open) r = 22; else if (e.k === 'shrine' && !rsOf(G.roomKey).prayed) r = 24; else if (e.k === 'portal') r = 22; else if (e.k === 'cell' && !rsOf(G.roomKey).freed) r = 26; else if (e.k === 'feast' && !rsOf(G.roomKey).ate) r = 40; else if (e.k === 'gamble' && !rsOf(G.roomKey).broke && !(e.spin > 0)) r = 24; else if (e.k === 'door') r = 26; else if (e.k === 'npc') r = 26; else if (e.k === 'altar' && !e.taken) r = 24; else return;
     if (dx < r && dy < 30 && dx < bd) { bd = dx; best = e; }
   });
   return best;
@@ -455,6 +481,9 @@ function useThing(e) {
   else if (e.k === 'npc') openMerchant(e);
   else if (e.k === 'altar') openAltar(e);
   else if (e.k === 'shrine') pray(e);
+  else if (e.k === 'portal') usePortal(e);
+  else if (e.k === 'cell') rescue(e);
+  else if (e.k === 'feast') openFeast(e);
   else if (e.k === 'gamble') openGamble(e);
 }
 function grantPower(id) {
@@ -523,7 +552,7 @@ function stepPlay(dt) {
   updatePlayer(dt);
   if (G.mode !== 'play') return;
   G.inFake = bodyInFake(); if (G.inFake && Math.random() < 0.7) parts.push({ x: P.x + (Math.random() - 0.5) * 22, y: P.y - Math.random() * P.h, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 40, life: 0.45, c: pick(['#ffe36a', '#fff6d8', '#d878ff', '#f1e7d0']), spark: 1 });
-  updateEnemies(dt); updateBosses(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
+  updateEnemies(dt); updateBosses(dt); moonFxStep(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
   var c = camTarget(); G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7); G.cam.y += (c.y - G.cam.y) * Math.min(1, dt * 6);
   if (G.sealDue) { G.sealDue.t -= dt; if (G.sealDue.t <= 0) { var sn = G.sealDue.n; G.sealDue = null; sealScene(sn); } }
   if (G.rm && G.rm.entry && G.rm.area === 'city' && !META.metSteve && !L.arena) { var stv = L.ents.filter(function (e) { return e.k === 'steve'; })[0]; if (stv && Math.abs(P.x - stv.x) < 90 && P.onGround) steveScene(stv); }

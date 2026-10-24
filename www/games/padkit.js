@@ -25,7 +25,7 @@
 
   /* ---------- the toggle for on-screen controls (one setting shared by every game) ---------- */
   function touchPref() { try { return localStorage.getItem(TOUCH_KEY); } catch (e) { return null; } }
-  function touchOn() { var p = touchPref(); if (p === 'on') return true; if (p === 'off') return false; return !!(window.matchMedia && matchMedia('(pointer:coarse)').matches) && !padSeen; }
+  function touchOn() { var p = touchPref(); if (p === 'on') return true; if (p === 'off') return false; return !padSeen; } // shown by default (they can be clicked with a mouse too); hidden once a controller is used
   var padSeen = false, tgl = null;
   function applyTouch() {
     var on = touchOn();
@@ -100,7 +100,7 @@
     var sc = cfg.menu ? cfg.menu() : null;
     if (sc) {
       releaseAll();
-      if (sc !== scope) { scope = sc; setFocus(null); var bs = buttons(sc), def = sc.querySelector('[data-pad-default]'); setFocus(def && visible(def) ? def : bs[0] || null); }
+      if (sc !== scope) { scope = sc; setFocus(null); var bs = buttons(sc), def = sc.querySelector('[data-pad-default]'); setFocus(def && visible(def) ? def : bs[0] || null); prev = s; return; } // a button that opened this menu must not also press inside it (B would close it straight away)
       else if (focus && !visible(focus)) { var bs2 = buttons(sc); setFocus(bs2[0] || null); }
       ['u', 'd', 'l', 'r'].forEach(function (k) {
         if (pressed(k)) { move(k); rep[k] = 0.38; }

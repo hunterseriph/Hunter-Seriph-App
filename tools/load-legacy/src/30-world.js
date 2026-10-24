@@ -48,18 +48,21 @@ function genWorld(seed) {
   var dd = add('dungeon', dnX, C.oy + C.h); link(cd, dd, 'd'); dd.entry = 1;
   var cc = add('city', C.ox + C.w, rtY); link(cr, cc, 'r'); cc.entry = 1;
   grow('roof', AREAS.roof.rooms); grow('city', AREAS.city.rooms); grow('dungeon', AREAS.dungeon.rooms);
+  // the secret area: not joined to the map at all. A hidden portal leads there.
+  var M = AREAS.moon, me = add('moon', M.ox, M.oy + 1 + Math.floor(r() * 2)); me.entry = 1; me.type = 'moongate'; grow('moon', M.rooms);
   // special rooms per area, chosen from the rooms furthest from the way in
-  AREAORDER.forEach(function (a) {
+  AREAORDER.concat(['moon']).forEach(function (a) {
     var list = Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (q) { return q.area === a; });
     var src = a === 'castle' ? start : list.filter(function (q) { return q.entry; })[0], dist = {}, qu = [src]; dist[key2(src.cx, src.cy)] = 0;
     while (qu.length) { var q = qu.shift(), dq = dist[key2(q.cx, q.cy)]; for (var d in q.ex) { var o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])]; if (o && dist[key2(o.cx, o.cy)] === undefined) { dist[key2(o.cx, o.cy)] = dq + 1; qu.push(o); } } }
     list.forEach(function (q) { q.dist = dist[key2(q.cx, q.cy)] || 0; });
-    var free = list.filter(function (q) { return q.type === 'normal' && !q.entry && q !== start; });
+    var free = list.filter(function (q) { return q.type === 'normal' && !q.entry && q !== start; }), moonA = a === 'moon';
     function deg(q) { return Object.keys(q.ex).length; }
     free.sort(function (p, q) { return (q.dist + (deg(q) === 1 ? 3 : 0)) - (p.dist + (deg(p) === 1 ? 3 : 0)); });
     var boss = free.shift(); if (boss) boss.type = 'bossdoor';
     shuffle(free, r);
-    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'], extra = ['powerup', 'challenge', 'trap', 'illusion', 'ambush', 'ambush']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); if (r() < 0.6) want.push(extra[0]); if (r() < 0.3) want.push(extra[1]);
+    if (moonA) { ['merchant', 'shrine', 'powerup', 'challenge', 'ambush'].forEach(function (t) { var q = free.shift(); if (q) q.type = t; }); return; }
+    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'], extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); if (r() < 0.75) want.push(extra[1]); if (r() < 0.45) want.push(extra[2]);
     want.forEach(function (t) { var q = free.shift(); if (q) q.type = t; });
     if (a === 'city') { var fq = free.filter(function (q) { return !q.ex.d; })[0] || free[0]; if (fq) { fq.type = 'flume'; free.splice(free.indexOf(fq), 1); } }
   });
@@ -77,9 +80,12 @@ function genWorld(seed) {
     for (var e2 in o.ex) if (e2 !== OPP[d]) R.exits.push({ d: e2, i: (wide ? (e2 === 'u' || e2 === 'd') : (e2 === 'l' || e2 === 'r')) ? 1 : 0 });
     rooms[key2(q.cx, q.cy)] = R; rooms[key2(o.cx, o.cy)] = R;
   });
+  // one illusion room somewhere hides the portal in its alcove
+  var ill = Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (q) { return q.type === 'illusion'; });
+  var pr = ill[Math.floor(r() * ill.length)]; if (pr) pr.portal = 1;
   var uniq = []; Object.keys(rooms).forEach(function (k) { if (uniq.indexOf(rooms[k]) < 0) uniq.push(rooms[k]); });
   uniq.forEach(function (q, i) { q.id = i; if (!q.exits) { q.exits = []; for (var d in q.ex) q.exits.push({ d: d, i: 0 }); } });
-  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy) };
+  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy), moonEntry: key2(me.cx, me.cy), portalFrom: pr ? key2(pr.cx, pr.cy) : null };
 }
 
 /* ---------- building one room's tiles and contents (deterministic per room) ---------- */
@@ -157,6 +163,28 @@ function buildRoom(rm) {
     RS(3, 11, 28, 15);
     [[5, 8, 9], [12, 16, 7], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 2) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
     nE = 2;
+  } else if (t === 'moongate') {
+    ents.push({ k: 'portal', x: cxp, y: 15 * T, back: 1 }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 0;
+  } else if (t === 'saws') {
+    // saw blades running back and forth on rails; a chest waits at the far end
+    var far = ex.r && !ex.l ? 3 : 28;
+    plat(5, 10, 10); plat(21, 26, 10); plat(13, 18, 7);
+    ents.push({ k: 'saw', x: 6 * T, x0: 6 * T, x1: 26 * T, y: 14 * T + 6, sp: 70 + 15 * A.tier, ph: 0 });
+    ents.push({ k: 'saw', x: 5 * T, x0: 5 * T, x1: 26 * T, y: 9 * T - 2, sp: 50 + 10 * A.tier, ph: 0.5 });
+    if (r() < 0.6) ents.push({ k: 'saw', x: 13 * T, x0: 13 * T, x1: 18 * T + 8, y: 6 * T - 2, sp: 40, ph: 0.25 });
+    ents.push({ k: 'chest', x: 16 * T, y: 7 * T, big: 1 }); nE = 1;
+  } else if (t === 'crumble') {
+    // a floor of spikes, and above it a long run of ledges that give way under you. Do not stop.
+    for (x = 5; x <= W - 6; x++) if (!res[14 * W + x] && G(x, 15) === TW) S(x, 14, TS);
+    for (x = 4; x <= W - 5; x++) if (G(x, 11) === TA && !res[11 * W + x]) { S(x, 11, TV); ents.push({ k: 'drop', x: x * T + 8, y: 11 * T - 10 }); }
+    RS(4, 8, W - 5, 11); plat(W - 5 < 27 ? 26 : 26, 28, 11);
+    ents.push({ k: 'chest', x: 27 * T + 8, y: 11 * T, big: 1 }); nE = 1 + Math.floor(A.tier / 2);
+  } else if (t === 'cell') {
+    // someone is locked in a cell. Break them out and they give you something for it.
+    ents.push({ k: 'cell', x: cxp, y: 15 * T, who: MERCH[Math.floor(r() * MERCH.length)] }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 2 + Math.floor(A.tier / 2);
+  } else if (t === 'feast') {
+    // a long table laid out. Eat one dish; the rest goes cold.
+    ents.push({ k: 'feast', x: cxp, y: 15 * T }); RS(cx0 - 5, 11, cx0 + 5, 14); nE = 1;
   } else if (t === 'shrine') {
     // a blood fountain: pray once to heal
     ents.push({ k: 'shrine', x: cxp, y: 15 * T }); RS(cx0 - 4, 9, cx0 + 4, 14); nE = 1;
@@ -178,13 +206,50 @@ function buildRoom(rm) {
     var ex0 = right ? mx0 - 5 : mx1 + 1, ex1 = right ? mx0 - 1 : mx1 + 5; for (x = ex0; x <= ex1; x++) if (G(x, 8) === TA) S(x, 8, TL);
     RS(ex0, 5, ex1, 8);
     var sx0 = right ? mx0 - 10 : mx1 + 6, sx1 = sx0 + 4; for (x = sx0; x <= sx1; x++) if (G(x, 11) === TA) S(x, 11, TL); RS(sx0, 8, sx1, 11);
-    ents.push({ k: 'chest', x: ((ax0 + ax1) / 2 | 0) * T + 8, y: 8 * T, big: 1, secret: 1 });
+    if (rm.portal) ents.push({ k: 'portal', x: ((ax0 + ax1) / 2 | 0) * T + 8, y: 8 * T });
+    else ents.push({ k: 'chest', x: ((ax0 + ax1) / 2 | 0) * T + 8, y: 8 * T, big: 1, secret: 1 });
     for (x = ax0; x <= ax1; x++) ents.push({ k: 'drop', x: x * T + 8, y: 7 * T - 2 });
     for (var fv = 0; fv < 3; fv++) { var fx = rn(4, 24), fy = rn(9, 11); if (free(fx, fy, fx + 3, fy)) { for (x = fx; x <= fx + 3; x++) S(x, fy, TV); RS(fx, fy - 2, fx + 3, fy); } }
     nE = 1 + Math.floor(A.tier / 2);
   } else if (t !== 'big') nE = 2 + Math.floor(A.tier / 2) + (r() < 0.5 ? 1 : 0);
+  // plain rooms come in several shapes, so the castle does not feel samey
+  var style = 'classic';
+  if (t === 'normal') { var sr = r(); style = sr < 0.34 ? 'classic' : sr < 0.47 ? 'pit' : sr < 0.6 ? 'stairs' : sr < 0.73 ? 'pillars' : sr < 0.86 ? 'tower' : 'bridge'; }
+  if (style !== 'classic' && !roomStyle(style)) style = 'classic';
+  rm.style = style;
+  function roomStyle(st) {
+    var ok = false, i, bx, bh, h;
+    if (st === 'pit') { // spikes in the middle of the floor, ledges across
+      var nsp = 0; for (x = 11; x <= 20; x++) if (!res[14 * W + x] && G(x, 14) === TA && G(x, 15) === TW) { S(x, 14, TS); nsp++; }
+      if (nsp < 4) return false; RS(10, 12, 21, 14);
+      if (free(5, 9, 10, 11)) plat(6, 10, 11); if (free(21, 9, 26, 11)) plat(21, 25, 11); if (free(13, 6, 18, 8)) plat(14, 17, 8); return true;
+    }
+    if (st === 'stairs') { // a staircase of blocks up to a high ledge
+      var dirS = r() < 0.5 ? 1 : -1;
+      for (i = 0; i < 5; i++) { bx = dirS > 0 ? 6 + i * 4 : W - 10 - i * 4; h = i + 1; if (!free(bx, 15 - h - 2, bx + 3, 14)) break; for (y = 15 - h; y <= 14; y++) for (x = bx; x < bx + 4; x++) S(x, y, TW); RS(bx, 15 - h - 2, bx + 3, 14); ok = true; }
+      if (i >= 3) { var lx = dirS > 0 ? Math.min(W - 8, 6 + i * 4) : Math.max(2, W - 10 - i * 4 - 2), ly = 15 - i - 3; if (free(lx, ly - 2, lx + 5, ly)) plat(lx, lx + 5, ly); }
+      return ok && i >= 3;
+    }
+    if (st === 'pillars') { // tall stone pillars; their tops are the platforms
+      [6, 12, 19, 25].forEach(function (px) { var ph = rn(3, 6); if (free(px, 15 - ph - 2, px + 1, 14)) { for (y = 15 - ph; y <= 14; y++) { S(px, y, TW); S(px + 1, y, TW); } RS(px - 1, 15 - ph - 2, px + 2, 14); ok = true; } });
+      if (ok && free(13, 4, 18, 6)) plat(14, 17, 6); return ok;
+    }
+    if (st === 'tower') { // a column in the middle with ledges climbing round it
+      if (!free(14, 5, 17, 14)) return false;
+      for (y = 6; y <= 14; y++) for (x = 15; x <= 16; x++) S(x, y, TW); RS(13, 5, 18, 14);
+      if (free(9, 10, 14, 12)) plat(10, 14, 12); if (free(17, 7, 22, 9)) plat(17, 21, 9); if (free(9, 3, 14, 5)) plat(10, 14, 5); return true;
+    }
+    if (st === 'bridge') { // a long high walkway across the room, broken in the middle
+      var nb2 = 0; for (x = 4; x <= W - 5; x++) if ((x < 14 || x > 17) && G(x, 9) === TA && !res[9 * W + x]) { S(x, 9, TL); nb2++; }
+      if (nb2 < 12) return false; RS(4, 6, W - 5, 9);
+      if (free(5, 11, 9, 13)) plat(5, 8, 12); if (free(W - 9, 11, W - 5, 13)) plat(W - 8, W - 5, 12);
+      var ns3 = rn(1, 2); for (var si3 = 0; si3 < ns3; si3++) { var sx3 = rn(8, 22); if (free(sx3, 13, sx3 + 1, 14) && G(sx3, 15) === TW) { S(sx3, 14, TS); S(sx3 + 1, 14, TS); RS(sx3, 13, sx3 + 1, 14); } }
+      return true;
+    }
+    return false;
+  }
   // general features for rooms that fight
-  if (t === 'normal' || t === 'illusion' || t === 'challenge' || t === 'ambush') {
+  if ((t === 'normal' && style === 'classic') || t === 'illusion' || t === 'challenge' || t === 'ambush') {
     var nb = t === 'challenge' || t === 'ambush' ? 1 : rn(0, 3);
     for (var bi = 0; bi < nb; bi++) { var bw = rn(2, 4), bh = rn(1, 2) + (r() < 0.15 ? 1 : 0), bx = rn(4, 27 - bw); if (free(bx, 15 - bh, bx + bw - 1, 14) && free(bx, 15 - bh - 2, bx + bw - 1, 15 - bh - 1)) { for (y = 15 - bh; y <= 14; y++) for (x = bx; x < bx + bw; x++) S(x, y, TW); RS(bx, 15 - bh - 2, bx + bw - 1, 14); } }
     var np = t === 'challenge' || t === 'ambush' ? 0 : rn(2, 4);

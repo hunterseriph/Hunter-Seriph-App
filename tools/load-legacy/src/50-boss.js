@@ -10,6 +10,7 @@ function openDoor(e) {
     if (n < 4) { sfx.lock(); toast('THE BLUMHEAD DOOR  ·  SEALS BROKEN ' + n + '/4'); return; }
     sfx.door(); enterArena('blum'); return;
   }
+  if (e.boss === 'moon') { if (RUN.moonDown) { sfx.click(); toast('THE CRIMSON MOON IS DARK. FOR THIS HEIR.'); return; } sfx.door(); enterArena('moon'); return; }
   var area = BOSSDEF[e.boss].area;
   if (META.bosses[area]) { sfx.click(); toast(BOSSDEF[e.boss].name.toUpperCase() + ' IS DEAD. ITS SEAL IS BROKEN.'); return; }
   sfx.door(); enterArena(e.boss);
@@ -18,27 +19,33 @@ function enterArena(id) {
   G.retKey = G.roomKey; L = buildArena(id); G.lock = true; G.layer = null; G.near = null; G.winT = 0;
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {};
   P.x = 3 * T; P.y = 15 * T; P.vx = 0; P.vy = 0; P.face = 1; camSnap();
-  G.superDue = id === 'blum' && META.blumWins >= 5;
+  G.superDue = id === 'blum' && META.blumWins >= 5; G.broSpawned = 0; MOONFX = []; G.eclipse = 0;
   spawnBoss(id);
   G.banner = 0; bossIntro(id);
   music.play(id === 'blum2' ? 'super' : id === 'blum' ? 'blum' : 'boss'); saveRun();
 }
 function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.ents.filter(function (e) { return e.k === 'door'; })[0]; if (dr) { P.x = dr.x + 34; P.y = 15 * T; camSnap(); } }
 function mkBoss(id, x, y, hpMul) {
-  var d = BOSSDEF[id], hp = Math.round(d.hp * (hpMul || 1) * (1 + 0.6 * META.ng) * (RUN.card === 'bigload' ? 1.5 : 1));
+  // bosses keep up with how strong the heir is, so a fight never melts in seconds
+  var d = BOSSDEF[id], pw = Math.max(1, Math.pow(ST.dmg / Math.max(1, CLASSES[RUN.cls].dmg), 0.7));
+  var hp = Math.round(d.hp * (hpMul || 1) * pw * (1 + 0.6 * META.ng) * (RUN.card === 'bigload' ? 1.5 : 1));
   return { boss: true, id: id, d: d, x: x, y: y, vx: 0, vy: 0, w: d.w, h: d.h, hp: hp, mhp: hp, dmg: d.dmg * (1 + 0.35 * META.ng), face: -1, st: 'intro', t: 0, cd: 1.6, flash: 0, stun: 0, alive: true, burn: 0, poison: 0, ph: 1 };
 }
 function spawnBoss(id) {
   var W = L.w * T;
   if (id === 'demon') { for (var i = 0; i < 4; i++) { var b = mkBoss('demon', W / 2, 120); b.slot = i; b.fly = true; b.cd = 1.5 + i * 0.9; bosses.push(b); } }
+  else if (id === 'moon') { var mb = mkBoss('moon', W / 2, 110); mb.fly = true; bosses.push(mb); }
   else if (id === 'blum' || id === 'blum2') { var bb = mkBoss(id, W - 200, 150); bb.fly = true; bosses.push(bb); }
   else { var b2 = mkBoss(id, W - 160, 15 * T); bosses.push(b2); }
   G.bossGroup = id;
 }
 function bossDown(b) {
   sfx.kill(); poof(b.x, b.y - b.h / 2, 30, ['#ff2630', '#ffe36a', '#f1e7d0', '#b3121c']); G.shake = 10;
-  if (b.id === 'cowpig') { G.banner = 1.4; G.bannerTxt = 'ONE BROTHER DOWN'; G.bannerSub = ''; return; }
-  var left = bosses.filter(function (q) { return q.alive && q.id !== 'cowpig'; }).length;
+  // Brothers Load: both brothers have to go down. If the big one falls before his brother turns up, the brother turns up anyway.
+  if (b.id === 'pig' && !G.broSpawned) { G.broSpawned = 1; brother(); }
+  var left = bosses.filter(function (q) { return q.alive; }).length;
+  if ((b.id === 'cowpig' || b.id === 'pig') && left > 0) { G.banner = 1.4; G.bannerTxt = 'ONE BROTHER DOWN'; G.bannerSub = 'NOW THE OTHER ONE'; return; }
+  if (b.id === 'cowpig') b = { id: 'pig', d: BOSSDEF.pig, x: b.x, y: b.y, h: b.h };
   if (b.id === 'demon' && left > 0) { G.banner = 1.2; G.bannerTxt = left + ' LEFT'; G.bannerSub = ''; bosses.forEach(function (q) { if (q.alive) q.rage = (q.rage || 0) + 1; }); return; }
   if (left > 0) return;
   bosses.forEach(function (q) { if (q.alive) { q.alive = false; poof(q.x, q.y - q.h / 2, 20, ['#ff2630', '#f1e7d0']); } });
@@ -54,6 +61,7 @@ function bossDown(b) {
     return;
   }
   if (b.id === 'blum2') { META.superWins++; saveMeta(); G.banner = 3.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = 'THE LOAD IS LIFTED'; G.winT = 4; G.winKind = 2; sfx.goal(); return; }
+  if (b.id === 'moon') { moonDown(b); return; }
   var area = BOSSDEF[b.id].area; META.bosses[area] = 1; saveMeta();
   G.lock = false; G.layer = null; sfx.goal(); G.banner = 3; G.bannerTxt = b.d.name.toUpperCase() + ' DEFEATED'; G.bannerSub = 'SEAL ' + sealCount() + ' OF 4 BROKEN'; saveRun();
   G.sealDue = { n: sealCount(), t: 1.8 };
@@ -72,14 +80,15 @@ function updateBosses(dt) {
     var b = bosses[i]; if (!b.alive) continue; b.t += dt; if (b.flash > 0) b.flash -= dt;
     if (b.burn > 0) { b.burnT = (b.burnT || 0) - dt; if (b.burnT <= 0) { b.burnT = 0.5; b.burn--; hurtE(b, Math.max(1, ST.dmg * 0.25), 'burn'); if (!b.alive) continue; } }
     if (b.poison > 0) { b.poisT = (b.poisT || 0) - dt; if (b.poisT <= 0) { b.poisT = 0.5; b.poison--; hurtE(b, Math.max(1, ST.dmg * 0.3), 'poison'); if (!b.alive) continue; } }
-    var ph = b.hp < b.mhp * 0.5 ? 2 : 1; if (ph !== b.ph) { b.ph = ph; if (b.id !== 'demon') { G.banner = 1.4; G.bannerTxt = 'ENRAGED'; G.bannerSub = ''; sfx.roar(); } if (b.id === 'pig') brother(); }
+    var ph = b.hp < b.mhp * 0.5 ? 2 : 1; if (ph !== b.ph) { b.ph = ph; if (b.id !== 'demon') { G.banner = 1.4; G.bannerTxt = 'ENRAGED'; G.bannerSub = ''; sfx.roar(); } if (b.id === 'pig' && !G.broSpawned) { G.broSpawned = 1; brother(); } }
     if (b.stun > 0) { b.stun -= dt; if (!b.fly) moveBody(b, dt, GRAV); continue; }
     if (b.st === 'intro') { b.cd -= dt; if (!b.fly) moveBody(b, dt, GRAV); if (b.cd <= 0) { b.st = 'idle'; b.cd = 0.6; } continue; }
+    if (b.hp < b.mhp * 0.25) { if (!b.fury) { b.fury = 1; if (b.id !== 'demon') { G.banner = 1.4; G.bannerTxt = 'DESPERATE'; G.bannerSub = 'IT FIGHTS FASTER'; sfx.roar(); G.shake = 8; } } if (b.cd > 0) b.cd -= dt * 0.6; }
     var fn = BRAIN[b.id]; if (fn) fn(b, dt, W, ph);
     b.x = clamp(b.x, b.w / 2 + 16, W - b.w / 2 - 16);
     if (P.state === 'dead') continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.w / 2 + 4, b.y - b.h + 4, b.x + b.w / 2 - 4, b.y)) {
-      if (P.vy > 30 && P.y - 8 < b.y - b.h + 12 && P.state === 'normal') { stompBounce(); if (!b.stompT || G.t - b.stompT > 0.3) { b.stompT = G.t; hurtE(b, ST.dmg * 2, 'stomp'); } }
+      if (P.vy > 30 && P.y - 8 < b.y - b.h + 12 && P.state === 'normal') { stompBounce(); if (!b.stompT || G.t - b.stompT > 0.5) { b.stompT = G.t; hurtE(b, ST.dmg * 1.3, 'stomp'); } }
       else if (P.ooze > 0) { if (!b.oozeHit || G.t - b.oozeHit > 0.5) { b.oozeHit = G.t; hurtE(b, ST.dmg * 0.6, 'ooze'); } }
       else hurtP(b.dmg, b.x, b.d.name);
     }
@@ -90,10 +99,10 @@ function towardP(b) { return P.x < b.x ? -1 : 1; }
 var BRAIN = {
   beast: function (b, dt, W, ph) {
     var f = towardP(b), sp = ph === 2 ? 1.35 : 1;
-    if (b.st === 'idle') { b.face = f; b.vx = f * 70 * sp; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'charge', 'howl']; b.nx = o[Math.floor(Math.random() * o.length)]; if (b.nx === 'howl' && enemies.length >= 3) b.nx = 'leap'; b.st = 'tell'; b.t2 = 0.55; } }
-    else if (b.st === 'tell') { b.vx = 0; b.face = f; b.t2 -= dt; if (b.t2 <= 0) { if (b.nx === 'charge') { b.st = 'charge'; sfx.roar(); } else if (b.nx === 'leap') { b.st = 'air'; b.vy = -430; b.vx = clamp((P.x - b.x) * 1.1, -260, 260); } else { b.st = 'howl'; b.t2 = 0.9; sfx.roar(); for (var k = 0; k < 2; k++) enemies.push(mkEnemy('bat', b.x + (k ? 40 : -40), b.y - 70, -1)); } } }
+    if (b.st === 'idle') { b.face = f; b.vx = f * 70 * sp; b.cd -= dt; if (b.cd <= 0) { var o = ['charge', 'leap', 'charge', 'howl']; if (Math.abs(P.x - b.x) < 100) o = ['swipe', 'swipe', 'leap']; b.nx = o[Math.floor(Math.random() * o.length)]; if (b.nx === 'howl' && enemies.length >= 3) b.nx = 'leap'; b.st = 'tell'; b.t2 = b.nx === 'swipe' ? 0.4 : 0.55; } }
+    else if (b.st === 'tell') { b.vx = 0; b.face = f; b.t2 -= dt; if (b.t2 <= 0) { if (b.nx === 'charge') { b.st = 'charge'; sfx.roar(); } else if (b.nx === 'leap') { b.st = 'air'; b.vy = -430; b.vx = clamp((P.x - b.x) * 1.1, -260, 260); } else if (b.nx === 'swipe') { b.st = 'swipe'; b.t2 = 0.25; sfx.whip(); var sx0 = b.face > 0 ? b.x : b.x - 80, sx1 = b.face > 0 ? b.x + 80 : b.x; fx.push({ k: 'ring', x: b.x + b.face * 40, y: b.y - 20, age: 0, c: '#ff2630' }); if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, sx0, b.y - 50, sx1, b.y)) hurtP(b.dmg * 1.1, b.x, 'the Beast\'s claws'); } else { b.st = 'howl'; b.t2 = 0.9; sfx.roar(); for (var k = 0; k < 2; k++) enemies.push(mkEnemy(ph === 2 ? 'ghoul' : 'bat', b.x + (k ? 40 : -40), ph === 2 ? b.y : b.y - 70, -1)); } } }
     else if (b.st === 'charge') { b.vx = b.face * 260 * sp; if (b.hitWall || b.x <= b.w / 2 + 18 || b.x >= W - b.w / 2 - 18) { b.st = 'stun'; b.t2 = 0.8; G.shake = 8; sfx.land(); } }
-    else if (b.st === 'stun' || b.st === 'howl') { b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.st = 'idle'; b.cd = (ph === 2 ? 0.9 : 1.4); } }
+    else if (b.st === 'stun' || b.st === 'howl' || b.st === 'swipe') { b.vx = 0; b.t2 -= dt; if (b.t2 <= 0) { b.st = 'idle'; b.cd = (ph === 2 ? 0.9 : 1.4); } }
     var wasG = b.onGround; moveBody(b, dt, GRAV);
     if (b.st === 'air' && b.onGround && !wasG) { b.st = 'idle'; b.cd = 1.2; G.shake = 9; sfx.land(); waves.push({ x: b.x - 30, y: b.y, dir: -1, life: 2, dmg: b.dmg * 0.8, by: 'the Beast' }, { x: b.x + 30, y: b.y, dir: 1, life: 2, dmg: b.dmg * 0.8, by: 'the Beast' }); }
   },
@@ -104,15 +113,16 @@ var BRAIN = {
       if (b.cd <= 0) { if (Math.random() < 0.5) { b.st = 'dive'; b.tx = P.x; b.ty = P.y - 8; b.t2 = 1.2; sfx.roar(); } else { b.cd = 2.2 - rage * 0.3; var a = Math.atan2((P.y - 18) - (b.y - 15), P.x - b.x); bshot(b.x, b.y - 15, a, 165, b.dmg * 0.8, 'fire', 'a semen demon'); if (rage >= 2) { bshot(b.x, b.y - 15, a - 0.3, 165, b.dmg * 0.8); bshot(b.x, b.y - 15, a + 0.3, 165, b.dmg * 0.8); } sfx.fire(); } }
     } else if (b.st === 'dive') {
       b.x += clamp(b.tx - b.x, -280 * dt, 280 * dt); b.y += clamp(b.ty - b.y, -280 * dt, 280 * dt); b.t2 -= dt; b.face = b.tx > b.x ? 1 : -1;
-      if (b.t2 <= 0 || (Math.abs(b.tx - b.x) < 4 && Math.abs(b.ty - b.y) < 4)) { b.st = 'idle'; b.cd = 2.6 - rage * 0.35 + Math.random(); }
+      if (b.t2 <= 0 || (Math.abs(b.tx - b.x) < 4 && Math.abs(b.ty - b.y) < 4)) { b.st = 'idle'; b.cd = 2.2 - rage * 0.35 + Math.random(); if (rage >= 1) { for (var q = 0; q < 3 + rage; q++) bshot(b.x, b.y - 15, -Math.PI / 2 - 0.9 + q * 1.8 / (2 + rage), 150, b.dmg * 0.6, 'fire', 'a semen demon'); sfx.fire(); } }
     }
   },
   sperm: function (b, dt, W, ph) {
     var f = towardP(b), dist = Math.abs(P.x - b.x);
-    if (b.st === 'idle') { b.face = f; b.vx = dist > 190 ? f * 55 : (dist < 110 ? -f * 45 : 0); b.cd -= dt; if (b.cd <= 0) { var o = ph === 2 ? ['laser', 'missile', 'dash', 'laser'] : ['laser', 'missile', 'laser']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
+    if (b.st === 'idle') { b.face = f; b.vx = dist > 190 ? f * 55 : (dist < 110 ? -f * 45 : 0); b.cd -= dt; if (b.cd <= 0) { var o = ph === 2 ? ['laser', 'missile', 'dash', 'swarm', 'laser'] : ['laser', 'missile', 'laser', 'swarm']; b.nx = o[Math.floor(Math.random() * o.length)]; b.st = 'tell'; b.t2 = 0.5; } }
     else if (b.st === 'tell') { b.vx = 0; b.face = f; b.t2 -= dt; if (b.t2 <= 0) { b.st = b.nx; b.n = 0; b.t2 = 0; if (b.nx === 'dash') { b.t2 = 0.7; sfx.roar(); } } }
     else if (b.st === 'laser') { b.t2 -= dt; if (b.t2 <= 0) { b.t2 = 0.22; b.n++; eshots.push({ x: b.x + b.face * 18, y: b.y - 50 + (b.n % 2) * 26, vx: b.face * 300, vy: 0, life: 4, r: 4, dmg: b.dmg * 0.7, k: 'laser', by: 'the Sperminator' }); sfx.shoot(); if (b.n >= (ph === 2 ? 6 : 4)) { b.st = 'idle'; b.cd = 1.2; } } }
     else if (b.st === 'missile') { b.t2 -= dt; if (b.t2 <= 0) { b.t2 = 0.35; b.n++; var tx = P.x + (Math.random() - 0.5) * 80, tt = 1.1, vx = (tx - b.x) / tt, vy = -(0.5 * 520 * tt) ; eshots.push({ x: b.x, y: b.y - 70, vx: vx, vy: vy + ((P.y - (b.y - 70)) / tt), g: 520, life: 3, r: 6, dmg: b.dmg * 0.8, k: 'big', by: 'a Sperminator missile' }); sfx.lob(); if (b.n >= 3) { b.st = 'idle'; b.cd = 1.3; } } }
+    else if (b.st === 'swarm') { b.t2 -= dt; if (b.t2 <= 0) { b.t2 = 0.16; b.n++; eshots.push({ x: b.x, y: b.y - 60, vx: (Math.random() - 0.5) * 200, vy: -160, life: 3, r: 4, dmg: b.dmg * 0.5, k: 'bolt', home: 1, by: 'a Sperminator swimmer' }); sfx.spit(); if (b.n >= (ph === 2 ? 7 : 5)) { b.st = 'idle'; b.cd = 1.4; } } }
     else if (b.st === 'dash') { b.vx = b.face * 330; b.t2 -= dt; if (b.t2 <= 0 || b.hitWall) { b.st = 'idle'; b.cd = 1; b.vx = 0; } }
     moveBody(b, dt, GRAV);
   },

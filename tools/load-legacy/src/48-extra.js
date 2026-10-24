@@ -90,10 +90,10 @@ function pray(e) {
 }
 function gambleCost(rs) { return Math.round((40 + 25 * tierOf()) * Math.pow(1.5, rs.pulls || 0)); }
 function openGamble(e) {
-  var rs = rsOf(G.roomKey);
-  openMenu({ title: e.park ? "Steve's Prize Wheel" : 'The Cursed Slot', note: 'Pay to play. The house usually wins.', pic: null, bank: 'run', rebuild: function () {
-    var c = gambleCost(rs);
-    return [{ icon: 'coin', name: e.park ? 'SPIN THE WHEEL' : 'PULL THE LEVER', sub: 'A powerup, a jackpot, nothing at all, or a nasty surprise', price: fmtN(c), cls: 'sec', fn: function () { if (spend(c, true)) { rs.pulls = (rs.pulls || 0) + 1; closeMenu(); gambleSpin(e, c); } } }];
+  var rs = rsOf(G.roomKey); if (rs.broke) return;
+  openMenu({ title: e.park ? "Steve's Prize Wheel" : 'The Cursed Slot', note: '', pic: null, bank: 'run', rebuild: function () {
+    var c = gambleCost(rs), left = 3 - (rs.pulls || 0);
+    return { note: 'Pay to play. The house usually wins. It is rattling: ' + left + (left === 1 ? ' go' : ' goes') + ' left in it.', rows: [{ icon: 'coin', name: e.park ? 'SPIN THE WHEEL' : 'PULL THE LEVER', sub: 'A powerup, a jackpot, nothing at all, or a nasty surprise', price: fmtN(c), cls: 'sec', fn: function () { if (spend(c, true)) { rs.pulls = (rs.pulls || 0) + 1; closeMenu(); gambleSpin(e, c); } } }] };
   } });
 }
 function gambleSpin(e, cost) {
@@ -104,8 +104,16 @@ function gambleSpin(e, cost) {
     else if (r < 0.58) { var win = Math.round(cost * 2.2); RUN.drops += win; sfx.goal(); spill(e.x, e.y - 40, 10); G.banner = 1.8; G.bannerTxt = 'JACKPOT'; G.bannerSub = '+' + fmtN(win) + ' DROPS'; }
     else if (r < 0.85) { sfx.no(); G.banner = 1.6; G.bannerTxt = 'NOTHING'; G.bannerSub = 'THE HOUSE WINS'; }
     else { var hurt = Math.round(ST.mhp * 0.15); P.hp = Math.max(1, P.hp - hurt); sfx.hurt(); G.shake = 6; pop(P.x, P.y - P.h - 4, '-' + hurt, '#ff5a60'); G.banner = 1.6; G.bannerTxt = 'CURSED'; G.bannerSub = 'IT BIT YOU'; }
+    if ((rsOf(G.roomKey).pulls || 0) >= 3) gambleBoom(e);
     saveRun();
   };
+}
+/* three goes and the machine blows itself to bits */
+function gambleBoom(e) {
+  var rs = rsOf(G.roomKey); rs.broke = 1; e.boomT = 0.6; G.shake = 12; sfx.roar(); sfx.splat();
+  fx.push({ k: 'ring', x: e.x, y: e.y - 24, age: 0, big: 1, c: '#ffb040' });
+  poof(e.x, e.y - 24, 40, ['#ffb040', '#ff2630', '#ffe36a', '#3a2a2a', '#12040a']); spill(e.x, e.y - 30, 6);
+  G.banner = 1.8; G.bannerTxt = 'KABOOM'; G.bannerSub = e.park ? 'THE WHEEL FLEW OFF' : 'THE MACHINE IS DEAD';
 }
 function startAmbush(rs) {
   rs.amb = 1; G.chal = { wave: 0, wait: 0.7, amb: 1 }; G.lock = true; G.layer = null; lockExits(true); sfx.lock(); G.shake = 6;
@@ -119,6 +127,21 @@ function ambushStep(dt) {
   G.chal.wave++; G.chal.wait = 1; spawnWave(2 + tierOf() + G.chal.wave - 1);
 }
 
+function rescue(e) { // break the lock: they thank you with a powerup or a bag of drops
+  var rs = rsOf(G.roomKey); rs.freed = 1; sfx.door(); sfx.oneup(); poof(e.x, e.y - 20, 20, ['#a6968f', '#ffe36a', '#f1e7d0']);
+  var nm = MERCHNAME[e.who] || 'A prisoner';
+  if (Math.random() < 0.55) { var pw = shuffle(POWERS.slice())[0]; grantPower(pw.id); G.bannerTxt = nm.toUpperCase() + ' IS FREE'; G.bannerSub = 'THEY GIVE YOU ' + pw.name.toUpperCase(); }
+  else { var v = 80 + 60 * tierOf(); RUN.drops += v; spill(e.x, e.y - 30, 12); G.banner = 2; G.bannerTxt = nm.toUpperCase() + ' IS FREE'; G.bannerSub = 'THEY GIVE YOU ' + v + ' DROPS'; }
+  cutPlay({ focus: { x: e.x }, lines: [{ who: nm, say: pick(['YOU CAME! I THOUGHT I WAS DONE FOR.', 'FINALLY. THE FOOD IN HERE IS AWFUL.', 'BLESS YOU, HEIR. TAKE THIS.', 'I OWE YOU ONE. NO, TWO.']), col: '#ffe36a' }] });
+  saveRun();
+}
+function openFeast(e) {
+  var rs = rsOf(G.roomKey);
+  openMenu({ title: 'The Long Table', note: 'Eat one dish. The rest goes cold.', pic: null, bank: 'none', rows: [
+    { icon: 'stew', name: 'HEARTY STEW', sub: 'Heal 45% of your HP', price: 'EAT', cls: 'sec', fn: function () { rs.ate = 1; closeMenu(); var k = ST.noHeal; ST.noHeal = false; healP(Math.round(ST.mhp * 0.45)); ST.noHeal = k; sfx.oneup(); saveRun(); } },
+    { icon: 'cpie', name: 'IRON PIE', sub: '+20 max HP for the rest of the run', price: 'EAT', cls: 'sec', fn: function () { rs.ate = 1; closeMenu(); RUN.feastHp = (RUN.feastHp || 0) + 20; ST = calcStats(); P.hp += 20; sfx.oneup(); saveRun(); } },
+    { icon: 'wchili', name: 'DEVIL WINGS', sub: '+12% damage for the rest of the run', price: 'EAT', cls: 'sec', fn: function () { rs.ate = 1; closeMenu(); RUN.feastDmg = (RUN.feastDmg || 0) + 0.12; ST = calcStats(); sfx.oneup(); saveRun(); } }] });
+}
 /* ---------- area quirks ---------- */
 var STREAKS = [];
 function quirkStep(dt) {
@@ -140,6 +163,10 @@ function quirkStep(dt) {
       if (P.state === 'normal' && P.onGround && Math.abs(P.y - e.y) < 2 && Math.abs(P.x - e.x) < 13) { P.vy = -600; P.onGround = false; P.jumps = 1; P.jumpHeld = false; P.coyote = 0; e.sq = 0.25; sfx.stomp(); poof(e.x, e.y - 4, 6, ['#ff2630', '#ffe36a']); }
     } else if (e.k === 'drip') {
       e.cd -= dt; if (e.cd <= 0) { e.cd = 2.6 + Math.random() * 2.4; eshots.push({ x: e.x, y: e.y + 3, vx: 0, vy: 30, g: 600, life: 3, r: 3, dmg: 6 + 2 * t, k: 'drip', by: 'a drip from the ceiling' }); }
+    } else if (e.k === 'saw') { // back and forth along its rail
+      e.ph += dt * e.sp / Math.max(1, e.x1 - e.x0) * 0.5; var u = e.ph % 1, tri = u < 0.5 ? u * 2 : 2 - u * 2; e.x = e.x0 + (e.x1 - e.x0) * tri;
+      if (P.state !== 'dead' && Math.hypot(P.x - e.x, (P.y - P.h / 2) - e.y) < 12 + P.w / 2) hurtP(10 + 4 * t, e.x, 'a saw blade');
+      if (Math.random() < 0.2) parts.push({ x: e.x + (Math.random() - 0.5) * 6, y: e.y + 8, vx: (Math.random() - 0.5) * 80, vy: -60, life: 0.25, c: '#ffe36a', spark: 0 });
     } else if (e.k === 'gamble' && e.spin > 0) { e.spin -= dt; if (e.spin <= 0 && e.after) { var f = e.after; e.after = null; f(); } }
   });
   // roof: gusts every few seconds push you along
@@ -178,8 +205,34 @@ function drawQuirks(cx) {
     else if (e.k === 'pad') drawPad(x, e);
     else if (e.k === 'drip') { var g = clamp(1 - e.cd / 0.7, 0, 1); R(ctx, '#2a0509', x - 3, e.y, 6, 2); if (g > 0) { R(ctx, '#12040a', x - 2, e.y + 1, 4, 2 + Math.round(g * 3)); R(ctx, '#7dff3a', x - 1, e.y + 1, 2, 1 + Math.round(g * 3)); } }
     else if (e.k === 'shrine') drawShrine(x, e);
-    else if (e.k === 'gamble') { if (e.park) drawWheel(x, e); else drawSlot(x, e); }
+    else if (e.k === 'saw') drawSaw(x, e);
+    else if (e.k === 'cell') drawCell(x, e);
+    else if (e.k === 'feast') drawFeast(x, e);
+    else if (e.k === 'gamble') { if (rsOf(G.roomKey).broke) drawWreck(x, e); else if (e.park) drawWheel(x, e); else drawSlot(x, e); }
   });
+}
+function drawSaw(x, e) {
+  var y = Math.round(e.y), a = G.t * 14, x0 = Math.round(e.x0 - G.cam.x), x1 = Math.round(e.x1 - G.cam.x);
+  R(ctx, '#12040a', x0 - 2, y - 1, x1 - x0 + 4, 3); R(ctx, '#3a3038', x0 - 1, y, x1 - x0 + 2, 1);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = '#12040a'; ctx.beginPath(); for (var i = 0; i < 16; i++) { var rr = i % 2 ? 9 : 13, aa = i / 16 * 6.283; ctx.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr); } ctx.fill();
+  ctx.fillStyle = '#a6968f'; ctx.beginPath(); for (i = 0; i < 16; i++) { var r2 = i % 2 ? 8 : 11.5, a2 = i / 16 * 6.283; ctx.lineTo(Math.cos(a2) * r2, Math.sin(a2) * r2); } ctx.fill();
+  ctx.fillStyle = '#5a5058'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 6.28); ctx.fill(); ctx.fillStyle = '#c4121c'; ctx.fillRect(-1, -1, 3, 3); ctx.restore();
+}
+function drawCell(x, e) {
+  var y = e.y, free = !!rsOf(G.roomKey).freed;
+  R(ctx, '#12040a', x - 22, y - 50, 44, 50); R(ctx, '#1e1418', x - 21, y - 49, 42, 49);
+  if (!free || Math.floor(G.t * 2) % 2 || true) spr(e.who, x, y, P.x < e.x, 1.1);
+  if (!free) { for (var b = -18; b <= 18; b += 6) { R(ctx, '#12040a', x + b - 1, y - 50, 3, 50); R(ctx, '#6a6070', x + b, y - 50, 1, 50); } R(ctx, '#12040a', x - 22, y - 30, 44, 3); R(ctx, '#6a6070', x - 22, y - 29, 44, 1); R(ctx, '#12040a', x - 4, y - 34, 8, 9); R(ctx, '#ffe36a', x - 3, y - 33, 6, 7); R(ctx, '#12040a', x - 1, y - 30, 2, 3); }
+  else { R(ctx, '#12040a', x + 18, y - 50, 3, 50); R(ctx, '#6a6070', x + 19, y - 50, 1, 50); }
+  R(ctx, '#12040a', x - 24, y - 54, 48, 5); R(ctx, '#4a4048', x - 23, y - 53, 46, 3);
+}
+function drawFeast(x, e) {
+  var y = e.y, ate = !!rsOf(G.roomKey).ate;
+  R(ctx, '#12040a', x - 40, y - 20, 80, 6); R(ctx, '#5a3a1a', x - 39, y - 19, 78, 4); R(ctx, '#c4121c', x - 39, y - 15, 78, 3);
+  [-34, 30].forEach(function (lx) { R(ctx, '#12040a', x + lx, y - 14, 5, 14); R(ctx, '#3a200e', x + lx + 1, y - 14, 3, 14); });
+  [-24, 0, 24].forEach(function (dx, i) { R(ctx, '#12040a', x + dx - 9, y - 24, 18, 5); R(ctx, '#f1e7d0', x + dx - 8, y - 23, 16, 3);
+    if (!ate) { var c = ['#8a4a1a', '#c8903a', '#ff2630'][i]; R(ctx, '#12040a', x + dx - 6, y - 30, 12, 7); R(ctx, c, x + dx - 5, y - 29, 10, 5); if (Math.floor(G.t * 2 + i) % 2) R(ctx, 'rgba(241,231,208,0.5)', x + dx - 1, y - 37, 2, 5); } });
+  R(ctx, '#12040a', x - 3, y - 40, 6, 18); R(ctx, '#f1e7d0', x - 2, y - 39, 4, 16); R(ctx, '#ff9a40', x - 1, y - 43 - Math.floor(G.t * 8) % 2, 2, 3);
 }
 function drawChand(x, e) {
   var y = e.st === 'fall' ? Math.round(e.fy) : e.y, j = e.st === 'shake' ? Math.round((Math.random() - 0.5) * 3) : 0;
@@ -225,6 +278,12 @@ function drawWheel(x, e) {
   for (var i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#1a1014' : '#c4121c'; if (i === 0) ctx.fillStyle = '#ffe36a'; ctx.beginPath(); ctx.moveTo(x, cy); ctx.arc(x, cy, 17, a0 + i * 0.785, a0 + (i + 1) * 0.785); ctx.fill(); }
   R(ctx, '#12040a', x - 3, cy - 3, 6, 6); R(ctx, '#f1e7d0', x - 2, cy - 2, 4, 4);
   ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.moveTo(x - 5, cy - 23); ctx.lineTo(x + 5, cy - 23); ctx.lineTo(x, cy - 15); ctx.fill(); ctx.fillStyle = '#f1e7d0'; ctx.beginPath(); ctx.moveTo(x - 3, cy - 22); ctx.lineTo(x + 3, cy - 22); ctx.lineTo(x, cy - 17); ctx.fill();
+}
+function drawWreck(x, e) { // what is left after three goes
+  var y = e.y;
+  R(ctx, '#12040a', x - 15, y - 12, 30, 12); R(ctx, '#2a1014', x - 14, y - 11, 28, 11); R(ctx, '#12040a', x - 12, y - 20, 9, 9); R(ctx, '#3a1a1e', x - 11, y - 19, 7, 7);
+  R(ctx, '#12040a', x + 3, y - 17, 10, 6); R(ctx, '#3a1a1e', x + 4, y - 16, 8, 4); R(ctx, '#a6968f', x + 6, y - 24, 2, 8);
+  if (Math.random() < 0.15) parts.push({ x: e.x + (Math.random() - 0.5) * 20, y: y - 16, vx: (Math.random() - 0.5) * 10, vy: -25, life: 0.9, c: Math.random() < 0.3 ? '#ffb040' : '#4a3a3a', spark: 0 });
 }
 function drawStorm(cx) {
   if (L.arena) return;

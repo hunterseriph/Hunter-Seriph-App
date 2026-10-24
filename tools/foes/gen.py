@@ -438,9 +438,27 @@ def blum(f, sup=False):
            'horn': ('#3a3440', '#1a1420', '#0a080c'), 'drip': ('#e0b0ff', '#a060ff', '#5020a0')}
     return g, pal
 
+def moon(f):
+    """The Crimson Moon: the secret boss behind the portal. A huge red moon with a face, craters and a grin."""
+    g = Grid(84, 84); cx, cy = 42, 42
+    g.ellipse(cx, cy, 38, 38, 'rock')
+    for (x, y, r) in ((24, 22, 6), (58, 20, 4), (64, 52, 7), (20, 56, 5), (44, 66, 4), (34, 14, 3)): g.ellipse(x, y, r, r * 0.8, 'crater'); g.ellipse(x - 1, y - 1, r * 0.6, r * 0.45, 'pit')
+    for side in (-1, 1):  # angry eyes
+        ex = cx + side * 13
+        g.poly([(ex - 7, 34), (ex + 7, 34 + side * -3), (ex + 6, 41), (ex - 6, 41)], 'void')
+        g.ellipse(ex + side * -1, 38, 2.6, 2.2, 'eye' if f == 0 else 'eye2'); g.put(ex + side * -2, 37, 'glint')
+    g.poly([(18, 52), (66, 52), (60, 64), (42, 70), (24, 64)], 'void')  # the grin
+    for i in range(7):
+        x = 22 + i * 6.4; g.poly([(x, 52), (x + 5, 52), (x + 2.5, 57 + (i % 2))], 'tooth'); g.poly([(x + 3, 66 - abs(i - 3) * 1.2), (x + 7, 66 - abs(i - 3) * 1.2), (x + 5, 61)], 'tooth')
+    if f == 1: g.ellipse(42, 62, 6, 2.5, 'drip')
+    for (x, y) in ((70, 34), (14, 40), (52, 76)): g.line(x, y, x + 3, y + 5, 'pit', 0.5)
+    pal = {'rock': ('#ff5a5a', '#c4121c', '#5a0a10'), 'crater': ('#a01820', '#7a0c14', '#4a060c'), 'pit': '#3a0408', 'void': '#12040a',
+           'eye': '#ffe36a', 'eye2': '#ffffff', 'glint': '#ffffff', 'tooth': ('#ffffff', '#f1e7d0', '#a6968f'), 'drip': '#ff2630'}
+    return g, pal
+
 BOSSES = {
     'beast': (beast, 2), 'demon': (demon, 2), 'sperm': (sperm, 2), 'pig': (pig, 2), 'cowpig': (cowpig, 2),
-    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2),
+    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2),
 }
 LEFTY = {'pig': pig, 'cowpig': cowpig}  # writing on them: separate left-facing frames
 

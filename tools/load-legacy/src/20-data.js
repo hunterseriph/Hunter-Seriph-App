@@ -2,10 +2,10 @@
    DATA: classes, areas, enemies, bosses, the town and everything it sells
    ===================================================================================================== */
 var CLASSES = {
-  cumhead: { name: 'Cumhead', hp: 150, mana: 50, dmg: 10, spd: 1, jumps: 2, atk: 'shot', cd: 0.36, spec: 'splash', specCost: 30,
+  cumhead: { name: 'Cumhead', hp: 150, mana: 50, dmg: 12, spd: 1, jumps: 2, atk: 'shot', cd: 0.36, spec: 'splash', specCost: 30,
     pas: 'Second Wind', pd: 'Once per run a killing blow leaves you on 1 HP.', ad: 'Cream Shot: fires a load straight ahead.', sd: 'Spin Splash: eight shots burst out all around you.' },
-  spermaid: { name: 'Spermaid', hp: 115, mana: 60, dmg: 12, spd: 1.05, jumps: 2, atk: 'whip', cd: 0.3, spec: 'song', specCost: 35,
-    pas: 'Siren Song', pd: 'Every kill heals 3 HP. Longer safety after a hit.', ad: 'Tail Whip: a fast, wide slap in front of you.', sd: 'Siren Song: stuns every foe on screen and heals you.' },
+  spermaid: { name: 'Spermaid', hp: 115, mana: 60, dmg: 10, spd: 1.05, jumps: 2, atk: 'whip', cd: 0.3, spec: 'song', specCost: 35,
+    pas: 'Siren Song', pd: 'Every kill heals 3 HP. Longer safety after a hit. Hold jump in the air to float down.', ad: 'Tail Whip: slap, slap, then a tail spin that throws a wave.', sd: 'Siren Song: stuns every foe on screen and heals you.' },
   greebo: { name: 'Greebo', hp: 125, mana: 50, dmg: 15, spd: 0.92, jumps: 2, atk: 'pie', cd: 0.5, spec: 'cat', specCost: 40,
     pas: 'Sticky Fingers', pd: '+30% drops from everything.', ad: 'Cream Pie Blast: a big pie straight ahead, half the reach of Cumhead.', sd: 'Sir Johnathan: the cat tears across the room.' },
   homunculus: { name: 'Homunculus', hp: 100, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
@@ -24,6 +24,8 @@ var AREAS = {
   dungeon: { name: 'The Dungeon', sub: 'CHAINS IN THE DARK', tier: 4, ox: 0, oy: 10, w: 7, h: 5, rooms: 22, boss: 'pig', music: 'dungeon',
     sky: null, tint: 'rgba(30,0,0,0.45)', e1: '#c4121c', e2: '#3a0408', wall: '#0a0305', wall2: '#140508', pool: [['ghoul', 2], ['slime', 2], ['vampire', 2], ['golem', 1], ['bat', 1], ['jailer', 2], ['rat', 2]] }
 };
+AREAS.moon = { name: 'The Crimson Moon', sub: 'BEYOND THE PORTAL', tier: 5, ox: 20, oy: 0, w: 5, h: 4, rooms: 13, boss: 'moon', music: 'roof', secret: 1,
+  sky: 'rgba(80,0,10,0.18)', tint: 'rgba(140,0,20,0.26)', e1: '#ff2630', e2: '#6a0a10', wall: '#0a0204', pool: [['vampire', 2], ['wraith', 2], ['gargoyle', 2], ['knight', 2], ['jailer', 1], ['clown', 1], ['imp', 1]] };
 var AREAORDER = ['castle', 'roof', 'city', 'dungeon'];
 
 /* enemies: hp/dmg are tier 1 values, scaled by the area tier and New Game+ */
@@ -51,12 +53,13 @@ var ENEMIES = {
 function isFlyer(d) { return d.ai === 'fly' || d.ai === 'shoot' || !!d.fly; }
 
 var BOSSDEF = {
-  beast: { name: 'Cum-starved Beast', area: 'castle', hp: 320, dmg: 18, sp: 'f_beast_', sc: 1, w: 70, h: 44 },
-  demon: { name: 'Legion of Semen Demon', area: 'roof', hp: 90, dmg: 16, sp: 'f_demon_', sc: 1, w: 34, h: 30, count: 4 },
-  sperm: { name: 'The Sperminator', area: 'city', hp: 480, dmg: 20, sp: 'f_sperm_', sc: 1, w: 36, h: 76 },
-  pig: { name: 'Brothers Load Piggy', area: 'dungeon', hp: 440, dmg: 22, sp: 'f_pig_', sc: 1, w: 80, h: 48 },
-  blum: { name: 'Blumhead', area: 'castle', hp: 700, dmg: 22, sp: 'f_blum_', sc: 1, w: 56, h: 64 },
-  blum2: { name: 'Super Blumhead', area: 'castle', hp: 1100, dmg: 26, sp: 'f_blum2_', sc: 1, w: 70, h: 80 }
+  beast: { name: 'Cum-starved Beast', area: 'castle', hp: 700, dmg: 20, sp: 'f_beast_', sc: 1, w: 70, h: 44 },
+  demon: { name: 'Legion of Semen Demon', area: 'roof', hp: 190, dmg: 18, sp: 'f_demon_', sc: 1, w: 34, h: 30, count: 4 },
+  sperm: { name: 'The Sperminator', area: 'city', hp: 1000, dmg: 22, sp: 'f_sperm_', sc: 1, w: 36, h: 76 },
+  pig: { name: 'Brothers Load Piggy', area: 'dungeon', hp: 900, dmg: 24, sp: 'f_pig_', sc: 1, w: 80, h: 48 },
+  blum: { name: 'Blumhead', area: 'castle', hp: 1300, dmg: 24, sp: 'f_blum_', sc: 1, w: 56, h: 64 },
+  moon: { name: 'The Crimson Moon', area: 'moon', hp: 2000, dmg: 26, sp: 'f_moon_', sc: 1, w: 70, h: 76 },
+  blum2: { name: 'Super Blumhead', area: 'castle', hp: 2000, dmg: 28, sp: 'f_blum2_', sc: 1, w: 70, h: 80 }
 };
 
 /* ---------- the town ---------- */
@@ -140,7 +143,20 @@ var POWERS = [
   { id: 'crit', name: 'Crit Splash', d: '+10% critical hits', icon: 'deck' },
   { id: 'greedy', name: 'Greedy', d: '+25% drops', icon: 'luck' },
   { id: 'iron', name: 'Iron Skin', d: '+8% damage blocked', icon: 'iron' },
-  { id: 'swift', name: 'Swift Feet', d: '+10% move speed', icon: 'swift' }
+  { id: 'swift', name: 'Swift Feet', d: '+10% move speed', icon: 'swift' },
+  { id: 'thorns', name: 'Spiked Skin', d: 'Foes that bump into you get hurt', icon: 'bloodbrace' },
+  { id: 'magnet', name: 'Drop Magnet', d: 'Drops fly to you from much further away', icon: 'lid' },
+  { id: 'snack', name: 'Pocket Snack', d: 'Heal 4 HP every time you enter a room', icon: 'garlicbread' },
+  { id: 'boots', name: 'Heavy Boots', d: 'Stomps hit twice as hard', icon: 'lgreaves' },
+  { id: 'bigshot', name: 'Big Load', d: 'Bigger attacks that hit 10% harder', icon: 'maul' },
+  { id: 'echo', name: 'Echo', d: '25% chance an attack goes off twice', icon: 'scrollStorm' },
+  { id: 'soul', name: 'Soul Eater', d: 'Kills give back 10 mana', icon: 'holy' },
+  { id: 'berserk', name: 'Berserk', d: '+40% damage while under 40% HP', icon: 'curse' },
+  { id: 'lucky', name: 'Lucky Drop', d: 'Kills sometimes heal you 10%', icon: 'luck' },
+  { id: 'volatile', name: 'Volatile', d: 'Foes explode when they die', icon: 'dchili' },
+  { id: 'cold', name: 'Cold Touch', d: 'Hits can freeze foes for a moment', icon: 'tonic' },
+  { id: 'bubble', name: 'Bubble Guard', d: 'A bubble blocks one hit, and comes back after 12 seconds', icon: 'moonaegis' },
+  { id: 'slayer', name: 'Giant Slayer', d: '+35% damage to bosses', icon: 'katana' }
 ];
 function powerById(id) { for (var i = 0; i < POWERS.length; i++) if (POWERS[i].id === id) return POWERS[i]; return null; }
 /* merchant rooms: a random shopkeeper sells these for drops */

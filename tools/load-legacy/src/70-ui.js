@@ -8,7 +8,7 @@ function iconURL(id) { if (ICONS[id]) return ICONS[id]; var c = SPR[id] ? sprCan
 function openMenu(o) {
   MENU = o; el('menu').hidden = false; setMenuMode(true); renderMenu(); sfx.click();
 }
-function closeMenu() { el('menu').hidden = true; MENU = null; if (G.mode === 'play' || G.mode === 'town') setMenuMode(false); }
+function closeMenu() { el('menu').hidden = true; MENU = null; if (P) { P.prevAtk = true; P.prevJump = true; P.prevSpec = true; } /* the button that closed it must be let go before it counts again */ if (G.mode === 'play' || G.mode === 'town') setMenuMode(false); }
 function renderMenu(keepIdx) {
   var o = MENU; if (!o) return;
   // menus that change when you buy or equip rebuild their rows every time, so nothing shows stale numbers
