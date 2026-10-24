@@ -64,7 +64,18 @@ function genWorld(seed) {
     if (moonA) { ['merchant', 'shrine', 'powerup', 'challenge', 'ambush'].forEach(function (t) { var q = free.shift(); if (q) q.type = t; }); return; }
     var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'], extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); if (r() < 0.75) want.push(extra[1]); if (r() < 0.45) want.push(extra[2]);
     want.forEach(function (t) { var q = free.shift(); if (q) q.type = t; });
-    if (a === 'city') { var fq = free.filter(function (q) { return !q.ex.d; })[0] || free[0]; if (fq) { fq.type = 'flume'; free.splice(free.indexOf(fq), 1); } }
+    if (a === 'city') { // the Load Flume: four screens long, laid along one row of the park. Empty cells are filled in; cells already in use must be plain and have no way down
+      var CA = AREAS.city, best = null, okC = function (x, y) { var q = rooms[key2(x, y)]; return !q || (q.area === 'city' && free.indexOf(q) >= 0 && !q.ex.d); };
+      for (var len = 4; len >= 2 && !best; len--) { var cands = [];
+        for (var fy = CA.oy; fy < CA.oy + CA.h; fy++) for (var fx = CA.ox; fx + len <= CA.ox + CA.w; fx++) { var ok = true, have = 0; for (var k2 = 0; k2 < len; k2++) { if (!okC(fx + k2, fy)) ok = false; else if (rooms[key2(fx + k2, fy)]) have++; } if (ok && have) cands.push([fx, fy, len]); }
+        if (cands.length) best = cands[Math.floor(r() * cands.length)]; }
+      if (best) {
+        var n = best[2], cellsF = [];
+        for (var k3 = 0; k3 < n; k3++) { var q3 = rooms[key2(best[0] + k3, best[1])]; if (q3) free.splice(free.indexOf(q3), 1); cellsF.push(q3 || { cx: best[0] + k3, cy: best[1], ex: {} }); }
+        var FR = { cx: best[0], cy: best[1], cw: n, ch: 1, area: 'city', type: 'flume', ex: {}, exits: [], dist: 0, long: n };
+        cellsF.forEach(function (q, i) { FR.dist = Math.max(FR.dist, q.dist || 0); for (var d in q.ex) { if ((d === 'r' && i < n - 1) || (d === 'l' && i > 0)) continue; FR.exits.push({ d: d, i: (d === 'u' || d === 'd') ? i : 0 }); FR.ex[d] = 1; } rooms[key2(q.cx, q.cy)] = FR; });
+      } else { var fq = free.filter(function (q) { return !q.ex.d; })[0] || free[0]; if (fq) { fq.type = 'flume'; free.splice(free.indexOf(fq), 1); } }
+    }
   });
   // some neighbouring plain rooms join into one big room: two screens wide, or two screens tall
   var list = Object.keys(rooms).map(function (k) { return rooms[k]; });
@@ -83,9 +94,25 @@ function genWorld(seed) {
   // one illusion room somewhere hides the portal in its alcove
   var ill = Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (q) { return q.type === 'illusion'; });
   var pr = ill[Math.floor(r() * ill.length)]; if (pr) pr.portal = 1;
+  // Blumhead's Lair: not joined to the map. You are dragged down into it after Super Blumhead falls (five wins on).
+  var LA = AREAS.lair, le = add('lair', LA.ox, LA.oy + 1); le.entry = 1; le.type = 'lairgate'; var llist = grow('lair', LA.rooms);
+  (function () {
+    var dist = {}, qu = [le]; dist[key2(le.cx, le.cy)] = 0;
+    while (qu.length) { var q = qu.shift(), dq = dist[key2(q.cx, q.cy)]; for (var d in q.ex) { var o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])]; if (o && o.area === 'lair' && dist[key2(o.cx, o.cy)] === undefined) { dist[key2(o.cx, o.cy)] = dq + 1; qu.push(o); } } }
+    llist.forEach(function (q) { q.dist = dist[key2(q.cx, q.cy)] || 0; });
+    var fr = llist.filter(function (q) { return q !== le; }).sort(function (p, q) { return q.dist - p.dist; });
+    var mega = fr.shift(); if (mega) mega.type = 'megadoor';
+    var bs = shuffle(['beast', 'demon', 'sperm', 'pig'], r), picked = [];
+    // the four guardians spread out: each one at least two cells from the others where possible
+    fr.forEach(function (q) { if (picked.length < 4 && picked.every(function (p) { return Math.abs(p.cx - q.cx) + Math.abs(p.cy - q.cy) > 1; }) && Math.abs(q.cx - mega.cx) + Math.abs(q.cy - mega.cy) > 1) picked.push(q); });
+    fr.forEach(function (q) { if (picked.length < 4 && picked.indexOf(q) < 0) picked.push(q); });
+    picked.forEach(function (q, i) { q.type = 'bossdoor'; q.boss = bs[i]; });
+    var rest = shuffle(fr.filter(function (q) { return q.type === 'normal'; }), r);
+    ['merchant', 'shrine', 'powerup', 'goorise', 'eyewall', 'heart', 'goorise', 'eyewall', 'heart', 'challenge'].forEach(function (t) { var q = rest.shift(); if (q) q.type = t; });
+  })();
   var uniq = []; Object.keys(rooms).forEach(function (k) { if (uniq.indexOf(rooms[k]) < 0) uniq.push(rooms[k]); });
   uniq.forEach(function (q, i) { q.id = i; if (!q.exits) { q.exits = []; for (var d in q.ex) q.exits.push({ d: d, i: 0 }); } });
-  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy), moonEntry: key2(me.cx, me.cy), portalFrom: pr ? key2(pr.cx, pr.cy) : null };
+  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy), moonEntry: key2(me.cx, me.cy), lairEntry: key2(le.cx, le.cy), portalFrom: pr ? key2(pr.cx, pr.cy) : null };
 }
 
 /* ---------- building one room's tiles and contents (deterministic per room) ---------- */
@@ -140,7 +167,22 @@ function buildRoom(rm) {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: 'blum' }); RS(cx0 - 5, 9, cx0 + 4, 14);
     ents.push({ k: 'deco', d: 'throneL', x: 6 * T, y: 15 * T }); ents.push({ k: 'deco', d: 'throneR', x: 26 * T, y: 15 * T });
   } else if (t === 'bossdoor') {
-    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss }); RS(cx0 - 5, 9, cx0 + 4, 14);
+    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss, lair: rm.area === 'lair' ? 1 : 0 }); RS(cx0 - 5, 9, cx0 + 4, 14);
+  } else if (t === 'megadoor') { // the last door in the lair: Mega Blumhead
+    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: 'mega', lair: 1 }); RS(cx0 - 5, 9, cx0 + 4, 14);
+  } else if (t === 'lairgate') { // where you land in the lair
+    ents.push({ k: 'deco', d: 'lairsign', x: 16 * T, y: 3 * T }); ents.push({ k: 'shrine', x: 24 * T, y: 15 * T }); RS(21, 10, 27, 14); nE = 0;
+  } else if (t === 'goorise') { // goo floods the room every few seconds: climb out of it
+    var top = 5; ents.push({ k: 'goo', t: r() * 3, top: top, lv: 15 * T });
+    [[3, 7, 11], [11, 15, 9], [19, 23, 11], [25, 28, 8], [6, 10, 7], [14, 18, 5], [21, 24, 4]].forEach(function (p) { if (free(p[0], p[2] - 2, p[1], p[2])) plat(p[0], p[1], p[2]); });
+    nE = 2;
+  } else if (t === 'eyewall') { // a huge eye in the back wall: a red line shows where its beam will go
+    ents.push({ k: 'walleye', x: 16 * T, y: 3 * T + 4, t: r() * 2, by: 0 });
+    [[4, 8, 12], [12, 15, 9], [18, 21, 12], [23, 27, 9], [8, 11, 6], [20, 23, 6]].forEach(function (p) { if (free(p[0], p[2] - 2, p[1], p[2])) plat(p[0], p[1], p[2]); });
+    nE = 2;
+  } else if (t === 'heart') { // a beating Blum heart: kill it to get the chest inside
+    ents.push({ k: 'enemy', e: 'lheart', x: cxp, y: 15 * T, idx: 90 }); RS(cx0 - 3, 11, cx0 + 3, 14);
+    plat(5, 9, 11); plat(22, 26, 11); nE = 1;
   } else if (t === 'merchant') {
     var who = MERCH[Math.floor(r() * MERCH.length)]; if (RUN && who === 'npc_' + RUN.cls) who = 'npc_jessiah'; // the heir you are playing does not also run a stall
     ents.push({ k: 'npc', x: cxp, y: 15 * T, who: who }); RS(cx0 - 4, 10, cx0 + 4, 14);
@@ -157,15 +199,24 @@ function buildRoom(rm) {
     var cp = [[14, 9], [16, 7]]; for (var ci = 0; ci < cp.length; ci++) if (free(cp[ci][0] - 1, cp[ci][1] - 2, cp[ci][0] + 1, cp[ci][1])) { plat(cp[ci][0] - 1, cp[ci][0] + 1, cp[ci][1]); ents.push({ k: 'chest', x: cp[ci][0] * T + 8, y: cp[ci][1] * T, big: 1 }); break; }
     if (ci === cp.length) ents.push({ k: 'chest', x: 3 * T, y: 15 * T, big: 1 });
   } else if (t === 'flume') {
-    // the Load Flume: a channel of cream with logs drifting left to right. Ride them across; falling in hurts.
-    ents.push({ k: 'water', x0: 4 * T, x1: 28 * T, y: 13 * T + 6 });
-    var sinker = rn(0, 2); for (var lg = 0; lg < 3; lg++) ents.push({ k: 'log', x: 4 * T + 34 + lg * 8 * T, y: 13 * T + 15, w: 52, h: 11, vx: 52, sink: lg === sinker ? 1 : 0 }); /* one boat is leaky and goes under now and then */
+    // the Load Flume: a long channel of cream (up to four screens) with boats drifting left to right. Ride them; falling in hurts.
+    var nS = W / CW, wx1 = W - 4;
+    ents.push({ k: 'water', x0: 4 * T, x1: wx1 * T, y: 13 * T + 6 });
+    var nb2 = Math.max(3, Math.round((wx1 - 4) / 8.5)), gap = (wx1 - 4) * T / nb2;
+    for (var lg = 0; lg < nb2; lg++) ents.push({ k: 'log', x: 4 * T + 34 + lg * gap, y: 13 * T + 15, w: 52, h: 11, vx: 52, sink: lg % 3 === 1 ? 1 : 0 }); /* every third boat is leaky and goes under now and then */
     ents.push({ k: 'deco', d: 'flumesign', x: 16 * T, y: 2 * T + 4 });
     for (var qy = 6; qy < H - 1; qy++) if (G(2, qy) === TA && G(2, qy + 1) === TW) { ents.push({ k: 'deco', d: 'tallsign', x: 3 * T + 4, y: (qy + 1) * T }); break; } /* Steve checks your height, by the queue rails */
-    RS(3, 11, 28, 15);
-    plat(5, 7, 12); plat(24, 26, 12); /* low steps off the banks, so nothing needs a perfect double jump */
-    [[5, 8, 9], [12, 16, 7], [19, 20, 8], [23, 27, 9]].forEach(function (p, i) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (i === 3) ents.push({ k: 'chest', x: 25 * T + 8, y: 9 * T, big: 1 }); } });
-    nE = 2;
+    RS(3, 11, W - 4, 15);
+    plat(5, 7, 12); plat(W - 8, W - 6, 12); /* low steps off the banks */
+    for (var fs = 0; fs < nS; fs++) {
+      var fo = fs * CW, hasU = (rm.exits || []).some(function (e) { return e.d === 'u' && e.i === fs; });
+      if (hasU) { plat(fo + 9, fo + 13, 12); plat(fo + 18, fo + 22, 8); plat(fo + 12, fo + 16, 4); continue; } /* a way up to an exit in the ceiling */
+      // otherwise a few perches over the cream: you cannot walk it, you have to ride
+      var perch = [[fo + 8, fo + 10, 10], [fo + 15, fo + 17, 8], [fo + 22, fo + 24, 10]];
+      perch.forEach(function (p, pi) { if (r() < 0.75 && free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); if (pi === 1 && r() < 0.5) ents.push({ k: 'chest', x: (p[0] + 1) * T + 8, y: p[2] * T, big: fs === nS - 1 ? 1 : 0 }); } });
+    }
+    ents.push({ k: 'chest', x: (W - 3) * T, y: 15 * T, big: 1 }); /* the prize at the end of the ride */
+    nE = 1 + nS;
   } else if (t === 'egate') { // the first screen of Endless: a sign, nothing to fight
     ents.push({ k: 'deco', d: 'esign', x: 16 * T, y: 4 * T }); nE = 0;
   } else if (t === 'moongate') {
@@ -335,12 +386,12 @@ function buildRoom(rm) {
 }
 
 /* ---------- boss arenas (two screens wide). Reached through a boss door. ---------- */
-function buildArena(boss) {
+function buildArena(boss, lair) {
   var W = CW * 2, H = CH, tl = new Uint8Array(W * H);
   function S(x, y, v) { if (x >= 0 && y >= 0 && x < W && y < H) tl[y * W + x] = v; }
   for (var x = 0; x < W; x++) { S(x, 0, TW); S(x, H - 1, TW); }
   for (var y = 0; y < H; y++) { S(0, y, TW); S(W - 1, y, TW); }
   for (y = 12; y <= 14; y++) S(0, y, TB);
   [[8, 13, 10], [50, 55, 10], [27, 36, 7], [17, 21, 4], [42, 46, 4]].forEach(function (p) { for (var x = p[0]; x <= p[1]; x++) S(x, p[2], TL); });
-  return { w: W, h: H, tiles: tl, ents: [], arena: boss };
+  return { w: W, h: H, tiles: tl, ents: [], arena: boss, lair: !!lair || boss === 'mega' };
 }

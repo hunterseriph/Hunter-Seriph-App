@@ -5,6 +5,7 @@
 function toast(t) { G.msg = { t: t, age: 0 }; }
 function sealCount() { var n = 0; AREAORDER.forEach(function (a) { if (META.bosses[a]) n++; }); return n; }
 function openDoor(e) {
+  if (e.lair) { lairDoor(e); return; }
   if (RUN && RUN.endless) { if (rsOf(G.roomKey).bossDone) { sfx.click(); toast('IT IS DEAD. KEEP GOING RIGHT.'); return; } sfx.door(); enterArena(e.boss); return; }
   if (e.boss === 'blum') {
     var n = sealCount();
@@ -16,8 +17,8 @@ function openDoor(e) {
   if (META.bosses[area]) { sfx.click(); toast(BOSSDEF[e.boss].name.toUpperCase() + ' IS DEAD. ITS SEAL IS BROKEN.'); return; }
   sfx.door(); enterArena(e.boss);
 }
-function enterArena(id) {
-  G.retKey = G.roomKey; L = buildArena(id); G.lock = true; G.layer = null; G.near = null; G.winT = 0;
+function enterArena(id, lair) {
+  G.retKey = G.roomKey; G.lairFight = !!lair; L = buildArena(id, lair); LAIRFX = []; G.lock = true; G.layer = null; G.near = null; G.winT = 0;
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {};
   P.x = 3 * T; P.y = 15 * T; P.vx = 0; P.vy = 0; P.face = 1; camSnap();
   G.superDue = id === 'blum' && META.blumWins >= 5; G.broSpawned = 0; MOONFX = []; G.eclipse = 0;
@@ -29,14 +30,15 @@ function leaveArena() { var k = G.retKey; enterRoom(k, null, null); var dr = L.e
 function mkBoss(id, x, y, hpMul) {
   // bosses keep up with how strong the heir is, so a fight never melts in seconds
   var d = BOSSDEF[id], en = RUN && RUN.endless ? 1 + 0.35 * Math.max(0, RUN.endless.n / 10 - 1) : 1, pw = en * Math.max(1, Math.pow(ST.dmg / Math.max(1, CLASSES[RUN.cls].dmg), 0.7));
-  var hp = Math.round(d.hp * (hpMul || 1) * pw * (1 + 0.6 * META.ng) * (RUN.card === 'bigload' ? 1.5 : 1));
-  return { boss: true, id: id, d: d, x: x, y: y, vx: 0, vy: 0, w: d.w, h: d.h, hp: hp, mhp: hp, dmg: d.dmg * (1 + 0.35 * META.ng), face: -1, st: 'intro', t: 0, cd: 1.6, flash: 0, stun: 0, alive: true, burn: 0, poison: 0, ph: 1 };
+  var lr = G.lairFight && id !== 'mega'; // the lair's guardians: the same bosses, powered up
+  var hp = Math.round(d.hp * (hpMul || 1) * pw * (1 + 0.6 * META.ng) * (RUN.card === 'bigload' ? 1.5 : 1) * (lr ? 2.2 : 1));
+  return { boss: true, lair: lr, id: id, d: lr ? lairDef(id, d) : d, x: x, y: y, vx: 0, vy: 0, w: d.w, h: d.h, hp: hp, mhp: hp, dmg: d.dmg * (1 + 0.35 * META.ng) * (lr ? 1.35 : 1), face: -1, st: 'intro', t: 0, cd: 1.6, flash: 0, stun: 0, alive: true, burn: 0, poison: 0, ph: 1 };
 }
 function spawnBoss(id) {
   var W = L.w * T;
   if (id === 'demon') { for (var i = 0; i < 4; i++) { var b = mkBoss('demon', W / 2, 120); b.slot = i; b.fly = true; b.cd = 1.5 + i * 0.9; bosses.push(b); } }
   else if (id === 'moon') { var mb = mkBoss('moon', W / 2, 110); mb.fly = true; bosses.push(mb); }
-  else if (id === 'blum' || id === 'blum2') { var bb = mkBoss(id, W - 200, 150); bb.fly = true; bosses.push(bb); }
+  else if (id === 'blum' || id === 'blum2' || id === 'mega') { var bb = mkBoss(id, W - 200, 150); bb.fly = true; bosses.push(bb); }
   else { var b2 = mkBoss(id, W - 160, 15 * T); bosses.push(b2); }
   G.bossGroup = id;
 }
@@ -47,6 +49,7 @@ function bossDown(b) {
   var left = bosses.filter(function (q) { return q.alive; }).length;
   if ((b.id === 'cowpig' || b.id === 'pig') && left > 0) { G.banner = 1.4; G.bannerTxt = 'ONE BROTHER DOWN'; G.bannerSub = 'NOW THE OTHER ONE'; return; }
   if (b.id === 'cowpig') b = { id: 'pig', d: BOSSDEF.pig, x: b.x, y: b.y, h: b.h };
+  if (b.id === 'mega') { eshots = []; waves = []; enemies.forEach(function (e) { e.alive = false; }); RUN.drops += 1500 * (1 + 0.3 * META.ng); megaDown(b); return; }
   if (b.id === 'demon' && left > 0) { G.banner = 1.2; G.bannerTxt = left + ' LEFT'; G.bannerSub = ''; bosses.forEach(function (q) { if (q.alive) q.rage = (q.rage || 0) + 1; }); return; }
   if (left > 0) return;
   bosses.forEach(function (q) { if (q.alive) { q.alive = false; poof(q.x, q.y - q.h / 2, 20, ['#ff2630', '#f1e7d0']); } });
@@ -56,6 +59,7 @@ function bossDown(b) {
   RUN.drops += 120 * t * (1 + 0.3 * META.ng);
   G.findDue = 3.2; // a boss always leaves a blueprint or rune behind (shown once its own banner is done)
   if (RUN.endless) { endlessBossDown(b); return; }
+  if (G.lairFight) { lairBossDown(b); return; }
   if (b.id === 'blum') {
     META.blumWins++; saveMeta();
     if (G.superDue) { superTransform(b); return; } // a secret: nothing tells you he is coming
@@ -63,14 +67,14 @@ function bossDown(b) {
     blumFallScene(function () { G.banner = 3.5; G.bannerTxt = 'BLUMHEAD FALLS'; G.bannerSub = META.superWins ? 'LEGACY COMPLETE' : 'THE LOAD IS SPENT. FOR NOW.'; });
     return;
   }
-  if (b.id === 'blum2') { META.superWins++; saveMeta(); G.banner = 3.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = 'THE LOAD IS LIFTED'; G.winT = 4; G.winKind = 2; sfx.goal(); return; }
+  if (b.id === 'blum2') { META.superWins++; saveMeta(); if (META.superWins >= 5) { G.banner = 2.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = ''; sfx.goal(); lairTeleport(); return; } G.banner = 3.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = 'THE LOAD IS LIFTED'; G.winT = 4; G.winKind = 2; sfx.goal(); return; }
   if (b.id === 'moon') { moonDown(b); return; }
   var area = BOSSDEF[b.id].area; META.bosses[area] = 1; saveMeta();
   G.lock = false; G.layer = null; sfx.goal(); G.banner = 3; G.bannerTxt = b.d.name.toUpperCase() + ' DEFEATED'; G.bannerSub = 'SEAL ' + sealCount() + ' OF 4 BROKEN'; saveRun();
   G.sealDue = { n: sealCount(), t: 1.8 };
 }
 function finishLegacy(kind) {
-  META.ng++; META.bosses = {}; var bonus = Math.round((kind === 2 ? 2500 : 1200) * META.ng); RUN.drops += bonus; saveMeta(); runOver(kind);
+  META.ng++; META.bosses = {}; var bonus = Math.round((kind === 3 ? 6000 : kind === 2 ? 2500 : 1200) * META.ng); RUN.drops += bonus; saveMeta(); runOver(kind);
 }
 
 /* ---------- boss brains ---------- */
@@ -87,7 +91,7 @@ function updateBosses(dt) {
     if (b.stun > 0) { b.stun -= dt; if (!b.fly) moveBody(b, dt, GRAV); continue; }
     if (b.st === 'intro') { b.cd -= dt; if (!b.fly) moveBody(b, dt, GRAV); if (b.cd <= 0) { b.st = 'idle'; b.cd = 0.6; } continue; }
     if (b.hp < b.mhp * 0.25) { if (!b.fury) { b.fury = 1; if (b.id !== 'demon') { G.banner = 1.4; G.bannerTxt = 'DESPERATE'; G.bannerSub = 'IT FIGHTS FASTER'; sfx.roar(); G.shake = 8; } } if (b.cd > 0) b.cd -= dt * 0.6; }
-    var fn = BRAIN[b.id]; if (fn) fn(b, dt, W, ph);
+    var fn = BRAIN[b.id]; if (fn) fn(b, b.lair ? dt * 1.2 : dt, W, ph); if (b.lair) lairExtra(b, dt);
     b.x = clamp(b.x, b.w / 2 + 16, W - b.w / 2 - 16);
     if (P.state === 'dead') continue;
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.w / 2 + 4, b.y - b.h + 4, b.x + b.w / 2 - 4, b.y)) {

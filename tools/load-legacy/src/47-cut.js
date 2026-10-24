@@ -52,10 +52,10 @@ var BOSSLINES = {
 function bossIntro(id) {
   var b = bosses[0]; if (!b || !BOSSLINES[id]) return;
   if (!META.seenBoss) META.seenBoss = {};
-  var first = !META.seenBoss[id]; META.seenBoss[id] = 1; saveMeta();
-  var nm = BOSSDEF[id].name, ls = BOSSLINES[id];
+  var sk = G.lairFight && id !== 'mega' ? 'x' + id : id, first = !META.seenBoss[sk]; META.seenBoss[sk] = 1; saveMeta();
+  var nm = G.lairFight && LAIRBOSS[id] ? LAIRBOSS[id] : BOSSDEF[id].name, ls = G.lairFight && LAIRBOSS[id] ? [BOSSLINES[id][0], 'BLUMHEAD GAVE ME MORE OF THE LOAD. MUCH MORE.'] : BOSSLINES[id];
   cutPlay({ focus: function () { return { x: b.x }; }, lines: first ? [{ who: nm, say: ls[0], col: '#ff2630', fx: function () { sfx.roar(); G.shake = 6; } }, { who: nm, say: ls[1], col: '#ff2630' }] : [{ who: nm, say: ls[1], col: '#ff2630', fx: function () { sfx.roar(); } }],
-    onEnd: function () { G.banner = 2.4; G.bannerTxt = nm; G.bannerSub = id === 'blum' ? 'THE LOAD AT THE END' : AREAS[BOSSDEF[id].area].name.toUpperCase(); } });
+    onEnd: function () { G.banner = 2.4; G.bannerTxt = nm; G.bannerSub = id === 'blum' ? 'THE LOAD AT THE END' : G.lairFight ? (id === 'mega' ? 'THE LAST LOAD' : "GUARDIAN OF BLUMHEAD'S LAIR") : AREAS[BOSSDEF[id].area].name.toUpperCase(); } });
 }
 function brotherIntro(c) {
   G.banner = 0;

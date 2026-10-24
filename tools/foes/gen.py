@@ -322,6 +322,75 @@ def magmaslug(f):
     return g, pal
 
 
+BLUMR = ('#ff5a64', '#d01e2a', '#6a0a12'); BLUMP = ('#c08aff', '#7a2ad8', '#34106a'); BLACKP = ('#4a3a54', '#241a2c', '#0e0a12')
+
+def blumling(f):
+    """a little Blumhead: a red drop with a curled tip and his grin, hopping"""
+    g = Grid(20, 22); sq = [0, 1, 2, 1][f]
+    g.ellipse(10, 15 + sq * 0.5, 8 + sq * 0.5, 7 - sq * 0.5, 'body'); g.poly([(4, 12), (10, 1 + sq), (16, 12)], 'body'); g.ellipse(13, 2 + sq, 2, 2, 'body')
+    g.ellipse(7, 13, 2, 2.5, 'white'); g.ellipse(13, 13, 2, 2.5, 'white'); g.put(7, 14, 'pupil'); g.put(13, 14, 'pupil')
+    g.line(4, 10, 8, 11, 'brow', 0.4); g.line(16, 10, 12, 11, 'brow', 0.4)
+    g.rect(6, 17, 9, 3, 'mouth'); g.put(7, 17, 'teeth'); g.put(9, 17, 'teeth'); g.put(11, 17, 'teeth'); g.put(13, 17, 'teeth'); g.ellipse(6, 10, 1.5, 1, 'shine')
+    return g, {'body': BLUMR, 'white': '#fff6e8', 'pupil': '#12040a', 'brow': '#12040a', 'mouth': '#2a0408', 'teeth': '#f1e7d0', 'shine': '#ffffff'}
+
+def blumeye(f):
+    """a floating eyeball with red veins, a purple iris and a dripping stalk"""
+    g = Grid(26, 30); bl = f == 3
+    g.ellipse(13, 12, 11, 11, 'ball')
+    for (x0, y0, x1, y1) in ((3, 8, 7, 11), (4, 17, 8, 14), (22, 7, 18, 10), (21, 18, 18, 15), (13, 1, 13, 4)): g.line(x0, y0, x1, y1, 'vein', 0.4)
+    if bl: g.rect(3, 11, 21, 3, 'lid')
+    else: g.ellipse(13 + [0, 1, 0, -1][f], 12, 5, 5, 'iris'); g.ellipse(13 + [0, 1, 0, -1][f], 12, 2, 2.5, 'pupil'); g.put(11, 10, 'glint')
+    g.line(13, 23, 12 + (f % 2), 28, 'stalk', 0.8); g.put(12 + (f % 2), 29, 'drip')
+    return g, {'ball': ('#fff6e8', '#e0d0c8', '#9a7a7a'), 'vein': '#c4121c', 'iris': BLUMP, 'pupil': '#12040a', 'glint': '#ffffff', 'lid': BLUMR, 'stalk': BLUMR, 'drip': '#ff2630'}
+
+def blumguard(f):
+    """an armoured guard of the lair: black plate, a Blumhead-drop helm and a purple-bladed spear"""
+    g = Grid(28, 36); step = [0, 1, 0, -1][f]; thrust = f == 3
+    for side, ph in ((-1, step), (1, -step)): g.rect(11 + side * 3 + ph, 26, 4, 9, 'plate'); g.rect(10 + side * 3 + ph, 34, 6, 2, 'plate')
+    g.rect(8, 14, 13, 13, 'plate'); g.rect(8, 14, 13, 2, 'trim'); g.rect(13, 18, 3, 6, 'trim')
+    g.ellipse(14, 9, 6, 6, 'helm'); g.poly([(9, 7), (14, -1), (19, 7)], 'helm'); g.rect(11, 9, 7, 2, 'visor'); g.put(13, 9, 'eye'); g.put(16, 9, 'eye')
+    g.rect(4, 14, 5, 12, 'shield'); g.rect(5, 18, 3, 3, 'trim')
+    sx = 26 if thrust else 22
+    g.line(18, 20, sx, 20 if thrust else 8, 'shaft', 0.6); tip = (sx + 2, 20) if thrust else (sx, 5)
+    g.poly([(tip[0] - 2, tip[1] - 2), (tip[0] + (2 if thrust else 0), tip[1] - (0 if thrust else 4)), (tip[0] - 2, tip[1] + 2)] if thrust else [(tip[0] - 2, tip[1] + 3), (tip[0], tip[1] - 3), (tip[0] + 2, tip[1] + 3)], 'blade')
+    return g, {'plate': BLACKP, 'trim': ('#ff3a44', '#c4121c', '#6a0a10'), 'helm': BLACKP, 'visor': '#12040a', 'eye': '#ff2630', 'shield': ('#3a2a40', '#1e1424', '#0c080e'), 'shaft': ('#8a6a46', '#5a4632', '#2e2018'), 'blade': BLUMP}
+
+def blumspore(f):
+    """a fleshy pod rooted to the floor; it swells and spits a glob"""
+    g = Grid(24, 24); sw = [0, 1, 2, 3][f]
+    for x in (4, 9, 15, 20): g.line(12, 22, x, 23, 'root', 0.6)
+    g.ellipse(12, 15 - sw * 0.5, 8 + sw * 0.6, 8 + sw * 0.4, 'pod')
+    for i in range(4): g.line(6 + i * 4, 10, 6 + i * 4, 19, 'rib', 0.3)
+    g.ellipse(12, 7 - sw * 0.8, 3 + sw * 0.4, 2, 'mouth'); g.put(12, 6 - int(sw * 0.8), 'glow')
+    return g, {'root': BLUMR, 'pod': ('#a85a9a', '#6a2a6a', '#300c30'), 'rib': '#2a0a2a', 'mouth': ('#ff5a64', '#c4121c', '#6a0a12'), 'glow': '#ffe36a'}
+
+def mega(f):
+    """Mega Blumhead: Blumhead grown huge and black, red-veined, three eyes, a crown of purple drips, armoured shoulders"""
+    g = Grid(124, 140); st = [0, 1][f]
+    for side, ph in ((-1, st), (1, -st)):
+        g.ellipse(62 + side * 18 + ph * 2, 124, 12, 12, 'body'); g.ellipse(62 + side * 20 + ph * 2, 134, 15, 6, 'body2')
+    g.ellipse(62, 96, 34, 30, 'body')
+    for side in (-1, 1):
+        sx = 62 + side * 30; g.line(sx, 82, sx + side * 16, 100 + st * side, 'body', 6); g.ellipse(sx + side * 18, 106 + st * side, 9, 9, 'body2')
+        for k in range(3): g.poly([(sx + side * (16 + k * 3), 112 + st * side), (sx + side * (19 + k * 3), 120 + st * side), (sx + side * (22 + k * 3), 112 + st * side)], 'claw')
+        g.ellipse(62 + side * 30, 74, 13, 9, 'plate'); g.poly([(62 + side * 30, 66), (62 + side * 40, 56), (62 + side * 38, 70)], 'spike')
+    g.ellipse(62, 50, 36, 32, 'body'); g.poly([(38, 30), (62, 2), (86, 30)], 'body'); g.ellipse(70, 5, 7, 7, 'body'); g.ellipse(77, 9, 4, 4, None)
+    for (x0, y0, x1, y1) in ((40, 40, 50, 56), (84, 38, 76, 58), (56, 22, 60, 36), (44, 90, 54, 104), (80, 88, 72, 106), (62, 108, 62, 118)): g.line(x0, y0, x1, y1, 'vein', 0.6)
+    for side in (-1, 1):
+        ex = 62 + side * 14; g.ellipse(ex, 50, 7, 8, 'white'); g.ellipse(ex + side, 51, 3.5, 5, 'pupil'); g.put(ex - 1, 48, 'glint'); g.line(ex - 8 * side, 39, ex + 6 * side, 44, 'brow', 1.4)
+    g.ellipse(62, 36, 5, 6, 'white'); g.ellipse(62, 37, 2.5, 4, 'iris'); g.put(61, 35, 'glint')
+    g.poly([(38, 62), (86, 62), (80, 78), (44, 78)], 'mouth')
+    for x in range(40, 85, 5): g.poly([(x, 62), (x + 2.5, 68), (x + 5, 62)], 'teeth'); g.poly([(x + 1, 78), (x + 3.5, 73), (x + 6, 78)], 'teeth')
+    g.ellipse(62, 76, 9, 3, 'tongue')
+    for i, x in enumerate(range(34, 92, 8)): g.poly([(x, 22 + abs(62 - x) * 0.3), (x + 4, 6 + abs(62 - x) * 0.3 - (i % 2) * 4), (x + 8, 22 + abs(62 - x) * 0.3)], 'crown')
+    for i, x in enumerate(range(30, 96, 9)): g.line(x, 80 + (i % 2) * 3, x, 88 + (i % 3) * 3 + st, 'drip', 1.2)
+    g.ellipse(46, 40, 5, 3, 'shine')
+    pal = {'body': ('#4a3a44', '#221820', '#0c080c'), 'body2': ('#3a2a34', '#1a1018', '#0a060a'), 'vein': '#ff2630', 'white': '#fff6e8', 'pupil': '#c4121c', 'iris': '#9a4aff',
+           'glint': '#ffffff', 'brow': '#ff2630', 'mouth': '#2a0408', 'teeth': '#f1e7d0', 'tongue': '#ff8a9a', 'shine': ('#a090a8', '#6a5a70', '#3a2a40'),
+           'crown': BLUMP, 'drip': ('#e0b0ff', '#a060ff', '#5020a0'), 'plate': ('#ff3a44', '#a8121c', '#4a060a'), 'spike': ('#3a3440', '#1a1420', '#0a080c'), 'claw': '#f1e7d0'}
+    return g, pal
+
+
 ENEMIES = {
     'crawler': (lambda f: crawler(f), 4), 'crawlerN': (lambda f: crawler(f, True), 4),
     'bat': (lambda f: bat(f), 4), 'batP': (lambda f: bat(f, True), 4),
@@ -332,6 +401,7 @@ ENEMIES = {
     'knight': (knight, 4), 'wraith': (wraith, 4), 'gargoyle': (gargoyle, 4), 'crow': (crow, 4),
     'clown': (clown, 4), 'balloon': (balloon, 4), 'jailer': (jailer, 4), 'rat': (rat, 4),
     'cultrat': (cultrat, 4), 'skeleton': (skeleton, 4), 'bonehound': (bonehound, 4), 'magmaslug': (magmaslug, 4),
+    'lheart': (lambda f: __import__('props').lairheart(f % 2), 2), 'blumling': (blumling, 4), 'blumeye': (blumeye, 4), 'blumguard': (blumguard, 4), 'blumspore': (blumspore, 4),
 }
 
 # ------------------------------------------------------------------ bosses
@@ -562,7 +632,7 @@ def hotload(f):
 
 BOSSES = {
     'beast': (beast, 2), 'demon': (demon, 2), 'sperm': (sperm, 2), 'pig': (pig, 2), 'cowpig': (cowpig, 2),
-    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2), 'ratking': (ratking, 2), 'boner': (boner, 2), 'hotload': (hotload, 2),
+    'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2), 'ratking': (ratking, 2), 'boner': (boner, 2), 'hotload': (hotload, 2), 'mega': (mega, 2),
 }
 LEFTY = {'pig': pig, 'cowpig': cowpig}  # writing on them: separate left-facing frames
 

@@ -36,7 +36,7 @@ function calcStats() {
   bonusStats(s); pillStats(s); homStats(s);
   return s;
 }
-function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
+function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; if (L && L.lair) return 6; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
 function dropVal() { return Math.max(1, Math.round((3 + tierOf() * 2) * ST.dropMul)); }
 
 /* ---------- starting, saving and ending runs ---------- */
@@ -71,10 +71,10 @@ function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDr
 function runOver(win) {
   clearRun(); var erec = RUN.endless ? recordEndless() : null;
   var area = G.rm ? AREAS[G.rm.area].name : '', got = Math.floor(RUN.drops), d = bankRun();
-  META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? 'Beat Blumhead' : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
+  META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? (win === 3 ? 'Beat Mega Blumhead' : 'Beat Blumhead') : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
   META.legacy = META.legacy.slice(0, 30); META.nextHeir = null; saveMeta();
   G.mode = 'over'; music.stop(1.2);
-  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
+  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 3 ? 'Mega Blumhead falls' : win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
   el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (RUN.hom ? ' (' + homName().toUpperCase() + ')' : '') + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.';
   // the stats of the run
   var st = [['TIME', fmtT(RUN.t)], ['FOES KILLED', RUN.kills], ['FELL IN', L && L.arena ? BOSSDEF[L.arena].name : area], ['POWERUPS', RUN.powers.length], ['FOUND', (RUN.finds || []).length ? RUN.finds.join(', ') : 'nothing'], ['FATE', RUN.card ? cardName(RUN.card) : 'none']];
@@ -265,7 +265,7 @@ function spawnRoom(rs) {
     else if (e.k === 'chest') e.open = !!rs.c[e.i];
     else if (e.k === 'altar') e.taken = !!rs.taken;
   });
-  L.movers = L.ents.filter(function (e) { return e.k === 'log'; }).map(function (e) { return { x: e.x, y: e.y, w: e.w, h: e.h, vx: e.vx, v0: e.vx, sink: e.sink, st: Math.random() * 3 }; }); L.flumeT = 0; L.water = L.ents.filter(function (e) { return e.k === 'water'; })[0] || null;
+  L.movers = L.ents.filter(function (e) { return e.k === 'log'; }).map(function (e) { return { x: e.x, y: e.y, w: e.w, h: e.h, vx: e.vx, v0: e.vx, sink: e.sink, st: Math.random() * 3 }; }); L.flumeT = 0; L.water = L.ents.filter(function (e) { return e.k === 'water'; })[0] || null; lairSpawn(rs);
   if (G.rm && G.rm.type === 'challenge' && rs.done && !L.ents.some(function (e) { return e.k === 'chest' && e.chal; })) L.ents.push({ k: 'chest', x: chestSpot(L.cx0), y: 15 * T, big: 1, chal: 1, i: 'ch', open: !!rs.c.ch });
 }
 /* the challenge reward chest goes on open floor nearest the middle, never inside a block */
@@ -342,7 +342,7 @@ function updateEnemies(dt) {
     } else if (ai === 'shoot') {
       var want = P.x + (e.x < P.x ? -110 : 110), wy = P.y - 70 + Math.sin(e.t * 2 + e.ph) * 18;
       e.x += clamp(want - e.x, -sp * dt, sp * dt); e.y += clamp(wy - e.y, -sp * dt, sp * dt); e.face = dx >= 0 ? 1 : -1;
-      e.cd -= dt; if (e.cd <= 0 && adx < 300) { e.cd = 2.4; var a = Math.atan2(dy, dx); eshots.push({ x: e.x, y: e.y - e.h / 2, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, life: 3, r: 5, dmg: e.dmg, k: 'fire' }); sfx.fire(); }
+      e.cd -= dt; if (e.cd <= 0 && adx < 300) { e.cd = 2.4; var a = Math.atan2(dy, dx); eshots.push({ x: e.x, y: e.y - e.h / 2, vx: Math.cos(a) * (e.d.shotsp || 150), vy: Math.sin(a) * (e.d.shotsp || 150), life: 3, r: 5, dmg: e.dmg, k: e.d.shotk || 'fire', by: e.d.name }); sfx.fire(); }
     } else if (ai === 'hop') {
       e.cd -= dt; if (e.onGround) { e.vx *= 0.8; if (e.cd <= 0 && adx < 280) { e.cd = 1.1 + Math.random() * 0.5; e.vy = -250 - Math.random() * 60; e.vx = (dx > 0 ? 1 : -1) * sp; e.face = dx > 0 ? 1 : -1; } }
       moveBody(e, dt, GRAV);
@@ -401,6 +401,7 @@ function hurtE(e, dmg, src) {
     if (ST.lucky && Math.random() < ST.lucky) { healP(Math.round(ST.mhp * 0.1)); pop(e.x, e.y - e.h - 12, 'LUCKY', '#7dff9a'); }
     if (RUN.cls === 'spermaid') healP(3);
     if (ST.boom) { fx.push({ k: 'ring', x: e.x, y: e.y - e.h / 2, age: 0, c: '#ffb040' }); enemies.forEach(function (o) { if (o.alive && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 50) hurtE(o, ST.dmg * 0.8, 'boom'); }); }
+    if (e.d.onDie) e.d.onDie(e);
     if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; m.safe = 0.5; enemies.push(m); } }
   }
 }
@@ -535,7 +536,7 @@ function updateRoomThings(dt) {
       if (!enemies.length) { G.chal.wait -= dt; if (G.chal.wait <= 0) { if (G.chal.wave >= 3) { rs.done = 1; G.chal = null; G.lock = false; lockExits(false); G.layer = null; sfx.goal(); G.banner = 1.8; G.bannerTxt = 'CHALLENGE CLEARED'; G.bannerSub = 'A CHEST APPEARS'; L.ents.push({ k: 'chest', x: L.cx0 * T, y: 15 * T, big: 1, chal: 1, i: 'ch', open: false }); saveRun(); } else { G.chal.wave++; G.chal.wait = 1.2; spawnWave(2 + tierOf() + G.chal.wave - 1); } } }
     }
   }
-  ambushStep(dt); quirkStep(dt);
+  ambushStep(dt); quirkStep(dt); lairStep(dt);
   G.near = findNear();
 }
 function lockExits(on) {
@@ -578,7 +579,7 @@ function stepPlay(dt) {
   updatePlayer(dt);
   if (G.mode !== 'play') return;
   G.inFake = bodyInFake(); if (G.inFake && Math.random() < 0.7) parts.push({ x: P.x + (Math.random() - 0.5) * 22, y: P.y - Math.random() * P.h, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 40, life: 0.45, c: pick(['#ffe36a', '#fff6d8', '#d878ff', '#f1e7d0']), spark: 1 });
-  updateEnemies(dt); updateBosses(dt); moonFxStep(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
+  updateEnemies(dt); updateBosses(dt); moonFxStep(dt); lairFxStep(dt); updateShots(dt); updateDrops(dt); updateRoomThings(dt); updateFx(dt);
   var c = camTarget(); G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7); G.cam.y += (c.y - G.cam.y) * Math.min(1, dt * 6);
   endlessStep(dt);
   if (G.findDue > 0) { G.findDue -= dt; if (G.findDue <= 0) findBlueprint(1); }

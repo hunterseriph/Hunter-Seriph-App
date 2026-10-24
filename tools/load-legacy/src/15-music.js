@@ -69,6 +69,12 @@ var music = (function () {
     mel: 'd5 - f5 a5 d6 - a5 - | f5 - d5 - a4 - - - | c#5 - e5 a5 c#6 - a5 - | e5 - c#5 - a4 - - - | d5 f5 a5 d6 f6 - d6 - | a5 - f5 - d5 - - - | g5 - bb5 - d6 - bb5 g5 | a5 - c#6 - e6 - - -' };
   SONGS.bhot = { bpm: 160, beats: 4, vol: 0.9, wet: 0.2, lead: 'fm', harm: 1, fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'industrial', chords: 'Fm Fm Db Eb Fm Fm Bbm C',
     mel: 'f5 . f5 ab5 . c6 . f6 | eb6 . db6 . c6 - ab5 - | db6 - c6 - bb5 - ab5 - | g5 - bb5 - eb6 - - - | f6 . f6 . eb6 . c6 ab5 | bb5 c6 ab5 bb5 f5 - - - | bb5 - db6 - f6 - bb6 - | e6 - - - c6 - - -' };
+  SONGS.lair = { bpm: 96, beats: 4, vol: 0.95, wet: 0.6, lead: 'organlead', harm: 1, bass: 'drone', acc: 'organ', drums: 'tribal', chords: 'Em Em C B Em G F# B Am Em C B Em C D# B',
+    mel: 'e5 - - - b5 - - - | c6 - b5 - g5 - e5 - | c6 - - - e6 - - - | d#6 - - - b5 - - - | e6 - d6 - b5 - g5 - | d6 - - - b5 - g5 - | f#5 - a#5 - c#6 - f#6 - | d#6 - - - - - . . | ' +
+         'a5 - c6 - e6 - a6 - | g6 - e6 - b5 - g5 - | e6 - - - c6 - a5 - | f#5 - a5 - b5 - d#6 - | e6 - - - g6 - e6 - | c6 - e6 - g6 - c7 - | b6 - g6 - d#6 - f#6 - | e6 - - - - - - -' };
+  SONGS.bmega = { bpm: 172, beats: 4, vol: 0.92, wet: 0.24, lead: 'fm', harm: 1, fmbass: 1, bass: 'pulse16', acc: 'organ', drums: 'industrial', chords: 'Cm Cm Ab Bb Cm Cm Db G Fm Cm Ab G Cm Ab Bb Cm',
+    mel: 'c5 . c5 eb5 . g5 . c6 | bb5 . ab5 . g5 - eb5 - | ab5 - c6 - eb6 - c6 ab5 | bb5 - d6 - f6 - d6 bb5 | c6 . c6 . eb6 . g6 - | f6 eb6 d6 eb6 c6 - - - | db6 - f6 - ab6 - f6 db6 | b5 - d6 - g6 - - - | ' +
+         'ab5 - c6 - f6 - ab6 - | g6 - eb6 - c6 - g5 - | ab5 - c6 - eb6 - ab6 - | g6 - f6 - d6 - b5 - | c6 - eb6 - g6 - c7 - | ab6 - g6 - eb6 - c6 - | bb5 - d6 - f6 - bb6 - | c7 - - - - - - -' };
   SONGS.super = (function () { var s = {}; for (var k in SONGS.blum) s[k] = SONGS.blum[k]; s.bpm = 166; s.shift = 1; s.harm = 1; return s; })();
   // drum kits: one bar each, 16th notes (12 for a waltz). k kick, s snare, h hat, o open hat, t tom, '.' nothing
   var KITS = {

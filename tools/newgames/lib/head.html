@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>/*@TITLE@*/</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+/* One low-res canvas scaled up crisp. In landscape the on-screen buttons sit over the bottom corners; in portrait they get their own strip under the game. */
+:root{--bg:#070405;--ink:#0e0708;--line:#4a1a1c;--red:#c4121c;--hot:#ff2630;--bone:#f1e7d0;--ash:#a6968f;--gold:#ffe36a;--display:'Pirata One',serif;--pixel:'Press Start 2P',monospace;--body:'Archivo Narrow',sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--body)}
+[hidden]{display:none!important}
+#app{position:relative;height:100%;display:flex;flex-direction:column}
+#view{position:relative;flex:1 1 auto;min-height:0;min-width:0;background:#000}
+#c{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,0.12) 3px)}
+#top{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));right:8px;z-index:6;display:flex;gap:6px}
+.tbtn,#top button{width:38px;height:38px;padding:0;border:0;background:rgba(14,7,8,0.72);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.55);color:var(--bone);cursor:pointer;display:flex;align-items:center;justify-content:center;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+#top svg{width:20px;height:20px}
+#mute .wv{stroke:var(--bone)}#mute .xx{stroke:var(--hot);display:none}#mute.off .wv{display:none}#mute.off .xx{display:block}
+#pad{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
+#pad>*{pointer-events:auto}
+.dpad{position:relative;width:132px;height:132px;border-radius:50%;background:rgba(14,7,8,0.55);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);touch-action:none}
+.dpad i{position:absolute;width:0;height:0;border:11px solid transparent}
+.dpad .u{left:55px;top:10px;border-bottom:15px solid var(--ash);border-top:0}.dpad .d{left:55px;bottom:10px;border-top:15px solid var(--ash);border-bottom:0}
+.dpad .l{top:55px;left:10px;border-right:15px solid var(--ash);border-left:0}.dpad .r{top:55px;right:10px;border-left:15px solid var(--ash);border-right:0}
+.dpad[data-dir*="u"] .u{border-bottom-color:var(--bone)}.dpad[data-dir*="d"] .d{border-top-color:var(--bone)}.dpad[data-dir*="l"] .l{border-right-color:var(--bone)}.dpad[data-dir*="r"] .r{border-left-color:var(--bone)}
+.dpad b{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;background:rgba(196,18,28,0.35)}
+#acts{display:grid;grid-template-columns:repeat(2,64px);gap:10px;align-items:end;direction:rtl}
+#acts.one{grid-template-columns:72px}
+.pbtn{appearance:none;border:0;margin:0;width:64px;height:64px;border-radius:50%;color:var(--bone);font-family:var(--pixel);font-size:12px;background:rgba(14,7,8,0.66);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;direction:ltr;gap:3px}
+.pbtn small{font-size:7px;color:var(--ash);letter-spacing:0.04em}
+.pbtn.on{background:rgba(196,18,28,0.85)}.pbtn.big{width:76px;height:76px}.pbtn.gold{box-shadow:inset 0 0 0 2px rgba(255,227,106,0.7)}
+@media (orientation:portrait){#pad{position:relative;flex:none;padding-top:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));background:#0a0506;box-shadow:inset 0 2px 0 #2a0c0e}.dpad{width:150px;height:150px}.dpad .u{left:64px}.dpad .d{left:64px}.dpad .l{top:64px}.dpad .r{top:64px}.pbtn{width:72px;height:72px}#acts{grid-template-columns:repeat(2,72px)}}
+.hs-notouch #pad{display:none!important}
+/* menus */
+#menu{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 30%,rgba(90,6,14,0.55),rgba(7,4,5,0.94) 70%);overflow:auto}
+#menu.clear{background:rgba(7,4,5,0.72)}
+.mbox{width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;padding:18px 18px 16px;background:#0e0708;box-shadow:inset 0 0 0 2px #c4121c,0 0 30px rgba(196,18,28,0.25);clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);overflow:auto}
+.mbox.wide{width:min(760px,100%)}
+.mbox h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(30px,7vw,46px);line-height:1;color:var(--hot);text-shadow:0 0 14px rgba(255,38,48,0.45),2px 2px 0 #12040a;text-align:center}
+.msub{margin:0;text-align:center;color:var(--ash);font-size:15px;line-height:1.3}
+.mnote{margin:2px 0 0;text-align:center;color:var(--ash);font-size:13px;line-height:1.35}
+.mart{display:flex;justify-content:center}.mart img,.mart canvas{image-rendering:pixelated;max-width:100%}
+.mhtml{color:var(--bone);font-size:15px;line-height:1.4}.mhtml b{color:var(--gold);font-weight:700}
+.mlist{display:flex;flex-direction:column;gap:8px}.mlist.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.mbtn{appearance:none;border:0;padding:11px 14px;background:#140809;color:var(--bone);font-family:var(--pixel);font-size:11px;line-height:1.4;letter-spacing:0.03em;text-align:left;cursor:pointer;box-shadow:inset 0 0 0 1px #4a1a1c;display:flex;flex-direction:column;gap:5px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.mbtn small{font-family:var(--body);font-size:13px;letter-spacing:0;color:var(--ash);line-height:1.25}
+.mbtn:hover,.mbtn:focus-visible,.mbtn.hs-focus{background:#2a0a0e;box-shadow:inset 0 0 0 2px #ff2630;outline:none}
+.mbtn:disabled{opacity:0.4;cursor:default}
+.mbtn.hot{background:#c4121c;box-shadow:inset 0 0 0 2px #ff2630}.mbtn.hot small{color:#f1e7d0}
+.mbtn.gold{box-shadow:inset 0 0 0 1px #ffe36a}.mbtn.gold span{color:var(--gold)}
+.mbtn.done span::after{content:'  \2713';color:var(--gold)}
+</style></head><body>
+<div id="app"><div id="view"><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
+<div id="top"><button id="mute" type="button" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#f1e7d0"/><path class="wv" d="M16 8.5c1.5 1.8 1.5 5.2 0 7M18.5 6c3 3.2 3 8.8 0 12" fill="none" stroke-width="2"/><path class="xx" d="M16 9l5 6M21 9l-5 6" fill="none" stroke-width="2.2"/></svg></button><button id="pauseBtn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#f1e7d0"/><rect x="14" y="5" width="4" height="14" fill="#f1e7d0"/></svg></button></div>
+<div id="menu" hidden></div></div><div id="pad"></div></div>
+<script src="padkit.js"></script>
+<script>
+/*@JS@*/
+</script>
+</body></html>

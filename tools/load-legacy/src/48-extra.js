@@ -50,6 +50,7 @@ function foeAI(e, dt, dx, dy, adx, sp) {
     if (e.st === 'wind') { e.vx = 0; e.fr = 3; e.st2 -= dt; if (e.st2 <= 0) { throwPie(e); e.st = 'go'; e.cd = 2.4; e.fr = null; } }
     else { e.fr = null; e.cd -= dt; patrol(e, sp); if (e.cd <= 0 && adx > 30 && adx < 240 && Math.abs(dy) < 130 && e.onGround) { e.st = 'wind'; e.st2 = 0.45; e.face = dx > 0 ? 1 : -1; } }
     moveBody(e, dt, GRAV);
+  } else if (ai === 'heart') { heartAI(e, dt);
   } else if (ai === 'slug') { // the magma slug crawls along slowly and leaves burning puddles behind it
     patrol(e, adx < 160 && Math.abs(dy) < 40 && (dx > 0) === (e.face > 0) ? sp * 1.6 : sp); moveBody(e, dt, GRAV);
     e.cd -= dt; if (e.cd <= 0 && e.onGround) { e.cd = 1.1; eshots.push({ x: e.x - e.face * 12, y: e.y - 4, vx: 0, vy: 0, life: 3.2, r: 6, dmg: e.dmg * 0.6, k: 'lava', by: 'a magma puddle', safe: 0.3 }); }
@@ -75,7 +76,7 @@ function foeAI(e, dt, dx, dy, adx, sp) {
 }
 function throwPie(e) {
   var sx = e.x + e.face * 8, sy = e.y - 26, tx = P.x, ty = P.y - 10, tt = clamp(Math.abs(tx - sx) / 150, 0.55, 1.3), g = 520;
-  var k = e.d.shot || 'pie', by = { pie: 'a cream pie', dagger: "a cultist's dagger", bone: 'a thrown bone' }[k];
+  var k = e.d.shot || 'pie', by = { pie: 'a cream pie', dagger: "a cultist's dagger", bone: 'a thrown bone', blob: 'a glob of Blum' }[k];
   eshots.push({ x: sx, y: sy, vx: (tx - sx) / tt, vy: (ty - sy - 0.5 * g * tt * tt) / tt, g: g, life: 3, r: 5, dmg: e.dmg, k: k, by: by }); sfx.lob();
 }
 function burstShards(e) {

@@ -6,7 +6,7 @@ from pixelkit import Grid
 S = math.sin; C = math.cos
 WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c'); WOOD2 = ('#8a4e2c', '#5a2e16', '#2e1408'); IRON = ('#9a929a', '#5a545c', '#2a262c')
 GOLD = ('#fff09a', '#ffc840', '#a8741a'); STONE = ('#7a6466', '#4e3c40', '#261c20'); STONER = ('#8a3a40', '#5a1e24', '#2e0a0e')
-RED = ('#ff3a44', '#c4121c', '#6a0a10'); BONE = ('#fff6e0', '#e0d0b0', '#9a8a6a'); BLACK = ('#3a2a30', '#1a1014', '#0c0608')
+RED = ('#ff3a44', '#c4121c', '#6a0a10'); BLUMPU = ('#c08aff', '#7a2ad8', '#34106a'); BONE = ('#fff6e0', '#e0d0b0', '#9a8a6a'); BLACK = ('#3a2a30', '#1a1014', '#0c0608')
 
 def chest(big, opened):
     w, h = (28, 22) if big else (20, 16); g = Grid(w, h + (6 if opened else 0)); oy = 6 if opened else 0
@@ -224,10 +224,32 @@ def emptylot():
     return g, {'dirt': ('#4a2a1a', '#2e1a10', '#1a0c06'), 'dirt2': ('#5a3a24', '#3a2416', '#1e120a'), 'pick': ('#8a7a6a', '#5a4a3a', '#2e241c'), 'rail': ('#6a5a4a', '#4a3a2a', '#24180e'),
                'weed': '#3a6a1a', 'post': ('#6a4630', '#4a2e1c', '#24160c'), 'board': ('#8a5a2a', '#6a3e1a', '#3a200c'), 'board2': ('#7a4e24', '#5a3818', '#2e1a0a'), 'grain': '#4a2a10', 'nail': '#c8c0b0'}
 
+def lairheart(beat):
+    """a beating Blum heart, veins running into the floor"""
+    g = Grid(44, 48); k = 2 if beat else 0
+    for x in (6, 14, 30, 38): g.line(22, 40, x, 47, 'vein', 1)
+    g.ellipse(15, 20, 11 + k, 12 + k, 'heart'); g.ellipse(29, 20, 11 + k, 12 + k, 'heart'); g.poly([(4 - k, 24), (40 + k, 24), (22, 44 + k)], 'heart')
+    g.rect(16, 2 - k, 5, 10, 'tube'); g.rect(24, 4 - k, 4, 8, 'tube')
+    for (x0, y0, x1, y1) in ((12, 14, 18, 30), (30, 12, 26, 32), (22, 26, 22, 40)): g.line(x0, y0, x1, y1, 'vein2', 0.5)
+    g.ellipse(13, 15, 3, 2, 'shine')
+    return g, {'vein': ('#c4121c', '#8a0a14', '#4a060a'), 'heart': ('#ff5a64', '#c4121c', '#5a0810'), 'tube': BLUMPU, 'vein2': '#6a0a12', 'shine': '#ffd0d4'}
+
+def walleye(shut):
+    """a huge eye grown into the wall of the lair"""
+    g = Grid(56, 40)
+    g.ellipse(28, 20, 27, 19, 'flesh')
+    g.ellipse(28, 20, 21, 13, 'ball')
+    if shut: g.ellipse(28, 20, 22, 14, 'lid'); g.line(8, 20, 48, 20, 'lash', 0.6)
+    else: g.ellipse(28, 20, 9, 9, 'iris'); g.ellipse(28, 20, 4, 6, 'pupil'); g.put(25, 16, 'glint'); g.put(26, 16, 'glint')
+    for (x0, y0, x1, y1) in ((8, 16, 14, 19), (48, 15, 42, 19), (12, 27, 17, 24), (44, 27, 39, 24)):
+        if not shut: g.line(x0, y0, x1, y1, 'vein', 0.4)
+    return g, {'flesh': ('#8a2a3a', '#5a1424', '#2a060e'), 'ball': ('#fff6e8', '#e0d0c8', '#9a7a7a'), 'lid': ('#a83a4a', '#6a1a2a', '#300810'), 'lash': '#12040a',
+               'iris': BLUMPU, 'pupil': '#12040a', 'glint': '#ffffff', 'vein': '#c4121c'}
+
 PROPS = {
     'chest': lambda: chest(False, False), 'chestopen': lambda: chest(False, True), 'bigchest': lambda: chest(True, False), 'bigchestopen': lambda: chest(True, True),
     'door': lambda: door(False), 'blumdoor': lambda: door(True), 'altar': altar, 'turret': turret, 'stall': stall, 'logboat': logboat,
     'shrine': lambda: shrine(False), 'shrinedry': lambda: shrine(True), 'slot': slot, 'cell': lambda: cell(False), 'cellopen': lambda: cell(True),
     'feast': lambda: feast(False), 'feastate': lambda: feast(True), 'chand': chand, 'pad0': lambda: pad(0), 'pad1': lambda: pad(1), 'vent': vent,
-    'saw0': lambda: saw(0), 'saw1': lambda: saw(1), 'creampool': creampool, 'skulls': skulls, 'ribs': ribs, 'crucible': crucible, 'tallsign': tallsign, 'hatchery': hatchery, 'emptylot': emptylot,
+    'saw0': lambda: saw(0), 'saw1': lambda: saw(1), 'creampool': creampool, 'skulls': skulls, 'ribs': ribs, 'crucible': crucible, 'tallsign': tallsign, 'hatchery': hatchery, 'emptylot': emptylot, 'heart0': lambda: lairheart(0), 'heart1': lambda: lairheart(1), 'walleye': lambda: walleye(0), 'walleyeshut': lambda: walleye(1),
 }

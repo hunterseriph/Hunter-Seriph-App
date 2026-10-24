@@ -14,7 +14,7 @@ function resize() {
   M = Math.max(1, Math.min(4, Math.ceil(cssScale))); cv.width = VW * M; cv.height = VH * M; buildVignette();
 }
 window.addEventListener('resize', resize);
-function areaNow() { if (G.mode === 'town') return null; if (L && L.arena) return BOSSDEF[L.arena].area; return G.rm ? G.rm.area : 'castle'; }
+function areaNow() { if (G.mode === 'town') return null; if (L && L.lair) return 'lair'; if (L && L.arena) return BOSSDEF[L.arena].area; return G.rm ? G.rm.area : 'castle'; }
 function TH() { var a = areaNow(); return a ? AREAS[a] : { e1: '#ff3a44', e2: '#7a0a12', tint: null, sky: null }; }
 function text(str, x, y, align, col, size) {
   ctx.font = (size || 8) + 'px "Press Start 2P", monospace'; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
@@ -208,6 +208,7 @@ function drawBack() {
   if (G.mode === 'town') { if (TOWN && TOWN.inside) clubBack(); else outdoorSky(gx, false); return; } // just the far skyline: the shops are all on the street itself
   var A = AREAS[a];
   if (a === 'moon') moonBack(gx);
+  else if (a === 'lair') lairBack(gx);
   else if (a === 'roof') { outdoorSky(gx, false); roofSpires(gx); }
   else if (a === 'city') parkBack(gx);
   else { wallBack(gx, A); if (a === 'castle') castleWindows(gx); else if (a === 'sewer') sewerBack(gx); else if (a === 'bone') { boneBack(gx); boneChains(gx); } else if (a === 'furnace') furnaceBack(gx); else dungeonChains(gx); }
@@ -223,9 +224,10 @@ var STONE = {
   bone:    { m: '#080604', c: ['#3a342a', '#423a2e', '#342e24', '#4a4234'], hi: '#6a604e', lo: '#1a1612', cap: ['#8a7e66', '#e8dcc0', '#3a342a'], deep: '#14100c', spot: '#5a5040', style: 'rough' },
   furnace: { m: '#080200', c: ['#2a0e06', '#321208', '#240c04', '#3a160a'], hi: '#6a2a10', lo: '#120402', cap: ['#8a3a10', '#ffb040', '#3a1004'], deep: '#120402', spot: '#ff5a20', style: 'brick' },
   moon:    { m: '#060204', c: ['#2a0a0e', '#300c12', '#240a0c', '#360e14'], hi: '#5a1a22', lo: '#12040a', cap: ['#8a1a24', '#ff2630', '#3a0a10'], deep: '#0e0306', spot: '#7a0c14', style: 'rough' },
+  lair:    { m: '#060004', c: ['#2a0a22', '#320c28', '#240820', '#3a1030'], hi: '#5a1a4a', lo: '#12040e', cap: ['#7a1a3a', '#c08aff', '#3a0a20'], deep: '#10030c', spot: '#9a4aff', style: 'rough' },
   dungeon: { m: '#060406', c: ['#2c2326', '#30272a', '#272022', '#342a2e'], hi: '#4a3e42', lo: '#160f12', cap: ['#463a3e', '#6a5a5e', '#221a1c'], deep: '#110b0d', spot: '#4a0a10', style: 'rough' }
 };
-function th16() { if (G.mode === 'town' || (L && L.town)) return STONE.castle; /* the town always stays red */ var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
+function th16() { if (G.mode === 'town' || (L && L.town)) return STONE.castle; /* the town always stays red */ if (L && L.lair) return STONE.lair; var a = L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 'castle' : BOSSDEF[L.arena].area) : (G.rm ? G.rm.area : 'castle'); return STONE[a] || STONE.castle; }
 function hsh(x, y, k) { var h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function stoneTile(g, px, py, tx, ty, S, open) {
   // open: which sides face air {u, d, l, r}
@@ -354,9 +356,11 @@ function drawDeco(e, cx) {
   else if (e.d === 'throneL' || e.d === 'throneR') { R(ctx, '#1a0507', x - 10, y - 50, 20, 50); R(ctx, '#5a070c', x - 8, y - 48, 16, 46); R(ctx, '#ff2630', x - 8, y - 48, 16, 2); ctx.fillStyle = 'rgba(255,170,60,0.18)'; ctx.beginPath(); ctx.arc(x, y - 58, 12, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x, y - 58 + Math.sin(G.t * 8 + x) * 0.8, 3, 0, 6.28); ctx.fill(); }
 }
 function drawDoor(e, cx) {
-  var x = Math.round(e.x - cx), y = e.y, h = 70, dead = e.boss !== 'blum' && !(RUN && RUN.endless) && META.bosses[BOSSDEF[e.boss].area];
-  ctx.save(); if (!dead) { ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 10 + Math.sin(G.t * 3) * 3; } spr(e.boss === 'blum' ? 'p_blumdoor' : 'p_door', x, y, false, 1, dead ? 0.55 : 1); ctx.restore();
-  if (e.boss === 'blum') {
+  var x = Math.round(e.x - cx), y = e.y, h = 70, dead = e.lair ? !!(RUN && RUN.lair && RUN.lair.seals[e.boss]) : e.boss !== 'blum' && !(RUN && RUN.endless) && META.bosses[BOSSDEF[e.boss].area];
+  ctx.save(); if (!dead) { ctx.shadowColor = e.lair ? '#9a4aff' : '#ff2630'; ctx.shadowBlur = 10 + Math.sin(G.t * 3) * 3; } spr(e.boss === 'blum' || e.boss === 'mega' ? 'p_blumdoor' : 'p_door', x, y, false, 1, dead ? 0.55 : 1); ctx.restore();
+  if (e.boss === 'mega') { /* four guardian seals over the last door */
+    ['beast', 'demon', 'sperm', 'pig'].forEach(function (a, s) { var on = RUN && RUN.lair && RUN.lair.seals[a], sx = x - 27 + s * 18, sy = y - h - 14; R(ctx, '#12040a', sx - 6, sy - 6, 12, 12); R(ctx, on ? '#9a4aff' : '#2a0a3a', sx - 5, sy - 5, 10, 10); R(ctx, on ? '#e0b0ff' : '#3a1a4a', sx - 5, sy - 5, 10, 2); if (on) R(ctx, '#ffe36a', sx - 1, sy - 3, 2, 6); });
+  } else if (e.boss === 'blum') {
     for (var s = 0; s < 4; s++) { var a = AREAORDER[s], on = META.bosses[a], sx = x - 27 + s * 18, sy = y - h - 14; R(ctx, '#12040a', sx - 6, sy - 6, 12, 12); R(ctx, on ? '#ff2630' : '#3a0a10', sx - 5, sy - 5, 10, 10); R(ctx, on ? '#ff9a9a' : '#5a1a20', sx - 5, sy - 5, 10, 2); if (on) R(ctx, '#ffe36a', sx - 1, sy - 3, 2, 6); }
   } else { var d = BOSSDEF[e.boss], f = SPR[d.sp + '0'] || SPR[d.sp]; if (f) { var sc = Math.min(30 / f[2], 26 / f[3]); spr(SPR[d.sp + '0'] ? d.sp + '0' : d.sp, x, y - h - 4, true, sc, dead ? 0.3 : 1); } if (dead) text('SLAIN', x, y - 20, 'center', '#a6968f', 6); }
 }function drawChest(e, cx) {
@@ -386,7 +390,7 @@ function drawBoss(b, cx) {
   var x = Math.round(b.x - cx), d = b.d, f = Math.floor(G.t * 4) % 2, name = SPR[d.sp + f] ? d.sp + f : d.sp, white = b.flash > 0 && Math.floor(G.t * 40) % 2 === 0;
   var face = b.face > 0, flip = !face;
   if (!face && SPR[name + 'L']) { name += 'L'; flip = false; } // the Piggy brothers' shirts never read backwards
-  ctx.save(); if (white) ctx.filter = 'brightness(3)'; if (b.ph === 2 && b.id !== 'demon') { ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 14; }
+  ctx.save(); if (white) ctx.filter = 'brightness(3)'; if (b.ph === 2 && b.id !== 'demon') { ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 14; } if (b.lair || b.id === 'mega') { ctx.shadowColor = '#9a4aff'; ctx.shadowBlur = 12 + Math.sin(G.t * 5) * 4; }
   var bob = b.fly ? Math.sin(G.t * 3 + (b.slot || 0)) * 3 : 0;
   if (b.st === 'tell' && Math.floor(G.t * 30) % 2) x += 2;
   spr(name, x, Math.round(b.y + bob), flip, d.sc); ctx.restore();
@@ -572,7 +576,7 @@ function render() {
     drawExits(cx);
     L.ents.forEach(function (e) { if (e.k === 'deco') drawDeco(e, cx); });
     L.ents.forEach(function (e) { if (e.k === 'steve') drawSteve(e, cx); });
-    drawFlume(cx); drawLogs(cx); drawQuirks(cx);
+    drawFlume(cx); drawLogs(cx); drawQuirks(cx); drawLairBack(cx);
     L.ents.forEach(function (e) { if (e.k === 'door') drawDoor(e, cx); else if (e.k === 'chest') drawChest(e, cx); else if (e.k === 'altar') drawAltar(e, cx); else if (e.k === 'turret') drawTurret(e, cx); else if (e.k === 'portal') drawPortal(e, cx); else if (e.k === 'npc') drawNpcEnt(e, cx); });
   }
   for (i = 0; i < drops.length; i++) { var d = drops[i], bob = d.fly ? 0 : Math.sin(G.t * 4 + d.x * 0.05) * 1.5, dx = Math.round(d.x - cx) - 4; if (dx < -12 || dx > VW + 12) continue; if (d.fly && d.age > 7 && Math.floor(G.t * 14) % 2 === 0) continue; ctx.drawImage(dropImg, dx, Math.round(d.y + bob) - 5); }
@@ -581,7 +585,7 @@ function render() {
   drawBlumBody(cx);
   if (P.x !== undefined) drawPlayer(cx);
   if (P.bubbleOn && G.mode === 'play' && P.state !== 'dead') { ctx.strokeStyle = 'rgba(154,223,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(Math.round(P.x - cx), Math.round(P.y - P.h / 2), P.h * 0.75 + Math.sin(G.t * 5), 0, 6.28); ctx.stroke(); R(ctx, '#ffffff', Math.round(P.x - cx - P.h * 0.35), Math.round(P.y - P.h * 0.95), 2, 2); }
-  drawShots(cx); if (G.mode === 'play') { drawStorm(cx); drawMoonFx(cx); }
+  drawShots(cx); if (G.mode === 'play') { drawStorm(cx); drawMoonFx(cx); drawLairFront(cx); drawLairFx(cx); }
   for (i = 0; i < parts.length; i++) if (!parts[i].spark) R(ctx, parts[i].c, Math.round(parts[i].x - cx), Math.round(parts[i].y), 2, 2);
   fx.forEach(function (f) { if (f.k === 'zap') { ctx.strokeStyle = '#fff6a0'; ctx.lineWidth = 2; ctx.globalAlpha = 1 - f.age / 0.45; ctx.beginPath(); ctx.moveTo(f.x0 - cx, f.y0); for (var zi = 1; zi < 5; zi++) ctx.lineTo(f.x0 + (f.x1 - f.x0) * zi / 5 - cx + (Math.random() * 8 - 4), f.y0 + (f.y1 - f.y0) * zi / 5 + (Math.random() * 8 - 4)); ctx.lineTo(f.x1 - cx, f.y1); ctx.stroke(); ctx.globalAlpha = 1; return; } var a = f.age / 0.45; ctx.strokeStyle = f.c || '#f1e7d0'; ctx.globalAlpha = 1 - a; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x - cx, f.y, (f.big ? 120 : 30) * a + 4, 0, 6.28); ctx.stroke(); ctx.globalAlpha = 1; });
   if (G.fakeLayer && G.mode === 'play') { ctx.globalAlpha = (RUN && RUN.card === 'haunted') ? 0.45 : (G.inFake ? 0.82 : 1); ctx.drawImage(G.fakeLayer, -cx, 0); ctx.globalAlpha = 1; for (i = 0; i < parts.length; i++) if (parts[i].spark) { var sp2 = parts[i]; ctx.fillStyle = sp2.c; ctx.fillRect(Math.round(sp2.x - cx) - 1, Math.round(sp2.y), 3, 1); ctx.fillRect(Math.round(sp2.x - cx), Math.round(sp2.y) - 1, 1, 3); } }

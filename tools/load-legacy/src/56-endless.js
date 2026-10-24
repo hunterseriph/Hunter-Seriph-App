@@ -22,9 +22,10 @@ function ensureEndless(n) {
       boss = i <= 30 ? ['ratking', 'boner', 'hotload'][i / 10 - 1] : order[(i / 10 - 4) % order.length]; area = BOSSDEF[boss].area; }
     else if (r() < 0.42 && !(prev && prev.type !== 'normal')) { type = ENDLESS_TYPES[Math.floor(r() * ENDLESS_TYPES.length)]; if (type === 'flume') area = 'city'; }
     if (type === 'normal' && i > 1 && r() < 0.2) cw = 2;
+    if (type === 'flume') cw = 3; /* the Load Flume is a long ride */
     var rm = { cx: W.next, cy: EROW, area: area, type: type, ex: { l: 1, r: 1 }, exits: [{ d: 'l', i: 0 }, { d: 'r', i: 0 }], idx: i, endless: 1, cw: cw, ch: 1, boss: boss, id: i };
-    if (cw === 2) rm.big = 'wide';
-    W.rooms[key2(W.next, EROW)] = rm; if (cw === 2) W.rooms[key2(W.next + 1, EROW)] = rm;
+    if (cw === 2) rm.big = 'wide'; if (type === 'flume') rm.long = cw;
+    for (var cc = 0; cc < cw; cc++) W.rooms[key2(W.next + cc, EROW)] = rm;
     W.list.push(rm); W.next += cw; W.count++;
   }
 }
