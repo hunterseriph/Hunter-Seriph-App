@@ -320,8 +320,21 @@ function cull() {
   ledges = ledges.filter(function (l) { return l[0] + l[2] > lo; });
 }
 
+/* ---------- the theme: Meatnado, Mega Drive version (meatnado-md.mp3, an FM/PSG cover of Hunter's own song) ---------- */
+var bgm = (function () {
+  var a = null, want = 0.55;
+  function el0() { if (!a) { a = new Audio('meatnado-md.mp3'); a.loop = true; a.preload = 'auto'; a.volume = want; } return a; }
+  function apply() { if (!a) return; a.muted = sfx.muted; }
+  return {
+    play: function (restart) { var x = el0(); apply(); if (restart) { try { x.currentTime = 0; } catch (e) {} } x.volume = want; var p = x.play(); if (p && p.catch) p.catch(function () {}); },
+    duck: function (v) { if (a) a.volume = v; },
+    pause: function () { if (a) a.pause(); },
+    resume: function () { if (a && a.paused && a.currentTime > 0) { apply(); var p = a.play(); if (p && p.catch) p.catch(function () {}); } },
+    sync: apply
+  };
+})();
 function startGame() {
-  sfx.init(); sfx.click();
+  sfx.init(); sfx.click(); bgm.play(true);
   G.mode = 'play'; G.time = 0; G.drops = 0; G.total = 0; G.kills = 0; G.dist = 0; G.score = 0; G.nextMark = 500; G.v = 150; G.overT = 0; G.gap = 175; G.stumble = 0; G.caught = false; G.rainT = 9; rain = [];
   pits = []; obs = []; drops = []; ledges = []; shots = []; parts = []; lastMix = ''; rain = [];
   START_X = 0; resetPlayer(); G.cam = P.x - PXS; genX = P.x + 260;
@@ -336,11 +349,12 @@ function toTitle() {
 el('startBtn').addEventListener('click', startGame);
 el('retryBtn').addEventListener('click', startGame);
 ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.addEventListener(ev, function () { sfx.init(); }, { passive: true }); });
-document.addEventListener('visibilitychange', function () { if (document.hidden) sfx.suspend(); else sfx.init(); });
+document.addEventListener('visibilitychange', function () { if (document.hidden) { sfx.suspend(); bgm.pause(); } else { sfx.init(); bgm.resume(); } });
+['pointerdown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function once() { window.removeEventListener(ev, once); if (G.mode === 'title') bgm.play(false); }); });
 (function () {
   var b = el('mute');
   function paint() { b.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); b.setAttribute('aria-label', sfx.muted ? 'Sound off' : 'Sound on'); b.classList.toggle('off', sfx.muted); }
-  b.addEventListener('click', function () { sfx.init(); sfx.setMuted(!sfx.muted); paint(); if (!sfx.muted) sfx.click(); });
+  b.addEventListener('click', function () { sfx.init(); sfx.setMuted(!sfx.muted); bgm.sync(); paint(); if (!sfx.muted) sfx.click(); });
   paint();
 })();
 
@@ -444,7 +458,7 @@ function endRun() {
   sfx.rumble(0); el('overTxt').textContent = 'SCORE ' + G.score + '   ' + m + 'M';
   el('overSub').textContent = 'DROPS ' + G.total + '   FOES ' + G.kills;
   el('overBest').textContent = newBest ? 'NEW BEST!' : 'Best: ' + best.score + ' pts · ' + best.m + 'm';
-  el('over').hidden = false; sfx.over(); showBest();
+  el('over').hidden = false; sfx.over(); showBest(); bgm.duck(0.2);
 }
 function updateWorld(dt) {
   var i, j, o, d, s, rel = G.v;
