@@ -397,6 +397,8 @@ function hurtE(e, dmg, src) {
     if (e.idx !== undefined && e.idx !== null && (typeof e.idx === 'string' || e.idx >= 0)) rsOf(G.roomKey).k[e.idx] = 1;
     if (e.d.burst) burstShards(e);
     if (!e.swarm) spill(e.x, e.y - e.h / 2, (e.d.drops || 2) + tierOf());
+    // Cum Crackers: a fair chance from anything, more likely when you are hurting
+    if (Math.random() < (e.swarm ? 0.04 : 0.16) + (P.hp < ST.mhp * 0.4 ? 0.12 : 0)) dropCracker(e.x, e.y - e.h / 2);
     P.mana = Math.min(ST.mmana, P.mana + 4 + (ST.soul || 0));
     if (ST.lucky && Math.random() < ST.lucky) { healP(Math.round(ST.mhp * 0.1)); pop(e.x, e.y - e.h - 12, 'LUCKY', '#7dff9a'); }
     if (RUN.cls === 'spermaid') healP(3);
@@ -405,6 +407,7 @@ function hurtE(e, dmg, src) {
     if (e.d.split && !e.mini) { for (var s = -1; s <= 1; s += 2) { var m = mkEnemy(e.k, e.x + s * 8, e.y, -1, true); m.vy = -200; m.vx = s * 60; m.safe = 0.5; enemies.push(m); } }
   }
 }
+function dropCracker(x, y) { drops.push({ x: x, y: y, fly: true, vx: (Math.random() - 0.5) * 80, vy: -230, age: 0, crk: 1 }); }
 function spill(x, y, n) {
   for (var i = 0; i < n; i++) { var a = -Math.PI * (0.15 + 0.7 * (i / Math.max(1, n - 1))), s = 80 + Math.random() * 90; drops.push({ x: x, y: y, fly: true, vx: Math.cos(a) * s, vy: Math.sin(a) * s, age: 0 }); }
 }
@@ -470,10 +473,12 @@ function updateDrops(dt) {
       d.vy += 700 * dt; d.x += d.vx * dt; var py = d.y; d.y += d.vy * dt;
       var t = tileAt(d.x, d.y + 5); if (d.vy > 0 && (solidT(t) || ((t === TL || t === TV || t === TG) && py + 5 <= Math.floor((d.y + 5) / T) * T + 1))) { d.y = Math.floor((d.y + 5) / T) * T - 5; d.vy *= -0.5; d.vx *= 0.8; if (Math.abs(d.vy) < 30) d.vy = 0; }
       if (solidT(tileAt(d.x, d.y))) d.vx = -d.vx;
-      if (d.age > 9 || d.y > L.h * T + 30) continue;
+      if ((d.age > (d.crk ? 16 : 9)) || d.y > L.h * T + 30) continue;
     }
     if (P.state !== 'dead' && (!d.fly || d.age > 0.35)) {
       var dx = d.x - P.x, dy = d.y - (P.y - P.h / 2);
+      if (d.crk && (P.hp >= ST.mhp || ST.noHeal)) { keep.push(d); continue; } /* full health: the cracker waits for later */
+      if (dx * dx + dy * dy < 17 * 17 && d.crk) { var hb = P.hp; healP(Math.round(ST.mhp * 0.12) + 6, true); pop(P.x, P.y - P.h - 6, 'CUM CRACKER +' + Math.round(P.hp - hb), '#7dff9a'); sfx.pick(G.t); RUN.crackers = (RUN.crackers || 0) + 1; continue; }
       if (dx * dx + dy * dy < 17 * 17) { var v = d.val || dropVal(); RUN.drops += v; sfx.pick(G.t); homGain(2); if (d.room !== undefined) rsOf(G.roomKey).d[d.room] = 1; continue; }
       var mr = ST.magnet ? 50 + 70 * ST.magnet : 50;
       if (dx * dx + dy * dy < mr * mr && (d.fly || ST.magnet) && d.age > 0.6) { d.x -= dx * 3 * dt; d.y -= dy * 3 * dt; }

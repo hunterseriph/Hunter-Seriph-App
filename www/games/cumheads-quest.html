@@ -1558,16 +1558,19 @@ function hubShop(sid, who, note) {
   if (sid === 'stackedfate') fateRows(list, sid, who);
   showEq(true);
 }
+/* every cabinet in Potbelly Arcade: the real games, in an iframe */
+var ARCGAMES = { meatnado: ['MEATNADO ESCAPE', 'meatnado.html'], spermhog: ['CUMHEAD THE SPERMHOG', 'spermhog.html'], survivors: ['SPERMAID SURVIVORS', 'spermaid-survivors.html'],
+  willy: ['WILLY NILLY', 'willy-nilly.html'], spuzz: ["SPUZZWORLD: CUM'S ODDYSEE", 'spuzzworld.html'], grinding: ['THE GRINDING OF CUMHEAD', 'grinding-of-cumhead.html'],
+  overdrive: ["POTBELLY'S ARCADE OVERDRIVE", 'arcade-overdrive.html'], void: ['JOURNEY TO THE VOID', 'journey-to-the-void.html'] };
 function arcadeRows(list) {
-  row(list, 'PLAY MEATNADO ESCAPE', function () { closeShop(); openArcade('meatnado'); }, 'Free to play. Arcade cabinet', 'use');
-  row(list, 'PLAY CUMHEAD THE SPERMHOG', function () { closeShop(); openArcade('spermhog'); }, 'Free to play. Arcade cabinet', 'use');
+  Object.keys(ARCGAMES).forEach(function (k) { row(list, 'PLAY ' + ARCGAMES[k][0], function () { closeShop(); openArcade(k); }, 'Free to play. Arcade cabinet', 'use'); });
 }
 
 /* ----- the arcade overlay: the real games, in an iframe ----- */
 function openArcade(game) {
   G.state = 'arcade'; G.arcGame = game; sfx.click(); music.stop(0.2);
-  el('arcTitle').textContent = game === 'meatnado' ? 'MEATNADO ESCAPE' : 'CUMHEAD THE SPERMHOG';
-  var fr = el('arcFrame'); fr.src = game === 'meatnado' ? 'meatnado.html' : 'spermhog.html';
+  var ag = ARCGAMES[game] || ARCGAMES.spermhog; el('arcTitle').textContent = ag[0];
+  var fr = el('arcFrame'); fr.src = ag[1];
   fr.onload = function () { try { fr.contentWindow.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeArcade(); }); fr.contentWindow.focus(); } catch (x) {} };
   el('arc').hidden = false;
 }

@@ -123,7 +123,7 @@ var SCREENS = [
       '                z         V  #',
       '##############################',
       '##############################'] },
-  { sx: 5, sy: 1, name: 'The Goo Works', zone: 1, signs: ['THE LEVER SWITCHES THE BARRIER OFF.'], shadows: [[2, 9, 4, 14]],
+  { sx: 5, sy: 1, name: 'The Mincing Floor', zone: 1, signs: ['THE LEVER SWITCHES THE BARRIER OFF.'], shadows: [[2, 9, 4, 14]],
     rows: [
       '##############################',
       '##############################',
@@ -239,7 +239,7 @@ var SCREENS = [
       '##############################'] }
 ];
 var ZONES = [
-  { name: 'The Cells', back: '#140810', band: '#1e0c18', pipe: '#3a1a2a', block: ['#3a2a34', '#4a3642', '#241a20'], ledge: '#5a4a52' },
-  { name: 'The Goo Works', back: '#0e0c10', band: '#18141c', pipe: '#3a2a1a', block: ['#3a2a20', '#4e3a2a', '#20160e'], ledge: '#6a5a40' },
+  { name: 'The Dungeon', back: '#140810', band: '#1e0c18', pipe: '#3a1a2a', block: ['#3a2a34', '#4a3642', '#241a20'], ledge: '#5a4a52' },
+  { name: 'The Mincing Works', back: '#0e0c10', band: '#18141c', pipe: '#3a2a1a', block: ['#3a2a20', '#4e3a2a', '#20160e'], ledge: '#6a5a40' },
   { name: 'The Deep Lair', back: '#160406', band: '#24080c', pipe: '#5a0a14', block: ['#4a121a', '#6a1a24', '#2a060c'], ledge: '#7a2a30' }
 ];

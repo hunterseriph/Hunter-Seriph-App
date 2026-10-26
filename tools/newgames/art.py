@@ -7,7 +7,7 @@ games/<id>/art.py (drawn with tools/pixelkit.py, same outline and shading). buil
 import base64, fnmatch, io, json, os, re, sys, importlib.util
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)); TOOLS = os.path.dirname(HERE); APP = os.path.dirname(TOOLS)
-sys.path.insert(0, TOOLS)
+sys.path.insert(0, TOOLS); sys.path.insert(0, HERE)
 from pixelkit import render, pack
 
 def _sheet(png, js, prefix=''):

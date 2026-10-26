@@ -2,8 +2,8 @@
 games need: meat chunks, pills, a lever, gate bars, targets, slot symbols, arrows, stairs and floor tiles."""
 import math
 from pixelkit import Grid
-USE = ['ch_*', 'cumface', 'npc_potbelly', 'npc_tb', 'npc_amy', 'npc_spermaid', 'spermaid_s*', 'greebo_s*', 'npc_greebo', 'npc_joff', 'npc_saba', 'npc_kaya', 'npc_t',
-       'f_crawler_*', 'f_bat_*', 'f_batP_*', 'f_blumling_*', 'f_blum_*', 'f_blum2_*', 'f_slime_*', 'f_ghoul_*', 'f_blumguard_*', 'f_vampire_*', 'f_imp_*',
+USE = ['ch_*', 'cumface', 'npc_*', 'spermaid_s*', 'greebo_s*', 'f_crawler_*', 'f_bat_*', 'f_batP_*', 'f_blumling_*', 'f_blum_*', 'f_blum2_*', 'f_slime_*', 'f_ghoul_*', 'f_blumguard_*', 'f_vampire_*', 'f_imp_*',
+       'f_sperm_*', 'f_pig_0', 'f_pig_1', 'f_demon_*', 'f_golem_*', 'f_beast_*', 'f_ratking_*',
        'p_logboat', 'p_slot', 'p_chest', 'p_chestopen', 'h_gloop_egg*', 'h_blood_egg*', 'h_gloop_baby_idle0', 'h_blood_baby_idle0', 'h_ember_baby_idle0', 'steve0', 'steve1']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); IRON = ('#9a929a', '#5a545c', '#2a262c')
 WHITE = ('#ffffff', '#e8dcc8', '#a8987a'); WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c'); PURP = ('#c08aff', '#7a2ad8', '#34106a')
@@ -70,3 +70,17 @@ ART = {'ao_cab_r': lambda: cabinet(RED), 'ao_cab_p': lambda: cabinet(PURP), 'ao_
        'ao_cabbig': lambda: cabinet(GOLD, True), 'ao_coin': coin, 'ao_meat0': lambda: meat(0), 'ao_meat1': lambda: meat(2), 'ao_pill': pill, 'ao_lever0': lambda: lever(False), 'ao_lever1': lambda: lever(True),
        'ao_bars': bars, 'ao_target': target, 'ao_s7': lambda: sym('7'), 'ao_scherry': lambda: sym('cherry'), 'ao_sskull': lambda: sym('skull'), 'ao_sdrop': lambda: sym('drop'),
        'ao_arrow': arrow, 'ao_stairs': stairs, 'ao_wall': wall, 'ao_bowlc': lambda: bowl(False), 'ao_bowld': lambda: bowl(True), 'ao_bubble': bigbubble, 'ao_heart': heart, 'ao_heart0': heart0, 'ao_drop': drop}
+
+# borrowed: Grinding's rock and bomb, Spuzzworld's mine, the chibi Cumhead, and a chilli for Willy Nilly's games
+import importlib.util as _iu, os as _os
+def _load(game):
+    p = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), game, 'art.py'); sp = _iu.spec_from_file_location('_a_' + game, p); m = _iu.module_from_spec(sp); sp.loader.exec_module(m); return m.ART
+_gr = _load('grinding'); _sw = _load('spuzzworld')
+for _k in ('gr_rock0', 'gr_bomb', 'gr_bombl'): ART[_k] = _gr[_k]
+ART['ao_mine'] = _sw['sw_mine1']
+import chibi as _ch
+ART.update(_ch.frames())
+def chilli():
+    g = Grid(18, 10); g.ellipse(9, 5, 8, 4, 'c'); g.poly([(14, 2), (18, 5), (14, 8)], 'c'); g.rect(0, 4, 3, 2, 'stem'); g.put(6, 3, 'hi'); g.put(7, 3, 'hi')
+    return g, {'c': RED, 'stem': ('#9aff5a', '#4aa82a', '#1a5a10'), 'hi': '#ffd0c0'}
+ART['ao_chilli'] = chilli

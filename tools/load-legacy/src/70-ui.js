@@ -138,6 +138,12 @@ function openArcadeMenu() {
   var rows = [
     { icon: 'npc_potbelly', name: 'PLAY MEATNADO ESCAPE', sub: 'The cabinet by the door', fn: function () { openCab('meatnado.html'); } },
     { icon: 'cumface', name: 'PLAY CUMHEAD THE SPERMHOG', sub: 'Where this engine came from', fn: function () { openCab('spermhog.html'); } },
+    { icon: 'npc_spermaid', name: 'PLAY SPERMAID SURVIVORS', sub: 'Last until dawn', fn: function () { openCab('spermaid-survivors.html'); } },
+    { icon: 'npc_amy', name: 'PLAY WILLY NILLY', sub: "Amy's diner, and the rest", fn: function () { openCab('willy-nilly.html'); } },
+    { icon: 'h_gloop_adult_idle0', name: "PLAY SPUZZWORLD: CUM'S ODDYSEE", sub: 'Get them out before dawn', fn: function () { openCab('spuzzworld.html'); } },
+    { icon: 'cumface', name: 'PLAY THE GRINDING OF CUMHEAD', sub: 'Six floors down', fn: function () { openCab('grinding-of-cumhead.html'); } },
+    { icon: 'npc_potbelly', name: "PLAY POTBELLY'S ARCADE OVERDRIVE", sub: 'The gold cabinet', fn: function () { openCab('arcade-overdrive.html'); } },
+    { icon: 'greebo_d', name: 'PLAY JOURNEY TO THE VOID', sub: 'Cumhead, Spermaid and Greebo', fn: function () { openCab('journey-to-the-void.html'); } },
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: function () { openLegacy(); } },
     { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng, fn: null }
   ];

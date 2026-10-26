@@ -1,8 +1,9 @@
 /* =====================================================================================================
    POTBELLY'S ARCADE OVERDRIVE: a WarioWare style rush of tiny games. Cumhead walks into Potbelly
    Arcade, puts a coin in the big gold cabinet, the machine goes Super Saiyan and Cumhead locks in.
-   Then it is one micro game after another, a few seconds each, every one taken from our other games.
-   Four lives. Every five games it speeds up; every tenth is a boss. D-pad and A only.
+   Now the arcade is a floor you walk along: a cabinet for every game we made, each a stage of that game's
+   micro games and its boss. Clear three and the gold OVERDRIVE cabinet wakes up (everything, endless).
+   D-pad (or stick) and A only. part2.js: the extra micro games, bosses and STAGES. part3.js: runs, the floor, drawing.
    ===================================================================================================== */
 var W = 480, H = 270;
 var SV = KIT.load('ao-save', null) || { best: 0, plays: 0, seen: {} };
@@ -14,7 +15,7 @@ var G = { mode: 'title', t: 0 };
 var GROUND = 214;
 function hitbox(a, b) { return Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2; }
 function cumFrame(m, p) { if (p.dead) return 'ch_hurt0'; if (!p.ground) return 'ch_jump1'; return Math.abs(p.vx) > 10 ? 'ch_walk' + (Math.floor(m.t * 14) % 9) : 'ch_idle' + (Math.floor(m.t * 8) % 7); }
-function moveLR(p, dt, sp) { var ix = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0); p.vx = ix * sp; if (ix) p.face = ix; p.x = clamp(p.x + p.vx * dt, 20, W - 20); }
+function moveLR(p, dt, sp) { var sx = KIT.stick(0).x, ix = sx > 0.3 ? 1 : sx < -0.3 ? -1 : 0; p.vx = ix * sp; if (ix) p.face = ix; p.x = clamp(p.x + p.vx * dt, 20, W - 20); }
 function physics(p, dt) { p.vy += 900 * dt; p.y += p.vy * dt; p.ground = false; if (p.y >= GROUND) { p.y = GROUND; p.vy = 0; p.ground = true; } }
 function floorBg(c1, c2) { R(c1, 0, 0, W, H); R(c2, 0, GROUND, W, H - GROUND); R('#12040a', 0, GROUND, W, 2); for (var x = 0; x < W; x += 32) R('rgba(0,0,0,0.25)', x, GROUND + 2, 16, H - GROUND); }
 
@@ -37,7 +38,7 @@ var MICRO = [
       m.meat.forEach(function (c) { spr(c.r % 2 > 1 ? 'ao_meat1' : 'ao_meat0', c.x, c.y, { anchor: 'c', rot: c.r }); }); spr(cumFrame(m, m.p), m.p.x, m.p.y, { flip: m.p.face < 0 }); } },
   { id: 'survive', word: 'SURVIVE!', from: 'Spermaid Survivors', dur: 5, survive: 1,
     init: function (m, lv) { m.p = { x: W / 2, y: H / 2 + 20 }; m.e = []; m.n = 0; m.rate = 0.6 - lv * 0.15; m.next = 0.2; m.sp = 50 + lv * 20; },
-    update: function (m, dt) { var p = m.p, ix = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0), iy = (KIT.held('down') ? 1 : 0) - (KIT.held('up') ? 1 : 0), mm = Math.hypot(ix, iy) || 1;
+    update: function (m, dt) { var p = m.p, st0 = KIT.stick(0), ix = st0.x, iy = st0.y, mm = 1;
       p.x = clamp(p.x + ix / mm * 150 * dt, 20, W - 20); p.y = clamp(p.y + iy / mm * 150 * dt, 50, H - 10); if (ix) p.face = ix;
       m.next -= dt; if (m.next <= 0) { m.next = m.rate; var a = Math.random() * 6.28; m.e.push({ x: W / 2 + Math.cos(a) * 280, y: H / 2 + Math.sin(a) * 180 }); }
       m.e.forEach(function (e) { var dx = p.x - e.x, dy = p.y - 20 - e.y, d = Math.hypot(dx, dy) || 1; e.x += dx / d * m.sp * dt; e.y += dy / d * m.sp * dt; if (d < 16 && !p.dead) { p.dead = 1; m.lose = 1; sfx.play('hurt'); } }); },
@@ -123,143 +124,3 @@ var BOSSG = { id: 'boss', word: 'BEAT BLUMHEAD!', from: 'BOSS STAGE', dur: 12, b
     m.sh.forEach(function (s) { if (!s.done) { R('#12040a', s.x - 3, s.y - 6, 6, 12); R('#fffbe8', s.x - 2, s.y - 5, 4, 10); } }); m.bl.forEach(function (q) { R('#12040a', q.x - 5, q.y - 5, 10, 10); R('#ff3a44', q.x - 4, q.y - 4, 8, 8); });
     spr(cumFrame(m, m.p), m.p.x, m.p.y, { flip: m.p.face < 0 }); for (var h = 0; h < m.b.hp; h++) R('#ff2630', 20 + h * 10, 40, 8, 4); } };
 
-/* ---------- the run ---------- */
-var run, M;
-function newRun() { run = { n: 0, lives: 4, speed: 0, score: 0, last: null }; SV.plays++; persist(); nextGame(true); }
-function speedK() { return run ? 1 + run.speed * 0.13 : 1; }
-function nextGame(first) {
-  var boss = run.n > 0 && run.n % 10 === 9, g;
-  if (boss) g = BOSSG; else { var pool = MICRO.filter(function (m) { return m.id !== run.last; }); g = pick(pool); }
-  run.last = g.id; var lv = Math.min(2, Math.floor(run.n / 7));
-  M = { g: g, t: 0, lv: lv, word: g.word }; g.init(M, lv); if (M.word !== g.word) {} else M.word = M.word;
-  if (g.id === 'command') M.word = M.word || g.word;
-  G.mode = 'between'; G.bt = first ? 2.2 : 2.0; G.speedUp = !first && run.n > 0 && run.n % 5 === 0 && !boss;
-  if (G.speedUp) { run.speed++; G.bt += 1; }
-  music.play(boss ? 'aoboss' : 'aobetween');
-}
-function finishMicro(won) {
-  G.mode = 'result'; G.rt = 1.1; G.won = won; if (won) { run.score++; sfx.play('win'); } else { run.lives--; sfx.play('lose'); KIT.shake(6); }
-  SV.seen[M.g.id] = 1; persist();
-}
-function update(dt) {
-  G.t += dt;
-  if (G.mode === 'intro') { introUpdate(dt); return; }
-  if (G.mode === 'between') { G.bt -= dt * (G.speedUp ? 1 : speedK()); if (G.bt <= 0) { G.mode = 'micro'; M.t = 0; music.play(M.g.boss ? 'aoboss' : 'aomicro'); } return; }
-  if (G.mode === 'micro') {
-    var sdt = dt * speedK(); M.t += sdt; M.g.update(M, sdt);
-    var over = M.t >= M.g.dur;
-    if (M.win && !M.g.survive) { M.endT = (M.endT || 0) + dt; if (M.endT > 0.35) finishMicro(true); }
-    else if (M.lose) { M.endT = (M.endT || 0) + dt; if (M.endT > 0.35) finishMicro(false); }
-    else if (over) finishMicro(!!M.g.survive);
-    return;
-  }
-  if (G.mode === 'result') { G.rt -= dt; if (G.rt <= 0 && run) { run.n++; if (run.lives <= 0) gameOver(); else nextGame(); } }
-}
-function gameOver() {
-  G.mode = 'over'; music.play('aotitle'); var best = run.score > SV.best; if (best) { SV.best = run.score; persist(); }
-  KIT.menu({ title: best ? 'New Best!' : 'Game Over', sub: 'Cumhead cleared ' + run.score + ' games before the machine spat him out.', html: '<p style="text-align:center;margin:0">Best: <b>' + SV.best + '</b>  ·  Speed level reached: <b>' + (run.speed + 1) + '</b></p><p style="text-align:center;color:#a6968f;margin:6px 0 0">"Cabinets are free, kid. Play all you like."</p>',
-    items: [{ label: 'ANOTHER COIN', fn: function () { KIT.closeMenu(); newRun(); }, cls: 'hot', def: true }, { label: 'TITLE', fn: titleMenu, back: true }] });
-}
-
-/* ---------- the walk in: the coin, Super Saiyan, locking in ---------- */
-var IN;
-function startIntro() { G.mode = 'intro'; IN = { t: 0, x: -30, phase: 0 }; music.play('aotitle'); }
-function introUpdate(dt) {
-  IN.t += dt; if (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap) { if (IN.t > 0.3) { newRun(); return; } }
-  if (IN.phase === 0) { IN.x += 80 * dt; if (IN.x >= 200) { IN.x = 200; IN.phase = 1; IN.pt = 0; sfx.play('coin'); } }
-  else if (IN.phase === 1) { IN.pt += dt; if (IN.pt > 1) { IN.phase = 2; IN.pt = 0; sfx.play('roar'); music.play('aoboss'); } }
-  else if (IN.phase === 2) { IN.pt += dt; KIT.shake(4); if (Math.random() < 0.15) { KIT.flash(0.1); sfx.play('boom'); } if (IN.pt > 2.6) { IN.phase = 3; IN.pt = 0; KIT.flash(0.4); sfx.play('power'); } }
-  else if (IN.phase === 3) { IN.pt += dt; if (IN.pt > 1.6) newRun(); }
-}
-function aura(cx, cy, w, h, k) {
-  var ctx = KIT.ctx;
-  for (var i = 0; i < 26; i++) {
-    var a = i / 26 * Math.PI * 2, fl = Math.sin(G.t * 18 + i * 1.7) * 0.5 + 0.5, len = (30 + fl * 40) * k;
-    var bx = cx + Math.cos(a) * w * 0.55, by = cy + Math.sin(a) * h * 0.55;
-    ctx.fillStyle = i % 3 === 0 ? 'rgba(255,255,255,' + 0.7 * k + ')' : i % 3 === 1 ? 'rgba(255,227,106,' + 0.8 * k + ')' : 'rgba(255,160,40,' + 0.7 * k + ')';
-    ctx.beginPath(); ctx.moveTo(bx - Math.sin(a) * 8, by + Math.cos(a) * 8); ctx.lineTo(bx + Math.cos(a) * len, by + Math.sin(a) * len - len * 0.6); ctx.lineTo(bx + Math.sin(a) * 8, by - Math.cos(a) * 8); ctx.fill();
-  }
-  if (Math.random() < 0.5 * k) { ctx.strokeStyle = '#7af0ff'; ctx.lineWidth = 2; ctx.beginPath(); var x = cx + rnd(-w, w) * 0.6, y = cy - h * 0.6; ctx.moveTo(x, y); for (var s = 0; s < 6; s++) { x += rnd(-14, 14); y += h * 0.22; ctx.lineTo(x, y); } ctx.stroke(); }
-}
-function drawArcade(alpha) {
-  R('#0c0408', 0, 0, W, H); R('#1a0a12', 0, 0, W, 170);
-  for (var x = 0; x < W; x += 40) { R('#220c16', x, 0, 20, 170); }
-  ctx2Neon('POTBELLY ARCADE', W / 2, 18);
-  ['ao_cab_r', 'ao_cab_p', 'ao_cab_b', 'ao_cab_g'].forEach(function (c, i) { var x = i < 2 ? 40 + i * 64 : 340 + (i - 2) * 64; spr(c, x, 196); R(['#ff2630', '#c08aff', '#7af0ff', '#9aff5a'][i], x - 17 + (Math.floor(G.t * 6 + i) % 3) * 6, 125, 4, 4); });
-  for (var y = 196; y < H; y += 12) for (var x2 = 0; x2 < W; x2 += 24) R(((x2 + y) / 12) % 2 ? '#1a0a0e' : '#2a0e12', x2, y, 24, 12);
-  spr('npc_potbelly', 440, 250, { sc: 1.2 });
-}
-function ctx2Neon(s, x, y) { text(s, x, y, { align: 'center', size: 20, font: 'title', col: '#ff2630', shadowCol: '#5a0410' }); }
-function drawIntro() {
-  drawArcade(); var k = IN.phase >= 2 ? Math.min(1, IN.pt * 0.8 + (IN.phase === 3 ? 1 : 0)) : 0;
-  if (k > 0) aura(W / 2, 140, 110, 180, k);
-  spr('ao_cabbig', W / 2, 200, { flash: IN.phase === 2 && Math.floor(G.t * 20) % 4 === 0 });
-  if (IN.phase >= 2) { R('rgba(255,227,106,' + (0.4 + Math.sin(G.t * 20) * 0.2) + ')', W / 2 - 30, 70, 60, 46); }
-  var cx = IN.phase === 0 ? IN.x : 200, frame = IN.phase === 0 ? 'ch_walk' + (Math.floor(IN.t * 12) % 9) : IN.phase === 3 ? 'ch_attack' : 'ch_idle' + (Math.floor(IN.t * 8) % 7);
-  spr(frame, cx, 250);
-  if (IN.phase === 1) { var c = Math.min(1, IN.pt * 1.5); spr('ao_coin', lerp(cx + 10, W / 2 + 8, c), lerp(200, 166, c) - Math.sin(c * Math.PI) * 30, { anchor: 'c' }); }
-  if (IN.phase === 0) caption('Cumhead walks into Potbelly Arcade. One cabinet is glowing.', 'npc_potbelly', '"Cabinets are free, kid. Play all you like."');
-  if (IN.phase === 1) caption('He puts a coin in anyway.');
-  if (IN.phase === 2) caption('THE MACHINE GOES SUPER SAIYAN', null, null, '#ffe36a');
-  if (IN.phase === 3) { R('rgba(255,255,255,' + Math.max(0, 0.6 - IN.pt) + ')', 0, 0, W, H); caption('CUMHEAD LOCKS IN', null, null, '#ff2630'); }
-  text('A TO SKIP', W - 10, H - 12, { align: 'right', size: 6, col: '#a6968f' });
-}
-function caption(a, who, quote, col) { KIT.panel(40, 6, 400, quote ? 50 : 32); text(a, W / 2, 14, { align: 'center', size: quote ? 14 : 16, font: quote ? 'body' : 'title', col: col || '#f1e7d0' }); if (quote) text('Potbelly: ' + quote, W / 2, 34, { align: 'center', size: 12, font: 'body', col: '#ffe36a' }); }
-
-/* ---------- drawing the rush ---------- */
-function drawBetween() {
-  var t = G.t; R('#140408', 0, 0, W, H);
-  aura(W / 2, 150, 200, 200, 0.55 + Math.sin(t * 4) * 0.15);
-  R('rgba(20,4,8,0.55)', 0, 0, W, H);
-  // the score and the lives
-  text(String(run.score), W / 2, 40, { align: 'center', size: 48, font: 'title', col: '#ffe36a' });
-  for (var i = 0; i < 4; i++) spr(i < run.lives ? 'ao_heart' : 'ao_heart0', W / 2 - 34 + i * 18, 108, { anchor: 'tl' });
-  spr('ch_icon0', W / 2, 200 + Math.sin(t * 10) * 2, { sc: 2 });
-  if (G.speedUp && G.bt > 1.8) { text('SPEED UP!', W / 2, 130, { align: 'center', size: 32, font: 'title', col: '#ff2630' }); return; }
-  var k = clamp((2 - G.bt) * 3, 0, 1);
-  if (G.bt < 1.2) { text(M.word, W / 2, 132 - (1 - k) * 10, { align: 'center', size: 34, font: 'title', col: '#ffffff', shadowCol: '#c4121c', max: 440 }); text('FROM ' + M.g.from.toUpperCase(), W / 2, 172, { align: 'center', size: 6, col: '#a6968f' }); }
-}
-function drawMicro() {
-  M.g.draw(M);
-  // the fuse: a burning bar along the bottom
-  var left = Math.max(0, 1 - M.t / M.g.dur); R('#12040a', 0, H - 8, W, 8); R('#c8a050', 0, H - 6, W * left, 4); R(Math.floor(G.t * 20) % 2 ? '#ffe36a' : '#ff5a20', W * left - 4, H - 9, 8, 10);
-  if (M.t < 0.7) text(M.word, W / 2, 10, { align: 'center', size: 26, font: 'title', col: '#ffffff', shadowCol: '#c4121c', max: 440 });
-  // the gold bezel of the Overdrive cabinet's screen
-  R('#ffc840', 0, 0, W, 2); R('#ffc840', 0, 0, 2, H); R('#ffc840', W - 2, 0, 2, H);
-}
-function drawResult() {
-  drawMicro(); var k = 1 - G.rt / 1.1;
-  R('rgba(7,4,5,' + Math.min(0.6, k * 2) + ')', 0, 0, W, H);
-  text(G.won ? 'YES!' : 'NOPE!', W / 2, 100, { align: 'center', size: 40, font: 'title', col: G.won ? '#ffe36a' : '#ff2630' });
-}
-function draw() {
-  if (G.mode === 'title' || G.mode === 'over') { drawArcade(); aura(W / 2, 140, 110, 180, 0.6); spr('ao_cabbig', W / 2, 200); return; }
-  if (G.mode === 'intro') { drawIntro(); return; }
-  if (G.mode === 'between') { drawBetween(); return; }
-  if (G.mode === 'micro') { drawMicro(); return; }
-  if (G.mode === 'result') drawResult();
-}
-
-/* ---------- menus ---------- */
-function titleMenu() {
-  G.mode = 'title'; music.play('aotitle');
-  KIT.menu({ cls: 'clear', title: "Potbelly's Arcade Overdrive", sub: 'One coin. Every game we ever made, a few seconds at a time.',
-    items: [{ label: 'INSERT COIN', fn: function () { KIT.closeMenu(); if (SV.plays) newRun(); else startIntro(); }, cls: 'hot', def: true }, { label: 'WATCH THE INTRO', fn: function () { KIT.closeMenu(); startIntro(); } }, { label: 'HOW TO PLAY', fn: helpMenu }],
-    note: 'Best ' + SV.best + '  ·  Micro games seen ' + Object.keys(SV.seen).length + ' of ' + (MICRO.length + 1) });
-}
-function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p>Each game lasts a few seconds. Read the word, then do it, fast. The fuse along the bottom is your time.</p><p>Only the <b>d-pad</b> and <b>A</b> (Z or Space on a keyboard). Miss and you lose a heart. Four hearts. Every five games it gets faster, and every tenth game is a boss.</p>', items: [{ label: 'BACK', back: true, fn: function () { if (run && G.mode !== 'title' && G.mode !== 'over') pauseMenu(); else titleMenu(); } }] }); }
-function pauseMenu() { if (G.mode === 'title' || G.mode === 'over' || KIT.menuOpen()) return; KIT.menu({ cls: 'clear', title: 'Paused', items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT', fn: titleMenu }] }); }
-
-music.songs.aotitle = { bpm: 128, beats: 4, vol: 0.85, wet: 0.3, lead: 'pulse', bass: 'drive', acc: 'arp16', drums: 'rock', chords: 'Em C D B Em C Am B',
-  mel: 'b4 - e5 - g5 - b5 - | c6 - b5 - g5 - e5 - | f#5 - a5 - d6 - c6 - | b5 - - - d#5 - - - | e5 - g5 - b5 - e6 - | e6 - d6 - c6 - g5 - | a5 - c6 - e6 - c6 - | b5 - - - - - . .' };
-music.songs.aobetween = { bpm: 150, beats: 4, vol: 0.8, wet: 0.2, lead: 'pulse', bass: 'pulse16', acc: 'arp16', drums: 'fast', chords: 'C G Am F',
-  mel: 'c6 . g5 . e5 . g5 . | b5 . g5 . d5 . g5 . | a5 . e5 . c5 . e5 . | f5 . a5 . c6 . f6 .' };
-music.songs.aomicro = { bpm: 170, beats: 4, vol: 0.8, wet: 0.15, lead: 'fm', fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'boss', chords: 'Am Am F G',
-  mel: 'a5 . a5 c6 . a5 e6 . | d6 c6 b5 a5 g5 . e5 . | f5 . a5 c6 . f6 . e6 | d6 . b5 . g5 . b5 .' };
-music.songs.aoboss = { bpm: 176, beats: 4, vol: 0.9, wet: 0.2, lead: 'fm', harm: 1, fmbass: 1, bass: 'drive', acc: 'organ', drums: 'industrial', chords: 'Dm Bb C A',
-  mel: 'd5 . d5 f5 . a5 . d6 | bb5 . a5 . f5 . d5 . | c5 . e5 g5 . c6 . e6 | c#6 . a5 . e5 . c#5 .' };
-
-KIT.start({ w: W, h: H, update: update, draw: draw, onPause: pauseMenu, pad: { four: true, btns: [{ k: 'a', label: 'A', cls: 'big' }] } });
-titleMenu();
-window.__ao = { G: G, get M() { return M; }, get run() { return run; }, MICRO: MICRO, BOSSG: BOSSG, newRun: newRun, startIntro: startIntro, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } },
-  force: function (id) { var g = id === 'boss' ? BOSSG : MICRO.filter(function (m) { return m.id === id; })[0]; M = { g: g, t: 0, lv: 1, word: g.word }; g.init(M, 1); G.mode = 'micro'; } };

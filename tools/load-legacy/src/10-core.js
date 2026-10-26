@@ -55,6 +55,14 @@ var dropImg = (function () {
   for (var y = 0; y < 11; y++) { var h = half[y]; for (var x = 4 - h; x <= 4 + h; x++) { var edge = (x === 4 - h || x === 4 + h || y === 0 || y === 10); R(g, edge ? '#8a1219' : '#f1e0a8', x, y, 1, 1); } }
   R(g, '#fff6d8', 3, 5, 1, 2); R(g, '#d9b36a', 5, 8, 2, 1); return c;
 })();
+/* the Cum Cracker: a golden cracker with a blob of cream on top. Enemies drop them; each one heals */
+var crackerImg = (function () {
+  var c = mk(12, 12), g = c.getContext('2d'), O = '#12040a';
+  R(g, O, 0, 3, 12, 9); R(g, '#c8862a', 1, 4, 10, 7); R(g, '#e8b04a', 1, 4, 10, 2); R(g, '#9a5a14', 1, 10, 10, 1);
+  [[3, 7], [6, 8], [9, 7], [4, 9], [8, 9]].forEach(function (p) { R(g, '#7a4410', p[0], p[1], 1, 1); });
+  R(g, O, 3, 0, 6, 5); R(g, '#f1e0a8', 4, 1, 4, 4); R(g, '#fff6d8', 4, 1, 2, 2); R(g, '#f1e0a8', 3, 4, 7, 2); R(g, '#d9b36a', 7, 5, 2, 1);
+  return c;
+})();
 function makeCrawler(f, body, dark) {
   var c = mk(16, 13), g = c.getContext('2d'), half = [4, 6, 7, 8, 8, 8, 8, 8];
   for (var i = 0; i < 8; i++) { var y = 3 + i, h = half[i]; for (var x = 8 - h; x < 8 + h; x++) { var edge = (i === 0 || x === 8 - h || x === 8 + h - 1); R(g, edge ? dark : body, x, y, 1, 1); } }

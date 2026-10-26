@@ -23,7 +23,7 @@ var FOES = {
   bat: { s: 'f_bat_', nf: 4, hp: 6, spd: 70, r: 8, ai: 'fly', dmg: 1 }, batP: { s: 'f_batP_', nf: 4, hp: 8, spd: 85, r: 8, ai: 'fly', dmg: 1 },
   crawler: { s: 'f_crawler_', nf: 4, hp: 10, spd: 40, r: 10, ai: 'chase', dmg: 1 }, slime: { s: 'f_slime_', nf: 4, hp: 12, spd: 110, r: 8, ai: 'hop', dmg: 1, split: 1 },
   slimeR: { s: 'f_slimeR_', nf: 4, hp: 14, spd: 120, r: 8, ai: 'hop', dmg: 2, split: 1 }, creamblob: { s: 'f_creamblob_', nf: 4, hp: 14, spd: 110, r: 9, ai: 'hop', dmg: 1, split: 1 },
-  rat: { s: 'f_rat_', nf: 4, hp: 4, spd: 120, r: 7, ai: 'wander', dmg: 1, pack: 3 }, ghoul: { s: 'f_ghoul_', nf: 4, hp: 18, spd: 35, r: 9, ai: 'charge', dmg: 2 },
+  rat: { s: 'f_rat_', nf: 4, hp: 4, spd: 78, r: 7, ai: 'wander', dmg: 1, pack: 3 }, ghoul: { s: 'f_ghoul_', nf: 4, hp: 18, spd: 35, r: 9, ai: 'charge', dmg: 2 },
   imp: { s: 'f_imp_', nf: 4, hp: 10, spd: 50, r: 8, ai: 'shoot', dmg: 1, fly: 1, shot: 'f' }, blumling: { s: 'f_blumling_', nf: 4, hp: 10, spd: 125, r: 8, ai: 'hop', dmg: 1 },
   blumeye: { s: 'f_blumeye_', nf: 3, hp: 14, spd: 40, r: 10, ai: 'shoot', dmg: 1, fly: 1, shot: 'p', burst: 3 }, blumspore: { s: 'f_blumspore_', nf: 3, hp: 18, spd: 0, r: 10, ai: 'ring', dmg: 1, shot: 'p' },
   wraith: { s: 'f_wraith_', nf: 4, hp: 14, spd: 45, r: 9, ai: 'phase', dmg: 1, fly: 1 }, magmaslug: { s: 'f_magmaslug_', nf: 4, hp: 26, spd: 22, r: 11, ai: 'trail', dmg: 1 },
@@ -223,22 +223,25 @@ function roomClear() {
 /* ---------- the player ---------- */
 var SHOOT = { sleft: [-1, 0], sright: [1, 0], sup: [0, -1], sdown: [0, 1] };
 function updPlayer(dt) {
-  var ix = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0), iy = (KIT.held('down') ? 1 : 0) - (KIT.held('up') ? 1 : 0), m = Math.hypot(ix, iy) || 1;
-  var tx = ix / m * S.speed, ty = iy / m * S.speed;
+  // twin stick: left stick (or WASD, or the left thumb on screen) moves, right stick (or the face buttons, arrows, right thumb) shoots
+  var mv = KIT.stick(0), ix = mv.x, iy = mv.y;
+  var tx = ix * S.speed, ty = iy * S.speed;
   P.vx += (tx - P.vx) * Math.min(1, dt * 12); P.vy += (ty - P.vy) * Math.min(1, dt * 12);
-  moveBody(P, P.vx * dt, P.vy * dt, 8, false); if (ix || iy) P.walk += dt;
+  moveBody(P, P.vx * dt, P.vy * dt, 8, false);
   if (P.inv > 0) P.inv -= dt; P.cd -= dt;
-  var sd = null; for (var k in SHOOT) if (KIT.held(k)) sd = k;
-  if (sd) { P.face = sd; if (P.cd <= 0) { fire(SHOOT[sd]); P.cd = 1 / S.fire; } }
+  var am = KIT.stick(1);
+  if (am.on) { var al = Math.hypot(am.x, am.y) || 1, ax = am.x / al, ay = am.y / al; P.face = Math.abs(ax) >= Math.abs(ay) ? (ax > 0 ? 'sright' : 'sleft') : (ay > 0 ? 'sdown' : 'sup'); P.shootT = 0.18; if (P.cd <= 0) { fire([ax, ay]); P.cd = 1 / S.fire; } }
   else if (ix || iy) P.face = Math.abs(ix) >= Math.abs(iy) ? (ix > 0 ? 'sright' : 'sleft') : (iy > 0 ? 'sdown' : 'sup');
+  if (P.shootT > 0) P.shootT -= dt;
+  if (ix || iy) P.walk += dt * Math.hypot(ix, iy);
   if (KIT.pressed('bomb') && P.bombs > 0) { P.bombs--; bombs.push({ x: P.x, y: P.y, t: 1.5 }); sfx.play('tick'); }
   // spikes
   if (!S.fly && tileAt(P.x, P.y) === 4) hurtP(2, 'spikes');
   // doors
   for (var d in room.doors) {
     var dp = DOORPOS[d], near = d === 'u' || d === 'd' ? Math.abs(P.x - dp.x) < 14 : Math.abs(P.y - dp.y) < 14;
-    var out = d === 'u' ? P.y < 12 : d === 'd' ? P.y > IH - 6 : d === 'l' ? P.x < 12 : P.x > IW - 12;
-    if (near && out && KIT.held(d === 'u' ? 'up' : d === 'd' ? 'down' : d === 'l' ? 'left' : 'right')) {
+    var out = d === 'u' ? P.y < 12 : d === 'd' ? P.y > IH - 11 : d === 'l' ? P.x < 12 : P.x > IW - 12;
+    if (near && out && (d === 'u' ? iy < -0.4 : d === 'd' ? iy > 0.4 : d === 'l' ? ix < -0.4 : ix > 0.4)) {
       var nb = room.doors[d];
       if (!room.cleared) continue;
       if (nb.locked) { if (P.keys > 0) { P.keys--; nb.locked = 0; sfx.play('door'); pop(P.x, P.y - 40, 'UNLOCKED', '#ffe36a'); } else { if (!P.lockMsg || KIT.t - P.lockMsg > 1) { P.lockMsg = KIT.t; pop(P.x, P.y - 40, 'LOCKED. NEED A KEY', '#a6968f'); sfx.play('no'); } continue; } }
@@ -481,7 +484,7 @@ function drawWorld() {
   var list = [];
   room.peds.forEach(function (pd) { list.push({ y: pd.y, d: function () { spr('gr_ped', IX0 + pd.x, IY0 + pd.y + 6); if (pd.item) { spr('it_' + pd.item, IX0 + pd.x, IY0 + pd.y - 14 + Math.sin(KIT.t * 3) * 2); if (pd.price) text(pd.price + 'c', IX0 + pd.x, IY0 + pd.y + 8, { align: 'center', size: 6, col: '#ffe36a' }); } } }); });
   room.pick.forEach(function (pk) { list.push({ y: pk.y, d: function () { var n = { heart: 'gr_heart', hearth: 'gr_hearth', coin: 'gr_coin', coin5: 'gr_coin5', bomb: 'gr_bomb', key: 'gr_key', shield: 'gr_shield' }[pk.k]; spr(n, IX0 + pk.x, IY0 + pk.y + 4); if (pk.price) text(pk.price + 'c', IX0 + pk.x, IY0 + pk.y + 6, { align: 'center', size: 6, col: '#ffe36a' }); } }); });
-  if (room.type === 'shop') list.push({ y: 10, d: function () { spr('npc_potbelly', IX0 + IW / 2, IY0 + 44); text('POTBELLY\'S STALL', IX0 + IW / 2, IY0 + 48, { align: 'center', size: 6, col: '#ffe36a' }); } });
+  if (room.type === 'shop') list.push({ y: 10, d: function () { spr('npc_saba', IX0 + IW / 2, IY0 + 44); text('SABA\'S HITLESS HEMPORIUM', IX0 + IW / 2, IY0 + 48, { align: 'center', size: 6, col: '#ffe36a' }); if (P.y < 90) text('Hitless runs only. Take a look, my friend.', IX0 + IW / 2, IY0 + 58, { align: 'center', size: 8, font: 'body', col: '#f1e7d0' }); } });
   bombs.forEach(function (b) { list.push({ y: b.y, d: function () { spr(Math.floor(KIT.t * 8) % 2 ? 'gr_bombl' : 'gr_bomb', IX0 + b.x, IY0 + b.y + 4, { sc: b.t < 0.5 && Math.floor(KIT.t * 20) % 2 ? 1.15 : 1 }); } }); });
   eshots.forEach(function (s) { if (s.puddle) list.push({ y: -1, d: function () { var x = IX0 + s.x, y = IY0 + s.y; R('#a8300a', x - 7, y - 2, 14, 5); R('#ff7a20', x - 5, y - 1, 10, 3); if (Math.random() < 0.3) R('#ffe36a', x + rnd(-5, 5), y - 4, 1, 2); } }); });
   foes.forEach(function (e) { list.push({ y: e.y, d: function () { drawFoe(e); } }); });
@@ -514,14 +517,10 @@ function drawFoe(e) {
 }
 function drawPlayer() {
   if (P.inv > 0 && Math.floor(KIT.t * 20) % 2) return;
-  var x = IX0 + P.x, y = IY0 + P.y, step = Math.hypot(P.vx, P.vy) > 20 ? Math.floor(P.walk * 10) % 2 : 0, flip = P.face === 'sleft';
+  var x = IX0 + P.x, y = IY0 + P.y, moving = Math.hypot(P.vx, P.vy) > 20, f = moving ? Math.floor(P.walk * 9) % 4 : 0;
+  var d = P.face === 'sup' ? 'u' : P.face === 'sdown' ? 'd' : 's', open = P.shootT > 0 && d !== 'u' && P.cd > 1 / S.fire * 0.4;
   R('rgba(0,0,0,0.35)', x - 9, y - 2, 18, 4);
-  // a small body in his black and red outfit, then his head
-  R('#12040a', x - 6, y - 14, 12, 11); R('#1a1014', x - 5, y - 13, 10, 9); R('#c4121c', x - 5, y - 10, 10, 2);
-  R('#12040a', x - 5 + (step ? 1 : 0), y - 4, 4, 5); R('#12040a', x + 1 - (step ? 1 : 0), y - 4, 4, 5); R('#2a1a20', x - 4 + (step ? 1 : 0), y - 4, 2, 3); R('#2a1a20', x + 2 - (step ? 1 : 0), y - 4, 2, 3);
-  R('#12040a', x - 9, y - 13 + (step ? 1 : 0), 4, 7); R('#12040a', x + 5, y - 13 - (step ? 1 : 0), 4, 7); R('#f1e7d0', x - 8, y - 8 + (step ? 1 : 0), 2, 2); R('#f1e7d0', x + 6, y - 8 - (step ? 1 : 0), 2, 2);
-  spr('ch_icon0', x, y - 11 - (P.cd > 1 / S.fire - 0.06 ? 1 : 0), { flip: flip });
-  if (P.face === 'sup') R('rgba(18,4,10,0.25)', x - 10, y - 38, 20, 10);
+  spr('chb_' + d + f + (open ? '_o' : ''), x, y + 2, { flip: P.face === 'sleft', sc: open ? 1.04 : 1 });
 }
 function drawHud() {
   // hearts
@@ -564,7 +563,7 @@ function drawTitle() {
 /* ---------- menus ---------- */
 function titleMenu() {
   G.mode = 'title'; run = null; music.play('grtitle');
-  KIT.menu({ cls: 'clear', title: 'The Grinding of Cumhead', sub: "Six floors of Blumhead's Lair. A boss at the end of every one. Blumhead at the bottom.",
+  KIT.menu({ cls: 'clear', logo: '../assets/gr-logo.webp', title: 'The Grinding of Cumhead', sub: "Six floors of Blumhead's Lair. A boss at the end of every one. Blumhead at the bottom.",
     items: [{ label: 'START A RUN', fn: function () { KIT.closeMenu(); pets = []; newRun(); }, cls: 'hot', def: true }, { label: 'ITEMS FOUND', sub: Object.keys(SV.seen).length + ' of ' + ITEMS.length, fn: itemsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }],
     note: 'Best floor ' + SV.best + '  ·  Runs ' + SV.runs + '  ·  Wins ' + SV.wins });
 }
@@ -573,7 +572,7 @@ function itemsMenu() {
     items: [{ label: 'BACK', back: true, fn: titleMenu }] });
 }
 function helpMenu() {
-  KIT.menu({ title: 'How to Play', html: '<p><b>Move</b>: left stick, d-pad, WASD or the left pad. <b>Shoot</b>: the face buttons (X left, B right, Y up, A down), the arrow keys / IJKL or the right pad. <b>Bomb</b>: LB, E or Space.</p><p>The doors shut until the room is clear. Bombs break rocks and cream piles. Gold doors and the shop need a key. Items stack. Find the boss room (the red mark on the map), kill the boss and drop down the hole.</p><p>Blumhead waits under the sixth floor.</p>',
+  KIT.menu({ title: 'How to Play', html: '<p><b>Move</b>: left stick, d-pad or WASD. <b>Shoot</b>: right stick in any direction, or the face buttons (X left, B right, Y up, A down), or the arrow keys / IJKL. <b>Bomb</b>: LB, RB, E or Space.</p><p><b>On a phone</b>: put your left thumb down anywhere on the left half to move and your right thumb anywhere on the right half to aim and shoot. Both work at once. The gold button drops a bomb.</p><p>The doors shut until the room is clear. Bombs break rocks and cream piles. Gold doors and the shop need a key. Items stack. Find the boss room (the red mark on the map), kill the boss and drop down the hole.</p><p>Blumhead waits under the sixth floor.</p>',
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] });
 }
 function pauseMenu() {
@@ -585,7 +584,7 @@ music.songs.grtitle = { bpm: 92, beats: 4, vol: 0.9, wet: 0.55, lead: 'organlead
   mel: 'e5 - - - a5 - - - | c6 - b5 - a5 - f5 - | g5 - - - e5 - c5 - | g#5 - - - b5 - - - | a5 - - - c6 - e6 - | f6 - e6 - c6 - a5 - | d6 - c6 - a5 - f5 - | e5 - - - - - . .' };
 
 KIT.start({ w: W, h: H, update: update, draw: draw, onPause: pauseMenu,
-  pad: { four: false, shootPad: true, btns: [{ k: 'bomb', label: 'B', sub: 'BOMB', cls: 'gold' }] },
+  pad: { sticks: true, btns: [{ k: 'bomb', label: 'B', sub: 'BOMB', cls: 'gold' }] },
   padKeys: { l: 'a', r: 'd', u: 'w', d: 's', a: 'k', b: 'l', x: 'j', y: 'i', lb: 'e', rb: 'e' } });
 titleMenu();
 window.__gr = { G: G, get P() { return P; }, get S() { return S; }, get run() { return run; }, get room() { return room; }, get foes() { return foes; }, newRun: function () { pets = []; newRun(); }, enterRoom: enterRoom, newFloor: newFloor, takeItem: takeItem, ITEMS: ITEMS, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, killAll: function () { foes.forEach(function (e) { e.hp = 0; killFoe(e); }); } };

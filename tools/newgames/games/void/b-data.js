@@ -42,7 +42,9 @@ var ITEMS = {
   chilli: { n: 'Willy Chilli', d: '90 fire damage to one foe.', price: 45, tg: 'one', dmg: 90 },
   dyn: { n: 'Dynamite Chilli', d: '80 fire damage to every foe.', price: 140, tg: 'all', dmg: 80 },
   feast: { n: 'Clubhouse Feast', d: 'Heals the whole party fully.', price: 320, tg: 'allies', heal: 9999 },
-  pizza: { n: 'Pineapple Pizza', d: 'Heals 120 HP to everyone.', price: 0, tg: 'allies', heal: 120 }
+  pizza: { n: 'Pineapple Pizza', d: 'Heals 120 HP to everyone.', price: 110, tg: 'allies', heal: 120 },
+  tea: { n: 'Mad Hatter Tea', d: 'Restores 15 MP to everyone.', price: 90, tg: 'allies', mp: 15 },
+  pill: { n: "TB's Silly Pill", d: 'Who knows? Could be great. Could be awful.', price: 25, tg: 'ally', pill: 1 }
 };
 /* gear: who can use it (w), slot, stats */
 var GEAR = {
@@ -58,7 +60,7 @@ var GEAR = {
 /* foes. lv sets their stats; weak = element that hurts them double */
 var FOES = {
   bat: { n: 'Bat', s: 'f_bat_', lv: 1, weak: 'water' }, rat: { n: 'Rat', s: 'f_rat_', lv: 1, hpk: 0.7 }, slime: { n: 'Slime', s: 'f_slime_', lv: 2, weak: 'cream' }, crawler: { n: 'Crawler', s: 'f_crawler_', lv: 2 },
-  ghoul: { n: 'Ghoul', s: 'f_ghoul_', lv: 4, sk: ['poison'] }, imp: { n: 'Imp', s: 'f_imp_', lv: 4, sk: ['fire'], weak: 'water' }, crow: { n: 'Crow', s: 'f_crow_', lv: 3 },
+  ghoul: { n: 'Ghoul', s: 'f_ghoul_', lv: 3, hpk: 0.75, atkk: 0.7, sk: ['poison'] }, imp: { n: 'Imp', s: 'f_imp_', lv: 4, sk: ['fire'], weak: 'water' }, crow: { n: 'Crow', s: 'f_crow_', lv: 3 },
   knight: { n: 'Hollow Knight', s: 'f_knight_', lv: 6, defk: 1.5, weak: 'pie' }, wraith: { n: 'Wraith', s: 'f_wraith_', lv: 6, sk: ['drain'], weak: 'cream' }, gargoyle: { n: 'Gargoyle', s: 'f_gargoyle_', lv: 6, defk: 1.4 },
   creamblob: { n: 'Cream Blob', s: 'f_creamblob_', lv: 7, weak: 'pie' }, cultrat: { n: 'Rat Cultist', s: 'f_cultrat_', lv: 7, sk: ['poison'] }, jailer: { n: 'Jailer', s: 'f_jailer_', lv: 8, hpk: 1.4, sk: ['all'] },
   clown: { n: 'Pie Clown', s: 'f_clown_', lv: 9, sk: ['blind'] }, balloon: { n: 'Steve Balloon', s: 'f_balloon_', lv: 9, hpk: 0.6, sk: ['explode'] }, crawlerN: { n: 'Neon Crawler', s: 'f_crawlerN_', lv: 9 },
@@ -80,8 +82,8 @@ var BOSSES = {
 /* who turns up where */
 var ZONES = {
   plains1: { lv: [1, 3], f: [['bat', 'bat'], ['slime'], ['rat', 'rat', 'rat'], ['crawler', 'bat'], ['slime', 'slime']], bg: 'waste' },
-  plains2: { lv: [3, 5], f: [['crawler', 'crawler'], ['ghoul'], ['imp', 'bat'], ['crow', 'crow', 'crow'], ['ghoul', 'slime']], bg: 'waste' },
-  forest: { lv: [4, 6], f: [['ghoul', 'ghoul'], ['imp', 'imp'], ['crow', 'ghoul', 'crow'], ['slime', 'slime', 'imp']], bg: 'forest' },
+  plains2: { lv: [2, 4], f: [['crawler', 'crawler'], ['ghoul'], ['imp', 'bat'], ['crow', 'crow', 'crow'], ['ghoul', 'slime']], bg: 'waste' },
+  forest: { lv: [3, 5], f: [['ghoul', 'bat'], ['imp', 'imp'], ['crow', 'ghoul', 'crow'], ['slime', 'slime', 'imp']], bg: 'forest' },
   castle: { lv: [5, 7], f: [['knight'], ['wraith', 'bat'], ['gargoyle', 'gargoyle'], ['knight', 'wraith'], ['imp', 'gargoyle', 'imp']], bg: 'castle' },
   sewer: { lv: [7, 9], f: [['creamblob', 'creamblob'], ['cultrat', 'rat', 'rat'], ['jailer'], ['cultrat', 'creamblob'], ['rat', 'rat', 'rat', 'rat']], bg: 'sewer' },
   east: { lv: [8, 11], f: [['clown', 'balloon'], ['crawlerN', 'crawlerN'], ['balloon', 'balloon', 'balloon'], ['clown', 'clown']], bg: 'park' },
@@ -101,67 +103,56 @@ var DUNGEONS = {
   L: { name: "Blumhead's Lair", floors: ['lair1', 'lair2'], zone: 'lair', boss: 'blum', chests: { lair1: [['gear', 'breaker'], ['item', 'feast']], lair2: [['gear', 'voidmail']] }, reward: { flag: 'blum', text: 'Behind Blumhead, the floor opens onto nothing at all. The Void.' }, song: 'lair', need: ['keyC', 'keyB', 'keyM'] },
   V: { name: 'The Void', floors: ['void1'], zone: 'void', boss: 'void', chests: {}, reward: { flag: 'void', text: '' }, song: 'moonarea' }
 };
-/* the towns. h = houses (3x3), letters are people */
-var TOWNS = {
-  C: { name: 'Clubhouse Row', song: 'town', rows: [
-    '##############################',
-    '#............................#',
-    '#..hhh....hhh....hhh....hhh..#',
-    '#..hhh....hhh....hhh....hhh..#',
-    '#..hhh....hhh....hhh....hhh..#',
-    '#...b......k......n......j...#',
-    '#............................#',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
-    ',,,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
-    '#............................#',
-    '#..a.....t......r....s.......#',
-    '#......................p.....#',
-    '#..hhh..............hhh......#',
-    '#..hhh....l.........hhh....m.#',
-    '#..hhh..............hhh......#',
-    '#............................#',
-    '##############################'],
-    people: {
-      b: { s: 'npc_beebs', n: 'Uncle Beeb', inn: 12, say: ['Sit down, lad. First one\'s always warm.'] },
-      k: { s: 'npc_kaya', n: 'Kaya', shop: ['puff', 'garlic', 'cuppa', 'chilli', 'load'], say: ["Welcome in! Kaya's on the coffee, Elden's on the grill."] },
-      n: { s: 'npc_nattyboro', n: 'Nattyboro', gear: ['knuckles', 'coral', 'knife', 'apron'], say: ['A blade without a bite is merely a stick.'] },
-      j: { s: 'npc_joff', n: 'Joff', give: 'pizza', say: ['Pineapple belongs on pizza. Fight me.', 'Going on a quest? Take a slice. Take two. Actually take the whole pizza.'] },
-      a: { s: 'npc_amy', n: 'Amy', say: ['Mild, hot or dynamite?', 'The Cream Sewers are south of here, past the road. Smells like my kitchen on a bad day.'] },
-      t: { s: 'npc_tb', n: 'TB', tb: 1 },
-      r: { s: 'npc_harold', n: 'Harold', say: ['Potions? Tea? Same thing, really. Sit, sit!', 'The Void? Oh, it is real. Blumhead keeps the way to it shut, deep in his lair, north of here behind the mountains.', 'Three keys open his lair. A Cream Key, a Bone Key and a Moon Key. Sewers, the Bone Pit past the sea, and the Crimson Moon up in the peaks.'] },
-      s: { s: 'npc_saba', n: 'Saba', say: ['Hitless runs only. Take a look, my friend.', "Your old castle is north-west. Something hungry lives there now. Good place to toughen up."] },
-      p: { s: 'npc_potbelly', n: 'Potbelly', say: ['Cabinets are free, kid. Play all you like.', 'Watch the bridge east. Past the blood sea it gets nasty.'] },
-      l: { s: 'npc_elden', n: 'Elden', say: ["The grill's hot. So's the road. Buy puffs, you'll need them."] },
-      m: { s: 'npc_masterbates', n: 'Master Bates', heal: 1, say: ['One must clear one\'s head before one proceeds.'] }
-    } },
-  E: { name: 'Ejaculand', song: 'park', rows: [
-    '##############################',
-    '#............................#',
-    '#..hhh....hhh.........hhh....#',
-    '#..hhh....hhh.........hhh....#',
-    '#..hhh....hhh.........hhh....#',
-    '#...v......o...........f.....#',
-    '#............................#',
-    ',,,,,,,,,,,,,,,,,,,,,,,,,,,,,,',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
-    '#.......u....................#',
-    '#..q.............g.....w.....#',
-    '#............................#',
-    '#..hhh.............hhh.......#',
-    '#..hhh....e........hhh.......#',
-    '#..hhh.............hhh.......#',
-    '#............................#',
-    '##############################'],
-    people: {
-      v: { s: 'steve0', n: 'Steve', inn: 30, say: ['WELCOME TO EJACULAND! THE PARK NEVER CLOSES. NEVER. EVER.'] },
-      o: { s: 'npc_bonjo', n: 'Bonjo', shop: ['puff', 'pie', 'cuppa', 'garlic', 'load', 'dyn', 'feast'], say: ['Welcome, welcome. Let me get the door.'] },
-      f: { s: 'npc_stackedfate', n: 'Stacked Fate', gear: ['spikes', 'tide', 'pin', 'vest', 'plate'], say: ['The deck was never yours. Neither was your fate.'] },
-      u: { s: 'npc_pulsar', n: 'PulsarOctopus', say: ['Just vibes, friend. Free of charge.', 'The Bone Pit is south-east of the park. Big bones. Bigger one at the bottom.'] },
-      q: { s: 'npc_t', n: 'T', say: ["Come in, darling. I'll get the doors.", 'The Crimson Moon sits up in the northern peaks. Take the road north from the bridge.'] },
-      g: { s: 'npc_judgement', n: 'Judgement', say: ['Light or shadow. Both have a price.', 'The Void takes everything you throw at it. Make sure what you throw is heavy.'] },
-      w: { s: 'npc_ali', n: 'Ali', give: 'garlic', say: ['Nuggets? Garlic bread? Everything is better with garlic.', 'Have some cloves. For the road. For the poison. For everything.'] },
-      e: { s: 'npc_jessiah', n: 'Jessiah', give: 'feast', say: ['An empty stomach makes a hollow man. Eat.'] },
-    } }
+/* the towns: big walkable places with a path, a fountain, decorations and buildings you can go into.
+   Each building has a front (an LL shop facade where one exists), and an inside with its keeper and what they do. */
+var BUILDINGS = {
+  club: { n: 'The Clubhouse', fac: 'fac_club', keeper: null, home: 1, floor: ['#2a1418', '#3a1c20'], wall: '#1a0a0e', props: ['bed', 'bed', 'jukebox', 'plant', 'table'],
+    say: [['', 'Home. The beds are made, the jukebox is on. Rest here for free, and save.']] },
+  beebs: { n: "Uncle Beeb's Tavern", fac: 'fac_beebs', keeper: 'npc_beebs', who: 'Uncle Beeb', inn: 12, floor: ['#3a2410', '#2a1a0a'], wall: '#2a1608', props: ['taps', 'table', 'table', 'barrel', 'barrel'],
+    say: [['Uncle Beeb', "Sit down, lad. First one's always warm."], ['Uncle Beeb', 'The old castle up north-west? Something hungry moved in. Good place to toughen up before the sewers.']] },
+  cafe: { n: "Kaya & Elden's Cum Café", fac: 'fac_cafe', keeper: 'npc_kaya', helper: 'npc_elden', who: 'Kaya', shop: ['puff', 'garlic', 'cuppa', 'load'], floor: ['#2a1c14', '#c8b898'], wall: '#2a1a10', props: ['coffee', 'table', 'table', 'plant'],
+    say: [['Kaya', "Welcome in! Kaya's on the coffee, Elden's on the grill."]] },
+  natty: { n: 'Nattyboro Enchanting', fac: null, roof: '#5a2a8a', keeper: 'npc_nattyboro', who: 'Nattyboro', gear: ['knuckles', 'coral', 'knife'], floor: ['#1e1028', '#2a1838'], wall: '#140a1e', props: ['rack', 'rack', 'crystal'],
+    say: [['Nattyboro', 'A blade without a bite is merely a stick.']] },
+  saba: { n: "Saba's Hitless Hemporium", fac: 'fac_saba', keeper: 'npc_saba', who: 'Saba', gear: ['apron', 'vest'], floor: ['#1a2a14', '#24361c'], wall: '#14200e', props: ['plant', 'plant', 'rack'],
+    say: [['Saba', 'Hitless runs only. Take a look, my friend.']] },
+  harold: { n: "Harold's Mad Tea Party", fac: null, roof: '#2a8a6a', keeper: 'npc_harold', who: 'Harold', shop: ['cuppa', 'tea'], floor: ['#2a1a2a', '#3a243a'], wall: '#1e0e1e', props: ['tea', 'table', 'plant'],
+    say: [['Harold', 'Potions? Tea? Same thing, really. Sit, sit!'], ['Harold', 'The Void? Oh, it is real. Blumhead keeps the way to it shut, deep in his lair, north of here behind the mountains.'], ['Harold', 'Three keys open his lair. A Cream Key, a Bone Key and a Moon Key. The Cream Sewers south of town, the Bone Pit past the blood sea, and the Crimson Moon up in the peaks.']] },
+  amy: { n: "Amy's Willy Chilli", fac: 'fac_amy', keeper: 'npc_amy', who: 'Amy', shop: ['chilli', 'dyn'], floor: ['#1e0a0c', '#4a0e14'], wall: '#3a0a10', props: ['pots', 'table', 'table', 'jukebox'],
+    say: [['Amy', 'Mild, hot or dynamite?'], ['Amy', 'Throw a chilli at anything that bites. Trust me.']] },
+  joff: { n: "Joff's Pineapple Pizzaria", fac: 'fac_joff', keeper: 'npc_joff', who: 'Joff', give: 'pizza', shop: ['pizza'], floor: ['#f1e7d0', '#c4121c'], wall: '#2a0a0a', props: ['oven', 'table', 'table'],
+    say: [['Joff', 'Pineapple belongs on pizza. Fight me.'], ['Joff', 'Going on a quest? Take a slice. Take two. Actually take the whole pizza.']] },
+  arcade: { n: 'Potbelly Arcade', fac: 'fac_arcade', keeper: 'npc_potbelly', who: 'Potbelly', arcade: 1, floor: ['#0e0618', '#1a0e2a'], wall: '#0a0612', props: ['cabs'],
+    say: [['Potbelly', 'Cabinets are free, kid. Play all you like.']] },
+  tb: { n: "TB's Suck n' Fuck", fac: 'fac_tb', keeper: 'npc_tb', who: 'TB', tb: 1, shop: ['pill'], floor: ['#1a0a1a', '#2a102a'], wall: '#14060e', props: ['sofa', 'plant'] },
+  bates: { n: 'Master Bates Emporium', fac: null, roof: '#3a3a3a', keeper: 'npc_masterbates', who: 'Master Bates', heal: 1, floor: ['#1a1a1a', '#262626'], wall: '#101010', props: ['mat', 'crystal'],
+    say: [['Master Bates', "One must clear one's head before one proceeds."]] },
+  greebo: { n: "Greebo's Gourmet Goonery", fac: 'fac_greebo', keeper: null, who: 'Greebo', shop: ['pie', 'puff'], floor: ['#140820', '#3a1a4a'], wall: '#1e0a2a', props: ['oven', 'table', 'table'], sign: 'Greebo is out on the road with you. The pies are on an honesty tray.',
+    say: [['', 'A note on the counter, in Greebo\'s writing: "Fresh cream pies. Don\'t ask what\'s in them."']] },
+  // Ejaculand
+  steve: { n: "Steve's Park Hotel", fac: 'fac_sanct', keeper: 'steve0', who: 'Steve', inn: 30, floor: ['#1a0a10', '#2a0e18'], wall: '#12040a', props: ['bed', 'bed', 'plant'],
+    say: [['Steve', 'WELCOME TO EJACULAND! THE PARK NEVER CLOSES. NEVER. EVER.']] },
+  bonjo: { n: "Bonjo's BJ Boutique", fac: 'fac_bonjo', keeper: 'npc_bonjo', who: 'Bonjo', shop: ['puff', 'pie', 'cuppa', 'garlic', 'load', 'dyn', 'feast'], floor: ['#2a0a1e', '#3a1028'], wall: '#1e0614', props: ['rack', 'plant'],
+    say: [['Bonjo', 'Welcome, welcome. Let me get the door.']] },
+  fate: { n: "Stacked Fate's Table", fac: null, roof: '#1a1a3a', keeper: 'npc_stackedfate', who: 'Stacked Fate', gear: ['spikes', 'tide', 'pin', 'vest', 'plate'], floor: ['#0e1a14', '#14261c'], wall: '#0a120e', props: ['table', 'crystal'],
+    say: [['Stacked Fate', 'The deck was never yours. Neither was your fate.']] },
+  t: { n: "T's Hussy House", fac: 'fac_t', keeper: 'npc_t', who: 'T', floor: ['#2a0a14', '#3a101c'], wall: '#1e060e', props: ['sofa', 'plant', 'jukebox'],
+    say: [['T', "Come in, darling. I'll get the doors."], ['T', 'The Crimson Moon sits up in the northern peaks. Take the road north from the bridge.']] },
+  pulsar: { n: 'PulsarOctopus Beats', fac: 'fac_pulsar', keeper: 'npc_pulsar', who: 'PulsarOctopus', floor: ['#0a0a1e', '#14142a'], wall: '#06061a', props: ['jukebox', 'jukebox'],
+    say: [['PulsarOctopus', 'Just vibes, friend. Free of charge.'], ['PulsarOctopus', 'The Bone Pit is south-east of the park. Big bones. Bigger one at the bottom.']] },
+  judge: { n: 'Judgement Spells', fac: null, roof: '#8a8a8a', keeper: 'npc_judgement', who: 'Judgement', shop: ['cuppa', 'tea'], floor: ['#1a1a1a', '#e8e0d8'], wall: '#0e0e0e', props: ['crystal', 'crystal'],
+    say: [['Judgement', 'Light or shadow. Both have a price.'], ['Judgement', 'The Void takes everything you throw at it. Make sure what you throw is heavy.']] },
+  ali: { n: "Ali's Garlic Grub", fac: null, roof: '#4aa82a', keeper: 'npc_ali', who: 'Ali', give: 'garlic', shop: ['garlic'], floor: ['#141c0e', '#3a4a24'], wall: '#142010', props: ['pots', 'table'],
+    say: [['Ali', 'Nuggets? Garlic bread? Everything is better with garlic.'], ['Ali', 'Have some cloves. For the road. For the poison. For everything.']] },
+  jessiah: { n: "Jessiah's", fac: null, roof: '#8a4a1a', keeper: 'npc_jessiah', who: 'Jessiah', give: 'feast', floor: ['#2a1a0a', '#3a2410'], wall: '#1e1208', props: ['table', 'table', 'oven'],
+    say: [['Jessiah', 'An empty stomach makes a hollow man. Eat.']] }
+};
+var TOWNSPEC = {
+  C: { name: 'Clubhouse Row', song: 'town', w: 44, h: 32, rowA: ['club', 'beebs', 'cafe', 'natty', 'saba', 'harold'], rowB: ['amy', 'joff', 'arcade', 'tb', 'bates', 'greebo'], theme: 'red', start: 'club',
+    folk: [{ s: 'npc_pulsar', n: 'PulsarOctopus', at: [18, 15], say: ['Just vibes, friend. Free of charge.'] }, { s: 'h_gloop_adult_idle0', n: 'Homunculus', at: [25, 12], say: ['Squeak!', 'The homunculus looks very pleased to see you.'] },
+      { s: 'h_ember_adult_idle0', n: 'Homunculus', at: [10, 28], say: ['*warm squeak*'] }, { s: 'npc_elden', n: 'Elden', at: [30, 18], say: ["The grill's hot. So's the road. Buy puffs, you'll need them."] }] },
+  E: { name: 'Ejaculand', song: 'park', w: 44, h: 32, rowA: ['steve', 'bonjo', 'fate', 't', 'pulsar', 'judge'], rowB: ['ali', 'jessiah'], theme: 'park', start: null,
+    folk: [{ s: 'steve0', n: 'Steve', at: [21, 16], say: ['WELCOME TO EJACULAND!', 'Have you tried the Load Flume? It is VERY wet.'] }, { s: 'h_goldie_adult_idle0', n: 'Homunculus', at: [12, 13], say: ['*jingle*'] }, { s: 'npc_kaya', n: 'Kaya', at: [32, 28], say: ['Day off! Do not ask me for coffee.'] }] }
 };
 var TBQ = ['Fuck muck', 'Shithead Laboozie', 'let me tighten that kynodesme', 'dick skin', 'whyma wimina', 'suck your own and fuck your own', 'suck me fuck me suck me fuck me', "I got lotion on my dick I'm out here shooting my shit I'm free man for real!", 'Old geezer, Prick teaser', 'I made muckies...', 'a sissy doesn\'t deserve pleasure, a sissy is someone plaything'];
 var STORY = {

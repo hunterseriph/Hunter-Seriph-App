@@ -43,6 +43,7 @@ function spawnBoss(id) {
   G.bossGroup = id;
 }
 function bossDown(b) {
+  if (typeof dropCracker === 'function' && G.mode === 'play') { dropCracker(b.x - 10, b.y - b.h / 2); dropCracker(b.x + 10, b.y - b.h / 2); }
   sfx.kill(); poof(b.x, b.y - b.h / 2, 30, ['#ff2630', '#ffe36a', '#f1e7d0', '#b3121c']); G.shake = 10;
   // Brothers Load: both brothers have to go down. If the big one falls before his brother turns up, the brother turns up anyway.
   if (b.id === 'pig' && !G.broSpawned) { G.broSpawned = 1; brother(); }

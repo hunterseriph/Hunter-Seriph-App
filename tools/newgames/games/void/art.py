@@ -3,7 +3,7 @@
 import math
 from pixelkit import Grid
 USE = ['ch_idle*', 'ch_walk*', 'ch_attack', 'ch_hurt0', 'ch_death*', 'ch_icon0', 'ch_jump1', 'spermaid_*', 'greebo_*', 'npc_*', 'steve0', 'steve1', 'cumface',
-       'f_*', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen', 'p_door', 'p_blumdoor', 'p_shrine', 'h_gloop_baby_idle0', 'h_blood_adult_idle0']
+       'f_*', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen', 'p_door', 'p_blumdoor', 'p_shrine', 'h_gloop_baby_idle0', 'h_blood_adult_idle0', 'h_*_adult_idle0', 'fac_*', 'p_slot', 'p_stall', 'p_feast']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); PURP = ('#c08aff', '#7a2ad8', '#34106a')
 STONE = ('#8a6a6e', '#5a4044', '#2e1c20'); WHITE = ('#ffffff', '#e8dcc8', '#a8987a'); CREAM = ('#fffbe8', '#f1e0b0', '#b8a070'); WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c')
 VOIDC = ('#3a2a4a', '#140a1c', '#000000')
@@ -84,3 +84,38 @@ ART = {'jv_void0': lambda: void(0), 'jv_void1': lambda: void(1), 'jv_spawn0': la
        'jv_crys0': lambda: crystal(0), 'jv_crys1': lambda: crystal(1), 'jv_keyc': lambda: key(CREAM), 'jv_keyb': lambda: key(WHITE), 'jv_keym': lambda: key(RED),
        'jv_houser': lambda: house(48, 44, RED), 'jv_housep': lambda: house(48, 44, PURP), 'jv_houseb': lambda: house(56, 48, ('#5a7aaa', '#2a4a7a', '#0a1a3a')), 'jv_tree': tree, 'jv_mtn': mountain}
 for k in ('town', 'park', 'castle', 'cave', 'sewer', 'bone', 'tower', 'lair', 'gate', 'clubhouse'): ART['jv_pl_' + k] = (lambda k=k: place(k))
+
+# borrowed for the insides of buildings and the field: the chibi Cumhead, Willy Nilly's diner bits, the arcade cabinets
+import importlib.util as _iu, os as _os
+def _load(game):
+    p = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), game, 'art.py'); sp = _iu.spec_from_file_location('_jv_' + game.replace('-', '_'), p); m = _iu.module_from_spec(sp); sp.loader.exec_module(m); return m.ART
+_wn = _load('willy-nilly'); _ao = _load('arcade')
+for _k in ('wn_table', 'wn_chair', 'wn_plant', 'wn_jukebox', 'wn_potc0', 'wn_potd0', 'wn_st_mach0', 'wn_st_oven1', 'wn_st_tap0', 'wn_d_p', 'wn_d_q', 'wn_d_x', 'wn_d_a', 'wn_bowld', 'wn_d_k'): ART[_k] = _wn[_k]
+for _k in ('ao_cab_r', 'ao_cab_p', 'ao_cab_b', 'ao_cab_g', 'ao_cabbig'): ART[_k] = _ao[_k]
+import chibi as _ch
+ART.update(_ch.frames())
+def bed():
+    g = Grid(28, 40); g.rect(1, 0, 26, 8, 'head'); g.rect(1, 6, 26, 32, 'frame'); g.rect(3, 8, 22, 28, 'sheet'); g.rect(5, 9, 18, 6, 'pillow'); g.rect(3, 20, 22, 16, 'blanket')
+    return g, {'head': WOOD, 'frame': WOOD, 'sheet': WHITE, 'pillow': WHITE, 'blanket': RED}
+def barrel():
+    g = Grid(18, 22); g.ellipse(9, 4, 8, 3, 'top'); g.rect(1, 4, 16, 15, 'body'); g.ellipse(9, 19, 8, 3, 'body'); g.rect(1, 7, 16, 2, 'hoop'); g.rect(1, 15, 16, 2, 'hoop')
+    return g, {'top': ('#c8844a', '#8a5428', '#4a2a10'), 'body': WOOD, 'hoop': ('#9a929a', '#5a545c', '#2a262c')}
+def rack():
+    g = Grid(30, 34); g.rect(0, 0, 30, 4, 'wood'); g.rect(0, 30, 30, 4, 'wood'); g.rect(1, 0, 3, 34, 'wood'); g.rect(26, 0, 3, 34, 'wood')
+    for i, x in enumerate((8, 14, 20)): g.line(x, 4, x, 28, 'blade', 1); g.rect(x - 2, 22, 5, 2, 'guard')
+    return g, {'wood': WOOD, 'blade': ('#e8e8f0', '#a8a8b8', '#5a5a6a'), 'guard': GOLD}
+def icecrystal():
+    g = Grid(20, 30); g.poly([(10, 0), (18, 12), (10, 28), (2, 12)], 'c'); g.line(10, 2, 10, 26, 'hi', 0.4); g.rect(4, 26, 12, 4, 'base')
+    return g, {'c': ('#c0e8ff', '#5aa8e8', '#1a4a8a'), 'hi': '#ffffff', 'base': STONE}
+def sofa():
+    g = Grid(44, 24); g.rect(0, 0, 44, 12, 'back'); g.rect(0, 10, 44, 10, 'seat'); g.rect(0, 4, 6, 18, 'arm'); g.rect(38, 4, 6, 18, 'arm')
+    return g, {'back': ('#ff6a9a', '#c4125a', '#6a0a2a'), 'seat': ('#ff8ab0', '#e0306a', '#8a1040'), 'arm': ('#ff6a9a', '#c4125a', '#6a0a2a')}
+def mat():
+    g = Grid(36, 20); g.ellipse(18, 10, 17, 9, 'm'); g.ellipse(18, 10, 11, 5, 'i'); return g, {'m': ('#a89a90', '#6a5a52', '#2a201c'), 'i': ('#c4121c', '#8a0a10', '#4a0408')}
+def lamp(on):
+    g = Grid(10, 34); g.rect(4, 8, 2, 26, 'post'); g.rect(1, 2, 8, 7, 'cage'); g.rect(2, 3, 6, 5, 'glass'); g.rect(2, 30, 6, 4, 'post')
+    return g, {'post': ('#4a4a52', '#2a2a32', '#12121a'), 'cage': ('#4a4a52', '#2a2a32', '#12121a'), 'glass': ('#fff6c0', '#ffe36a', '#c89a2a') if on else ('#5a4a3a', '#3a2a1a', '#1a1208')}
+def bench():
+    g = Grid(30, 16); g.rect(0, 0, 30, 4, 'w'); g.rect(0, 6, 30, 4, 'w'); g.rect(2, 10, 3, 6, 'leg'); g.rect(25, 10, 3, 6, 'leg')
+    return g, {'w': WOOD, 'leg': BLACK}
+ART.update({'jv_bed': bed, 'jv_barrel': barrel, 'jv_rack': rack, 'jv_crystal': icecrystal, 'jv_sofa': sofa, 'jv_mat': mat, 'jv_lamp0': lambda: lamp(False), 'jv_lamp1': lambda: lamp(True), 'jv_bench': bench})

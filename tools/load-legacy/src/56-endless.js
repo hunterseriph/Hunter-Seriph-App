@@ -191,15 +191,15 @@ BRAIN.hotload = function (b, dt, W, ph) {
 function sewerBack(gx) { // brick arches, rusty outfall pipes pouring cream, a cream river below, cream dripping off the vaults
   var sp = 180, x0 = -((gx * 0.5) % sp) - sp, t = G.t;
   for (var x = x0; x < VW + sp; x += sp) {
-    var px = Math.round(x);
+    var px = Math.round(x), n = segN(gx, 0.5, sp, x, x0);
     // a brick arch: dark recess with a lighter brick rim, stepped (no smooth curves)
     for (var st = 0; st < 8; st++) { var ah = Math.round(Math.sqrt(1 - Math.pow((st - 3.5) / 4, 2)) * 26); R(ctx, '#1e1812', px + 40 + st * 12, 40 - ah, 12, VH); R(ctx, '#0c0a08', px + 42 + st * 12, 44 - ah, 8, VH); }
     for (var st2 = 0; st2 < 8; st2++) { var ah2 = Math.round(Math.sqrt(1 - Math.pow((st2 - 3.5) / 4, 2)) * 26); R(ctx, '#4a3e30', px + 40 + st2 * 12, 38 - ah2, 11, 3); R(ctx, '#6a5a44', px + 40 + st2 * 12, 38 - ah2, 11, 1); }
     // cream stalactites off the vault, one of them dripping
     for (var c = 0; c < 4; c++) { var cx2 = px + 52 + c * 22, cl = 4 + (c * 7) % 9; R(ctx, '#12040a', cx2 - 1, 40, 5, cl + 1); R(ctx, '#e6cf98', cx2, 40, 3, cl); R(ctx, '#fff6d8', cx2, 40, 1, cl - 1); }
-    var dd = (t * 50 + px * 3) % 160; R(ctx, '#fff6d8', px + 75, 52 + dd, 2, 3);
+    var dd = (t * 50 + n * 53) % 160; R(ctx, '#fff6d8', px + 75, 52 + dd, 2, 3);
     // an outfall pipe in the wall pouring a stream of cream
-    var py = 110 + (Math.abs(px) % 3) * 12, pxx = px + 20;
+    var py = 110 + (((n % 3) + 3) % 3) * 12, pxx = px + 20;
     R(ctx, '#12040a', pxx - 2, py - 2, 26, 22); R(ctx, '#5a4632', pxx, py, 22, 18); R(ctx, '#8a6a46', pxx, py, 22, 3); R(ctx, '#3a2a1c', pxx, py + 15, 22, 3); R(ctx, '#12040a', pxx + 4, py + 4, 14, 10); R(ctx, '#e6cf98', pxx + 5, py + 10, 12, 4);
     for (var r2 = 0; r2 < 3; r2++) R(ctx, '#c8903a', pxx + 2 + r2 * 8, py + 1, 2, 2);
     for (var fy = py + 14; fy < VH - 30; fy += 3) { var wob = Math.round(Math.sin(fy * 0.3 - t * 14) * 1); R(ctx, ((fy / 3) | 0) % 2 ? '#fff6d8' : '#f1e0b0', pxx + 7 + wob, fy, 8, 3); R(ctx, '#ffffff', pxx + 8 + wob, fy, 2, 3); }
@@ -214,17 +214,17 @@ function sewerBack(gx) { // brick arches, rusty outfall pipes pouring cream, a c
 function boneBack(gx) {
   var sp = 120, x0 = -((gx * 0.6) % sp) - sp;
   for (var x = x0; x < VW + sp; x += sp) {
-    var px = Math.round(x);
+    var px = Math.round(x), n = segN(gx, 0.6, sp, x, x0);
     // a giant ribcage half-buried in the wall behind the niches
-    if ((Math.round(x - x0) / sp) % 2 === 0) { for (var rb = 0; rb < 5; rb++) { var rx = px + 20 + rb * 18, top = 34 + Math.abs(rb - 2) * 10; R(ctx, '#12040a', rx - 1, top - 1, 8, VH - top + 1); R(ctx, '#4a4234', rx, top, 6, VH - top); R(ctx, '#6a604e', rx + 1, top, 2, VH - top); } R(ctx, '#12040a', px + 13, 29, 92, 8); R(ctx, '#4a4234', px + 14, 30, 90, 6); R(ctx, '#6a604e', px + 14, 30, 90, 2); }
+    if (((n % 2) + 2) % 2 === 0) { for (var rb = 0; rb < 5; rb++) { var rx = px + 20 + rb * 18, top = 34 + Math.abs(rb - 2) * 10; R(ctx, '#12040a', rx - 1, top - 1, 8, VH - top + 1); R(ctx, '#4a4234', rx, top, 6, VH - top); R(ctx, '#6a604e', rx + 1, top, 2, VH - top); } R(ctx, '#12040a', px + 13, 29, 92, 8); R(ctx, '#4a4234', px + 14, 30, 90, 6); R(ctx, '#6a604e', px + 14, 30, 90, 2); }
     for (var row = 0; row < 3; row++) { var y = 50 + row * 50; R(ctx, '#060402', px + 10, y, 90, 34); for (var k = 0; k < 4; k++) { var sx = px + 16 + k * 22, sy = y + 10 + ((k + row) % 2) * 4; R(ctx, '#3a342a', sx, sy, 14, 12); R(ctx, '#0a0806', sx + 3, sy + 4, 3, 3); R(ctx, '#0a0806', sx + 8, sy + 4, 3, 3); R(ctx, '#2a2620', sx + 3, sy + 10, 8, 2); } }
   }
 }
-function boneChains(gx) { var sp = 140, x0 = -((gx * 0.8) % sp) - sp; for (var x = x0; x < VW + sp; x += sp) { var px = Math.round(x) + 60, len = 30 + (Math.abs(Math.round(x)) % 4) * 12; for (var cy = 0; cy < len; cy += 4) R(ctx, cy % 8 ? '#3a342a' : '#5a5040', px, cy, 2, 3); R(ctx, '#12040a', px - 5, len, 12, 11); R(ctx, '#e8dcc0', px - 4, len + 1, 10, 9); R(ctx, '#12040a', px - 2, len + 4, 2, 2); R(ctx, '#12040a', px + 2, len + 4, 2, 2); R(ctx, '#9a8a6a', px - 2, len + 8, 6, 1); } }
+function boneChains(gx) { var sp = 140, x0 = -((gx * 0.8) % sp) - sp; for (var x = x0; x < VW + sp; x += sp) { var px = Math.round(x) + 60, len = 30 + (((segN(gx, 0.8, sp, x, x0) * 3) % 4 + 4) % 4) * 12; for (var cy = 0; cy < len; cy += 4) R(ctx, cy % 8 ? '#3a342a' : '#5a5040', px, cy, 2, 3); R(ctx, '#12040a', px - 5, len, 12, 11); R(ctx, '#e8dcc0', px - 4, len + 1, 10, 9); R(ctx, '#12040a', px - 2, len + 4, 2, 2); R(ctx, '#12040a', px + 2, len + 4, 2, 2); R(ctx, '#9a8a6a', px - 2, len + 8, 6, 1); } }
 function furnaceBack(gx) {
   var g = ctx.createLinearGradient(0, VH * 0.5, 0, VH); g.addColorStop(0, 'rgba(255,90,20,0)'); g.addColorStop(1, 'rgba(255,90,20,0.28)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   var sp = 170, x0 = -((gx * 0.6) % sp) - sp;
-  for (var x = x0; x < VW + sp; x += sp) { var px = Math.round(x); R(ctx, '#140604', px + 30, 70, 70, 90); R(ctx, '#2a0c06', px + 34, 74, 62, 82); var fl = 0.6 + Math.sin(G.t * 6 + px) * 0.2; ctx.fillStyle = 'rgba(255,120,30,' + fl.toFixed(2) + ')'; ctx.fillRect(px + 40, 120, 50, 30); R(ctx, '#ffe36a', px + 55, 132, 20, 10); for (var b = 0; b < 6; b++) R(ctx, '#140604', px + 38 + b * 10, 116, 4, 40); }
+  for (var x = x0; x < VW + sp; x += sp) { var px = Math.round(x); R(ctx, '#140604', px + 30, 70, 70, 90); R(ctx, '#2a0c06', px + 34, 74, 62, 82); var fl = 0.6 + Math.sin(G.t * 6 + segN(gx, 0.6, sp, x, x0) * 1.7) * 0.2; ctx.fillStyle = 'rgba(255,120,30,' + fl.toFixed(2) + ')'; ctx.fillRect(px + 40, 120, 50, 30); R(ctx, '#ffe36a', px + 55, 132, 20, 10); for (var b = 0; b < 6; b++) R(ctx, '#140604', px + 38 + b * 10, 116, 4, 40); }
   for (var i = 0; i < 6; i++) { var ex = (i * 83 + G.t * 20 * (1 + i % 3)) % VW, ey = VH - ((G.t * 40 + i * 47) % VH); R(ctx, i % 2 ? '#ffb040' : '#ff5a20', Math.round(ex), Math.round(ey), 1, 1); }
 }
 /* furnace vents: smoke, then a column of fire */

@@ -183,13 +183,13 @@ function lairBack(gx) {
   ctx.fillStyle = '#0a0208'; ctx.fillRect(0, 0, VW, VH);
   var pulse = 0.5 + Math.sin(G.t * 2.4) * 0.5, sp = 160, x0 = -((gx * 0.35) % sp) - sp;
   for (var x = x0; x < VW + sp; x += sp) {
-    var px = Math.round(x);
+    var px = Math.round(x), n = segN(gx, 0.35, sp, x, x0);
     R(ctx, '#1a0614', px + 10, 0, 50, VH); R(ctx, '#240a1c', px + 14, 0, 10, VH); R(ctx, '#12040c', px + 54, 0, 6, VH); // a fleshy column
-    for (var vy = 0; vy < VH; vy += 6) { var vx = px + 70 + Math.round(Math.sin(vy * 0.08 + px) * 8); R(ctx, pulse > 0.6 ? '#7a0a1a' : '#4a0612', vx, vy, 2, 6); } // a vein
+    for (var vy = 0; vy < VH; vy += 6) { var vx = px + 70 + Math.round(Math.sin(vy * 0.08 + n * 2.3) * 8); R(ctx, pulse > 0.6 ? '#7a0a1a' : '#4a0612', vx, vy, 2, 6); } // a vein
     R(ctx, '#12040c', px + 100, 120, 40, 60); R(ctx, '#2a0820', px + 102, 122, 36, 56); R(ctx, pulse > 0.7 ? '#9a4aff' : '#5a1a8a', px + 116, 140, 8, 8); // a pod in the wall
   }
   // the carved face far behind
-  var fx2 = VW / 2 - ((gx * 0.08) % 200) + 60; ctx.globalAlpha = 0.18;
+  var fsp = 640, fx2 = VW / 2 + 60 - (((gx * 0.08) % fsp) + fsp) % fsp; if (fx2 < -140) fx2 += fsp; ctx.globalAlpha = 0.18;
   ctx.fillStyle = '#5a0a2a'; ctx.beginPath(); ctx.ellipse(fx2, 120, 120, 100, 0, 0, 6.28); ctx.fill();
   ctx.fillStyle = '#0a0208'; ctx.beginPath(); ctx.ellipse(fx2 - 40, 100, 18, 22, 0, 0, 6.28); ctx.ellipse(fx2 + 40, 100, 18, 22, 0, 0, 6.28); ctx.fill(); ctx.fillRect(fx2 - 60, 150, 120, 26);
   ctx.globalAlpha = 1;

@@ -16,25 +16,30 @@ function resize() {
 window.addEventListener('resize', resize);
 function areaNow() { if (G.mode === 'town') return null; if (L && L.lair) return 'lair'; if (L && L.arena) return BOSSDEF[L.arena].area; return G.rm ? G.rm.area : 'castle'; }
 function TH() { var a = areaNow(); return a ? AREAS[a] : { e1: '#ff3a44', e2: '#7a0a12', tint: null, sky: null }; }
+/* the pixel font is only clean when its pixels land on whole screen pixels, so its size snaps to that */
+function pxSize(sz) { var d = sz * M, a = Math.max(8, Math.round(d / 8) * 8); if (Math.abs(a - d) / d > 0.25) a = Math.max(4, Math.round(d / 4) * 4); return a / M; }
 function text(str, x, y, align, col, size) {
-  ctx.font = (size || 8) + 'px "Press Start 2P", monospace'; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#000'; ctx.fillText(str, x + 1, y + 1); ctx.fillStyle = col || '#f1e7d0'; ctx.fillText(str, x, y);
+  ctx.font = pxSize(size || 8) + 'px "Press Start 2P", monospace'; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+  x = Math.round(x); y = Math.round(y); ctx.fillStyle = '#000'; ctx.fillText(str, x + 1, y + 1); ctx.fillStyle = col || '#f1e7d0'; ctx.fillText(str, x, y);
 }
 function tileMirror(img, par, y, scale, off) {
   var w = img.naturalWidth * scale, h = img.naturalHeight * scale, x0 = -(((off * par) % (w * 2)) + w * 2) % (w * 2);
-  for (var x = x0; x < VW + w; x += w) { var i = Math.round((x - x0) / w); if (i % 2 === 0) ctx.drawImage(img, x, y, w, h); else { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0, w, h); ctx.restore(); } }
+  for (var x = x0; x < VW + w; x += w) { var i = Math.round((x - x0) / w); var rx = Math.round(x); if (i % 2 === 0) ctx.drawImage(img, rx, y, w, h); else { ctx.save(); ctx.translate(rx + w, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0, w, h); ctx.restore(); } }
 }
 function tileRepeat(img, par, y, scale, off, alpha) {
   var w = img.naturalWidth * scale, h = img.naturalHeight * scale, x0 = -(((off * par) % w) + w) % w;
-  if (alpha !== undefined) ctx.globalAlpha = alpha; for (var x = x0 - w; x < VW + w; x += w) ctx.drawImage(img, x, y, w, h); ctx.globalAlpha = 1;
+  if (alpha !== undefined) ctx.globalAlpha = alpha; for (var x = x0 - w; x < VW + w; x += w) ctx.drawImage(img, Math.round(x), y, w, h); ctx.globalAlpha = 1;
 }
-function moon(x, y, r) {
-  var mg = ctx.createRadialGradient(x, y, 2, x, y, r); mg.addColorStop(0, '#d8141f'); mg.addColorStop(0.8, '#8e0c14'); mg.addColorStop(1, '#5a070c');
-  ctx.save(); ctx.shadowColor = 'rgba(255,30,40,0.7)'; ctx.shadowBlur = 24; ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.restore();
+var MOONC = {};
+function moon(x, y, r) { // drawn once per size (the glow is costly on phones), then stamped
+  var c = MOONC[r];
+  if (!c) { var p = r + 30; c = MOONC[r] = mk(p * 2, p * 2); var g = c.getContext('2d'), mg = g.createRadialGradient(p, p, 2, p, p, r); mg.addColorStop(0, '#d8141f'); mg.addColorStop(0.8, '#8e0c14'); mg.addColorStop(1, '#5a070c');
+    g.shadowColor = 'rgba(255,30,40,0.7)'; g.shadowBlur = 24; g.fillStyle = mg; g.beginPath(); g.arc(p, p, r, 0, 6.2832); g.fill(); }
+  ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height / 2));
 }
 function outdoorSky(gx, city) {
   if (ok(imgs.sky)) tileMirror(imgs.sky, 0.06, 0, 216 / imgs.sky.naturalHeight, gx); else { ctx.fillStyle = '#1a0507'; ctx.fillRect(0, 0, VW, VH); }
-  moon(70 - (gx * 0.02) % 40, 46, 22);
+  moon(Math.round(70 - gx * 0.02), 46, 22);
   if (ok(imgs.clouds)) { tileRepeat(imgs.clouds, 0.1, 4, 0.5, gx + G.t * 5, 1); tileRepeat(imgs.clouds, 0.18, 34, 0.5, 260 + gx + G.t * 9, 0.85); }
   if (G.flash > 0) { ctx.fillStyle = 'rgba(255,50,60,' + (G.flash / 0.16 * 0.26).toFixed(3) + ')'; ctx.fillRect(0, 0, VW, VH); }
   if (ok(imgs.skyline)) tileRepeat(imgs.skyline, 0.28, 224 - imgs.skyline.naturalHeight / 2, 0.5, gx, 1);
@@ -54,6 +59,8 @@ function bgPattern(a) { // the far wall: big dim blocks with bevels, pre-drawn o
   }
   return (BGPAT[a] = c);
 }
+/* which repeat of a backdrop pattern this is, counted in the world, so details stay put while the camera scrolls */
+function segN(gx, k, sp, x, x0) { return Math.round((x - x0) / sp) + Math.floor(gx * k / sp); }
 function wallBack(gx, A) {
   ctx.fillStyle = A.wall; ctx.fillRect(0, 0, VW, VH);
   var p = bgPattern(areaNow()), x0 = -((gx * 0.5) % p.width) - p.width;
@@ -72,13 +79,13 @@ function castleWindows(gx) {
 }
 function dungeonChains(gx) {
   var sp = 70, x0 = -((gx * 0.8) % sp) - sp;
-  for (var x = x0; x < VW + sp; x += sp) { var h = 40 + ((Math.abs(Math.round((x - x0) / sp + gx / sp)) * 37) % 70); ctx.fillStyle = '#2a1a1a'; for (var y = 0; y < h; y += 6) ctx.fillRect(Math.round(x) + (y % 12 ? 0 : 1), y, 3, 4); ctx.fillStyle = '#5a0f14'; ctx.fillRect(Math.round(x) - 3, h, 9, 3); }
+  for (var x = x0; x < VW + sp; x += sp) { var h = 40 + ((Math.abs(segN(gx, 0.8, sp, x, x0)) * 37) % 70); ctx.fillStyle = '#2a1a1a'; for (var y = 0; y < h; y += 6) ctx.fillRect(Math.round(x) + (y % 12 ? 0 : 1), y, 3, 4); ctx.fillStyle = '#5a0f14'; ctx.fillRect(Math.round(x) - 3, h, 9, 3); }
   for (var d = 0; d < 6; d++) { var dx = ((d * 97 + gx * 0.3) % VW + VW) % VW, dy = (G.t * 30 + d * 47) % 120; ctx.fillStyle = 'rgba(160,10,20,0.6)'; ctx.fillRect(Math.round(dx), Math.round(dy), 2, 4); }
 }
 function roofSpires(gx) {
   var sp = 150, x0 = -((gx * 0.4) % sp) - sp;
   ctx.fillStyle = '#0c0306';
-  for (var x = x0; x < VW + sp; x += sp) { var bx = Math.round(x), h = 90 + ((Math.abs(Math.round((x - x0) / sp)) * 53) % 50); ctx.fillRect(bx + 20, VH - h, 30, h); ctx.beginPath(); ctx.moveTo(bx + 14, VH - h); ctx.lineTo(bx + 35, VH - h - 46); ctx.lineTo(bx + 56, VH - h); ctx.fill(); ctx.fillStyle = '#ff2630'; ctx.fillRect(bx + 32, VH - h + 20, 5, 8); ctx.fillStyle = '#0c0306'; }
+  for (var x = x0; x < VW + sp; x += sp) { var bx = Math.round(x), h = 90 + ((((segN(gx, 0.4, sp, x, x0) * 53) % 50) + 50) % 50); ctx.fillRect(bx + 20, VH - h, 30, h); ctx.beginPath(); ctx.moveTo(bx + 14, VH - h); ctx.lineTo(bx + 35, VH - h - 46); ctx.lineTo(bx + 56, VH - h); ctx.fill(); ctx.fillStyle = '#ff2630'; ctx.fillRect(bx + 32, VH - h + 20, 5, 8); ctx.fillStyle = '#0c0306'; }
 }
 
 /* ---------- Ejaculand: black and red theme park skyline ---------- */
@@ -145,7 +152,7 @@ function stringLights(off) {
 }
 function parkBack(gx) {
   var g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#0c0204'); g.addColorStop(0.55, '#3a0609'); g.addColorStop(1, '#6a0a12'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
-  moon(VW - 90 - (gx * 0.02) % 30, 52, 24);
+  moon(Math.round(VW - 90 - gx * 0.02), 52, 24);
   if (ok(imgs.clouds)) tileRepeat(imgs.clouds, 0.1, 6, 0.5, gx + G.t * 5, 0.55);
   // far back: the wheel, dimmed, slow. Middle: one panel holding the coaster, the clock tower and the carousel, laid out so nothing overlaps.
   var sp = 720, x0 = -((gx * 0.12) % sp) - sp, x;
@@ -579,7 +586,7 @@ function render() {
     drawFlume(cx); drawLogs(cx); drawQuirks(cx); drawLairBack(cx);
     L.ents.forEach(function (e) { if (e.k === 'door') drawDoor(e, cx); else if (e.k === 'chest') drawChest(e, cx); else if (e.k === 'altar') drawAltar(e, cx); else if (e.k === 'turret') drawTurret(e, cx); else if (e.k === 'portal') drawPortal(e, cx); else if (e.k === 'npc') drawNpcEnt(e, cx); });
   }
-  for (i = 0; i < drops.length; i++) { var d = drops[i], bob = d.fly ? 0 : Math.sin(G.t * 4 + d.x * 0.05) * 1.5, dx = Math.round(d.x - cx) - 4; if (dx < -12 || dx > VW + 12) continue; if (d.fly && d.age > 7 && Math.floor(G.t * 14) % 2 === 0) continue; ctx.drawImage(dropImg, dx, Math.round(d.y + bob) - 5); }
+  for (i = 0; i < drops.length; i++) { var d = drops[i], bob = d.fly ? 0 : Math.sin(G.t * 4 + d.x * 0.05) * 1.5, dx = Math.round(d.x - cx) - 4; if (dx < -12 || dx > VW + 12) continue; if (d.fly && d.age > (d.crk ? 14 : 7) && Math.floor(G.t * 14) % 2 === 0) continue; if (d.crk) ctx.drawImage(crackerImg, dx - 2, Math.round(d.y + bob) - 7); else ctx.drawImage(dropImg, dx, Math.round(d.y + bob) - 5); }
   enemies.forEach(function (e) { drawEnemy(e, cx); });
   bosses.forEach(function (b) { if (b.alive) drawBoss(b, cx); });
   drawBlumBody(cx);

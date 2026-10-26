@@ -8,8 +8,25 @@
 var OPT = { mus: 1 };
 var KIT = (function () {
   'use strict';
-  var cv = document.getElementById('c'), ctx = cv.getContext('2d'), W = 480, H = 270, cfg = {};
+  var cv = document.getElementById('c'), main = cv.getContext('2d'), ctx = main, W = 480, H = 270, cfg = {}, S = 1;
   ctx.imageSmoothingEnabled = false;
+  /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
+  function fit() {
+    var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, k = Math.min(r.width / W, r.height / H) * dpr;
+    var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
+    if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
+  }
+  window.addEventListener('resize', function () { setTimeout(fit, 50); });
+  /* cached layers: draw static things (floors, walls, backdrops) once into a canvas, then blit them each frame */
+  var layers = {};
+  function layer(key, w, h, fn) {
+    var L = layers[key]; if (L) return L;
+    var c = document.createElement('canvas'); c.width = Math.ceil(w * S); c.height = Math.ceil(h * S); var g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.setTransform(S, 0, 0, S, 0, 0);
+    var old = ctx; ctx = g; try { fn(); } finally { ctx = old; }
+    c.lw = w; c.lh = h; return (layers[key] = c);
+  }
+  function blit(L, x, y) { ctx.drawImage(L, Math.round(x), Math.round(y), L.lw, L.lh); }
+  function dropLayer(key) { if (key) delete layers[key]; else layers = {}; }
   /* ---------- sprites ---------- */
   var SHEET = new Image(), SPR = /*@SPR@*/{}, ready = false, whites = {};
   SHEET.onload = function () { ready = true; }; SHEET.src = /*@SHEET@*/'';
@@ -33,14 +50,16 @@ var KIT = (function () {
   function R(c, x, y, w, h) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
   var FONTS = { px: '"Press Start 2P", monospace', title: '"Pirata One", serif', body: '"Archivo Narrow", sans-serif' };
   /* text(s, x, y, {size, col, align, font, shadow, alpha, max}) - pixel font sizes should be multiples of 8 (or 4/6 for tiny) */
+  /* the pixel font only looks clean when each of its pixels lands on whole screen pixels: snap its size to that */
+  function fsz(sz, f) { if (f !== 'px') return sz; var d = sz * S, a = Math.max(8, Math.round(d / 8) * 8); if (Math.abs(a - d) / d > 0.25) a = Math.max(4, Math.round(d / 4) * 4); return a / S; }
   function text(s, x, y, o) {
-    o = o || {}; var sz = o.size || 8, f = o.font || 'px';
+    o = o || {}; var f = o.font || 'px', sz = fsz(o.size || 8, f);
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.font = sz + 'px ' + FONTS[f]; ctx.textAlign = o.align || 'left'; ctx.textBaseline = 'top';
     if (o.shadow !== false) { ctx.fillStyle = o.shadowCol || '#12040a'; ctx.fillText(s, Math.round(x) + 1, Math.round(y) + 1, o.max); if (o.outline) { ctx.fillText(s, Math.round(x) - 1, Math.round(y), o.max); ctx.fillText(s, Math.round(x), Math.round(y) - 1, o.max); ctx.fillText(s, Math.round(x) + 1, Math.round(y) - 1, o.max); ctx.fillText(s, Math.round(x) - 1, Math.round(y) + 1, o.max); } }
-    ctx.fillStyle = o.col || '#f1e7d0'; ctx.fillText(s, Math.round(x), Math.round(y), o.max); ctx.restore();
+    ctx.fillStyle = o.col || '#f1e7d0'; ctx.fillText(s, Math.round(x), Math.round(y), o.max && o.max < tw(s, o.size || 8, f) ? o.max : undefined); ctx.restore();
   }
-  function tw(s, sz, f) { ctx.save(); ctx.font = (sz || 8) + 'px ' + FONTS[f || 'px']; var w = ctx.measureText(s).width; ctx.restore(); return w; }
+  function tw(s, sz, f) { ctx.save(); ctx.font = fsz(sz || 8, f || 'px') + 'px ' + FONTS[f || 'px']; var w = ctx.measureText(s).width; ctx.restore(); return w; }
   /* wrap text into lines that fit a width */
   function wrap(s, maxW, sz, f) {
     var out = []; String(s).split('\n').forEach(function (para) {
@@ -80,36 +99,77 @@ var KIT = (function () {
   cv.addEventListener('pointerdown', function (e) { audioInit(); var p = toCanvas(e); ptr.x = p.x; ptr.y = p.y; ptr.down = true; ptr.tapQ = true; });
   cv.addEventListener('pointermove', function (e) { var p = toCanvas(e); ptr.x = p.x; ptr.y = p.y; ptr.moved = true; });
   window.addEventListener('pointerup', function () { ptr.down = false; });
-  /* the on-screen pad: a d-pad (or stick) and the face buttons the game asks for */
+  /* ---------- on-screen controls ----------
+     One touch handler for the whole pad, so several fingers work at once (move and jump, move and shoot).
+     o.dpad (default on): a d-pad on the left. o.btns: face buttons. o.sticks: twin analogue sticks that
+     appear wherever a thumb lands, left half moves, right half aims (for twin-stick shooting). */
+  var CTL = [], touches = {}, sticks = [{ x: 0, y: 0, on: false }, { x: 0, y: 0, on: false }], vsticks = {}, padCfg = null;
   function buildPad(o) {
-    var pad = document.getElementById('pad'); pad.innerHTML = ''; if (!o || o === 'none') { pad.hidden = true; return; } pad.hidden = false;
-    function mkPad(map, four) {
+    var pad = document.getElementById('pad'); pad.innerHTML = ''; CTL = []; padCfg = o; if (!o || o === 'none') { pad.hidden = true; return; } pad.hidden = false;
+    pad.classList.toggle('sticks', !!o.sticks);
+    if (o.dpad !== false && !o.sticks) {
       var dp = document.createElement('div'); dp.className = 'dpad'; dp.innerHTML = '<i class="u"></i><i class="l"></i><i class="r"></i><i class="d"></i><b></b>'; pad.appendChild(dp);
-      var clear = function () { touchDown[map.l] = touchDown[map.r] = touchDown[map.u] = touchDown[map.d] = false; };
-      var upd = function (e) {
-        var r = dp.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2, m = Math.hypot(x, y);
-        clear(); if (m < 8) { dp.dataset.dir = ''; return; }
-        var a = Math.atan2(y, x), oct = Math.round(a / (Math.PI / 4)), dirs = { 0: 'r', 1: 'rd', 2: 'd', 3: 'ld', 4: 'l', '-4': 'l', '-3': 'lu', '-2': 'u', '-1': 'ru' }, d = dirs[oct] || '';
-        if (four) d = d.length > 1 ? (Math.abs(x) > Math.abs(y) ? d[0] : d[1]) : d;
-        touchDown[map.l] = d.indexOf('l') >= 0; touchDown[map.r] = d.indexOf('r') >= 0; touchDown[map.u] = d.indexOf('u') >= 0; touchDown[map.d] = d.indexOf('d') >= 0; dp.dataset.dir = d;
-      };
-      dp.addEventListener('pointerdown', function (e) { audioInit(); dp.setPointerCapture(e.pointerId); upd(e); e.preventDefault(); });
-      dp.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') upd(e); });
-      var off = function () { clear(); dp.dataset.dir = ''; };
-      dp.addEventListener('pointerup', off); dp.addEventListener('pointercancel', off);
-      return dp;
+      CTL.push({ el: dp, kind: 'dpad', map: { l: 'left', r: 'right', u: 'up', d: 'down' }, four: o.four });
     }
-    if (o.dpad !== false) mkPad({ l: 'left', r: 'right', u: 'up', d: 'down' }, o.four);
-    var acts = document.createElement('div'); acts.id = 'acts'; pad.appendChild(acts);
+    if (o.sticks) { var sp = document.createElement('div'); sp.className = 'stickzone'; sp.innerHTML = '<span>MOVE</span><span>AIM</span>'; pad.appendChild(sp); }
+    var acts = document.createElement('div'); acts.id = 'acts'; if ((o.btns || []).length === 1) acts.className = 'one'; pad.appendChild(acts);
     (o.btns || []).forEach(function (b) {
-      var el = document.createElement('button'); el.className = 'pbtn ' + (b.cls || ''); el.innerHTML = '<span>' + b.label + '</span>' + (b.sub ? '<small>' + b.sub + '</small>' : ''); el.setAttribute('data-pad-skip', '');
-      el.addEventListener('pointerdown', function (e) { audioInit(); touchDown[b.k] = true; el.classList.add('on'); el.setPointerCapture(e.pointerId); e.preventDefault(); });
-      var up = function () { touchDown[b.k] = false; el.classList.remove('on'); };
-      el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-      acts.appendChild(el);
+      var el = document.createElement('button'); el.className = 'pbtn ' + (b.cls || ''); el.innerHTML = '<span>' + b.label + '</span>' + (b.sub ? '<small>' + b.sub + '</small>' : ''); el.setAttribute('data-pad-skip', ''); el.tabIndex = -1;
+      el.addEventListener('contextmenu', function (e) { e.preventDefault(); }); acts.appendChild(el); CTL.push({ el: el, kind: 'btn', k: b.k });
     });
-    if (o.shootPad) { var sp = mkPad({ l: 'sleft', r: 'sright', u: 'sup', d: 'sdown' }, true); sp.classList.add('shoot'); }
   }
+  function ctlAt(x, y) { for (var i = 0; i < CTL.length; i++) { var r = CTL[i].el.getBoundingClientRect(), m = CTL[i].kind === 'btn' ? 8 : 4; if (!r.width) continue; if (x >= r.left - m && x <= r.right + m && y >= r.top - m && y <= r.bottom + m) return CTL[i]; } return null; }
+  function dpadSet(c, x, y) {
+    var r = c.el.getBoundingClientRect(), dx = x - r.left - r.width / 2, dy = y - r.top - r.height / 2, m = Math.hypot(dx, dy), map = c.map;
+    touchDown[map.l] = touchDown[map.r] = touchDown[map.u] = touchDown[map.d] = false;
+    if (m < r.width * 0.12) { c.el.dataset.dir = ''; return; }
+    var a = Math.atan2(dy, dx), oct = Math.round(a / (Math.PI / 4)), dirs = { 0: 'r', 1: 'rd', 2: 'd', 3: 'ld', 4: 'l', '-4': 'l', '-3': 'lu', '-2': 'u', '-1': 'ru' }, d = dirs[oct] || '';
+    if (c.four) d = d.length > 1 ? (Math.abs(dx) > Math.abs(dy) ? d[0] : d[1]) : d;
+    touchDown[map.l] = d.indexOf('l') >= 0; touchDown[map.r] = d.indexOf('r') >= 0; touchDown[map.u] = d.indexOf('u') >= 0; touchDown[map.d] = d.indexOf('d') >= 0; c.el.dataset.dir = d;
+  }
+  function release(id) {
+    var t = touches[id]; if (!t) return; delete touches[id];
+    if (t.c) { if (t.c.kind === 'btn') { var still = false; for (var o in touches) if (touches[o].c === t.c) still = true; if (!still) { touchDown[t.c.k] = false; t.c.el.classList.remove('on'); } } else if (t.c.kind === 'dpad') { var m = t.c.map; touchDown[m.l] = touchDown[m.r] = touchDown[m.u] = touchDown[m.d] = false; t.c.el.dataset.dir = ''; } }
+    if (t.stick !== undefined) { vsticks[t.stick] = null; }
+  }
+  function touchStart(id, x, y, tg) {
+    audioInit(); if (menuOpen()) return false;
+    var c = ctlAt(x, y); if (!c && tg && tg.closest && tg.closest('button,a,input,select,#menu')) return false;
+    if (c) { touches[id] = { c: c }; if (c.kind === 'btn') { touchDown[c.k] = true; c.el.classList.add('on'); } else dpadSet(c, x, y); return true; }
+    if (id !== 'm' && padCfg && padCfg.sticks && padOn()) { var half = x < window.innerWidth / 2 ? 0 : 1; if (!vsticks[half]) { vsticks[half] = { ox: x, oy: y, x: x, y: y }; touches[id] = { stick: half }; return true; } }
+    return false;
+  }
+  function touchMove(id, x, y) { var t = touches[id]; if (!t) return; if (t.c && t.c.kind === 'dpad') dpadSet(t.c, x, y); if (t.stick !== undefined && vsticks[t.stick]) { var v = vsticks[t.stick], dx = x - v.ox, dy = y - v.oy, m = Math.hypot(dx, dy), R = 56; if (m > R) { v.ox = x - dx / m * R; v.oy = y - dy / m * R; } v.x = x; v.y = y; } }
+  function padOn() { return !document.documentElement.classList.contains('hs-notouch'); }
+  document.addEventListener('touchstart', function (e) { var used = false; for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; if (touchStart(t.identifier, t.clientX, t.clientY, e.target)) used = true; } if (used && e.cancelable) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', function (e) { for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; if (touches[t.identifier]) { touchMove(t.identifier, t.clientX, t.clientY); if (e.cancelable) e.preventDefault(); } } }, { passive: false });
+  var tend = function (e) { for (var i = 0; i < e.changedTouches.length; i++) release(e.changedTouches[i].identifier); };
+  document.addEventListener('touchend', tend); document.addEventListener('touchcancel', tend);
+  // a mouse can click the on-screen buttons too
+  document.addEventListener('mousedown', function (e) { if (e.button === 0 && touchStart('m', e.clientX, e.clientY, e.target)) e.preventDefault(); });
+  document.addEventListener('mousemove', function (e) { if (touches.m) touchMove('m', e.clientX, e.clientY); });
+  document.addEventListener('mouseup', function () { release('m'); });
+  /* analogue sticks: 0 = move, 1 = aim. From the controller's sticks, the on-screen sticks, or the keys */
+  var GP = null;
+  function readPad() { var gps = navigator.getGamepads ? navigator.getGamepads() : []; GP = null; for (var i = 0; i < gps.length; i++) if (gps[i] && gps[i].connected) { GP = gps[i]; break; } }
+  function dz(x, y) { var m = Math.hypot(x, y); if (m < 0.2) return { x: 0, y: 0, on: false }; if (m > 1) { x /= m; y /= m; } return { x: x, y: y, on: true }; }
+  function stick(i) {
+    if (vsticks[i]) { var v = vsticks[i], dx = (v.x - v.ox) / 56, dy = (v.y - v.oy) / 56; return dz(dx, dy); }
+    if (GP && GP.axes) { var g = dz(GP.axes[i * 2] || 0, GP.axes[i * 2 + 1] || 0); if (g.on) return g; }
+    var names = i === 0 ? ['left', 'right', 'up', 'down'] : ['sleft', 'sright', 'sup', 'sdown'], x = (held(names[1]) ? 1 : 0) - (held(names[0]) ? 1 : 0), y = (held(names[3]) ? 1 : 0) - (held(names[2]) ? 1 : 0);
+    return dz(x, y);
+  }
+  var ringEls = [];
+  function drawSticks() { // the floating sticks, as rings under the thumbs (anywhere on the screen, game or pad area)
+    if (!padCfg || !padCfg.sticks) return;
+    [0, 1].forEach(function (i) {
+      var el = ringEls[i]; if (!el) { el = ringEls[i] = document.createElement('div'); el.className = 'vstick' + (i ? ' aim' : ''); el.innerHTML = '<b></b>'; document.body.appendChild(el); }
+      var v = vsticks[i]; if (!v) { el.style.display = 'none'; return; }
+      var dx = v.x - v.ox, dy = v.y - v.oy, m = Math.hypot(dx, dy); if (m > 56) { dx = dx / m * 56; dy = dy / m * 56; }
+      el.style.display = 'block'; el.style.left = v.ox + 'px'; el.style.top = v.oy + 'px'; el.firstChild.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    });
+  }
+
   /* ---------- sound: a little synth for effects ---------- */
   var A = null, master = null, muted = false, nb = null;
   try { muted = localStorage.getItem('hs-muted') === '1'; } catch (e) {}
@@ -158,7 +218,10 @@ var KIT = (function () {
     menuEl.innerHTML = ''; menuEl.hidden = false; menuEl.className = o.cls || '';
     var box = document.createElement('div'); box.className = 'mbox' + (o.wide ? ' wide' : ''); menuEl.appendChild(box);
     if (o.art) { var a = document.createElement('div'); a.className = 'mart'; a.innerHTML = o.art; box.appendChild(a); }
-    if (o.title) { var h = document.createElement('h1'); h.textContent = o.title; box.appendChild(h); }
+    var bk = (o.items || []).filter(function (it) { return it && it.back; })[0];
+    if (bk) { var x = document.createElement('button'); x.type = 'button'; x.className = 'mclose'; x.setAttribute('aria-label', 'Close'); x.setAttribute('data-pad-skip', ''); x.textContent = '\u2715'; x.addEventListener('click', function () { audioInit(); sfx.play('back'); if (bk.fn) bk.fn(); }); box.appendChild(x); }
+    if (o.logo) { var lg = document.createElement('img'); lg.className = 'mlogo'; lg.src = o.logo; lg.alt = o.title || ''; box.appendChild(lg); }
+    else if (o.title) { var h = document.createElement('h1'); h.textContent = o.title; box.appendChild(h); }
     if (o.sub) { var s = document.createElement('p'); s.className = 'msub'; s.textContent = o.sub; box.appendChild(s); }
     if (o.html) { var hh = document.createElement('div'); hh.className = 'mhtml'; hh.innerHTML = o.html; box.appendChild(hh); }
     var list = document.createElement('div'); list.className = 'mlist' + (o.grid ? ' grid' : ''); box.appendChild(list);
@@ -172,23 +235,25 @@ var KIT = (function () {
   }
   function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; }
   /* ---------- the loop ---------- */
-  var acc = 0, last = 0, T = 0, shake = 0, flash = 0;
+  var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
   function frame(t) {
     requestAnimationFrame(frame);
     var dt = Math.min(0.1, (t - last) / 1000 || 0); last = t; acc += dt;
     var steps = 0;
     while (acc >= 1 / 60 && steps < 5) {
-      acc -= 1 / 60; steps++; snapEdges(); ptr.tap = !!ptr.tapQ && !menuOpen(); ptr.tapQ = false;
+      acc -= 1 / 60; steps++; if (steps === 1) readPad(); snapEdges(); ptr.tap = !!ptr.tapQ && !menuOpen(); ptr.tapQ = false;
       if (!menuOpen() && cfg.update) { T += 1 / 60; cfg.update(1 / 60); } else if (cfg.idleUpdate) cfg.idleUpdate(1 / 60);
       if (shake > 0) shake = Math.max(0, shake - 1 / 60 * 30); if (flash > 0) flash -= 1 / 60;
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+    if ((frameN++ & 31) === 0) fit();
+    ctx = main; ctx.setTransform(S, 0, 0, S, 0, 0); ctx.globalAlpha = 1;
     if (shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
     if (cfg.draw) cfg.draw();
-    if (flash > 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(255,240,230,' + Math.min(0.7, flash * 3) + ')'; ctx.fillRect(0, 0, W, H); }
+    if (flash > 0) { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.fillStyle = 'rgba(255,240,230,' + Math.min(0.7, flash * 3) + ')'; ctx.fillRect(0, 0, W, H); }
+    drawSticks();
   }
   function start(o) {
-    cfg = o; W = o.w || 480; H = o.h || 270; cv.width = W; cv.height = H; ctx.imageSmoothingEnabled = false;
+    cfg = o; W = o.w || 480; H = o.h || 270; S = 0; fit();
     buildPad(o.pad);
     if (window.HSPad) HSPad.setup({ menu: function () { return menuOpen() ? menuEl : null; }, keys: o.padKeys || { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' },
       onStart: function () { if (o.onPause) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
@@ -196,12 +261,12 @@ var KIT = (function () {
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
     requestAnimationFrame(frame);
   }
-  return { start: start, ctx: ctx, canvas: cv, get W() { return W; }, get H() { return H; }, get t() { return T; },
+  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,
     shake: function (n) { shake = Math.max(shake, n); }, flash: function (n) { flash = Math.max(flash, n || 0.12); },
-    get SPR() { return SPR; }, tick: function () { snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
+    get SPR() { return SPR; }, tick: function () { readPad(); snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
 })();
 var sfx = KIT.sfx;
 function rnd(a, b) { return a + Math.random() * (b - a); }

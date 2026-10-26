@@ -25,7 +25,7 @@ function drawPortal(e, cx) {
 function moonBack(gx) {
   ctx.fillStyle = '#0a0204'; ctx.fillRect(0, 0, VW, VH);
   for (var i = 0; i < 40; i++) { var sx = ((i * 97 + 13) % 503) - (gx * 0.04) % 503, sy = (i * 53) % 150; if (sx < 0) sx += 503; if (sx < VW) R(ctx, i % 3 ? '#5a1a20' : '#a6968f', Math.round(sx), sy, 1, 1); }
-  var mx = VW * 0.62 - (gx * 0.03) % 60, my = 80; moon(mx, my, 64);
+  var mx = Math.round(VW * 0.62 - gx * 0.03), my = 80; moon(mx, my, 64);
   ctx.fillStyle = 'rgba(58,4,8,0.6)'; [[-20, -18, 12], [24, 10, 16], [-8, 30, 9], [30, -30, 7]].forEach(function (c) { ctx.beginPath(); ctx.arc(mx + c[0], my + c[1], c[2], 0, 6.28); ctx.fill(); });
   ctx.fillStyle = '#0c0306'; var x0 = -((gx * 0.3) % 80) - 80; for (var x = x0; x < VW + 80; x += 80) { ctx.beginPath(); ctx.moveTo(x, VH); ctx.lineTo(x + 18, VH - 70); ctx.lineTo(x + 30, VH - 52); ctx.lineTo(x + 46, VH - 96); ctx.lineTo(x + 62, VH - 60); ctx.lineTo(x + 80, VH); ctx.fill(); }
 }
