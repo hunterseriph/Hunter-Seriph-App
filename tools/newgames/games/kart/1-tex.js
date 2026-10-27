@@ -3,28 +3,39 @@
    neon, flesh...) from its colours, plus a sky strip that wraps round the horizon. Painted pixel by pixel
    with a seeded random so a course always looks the same. Low colour, hard edges, PS1 style.
    ===================================================================================================== */
-var TS = 32, TA = 512;
+var TS = 32, TT = 64, TA = 1024; // painters work on a 32x32 grid; each tile is finished at 64x64 in a 1024 atlas
 function srand(seed) { var s = seed >>> 0 || 1; return function () { s = (s + 0x6D2B79F5) | 0; var t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function hexrgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
 function shade(h, k) { var c = hexrgb(h); return 'rgb(' + c.map(function (v) { return Math.max(0, Math.min(255, Math.round(v * k))); }).join(',') + ')'; }
 function mix(a, b, k) { var x = hexrgb(a), y = hexrgb(b); return 'rgb(' + x.map(function (v, i) { return Math.round(v + (y[i] - v) * k); }).join(',') + ')'; }
+/* seamless value noise on a 64 tile: smooth blobs of light and dark so surfaces look worn, not flat */
+function tileNoise(rnd, cells) { var g = []; for (var i = 0; i < cells * cells; i++) g.push(rnd()); return function (x, y) { var fx = x / TT * cells, fy = y / TT * cells, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+  var a = g[(y0 % cells) * cells + (x0 % cells)], b = g[(y0 % cells) * cells + ((x0 + 1) % cells)], c = g[((y0 + 1) % cells) * cells + (x0 % cells)], d = g[((y0 + 1) % cells) * cells + ((x0 + 1) % cells)]; return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty; }; }
 
 function Atlas(seed) {
-  var c = document.createElement('canvas'); c.width = c.height = TA; var g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  var c = document.createElement('canvas'); c.width = c.height = TA; var g = c.getContext('2d');
+  var t = document.createElement('canvas'); t.width = t.height = TS; var tg = t.getContext('2d'); tg.imageSmoothingEnabled = false;
   var slots = {}, next = 0, rnd = srand(seed || 7);
-  function P(ox, oy) { // a painter for one tile
-    return {
-      rnd: rnd, ox: ox, oy: oy,
-      px: function (x, y, col) { g.fillStyle = col; g.fillRect(ox + ((x % TS) + TS) % TS, oy + ((y % TS) + TS) % TS, 1, 1); },
-      rect: function (x, y, w, h, col) { g.fillStyle = col; for (var yy = y; yy < y + h; yy++) for (var xx = x; xx < x + w; xx++) g.fillRect(ox + ((xx % TS) + TS) % TS, oy + ((yy % TS) + TS) % TS, 1, 1); },
-      fill: function (col) { g.fillStyle = col; g.fillRect(ox, oy, TS, TS); },
-      clear: function () { g.clearRect(ox, oy, TS, TS); },
-      speck: function (cols, n) { for (var i = 0; i < n; i++) { g.fillStyle = cols[Math.floor(rnd() * cols.length)]; g.fillRect(ox + Math.floor(rnd() * TS), oy + Math.floor(rnd() * TS), 1, 1); } },
-      g: g
-    };
+  var P = { rnd: rnd,
+    px: function (x, y, col) { tg.fillStyle = col; tg.fillRect(((x % TS) + TS) % TS, ((y % TS) + TS) % TS, 1, 1); },
+    rect: function (x, y, w, h, col) { tg.fillStyle = col; for (var yy = y; yy < y + h; yy++) for (var xx = x; xx < x + w; xx++) tg.fillRect(((xx % TS) + TS) % TS, ((yy % TS) + TS) % TS, 1, 1); },
+    fill: function (col) { tg.fillStyle = col; tg.fillRect(0, 0, TS, TS); },
+    clear: function () { tg.clearRect(0, 0, TS, TS); },
+    speck: function (cols, n) { for (var i = 0; i < n; i++) { tg.fillStyle = cols[Math.floor(rnd() * cols.length)]; tg.fillRect(Math.floor(rnd() * TS), Math.floor(rnd() * TS), 1, 1); } },
+    g: tg };
+  /* paint at 32, then finish at 64: smoothed up, a wash of soft light and shadow, fine grain. o.flat keeps a tile clean (solid colours for tinting) */
+  function add(name, fn, o) {
+    o = o || {}; var i = next++, ox = (i % (TA / TT)) * TT, oy = Math.floor(i / (TA / TT)) * TT;
+    tg.clearRect(0, 0, TS, TS); fn(P);
+    g.clearRect(ox, oy, TT, TT); g.imageSmoothingEnabled = !o.flat && !o.crisp; g.drawImage(t, 0, 0, TS, TS, ox, oy, TT, TT); g.imageSmoothingEnabled = false;
+    if (!o.flat) {
+      var im = g.getImageData(ox, oy, TT, TT), d = im.data, n1 = tileNoise(rnd, 4), n2 = tileNoise(rnd, 8), amt = o.wash === undefined ? 0.22 : o.wash;
+      for (var y = 0; y < TT; y++) for (var x = 0; x < TT; x++) { var q = (y * TT + x) * 4; if (!d[q + 3]) continue; if (d[q + 3] < 128 && !o.soft) { d[q + 3] = 0; continue; } if (!o.soft) d[q + 3] = 255;
+        var k = 1 + amt * ((n1(x, y) - 0.5) * 1.4 + (n2(x, y) - 0.5) * 0.7) + (rnd() - 0.5) * 0.09; d[q] = Math.min(255, d[q] * k); d[q + 1] = Math.min(255, d[q + 1] * k); d[q + 2] = Math.min(255, d[q + 2] * k); }
+      g.putImageData(im, ox, oy);
+    }
+    slots[name] = [(ox + 0.5) / TA, (oy + 0.5) / TA, (TT - 1) / TA, (TT - 1) / TA]; return slots[name];
   }
-  function add(name, fn) { var i = next++, ox = (i % (TA / TS)) * TS, oy = Math.floor(i / (TA / TS)) * TS; fn(P(ox, oy)); slots[name] = [(ox + 0.25) / TA, (oy + 0.25) / TA, (TS - 0.5) / TA, (TS - 0.5) / TA]; return slots[name]; }
-  /* a tile made of several smaller tiles packed side by side: for things that should not repeat within a quad */
   function tile(name) { return slots[name] || slots.white; }
   return { canvas: c, add: add, tile: tile, slots: slots };
 }
@@ -112,10 +123,10 @@ var PAINT = {
 function paintSky(sk, seed) {
   var c = document.createElement('canvas'); c.width = 512; c.height = 128; var g = c.getContext('2d'), rnd = srand(seed || 3);
   var gr = g.createLinearGradient(0, 0, 0, 128); sk.grad.forEach(function (s) { gr.addColorStop(s[0], s[1]); }); g.fillStyle = gr; g.fillRect(0, 0, 512, 128);
-  // banded so it reads as 15-bit
-  var im = g.getImageData(0, 0, 512, 128), d = im.data; for (var i = 0; i < d.length; i += 4) { var b = ((i / 4) % 512 + Math.floor(i / 4 / 512)) % 2 ? 4 : 0; d[i] = Math.min(255, d[i] + b) & 0xf8; d[i + 1] = Math.min(255, d[i + 1] + b) & 0xf8; d[i + 2] = Math.min(255, d[i + 2] + b) & 0xf8; } g.putImageData(im, 0, 0);
   if (sk.stars) for (var s = 0; s < sk.stars; s++) { g.fillStyle = rnd() < 0.2 ? '#ffe36a' : '#f1e7d0'; g.fillRect(Math.floor(rnd() * 512), Math.floor(rnd() * 70), 1, 1); }
-  if (sk.moon) { var m = sk.moon; g.fillStyle = m.glow || 'rgba(255,40,48,0.18)'; g.beginPath(); g.arc(m.x, m.y, m.r * 1.6, 0, 6.3); g.fill(); g.fillStyle = m.col; g.beginPath(); g.arc(m.x, m.y, m.r, 0, 6.3); g.fill(); g.fillStyle = m.dark || 'rgba(0,0,0,0.18)'; g.beginPath(); g.arc(m.x - m.r * 0.3, m.y + m.r * 0.2, m.r * 0.3, 0, 6.3); g.arc(m.x + m.r * 0.35, m.y - m.r * 0.3, m.r * 0.18, 0, 6.3); g.fill(); }
+  if (sk.moon) { var m = sk.moon, gl2 = g.createRadialGradient(m.x, m.y, m.r * 0.6, m.x, m.y, m.r * 3); gl2.addColorStop(0, m.glow || 'rgba(255,40,48,0.35)'); gl2.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl2; g.fillRect(m.x - m.r * 3, m.y - m.r * 3, m.r * 6, m.r * 6);
+    var mg = g.createRadialGradient(m.x - m.r * 0.35, m.y - m.r * 0.35, m.r * 0.1, m.x, m.y, m.r); mg.addColorStop(0, mix(m.col, '#ffffff', 0.35)); mg.addColorStop(0.7, m.col); mg.addColorStop(1, shade(m.col, 0.55)); g.fillStyle = mg; g.beginPath(); g.arc(m.x, m.y, m.r, 0, 6.3); g.fill();
+    g.fillStyle = m.dark || 'rgba(0,0,0,0.2)'; [[-0.3, 0.2, 0.3], [0.35, -0.3, 0.18], [0.1, 0.45, 0.14], [-0.45, -0.2, 0.1]].forEach(function (cr) { g.beginPath(); g.arc(m.x + cr[0] * m.r, m.y + cr[1] * m.r, cr[2] * m.r, 0, 6.3); g.fill(); }); }
   if (sk.clouds) { g.fillStyle = sk.clouds; for (var k = 0; k < 12; k++) { var cx = rnd() * 512, cy = 20 + rnd() * 40, w = 30 + rnd() * 60; for (var j = 0; j < 5; j++) { g.beginPath(); g.ellipse(cx + j * w / 5, cy + Math.sin(j) * 3, w / 4, 4 + rnd() * 3, 0, 0, 6.3); g.fill(); } } }
   if (sk.city) { // a skyline along the bottom, with lit windows
     var x = 0; while (x < 512) { var w = 10 + Math.floor(rnd() * 22), h = 14 + Math.floor(rnd() * sk.city.h); g.fillStyle = sk.city.col; g.fillRect(x, 128 - h, w, h); if (rnd() < 0.3) { g.fillRect(x + w / 2 - 1, 128 - h - 8, 2, 8); }
@@ -125,5 +136,7 @@ function paintSky(sk, seed) {
   if (sk.spires) { g.fillStyle = sk.spires; for (var q = 0; q < 9; q++) { var sx = q * 57 + rnd() * 20, sh2 = 30 + rnd() * 40; g.fillRect(sx, 128 - sh2, 12, sh2); g.beginPath(); g.moveTo(sx - 3, 128 - sh2); g.lineTo(sx + 6, 128 - sh2 - 22); g.lineTo(sx + 15, 128 - sh2); g.fill(); g.fillStyle = '#ff2630'; g.fillRect(sx + 5, 128 - sh2 + 8, 2, 3); g.fillStyle = sk.spires; } }
   if (sk.wheel) { var wx2 = 380, wy2 = 70, wr = 34; g.strokeStyle = sk.wheel; g.lineWidth = 2; g.beginPath(); g.arc(wx2, wy2, wr, 0, 6.3); g.stroke(); for (var a = 0; a < 12; a++) { g.beginPath(); g.moveTo(wx2, wy2); g.lineTo(wx2 + Math.cos(a / 12 * 6.28) * wr, wy2 + Math.sin(a / 12 * 6.28) * wr); g.stroke(); } g.beginPath(); g.moveTo(wx2 - 20, 128); g.lineTo(wx2, wy2); g.lineTo(wx2 + 20, 128); g.stroke(); }
   if (sk.nado) { g.fillStyle = sk.nado; for (var y = 20; y < 128; y += 2) { var ww = 4 + (128 - y) * 0.18, ox = 120 + Math.sin(y * 0.08) * 6; g.fillRect(ox - ww, y, ww * 2, 2); } }
-  return c;
+  var big = document.createElement('canvas'); big.width = 1024; big.height = 256; var bg = big.getContext('2d'); bg.imageSmoothingEnabled = true; bg.drawImage(c, 0, 0, 1024, 256);
+  if (sk.glow) { var gr2 = bg.createLinearGradient(0, 150, 0, 256); gr2.addColorStop(0, 'rgba(0,0,0,0)'); gr2.addColorStop(1, sk.glow); bg.fillStyle = gr2; bg.fillRect(0, 150, 1024, 106); }
+  return big;
 }

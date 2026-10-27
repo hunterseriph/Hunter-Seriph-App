@@ -2,18 +2,22 @@
    THE PLACES: each course's tiles, scenery and its own hazards. Every one is a spot from our other games.
    ===================================================================================================== */
 function THEME_TILES(A, TH, def) {
-  A.add('white', PAINT.white); A.add('check', PAINT.check); A.add('arrow', PAINT.arrow); A.add('box', PAINT.box); A.add('shadow', PAINT.shadow);
+  A.add('white', PAINT.white, { flat: 1 }); A.add('check', PAINT.check, { crisp: 1 }); A.add('arrow', PAINT.arrow); A.add('box', PAINT.box);
+  function radial(stops) { return function (p) { var g = p.g, gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); stops.forEach(function (s) { gr.addColorStop(s[0], s[1]); }); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); }; }
+  A.add('shadow', radial([[0, 'rgba(0,0,0,0.75)'], [0.6, 'rgba(0,0,0,0.5)'], [1, 'rgba(0,0,0,0)']]), { soft: 1, flat: 1 });
+  A.add('halo', radial([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,255,255,0.55)'], [1, 'rgba(255,255,255,0)']]), { soft: 1, flat: 1 });
+  A.add('puff', radial([[0, 'rgba(255,255,255,0.9)'], [0.5, 'rgba(255,255,255,0.55)'], [1, 'rgba(255,255,255,0)']]), { soft: 1, flat: 1 });
   A.add('ramp', function (p) { for (var y = 0; y < 32; y++) for (var x = 0; x < 32; x++) p.px(x, y, ((x + y) >> 3) % 2 ? '#ffe36a' : '#12040a'); });
   A.add('metal', PAINT.metal('#8a828a', '#3a343c', '#d0c8d0')); A.add('tire', function (p) { p.fill('#2a2228'); for (var y = 0; y < 32; y += 4) p.rect(0, y, 32, 2, '#12040a'); });
   A.add('belt', function (p) { p.fill('#2a2228'); for (var y = 0; y < 32; y += 8) { p.rect(0, y, 32, 2, '#5a545c'); p.rect(0, y + 2, 32, 1, '#12040a'); } p.rect(0, 0, 2, 32, '#ffe36a'); p.rect(30, 0, 2, 32, '#ffe36a'); });
-  [['spark1', '#6ac8ff'], ['spark2', '#ffb040'], ['spark3', '#fff6d8'], ['flame1', '#ffe36a'], ['flame2', '#ff5a20'], ['cream', '#fff6d8'], ['red', '#ff2630'], ['dust', TH.dust || '#a6968f'], ['glow', '#ffe36a'], ['purple', '#9a4aff'], ['black', '#12040a'], ['steam', '#d8d0d8'], ['blood', '#8a0a14']].forEach(function (c) { A.add(c[0], PAINT.solid(c[1])); });
+  [['spark1', '#6ac8ff'], ['spark2', '#ffb040'], ['spark3', '#fff6d8'], ['flame1', '#ffe36a'], ['flame2', '#ff5a20'], ['cream', '#fff6d8'], ['red', '#ff2630'], ['dust', TH.dust || '#a6968f'], ['glow', '#ffe36a'], ['purple', '#9a4aff'], ['black', '#12040a'], ['steam', '#d8d0d8'], ['blood', '#8a0a14']].forEach(function (c) { A.add(c[0], PAINT.solid(c[1]), { flat: 1 }); });
   A.add('kerb', PAINT.kerb('#c4121c', '#f1e7d0')); A.add('kerb2', PAINT.solid('#4a1a1c'));
   A.add('trim', PAINT.solid('#3a1418')); A.add('skirt', PAINT.speckle('#1a0a0c', ['#120608', '#24100e'], 80));
   A.add('stripes', function (p) { for (var x = 0; x < 32; x++) p.rect(x, 0, 1, 32, (x >> 3) % 2 ? '#f1e7d0' : '#c4121c'); });
   A.add('goopool', function (p) { p.clear(); for (var y = 0; y < 32; y++) for (var x = 0; x < 32; x++) { var d = Math.hypot(x - 15.5, (y - 15.5) * 1.1) + Math.sin(Math.atan2(y - 15.5, x - 15.5) * 5) * 1.6; if (d < 14) p.px(x, y, d > 12 ? '#3a0a4a' : d > 9 ? '#7a2ad8' : (x + y) % 7 ? '#5a1aa8' : '#c08aff'); } });
 }
 var FACADES = ['fac_amy', 'fac_beebs', 'fac_greebo', 'fac_joff', 'fac_saba', 'fac_pulsar', 'fac_sanct', 'fac_tb', 'fac_t', 'fac_bonjo', 'fac_arcade', 'fac_cafe'];
-function lamp(B, x, y, z, h, glow) { B.box(x, y, z, 0.35, 0.35, h, 0, 'trim', 'trim'); B.box(x, y + h, z, 0.9, 0.9, 0.6, 0, glow || 'glow', glow || 'glow', [1, 1, 1]); }
+function lamp(B, x, y, z, h, glow) { B.box(x, y, z, 0.35, 0.35, h, 0, 'trim', 'trim'); B.box(x, y + h, z, 0.9, 0.9, 0.6, 0, glow || 'glow', glow || 'glow', [1, 1, 1]); B.light(x, y + h + 0.3, z, 13, glow === 'red' ? [0.9, 0.12, 0.1] : [0.85, 0.6, 0.25], glow === 'red' ? '#ff4a3a' : '#ffd080'); }
 function inPlace(B, q, sd, dist, r) { var p = B.side(q, sd, dist); return B.clear(p.x, p.z, r || 2) ? p : null; }
 function ahead(p, d) { return { x: p.x + Math.cos(p.face) * d, z: p.z + Math.sin(p.face) * d }; }
 /* a building whose front faces the track, with a shop front stuck on it */
@@ -140,7 +144,7 @@ var THEMES = {
     roadAt: function (f) { var r = COURSES.castle.ramps[0][0]; return f > r - 0.02 && f < r + 0.05 ? 'planks' : null; },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 9) B.beam(i, 8.4, 'beam', 1.2);
-      for (var j = 4; j < T.N; j += 27) { var q = T.S[j]; B.cyl(q.x, q.y + 6, q.z, 1.6, 0.4, 8, 'gold'); B.box(q.x, q.y + 6.4, q.z, 0.15, 0.15, 2, 0, 'black'); B.bill(q.x + 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8) % 2); } }); B.bill(q.x - 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8 + 1) % 2); } }); }
+      for (var j = 4; j < T.N; j += 27) { var q = T.S[j]; B.light(q.x, q.y + 6, q.z, 18, [0.9, 0.6, 0.25], '#ffc060'); B.cyl(q.x, q.y + 6, q.z, 1.6, 0.4, 8, 'gold'); B.box(q.x, q.y + 6.4, q.z, 0.15, 0.15, 2, 0, 'black'); B.bill(q.x + 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8) % 2); } }); B.bill(q.x - 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8 + 1) % 2); } }); }
       B.along(32, function (q, sd, i) { var p = B.side(q, sd, -1.6); B.bill(p.x, p.y, p.z, i % 3 ? 'f_knight_0' : 'f_gargoyle_0', 0.07); });
       var th = T.S[Math.round(T.N * 0.97)], tp = B.side(th, 1, -1.4); B.bill(tp.x, tp.y, tp.z, 'throne', 0.08);
     }

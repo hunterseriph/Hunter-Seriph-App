@@ -7,7 +7,7 @@
    - distance fog instead of a far draw distance
    Everything else (HUD, menus, sound, input) is the shared kit, drawn over it on the 480x270 canvas.
    ===================================================================================================== */
-var GLW = 320, GLH = 180;
+var GLW = 400, GLH = 225;
 var R3 = (function () {
   var view = document.getElementById('view'), hud = document.getElementById('c');
   var cv = document.createElement('canvas'); cv.id = 'gl'; cv.width = GLW; cv.height = GLH;
@@ -30,19 +30,19 @@ var R3 = (function () {
     '}'].join('\n');
   var FS = [
     '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-    'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uBright;',
+    'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uBright; uniform float uSoft;',
     'varying vec3 vU; varying vec4 vT; varying vec3 vC; varying float vF;',
     'float b2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }',
     'float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }',
     'void main() {',
     '  vec2 uv = vU.xy / vU.z;',
     '  vec4 t = texture2D(uTex, vT.xy + fract(uv) * vT.zw);',
-    '  if (t.a < 0.5) discard;',
+    '  if (t.a < (uSoft > 0.5 ? 0.02 : 0.5)) discard;',
     '  vec3 c = t.rgb * vC * 2.0 * uBright;',
     '  float f = clamp((vF - uFogR.x) / (uFogR.y - uFogR.x), 0.0, 1.0);',
     '  c = mix(c, uFog, f * f * (3.0 - 2.0 * f));',
     '  c = floor(clamp(c, 0.0, 1.0) * 31.0 + b4(gl_FragCoord.xy)) / 31.0;', // 15-bit colour, dithered
-    '  gl_FragColor = vec4(c, uAlpha);',
+    '  gl_FragColor = vec4(c, uAlpha * (uSoft > 0.5 ? t.a : 1.0));',
     '}'].join('\n');
   var built = (function () { try { return setup(); } catch (e) { return null; } })();
   if (!built) return { ok: false, canvas: cv };
@@ -53,7 +53,7 @@ var R3 = (function () {
   if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
   gl.useProgram(pr);
   var A = { p: gl.getAttribLocation(pr, 'aP'), u: gl.getAttribLocation(pr, 'aU'), t: gl.getAttribLocation(pr, 'aT'), c: gl.getAttribLocation(pr, 'aC') };
-  var U = {}; ['uM', 'uRes', 'uTime', 'uSnap', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uBright'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+  var U = {}; ['uM', 'uRes', 'uTime', 'uSnap', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uBright', 'uSoft'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
   gl.uniform2f(U.uRes, GLW, GLH); gl.uniform1i(U.uTex, 0); gl.uniform1f(U.uAlpha, 1); gl.uniform1f(U.uBright, 1);
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
   var STRIDE = 13 * 4;
@@ -93,8 +93,8 @@ var R3 = (function () {
     if (mesh.buf) gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
     else { var arr = new Float32Array(mesh.a); gl.bindBuffer(gl.ARRAY_BUFFER, dyn); if (arr.byteLength > dynCap) { dynCap = arr.byteLength * 2; gl.bufferData(gl.ARRAY_BUFFER, dynCap, gl.DYNAMIC_DRAW); } gl.bufferSubData(gl.ARRAY_BUFFER, 0, arr); }
     attribs(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha);
-    if (o.alpha !== undefined && o.alpha < 1) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
+    gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0);
+    if ((o.alpha !== undefined && o.alpha < 1) || (o.soft && !o.add)) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
     if (o.add) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false); }
     if (o.noDepth) gl.disable(gl.DEPTH_TEST);
     gl.drawArrays(gl.TRIANGLES, 0, n);

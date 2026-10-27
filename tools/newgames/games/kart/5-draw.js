@@ -22,45 +22,21 @@ function flat(m, A, x, y, z, s, tile, col, rot) {
   var c = Math.cos(rot || 0) * s, sn = Math.sin(rot || 0) * s;
   m.quad([x - c + sn, y, z - sn - c], [x + c + sn, y, z + sn - c], [x + c - sn, y, z + sn + c], [x - c - sn, y, z - sn + c], [0.001, 0.001, 0.999, 0.001, 0.999, 0.999, 0.001, 0.999], A.tile(tile), col);
 }
-/* ---------- the kart: boxes in the driver's colours ---------- */
-function kartModel(m, A, k) {
+/* ---------- the kart and its driver: lit low-poly models (5b-models.js) ---------- */
+function kartModel(m, A, k, dv) {
   var R = RACE, yaw = k.yaw + (k.drift ? k.drift * 0.38 : 0) + (k.spinA || 0), sq = k.squashT > 0 ? 0.45 : 1;
   var S = R.T.S, a = S[k.seg < 0 ? 0 : k.seg], b = S[(k.seg + 1) % R.T.N], pitch = k.air ? clamp(k.vy * 0.03, -0.35, 0.35) : Math.atan2(b.y - a.y, STEP);
-  var cp = Math.cos(pitch), sp = Math.sin(pitch), F = [Math.cos(yaw) * cp, sp, Math.sin(yaw) * cp], U = [-Math.cos(yaw) * sp, cp, -Math.sin(yaw) * sp], Sd = [-Math.sin(yaw), 0, Math.cos(yaw)];
   var hop = k.hopT > 0 ? Math.sin(k.hopT / 0.18 * Math.PI) * 0.35 : 0, bob = Math.sin(RACE.t * 30 + k.slot) * 0.02 * Math.min(1, Math.abs(k.spd) / 10);
-  var ox = k.x, oy = k.y + hop + bob, oz = k.z, L = RACE.def.light;
-  function P(f, s, u) { u *= sq; return [ox + F[0] * f + Sd[0] * s + U[0] * u, oy + F[1] * f + U[1] * u, oz + F[2] * f + Sd[2] * s + U[2] * u]; }
-  function C(hex, kk) { var c = hexrgb(hex); return [c[0] / 255 * L[0] * 1.6 * kk, c[1] / 255 * L[1] * 1.6 * kk, c[2] / 255 * L[2] * 1.6 * kk]; }
-  function box(f0, f1, s0, s1, u0, u1, hex, tile, taper) {
-    var t = A.tile(tile || 'white'), tp = taper || 0, c = C(hex, 1), cd = C(hex, 0.62), cs = C(hex, 0.8);
-    var p = [P(f0, s0, u0), P(f1, s0 + tp, u0), P(f1, s1 - tp, u0), P(f0, s1, u0), P(f0, s0, u1), P(f1, s0 + tp, u1), P(f1, s1 - tp, u1), P(f0, s1, u1)], uv = [0, 1, 1, 1, 1, 0, 0, 0];
-    m.quad(p[4], p[5], p[6], p[7], uv, t, c); m.quad(p[0], p[1], p[5], p[4], uv, t, cs); m.quad(p[3], p[2], p[6], p[7], uv, t, cs);
-    m.quad(p[1], p[2], p[6], p[5], uv, t, cd); m.quad(p[0], p[3], p[7], p[4], uv, t, cd);
-  }
-  var col = k.c.kart;
-  box(-1.0, 0.95, -0.62, 0.62, 0.16, 0.42, col[0]);           // chassis
-  box(0.6, 1.3, -0.5, 0.5, 0.14, 0.34, col[1], null, 0.22);   // nose
-  box(-0.55, 0.45, -0.82, -0.6, 0.16, 0.52, col[2]); box(-0.55, 0.45, 0.6, 0.82, 0.16, 0.52, col[2]); // side pods
-  box(-0.72, -0.56, -0.36, 0.36, 0.42, 0.78, col[1]);         // seat back
-  box(-1.05, -0.72, -0.42, 0.42, 0.42, 0.72, '#8a828a', 'metal'); // engine
-  box(-1.18, -0.98, -0.34, -0.2, 0.56, 0.7, '#5a545c'); box(-1.18, -0.98, 0.2, 0.34, 0.56, 0.7, '#5a545c'); // exhausts
-  box(0.32, 0.42, -0.12, 0.12, 0.55, 0.8, '#12040a');         // steering column
-  box(1.1, 1.32, -0.66, 0.66, 0.12, 0.26, col[0]);            // front bumper
-  var wr = 0.27, steerA = k.steerVis * 0.4;
-  [[0.78, 1], [0.78, -1], [-0.72, 1], [-0.72, -1]].forEach(function (w, i) {
-    var s0 = w[1] * 0.62, s1 = w[1] * 0.95, f = w[0], ws = i < 2 ? steerA : 0, roll = (RACE.t * k.spd * 0.8) % 1;
-    var cs2 = Math.cos(ws) * 0.3, sn2 = Math.sin(ws) * 0.3;
-    box(f - cs2, f + cs2, Math.min(s0, s1) - sn2 * w[1], Math.max(s0, s1) + sn2 * w[1], 0.0, wr * 2, '#2a2228', 'tire');
-  });
-  // the driver
+  var fr = Frame(k.x, k.y + hop + bob, k.z, yaw, pitch, sq, R.def.light);
+  kart3D(m, A, k, fr); k._drv = null;
+  if (dv) { driver3D(dv, k, fr); return; }
+  // no driver texture yet: the old sprite
   var c = k.c, d = R3.cam.fwd, kf = [Math.cos(k.yaw + (k.spinA || 0)), Math.sin(k.yaw + (k.spinA || 0))], dot = d[0] * kf[0] + d[2] * kf[1], cross = d[0] * kf[1] - d[2] * kf[0];
   var name = c.f, flip = false;
   if (c.only) { name = c.side; flip = cross > 0; if (dot < -0.5) flip = !flip; }
   else if (dot > 0.35) name = 'ckb_' + c.id;
-  else if (dot < -0.35) name = c.f;
-  else if (c.side) { name = c.side; flip = cross > 0; }
-  var sc = c.sc * 0.052, sp2 = P(-0.2, 0, 0.3);
-  k._drv = { x: sp2[0], y: sp2[1], z: sp2[2], n: name, sc: sc, flip: flip, sq: sq };
+  else if (c.side && dot >= -0.35) { name = c.side; flip = cross > 0; }
+  var sp2 = fr.P(-0.2, 0, 0.3); k._drv = { x: sp2[0], y: sp2[1], z: sp2[2], n: name, sc: c.sc * 0.052, flip: flip, sq: sq };
 }
 function boxModel(m, A, x, y, z, s, rot, tile, col) {
   var c = Math.cos(rot) * s, sn = Math.sin(rot) * s, t = A.tile(tile);
@@ -112,24 +88,30 @@ function drawRace(dt) {
   if (stx && !R.decalMesh) { var dmh = new R3.Mesh(); R.B.decals.forEach(function (d) { var r = sprRect(d.spr); if (!r) return; var c = Math.cos(d.ry), s = Math.sin(d.ry), col = d.col || def.light; dmh.quad([d.x - c * d.w / 2, d.y, d.z - s * d.w / 2], [d.x + c * d.w / 2, d.y, d.z + s * d.w / 2], [d.x + c * d.w / 2, d.y + d.h, d.z + s * d.w / 2], [d.x - c * d.w / 2, d.y + d.h, d.z - s * d.w / 2], [0.001, 0.999, 0.999, 0.999, 0.999, 0.001, 0.001, 0.001], r.t, col); }); R.decalMesh = dmh.n ? dmh.upload() : dmh; }
   if (stx && R.decalMesh && R.decalMesh.count) R3.draw(R.decalMesh, stx);
   // moving things made of boxes and flat tiles
-  var dm = new R3.Mesh(), sp = new R3.Mesh(), L = def.light;
+  var dm = new R3.Mesh(), sp = new R3.Mesh(), L = def.light, dtx = driverTex(), dv = dtx ? new R3.Mesh() : null, shm = new R3.Mesh(), soft = new R3.Mesh(), glow = new R3.Mesh();
+  R.soft = soft; R.glow = glow;
   R.karts.forEach(function (kk) {
-    kartModel(dm, A, kk);
-    var q = R.T.locate(kk.x, kk.z, kk.seg); flat(dm, A, kk.x, q.y + 0.06, kk.z, 1.25, 'shadow', [0.5, 0.5, 0.5], kk.yaw);
+    var far = Math.abs(kk.x - cam.eye[0]) + Math.abs(kk.z - cam.eye[2]);
+    kartModel(dm, A, kk, far < 140 ? dv : null);
+    var q = R.T.locate(kk.x, kk.z, kk.seg); flat(shm, A, kk.x, q.y + 0.05, kk.z, 1.35, 'shadow', [0.5, 0.5, 0.5], kk.yaw);
     // drift sparks and boost flames
-    if (kk.drift && kk.driftLvl > 0 && !kk.air) for (var s = -1; s <= 1; s += 2) { var sx = kk.x - Math.cos(kk.yaw) * 1.1 + -Math.sin(kk.yaw) * 0.8 * s, sz = kk.z - Math.sin(kk.yaw) * 1.1 + Math.cos(kk.yaw) * 0.8 * s; for (var j = 0; j < 3; j++) spark(dm, A, sx + (Math.random() - 0.5) * 0.4, kk.y + 0.15 + Math.random() * 0.4, sz + (Math.random() - 0.5) * 0.4, 0.09 + Math.random() * 0.07, 'spark' + kk.driftLvl); }
-    if (kk.boostT > 0 || kk.nadoT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; spark(dm, A, bx - Math.cos(kk.yaw) * Math.random() * 0.5, kk.y + 0.62, bz - Math.sin(kk.yaw) * Math.random() * 0.5, 0.16 + Math.random() * 0.12, Math.random() < 0.5 ? 'flame1' : 'flame2'); }
+    if (kk.drift && kk.driftLvl > 0 && !kk.air) for (var s = -1; s <= 1; s += 2) { var sx = kk.x - Math.cos(kk.yaw) * 1.1 + -Math.sin(kk.yaw) * 0.8 * s, sz = kk.z - Math.sin(kk.yaw) * 1.1 + Math.cos(kk.yaw) * 0.8 * s; { for (var j = 0; j < 3; j++) spark(glow, A, sx + (Math.random() - 0.5) * 0.4, kk.y + 0.15 + Math.random() * 0.4, sz + (Math.random() - 0.5) * 0.4, 0.1 + Math.random() * 0.08, 'halo', DRIFTC[kk.driftLvl]); spark(glow, A, sx, kk.y + 0.3, sz, 0.55, 'halo', mulc(DRIFTC[kk.driftLvl], 0.5)); } }
+    if (kk.boostT > 0 || kk.nadoT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; { var fl = Math.random(); spark(glow, A, bx - Math.cos(kk.yaw) * fl * 0.6, kk.y + 0.72, bz - Math.sin(kk.yaw) * fl * 0.6, 0.2 + Math.random() * 0.16, 'halo', fl < 0.5 ? [0.6, 0.45, 0.2] : [0.6, 0.2, 0.06]); spark(glow, A, bx, kk.y + 0.72, bz, 0.5, 'halo', [0.3, 0.15, 0.05]); } }
     if (!kk.air && Math.abs(kk.lat) > def.hw + 0.6 && kk.spd > 6 && Math.random() < 0.6) R.fx.push({ k: 'dust', x: kk.x - Math.cos(kk.yaw), y: kk.y + 0.2, z: kk.z - Math.sin(kk.yaw), t: 0.35, vx: 0, vy: 1.5, vz: 0 });
   });
   R.boxes.forEach(function (b) { if (b.t > 0) return; boxModel(dm, A, b.x, b.y + 0.7 + Math.sin(R.t * 3 + b.ph) * 0.15, b.z, 0.55, R.t * 1.6 + b.ph, 'box', mulc(L, 1.25)); });
   R.fx.forEach(function (f) {
-    if (f.k === 'dust') spark(dm, A, f.x, f.y + (0.35 - f.t), f.z, 0.25 + (0.35 - f.t), 'dust');
-    else if (f.k === 'trail') spark(dm, A, f.x, f.y, f.z, 0.12, 'cream');
-    else if (f.k === 'box') for (var q = 0; q < 6; q++) spark(dm, A, f.x + Math.cos(q + R.t * 9) * (0.35 - f.t) * 6, f.y + (0.35 - f.t) * 3, f.z + Math.sin(q + R.t * 9) * (0.35 - f.t) * 6, 0.18, 'spark2');
-    else if (f.k === 'pop') for (var q2 = 0; q2 < (f.big ? 16 : 9); q2++) { var aa = q2 / (f.big ? 16 : 9) * 6.28, rr = (0.6 - f.t) * (f.big ? 14 : 6); spark(dm, A, f.x + Math.cos(aa) * rr, f.y + Math.sin(q2 * 2.1) * rr * 0.4 + 0.3, f.z + Math.sin(aa) * rr, 0.22, 'cream'); }
+    if (f.k === 'dust') spark(soft, A, f.x, f.y + (0.35 - f.t) * 1.5, f.z, 0.35 + (0.35 - f.t) * 2, 'puff', mulc(DUSTC(), 0.45 + f.t));
+    else if (f.k === 'trail') spark(soft, A, f.x, f.y, f.z, 0.22, 'puff', [0.6, 0.58, 0.52]);
+    else if (f.k === 'box') for (var q = 0; q < 6; q++) spark(glow, A, f.x + Math.cos(q + R.t * 9) * (0.35 - f.t) * 6, f.y + (0.35 - f.t) * 3, f.z + Math.sin(q + R.t * 9) * (0.35 - f.t) * 6, 0.3, 'halo', [0.6, 0.4, 0.15]);
+    else if (f.k === 'pop') for (var q2 = 0; q2 < (f.big ? 16 : 9); q2++) { var aa = q2 / (f.big ? 16 : 9) * 6.28, rr = (0.6 - f.t) * (f.big ? 14 : 6); spark(soft, A, f.x + Math.cos(aa) * rr, f.y + Math.sin(q2 * 2.1) * rr * 0.4 + 0.3, f.z + Math.sin(aa) * rr, 0.45, 'puff', [0.62, 0.6, 0.55]); }
   });
   if (R.TH.drawDyn) R.TH.drawDyn(R, dm, sp);
   R3.draw(dm, R.atlas);
+  if (dv && dv.n) R3.draw(dv, dtx);
+  R3.draw(shm, R.atlas, { soft: true });
+  // light halos round lamps and torches near the camera
+  R.B.lights.forEach(function (l) { if (!l.halo) return; var dx = l.x - cam.eye[0], dz = l.z - cam.eye[2]; if (dx * dx + dz * dz > 120 * 120 || dx * R3.cam.fwd[0] + dz * R3.cam.fwd[2] < -4) return; spark(glow, A, l.x, l.y, l.z, 1.1 + Math.sin(R.t * 7 + l.x) * 0.06, 'halo', l.hc || (l.hc = rgb01(l.halo).map(function (v) { return v * 0.32; }))); });
   // sprites: drivers, scenery cut-outs, drops, items in flight
   var st = sheetTex(); if (!st) return;
   R.karts.forEach(function (kk) {
@@ -154,8 +136,12 @@ function drawRace(dt) {
   });
   if (R.TH.drawBills) R.TH.drawBills(R, sp);
   R3.draw(sp, st);
+  R3.draw(soft, R.atlas, { soft: true });
+  R3.draw(glow, R.atlas, { add: true, soft: true });
 }
-function spark(m, A, x, y, z, s, tile) { var r = R3.cam.right; m.quad([x - r[0] * s, y - s, z - r[2] * s], [x + r[0] * s, y - s, z + r[2] * s], [x + r[0] * s, y + s, z + r[2] * s], [x - r[0] * s, y + s, z - r[2] * s], [0.1, 0.9, 0.9, 0.9, 0.9, 0.1, 0.1, 0.1], A.tile(tile), [0.5, 0.5, 0.5]); }
+var DRIFTC = [null, [0.25, 0.55, 0.75], [0.75, 0.42, 0.12], [0.75, 0.72, 0.6]];
+function DUSTC() { var c = rgb01(RACE.TH.dust || '#a6968f'); return [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]; }
+function spark(m, A, x, y, z, s, tile, col) { var r = R3.cam.right; m.quad([x - r[0] * s, y - s, z - r[2] * s], [x + r[0] * s, y - s, z + r[2] * s], [x + r[0] * s, y + s, z + r[2] * s], [x - r[0] * s, y + s, z - r[2] * s], [0.02, 0.98, 0.98, 0.98, 0.98, 0.02, 0.02, 0.02], A.tile(tile), col || [0.5, 0.5, 0.5]); }
 
 /* ---------- the HUD (480x270, over the 3D) ---------- */
 var R2 = KIT.R, text = KIT.text, spr = KIT.spr;

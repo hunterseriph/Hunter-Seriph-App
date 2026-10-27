@@ -44,6 +44,14 @@ function buildTrack(def) {
 }
 
 /* ---------- building the world mesh ---------- */
+function bakeLights(m, lights) {
+  var a = m.a; if (!lights.length) return;
+  for (var i = 0; i < a.length; i += 13) {
+    var x = a[i], y = a[i + 1], z = a[i + 2], r = 0, g = 0, b = 0;
+    for (var j = 0; j < lights.length; j++) { var L = lights[j], dx = x - L.x, dy = y - L.y, dz = z - L.z, d2 = dx * dx + dy * dy + dz * dz; if (d2 >= L.r * L.r) continue; var k = 1 - Math.sqrt(d2) / L.r; k *= k * 0.55; r += L.c[0] * k; g += L.c[1] * k; b += L.c[2] * k; }
+    if (r + g + b) { a[i + 9] += r; a[i + 10] += g; a[i + 11] += b; }
+  }
+}
 function lightK(nx, nz, base) { var d = nx * 0.55 + nz * 0.83; return base * (0.78 + 0.22 * d); } // walls facing the light are a touch brighter
 function mulc(c, k) { return [c[0] * k, c[1] * k, c[2] * k]; }
 function buildWorld(T, TH, A) {
@@ -55,7 +63,9 @@ function buildWorld(T, TH, A) {
     function P(q, lat, dy) { return [q.x + q.nx * lat, q.y + (dy || 0), q.z + q.nz * lat]; }
     var shadeA = mulc(L, 1), shadeB = mulc(L, 1);
     // road
-    m.quad(P(a, hw), P(b, hw), P(b, -hw), P(a, -hw), [0, v0, 0, v1, hw * 2 / 4, v1, hw * 2 / 4, v0], road(i), [shadeA, shadeB, shadeB, shadeA], TH.roadScroll ? TH.roadScroll(i / N) : 0);
+    var ce = mulc(L, 1.06), ed = mulc(L, 0.8), rs = TH.roadScroll ? TH.roadScroll(i / N) : 0, rt = road(i); // lighter down the middle, darker at the edges (Gouraud)
+    m.quad(P(a, hw), P(b, hw), P(b, 0), P(a, 0), [0, v0, 0, v1, hw / 4, v1, hw / 4, v0], rt, [ed, ed, ce, ce], rs);
+    m.quad(P(a, 0), P(b, 0), P(b, -hw), P(a, -hw), [hw / 4, v0, hw / 4, v1, hw * 2 / 4, v1, hw * 2 / 4, v0], rt, [ce, ce, ed, ed], rs);
     // kerbs: striped where the road bends, plain verge colour on straights
     var bend = Math.abs(a.curve) > 0.035 || Math.abs(b.curve) > 0.035, kt = A.tile(bend ? 'kerb' : 'kerb2');
     m.quad(P(a, e1, 0.02), P(b, e1, 0.02), P(b, hw, 0.02), P(a, hw, 0.02), [0, v0 * 2, 0, v1 * 2, 1, v1 * 2, 1, v0 * 2], kt, mulc(L, 0.95));
@@ -129,6 +139,8 @@ function Builder(T, A, m) {
     along: function (every, fn) { var step = Math.max(1, Math.round(every / STEP)); for (var i = 0; i < N; i += step) { fn(S[i], 1, i); fn(S[i], -1, i); } },
     side: function (q, sd, dist) { var e = T.edge + 0.7 + (dist || 0); return { x: q.x + q.nx * e * sd, z: q.z + q.nz * e * sd, y: q.y, face: Math.atan2(-q.nz * sd, -q.nx * sd) }; },
     anim: function (o) { anims.push(o); return o; },
+    /* a light: it brightens the world's vertex colours round it (baked once) and can wear a glowing halo */
+    lights: [], light: function (x, y, z, r, col, halo) { B.lights.push({ x: x, y: y, z: z, r: r, c: col, halo: halo }); },
     /* a horizontal pipe from one point to another */
     hcyl: function (x0, y0, z0, x1, y1, z1, r, tile, col, seg) {
       col = col || L; seg = seg || 6; var dx = x1 - x0, dy = y1 - y0, dz = z1 - z0, l = Math.hypot(dx, dy, dz), ux = dx / l, uy = dy / l, uz = dz / l;

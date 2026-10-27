@@ -15,11 +15,12 @@ Object.assign(THEMES, {
     wallAt: function (i, band) { return band === 0 && i % 20 === 10 ? 'grate' : 'wall'; },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 8) B.beam(i, 7.6, 'beam', 1.4);
+      for (var li = 4; li < T.N; li += 24) { var lq = T.S[li]; B.light(lq.x, lq.y + 6.8, lq.z, 16, [0.45, 0.5, 0.25], '#e8f0a0'); }
       B.pours = [];
       for (var j = 5; j < T.N; j += 22) { var q = T.S[j], sd = j % 44 < 22 ? 1 : -1, w = B.side(q, sd, -0.7), x2 = w.x + q.nx * sd * 3, z2 = w.z + q.nz * sd * 3; B.hcyl(w.x - q.nx * sd * 1.4, q.y + 5, w.z - q.nz * sd * 1.4, x2, q.y + 5, z2, 0.9, 'pipe'); B.pours.push({ x: w.x - q.nx * sd * 1.6, y: q.y + 4.4, z: w.z - q.nz * sd * 1.6 }); }
       B.along(20, function (q, sd, i) { var p = B.side(q, sd, -1.5); B.bill(p.x, p.y, p.z, i % 2 ? 'f_rat_0' : 'p_creampool', i % 2 ? 0.07 : 0.06, i % 2 ? { anim: function (t) { return 'f_rat_' + (Math.floor(t * 8) % 4); } } : null); });
     },
-    drawDyn: function (R, m) { (R.B.pours || []).forEach(function (p, i) { for (var k = 0; k < 4; k++) { var f = ((R.t * 1.6 + k / 4 + i * 0.3) % 1); spark(m, R.A, p.x + Math.sin(k * 7 + i) * 0.2, p.y - f * 5, p.z + Math.cos(k * 5) * 0.2, 0.32, 'cream'); } }); }
+    drawDyn: function (R, m) { (R.B.pours || []).forEach(function (p, i) { for (var k = 0; k < 4; k++) { var f = ((R.t * 1.6 + k / 4 + i * 0.3) % 1); spark(R.soft || m, R.A, p.x + Math.sin(k * 7 + i) * 0.2, p.y - f * 5, p.z + Math.cos(k * 5) * 0.2, 0.42, R.soft ? 'puff' : 'cream', [0.62, 0.6, 0.52]); } }); }
   },
   /* ---------------- Potbelly Arcade: neon floor, cabinets for walls, pinball bumpers in the zigzags ---------------- */
   arcade: {
@@ -34,14 +35,14 @@ Object.assign(THEMES, {
     },
     scen: function (B) {
       var T = B.T, n = 0; B.bumpers = [];
-      B.along(4.5, function (q, sd, i) { var p = B.side(q, sd, 1.8); if (!B.clear(p.x, p.z, 1)) return; var ry = p.face + Math.PI / 2, c = 'rgbp'[(n++) % 4]; B.box(p.x, p.y - 0.4, p.z, 3.2, 2.6, 6, ry, 'cabside', 'cabside', [0.7, 0.6, 0.75]); var a = ahead(p, 1.32); B.panel(a.x, p.y + 1.4, a.z, 3.0, 4.2, ry, 'cab_' + c, [0.85, 0.85, 0.85]); B.box(p.x, p.y + 5.6, p.z, 3.3, 2.7, 0.4, ry, 'neon' + c, 'neon' + c, [1, 1, 1]); });
+      B.along(4.5, function (q, sd, i) { var p = B.side(q, sd, 1.8); if (!B.clear(p.x, p.z, 1)) return; var ry = p.face + Math.PI / 2, c = 'rgbp'[(n++) % 4]; B.box(p.x, p.y - 0.4, p.z, 3.2, 2.6, 6, ry, 'cabside', 'cabside', [0.7, 0.6, 0.75]); var a = ahead(p, 1.32); B.panel(a.x, p.y + 1.4, a.z, 3.0, 4.2, ry, 'cab_' + c, [0.85, 0.85, 0.85]); B.box(p.x, p.y + 5.6, p.z, 3.3, 2.7, 0.4, ry, 'neon' + c, 'neon' + c, [1, 1, 1]); if (n % 3 === 0) B.light(p.x, p.y + 4, p.z, 9, { r: [0.9, 0.15, 0.5], g: [0.3, 0.9, 0.2], b: [0.3, 0.7, 0.95], p: [0.9, 0.8, 0.3] }[c], null); });
       B.along(40, function (q, sd, i) { var p = inPlace(B, q, sd, 12, 6); if (p) B.decal(p.x, p.y - 0.5, p.z, 69 * 0.2, 72 * 0.2, p.face + Math.PI / 2, 'fac_arcade', [0.8, 0.8, 0.8]); });
       [0.18, 0.3, 0.42, 0.62].forEach(function (f, j) { var q = T.at(f), p = T.pos(q.i, (j % 2 ? 1 : -1) * T.def.hw * 0.55); B.bumpers.push({ x: p.x, z: p.z, r: 1.3, hit: 0 }); B.cyl(p.x, p.y, p.z, 1.3, 1.2, 10, 'bumper', null, 1.3, 'glow'); });
       var big = [0.05, 0.5, 0.8]; big.forEach(function (f, j) { var p = inPlace(B, T.at(f), j % 2 ? 1 : -1, 14, 6); if (p) B.decal(p.x, p.y, p.z, 96 * 0.12, 160 * 0.12, p.face + Math.PI / 2, 'ao_cabbig'); });
       var pb = B.side(T.S[4], 1, -1.2); B.bill(pb.x, pb.y, pb.z, 'npc_potbelly', 0.065);
     },
     kartStep: hazardStep,
-    drawDyn: function (R, m) { (R.bumpers || []).forEach(function (b) { if (b.hit > 0) for (var k = 0; k < 6; k++) spark(m, R.A, b.x + Math.cos(k) * 1.6, R.T.locate(b.x, b.z, -1).y + 1.4, b.z + Math.sin(k) * 1.6, 0.25, 'glow'); }); }
+    drawDyn: function (R, m) { (R.bumpers || []).forEach(function (b) { if (b.hit > 0) for (var k = 0; k < 6; k++) spark(R.glow || m, R.A, b.x + Math.cos(k) * 1.6, R.T.locate(b.x, b.z, -1).y + 1.4, b.z + Math.sin(k) * 1.6, 0.5, R.glow ? 'halo' : 'glow', [0.6, 0.5, 0.2]); }); }
   },
   /* ---------------- Spuzzworld Factory: the dark bloody steam factory under the lair ---------------- */
   factory: {
@@ -57,6 +58,7 @@ Object.assign(THEMES, {
     },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 10) B.beam(i, 6.4, 'beam', 1.2);
+      for (var fi = 5; fi < T.N; fi += 20) { var fq = T.S[fi]; B.light(fq.x, fq.y + 6, fq.z, 14, fi % 40 < 20 ? [0.9, 0.15, 0.08] : [0.8, 0.5, 0.2], fi % 40 < 20 ? '#ff4030' : '#ffb060'); }
       for (var j = 3; j < T.N; j += 16) { var q = T.S[j], a = B.side(q, 1, -0.6), b = B.side(q, -1, -0.6); B.hcyl(a.x, q.y + 4.6, a.z, b.x, q.y + 4.6, b.z, 0.4, 'pipe'); }
       B.vents = []; (T.def.vents || []).forEach(function (f, n) { var q = T.at(f), lat = ((n % 3) - 1) * T.def.hw * 0.45, p = T.pos(q.i, lat); B.vents.push({ x: p.x, z: p.z, y: p.y, ph: n * 1.3 }); B.m.quad([p.x - 1.4, p.y + 0.04, p.z - 1.4], [p.x + 1.4, p.y + 0.04, p.z - 1.4], [p.x + 1.4, p.y + 0.04, p.z + 1.4], [p.x - 1.4, p.y + 0.04, p.z + 1.4], [0.01, 0.01, 0.99, 0.01, 0.99, 0.99, 0.01, 0.99], B.A.tile('vent'), T.def.light); });
       B.along(24, function (q, sd, i) { var p = B.side(q, sd, -1.5); var w = ['f_blumguard_0', 'sw_hob0', 'h_gloop_adult_idle0', 'f_blumguard_1'][i % 4]; B.bill(p.x, p.y, p.z, w, w === 'sw_hob0' ? 0.045 : 0.07); });
@@ -68,7 +70,7 @@ Object.assign(THEMES, {
     },
     drawDyn: function (R, m) {
       var A = R.A, L = R.def.light;
-      (R.B.vents || []).forEach(function (v) { var ph = (R.t + v.ph) % 3; if (ph > 1.9) for (var k = 0; k < 8; k++) { var f = (ph - 1.9) / 1.1; spark(m, A, v.x + Math.sin(k * 3 + R.t * 5) * 0.8, v.y + 0.5 + k * 0.6 * (0.3 + f), v.z + Math.cos(k * 2 + R.t * 4) * 0.8, 0.4 + k * 0.08, 'steam'); } });
+      (R.B.vents || []).forEach(function (v) { var ph = (R.t + v.ph) % 3; if (ph > 1.9) for (var k = 0; k < 8; k++) { var f = (ph - 1.9) / 1.1; spark(R.soft || m, A, v.x + Math.sin(k * 3 + R.t * 5) * 0.8, v.y + 0.5 + k * 0.6 * (0.3 + f), v.z + Math.cos(k * 2 + R.t * 4) * 0.8, 0.6 + k * 0.12, R.soft ? 'puff' : 'steam', [0.5, 0.5, 0.52]); } });
       (R.B.gears || []).forEach(function (g) { var c = Math.cos(g.ry), s = Math.sin(g.ry), a0 = R.t * 0.8 * g.dir, n = 12; for (var i = 0; i < n; i++) { var a = a0 + i / n * Math.PI * 2, b = a0 + (i + 1) / n * Math.PI * 2, rr = i % 2 ? g.r : g.r * 1.25; var P = function (aa, r) { return [g.x + c * Math.cos(aa) * r, g.y + Math.sin(aa) * r, g.z + s * Math.cos(aa) * r]; }; m.quad(P(a, 0.6), P(b, 0.6), P(b, rr), P(a, rr), [0, 0, 1, 0, 1, 1, 0, 1], A.tile('gear'), L); } });
     }
   },
@@ -84,6 +86,7 @@ Object.assign(THEMES, {
     wallAt: function (i, band) { return band === 1 && i % 16 === 8 ? 'walleye' : 'wall'; },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 7) B.beam(i, 6.8, 'beam', 0.9);
+      for (var ei = 8; ei < T.N; ei += 16) [1, -1].forEach(function (sd) { var p = B.side(T.S[ei], sd, -0.8); B.light(p.x, p.y + 5, p.z, 12, [0.55, 0.15, 0.7], null); });
       gooPuddles(B, T.def.goo || [], 2.3);
       B.along(22, function (q, sd, i) { var p = B.side(q, sd, -1.8); B.bill(p.x, p.y, p.z, i % 3 ? 'f_blumling_0' : 'f_blumeye_0', 0.07, { anim: i % 3 ? function (t) { return 'f_blumling_' + (Math.floor(t * 6 + i) % 4); } : function (t) { return 'f_blumeye_' + (Math.floor(t * 3 + i) % 3); } }); });
       var hp = B.side(T.S[Math.round(T.N * 0.5)], 1, -2.2); B.bill(hp.x, hp.y, hp.z, 'p_heart0', 0.09, { anim: function (t) { return Math.floor(t * 2.4) % 2 ? 'p_heart1' : 'p_heart0'; } });
@@ -127,6 +130,7 @@ Object.assign(THEMES, {
     wallAt: function (i, band) { if (band === 0 && i % 18 === 9) return 'walltorch'; if (band === 0 && i % 31 === 15) return 'door'; return 'wall'; },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 8) B.beam(i, 7.6, 'beam', 1);
+      for (var ti = 9; ti < T.N; ti += 18) [1, -1].forEach(function (sd) { var p = B.side(T.S[ti], sd, -1.2); B.light(p.x, p.y + 2.6, p.z, 13, [0.95, 0.5, 0.12], '#ffa040'); });
       B.along(26, function (q, sd, i) { var p = B.side(q, sd, -1.4); var w = ['f_skeleton_0', 'p_chest', 'f_ghost_0', 'p_skulls', 'f_mummy_0', 'p_bigchest'][i % 6]; if (KIT.has(w)) B.bill(p.x, p.y, p.z, w, 0.07); });
     }
   },
@@ -144,7 +148,7 @@ Object.assign(THEMES, {
       for (var n = 0; n < 26; n++) { var a = B.rnd() * Math.PI * 2, r = 60 + B.rnd() * 160, b = T.box, x = (b[0] + b[2]) / 2 + Math.cos(a) * r, z = (b[1] + b[3]) / 2 + Math.sin(a) * r; if (!B.clear(x, z, 12)) continue; var y = -20 + B.rnd() * 50, s = 6 + B.rnd() * 10;
         B.cyl(x, y - s * 1.2, z, 0.5, s * 1.2, 7, 'rock', null, s); B.cyl(x, y, z, s, 0.6, 7, 'isle', null, s, 'isle'); if (B.rnd() < 0.7) B.bill(x, y + 0.6, z, ['jv_crystal', 'jv_tree', 'jv_crys0', 'jv_lamp0'][n % 4], 0.12 + B.rnd() * 0.1); }
       var vp = T.S[Math.round(T.N * 0.4)]; B.bill(vp.x + 120, vp.y - 30, vp.z - 90, 'jv_void0', 0.8, { anim: function (t) { return Math.floor(t * 2) % 2 ? 'jv_void1' : 'jv_void0'; } });
-      B.along(20, function (q, sd, i) { var p = B.side(q, sd, -0.4); if (i % 2) B.bill(p.x, p.y, p.z, 'jv_crys' + (i % 4 < 2 ? 0 : 1), 0.06); });
+      B.along(20, function (q, sd, i) { var p = B.side(q, sd, -0.4); if (i % 2) { B.bill(p.x, p.y, p.z, 'jv_crys' + (i % 4 < 2 ? 0 : 1), 0.06); B.light(p.x, p.y + 1, p.z, 10, [0.5, 0.25, 0.8], '#c08aff'); } });
     }
   },
   /* ---------------- The Crimson Moon: low gravity, red dust, big jumps, and the Crimson Moon itself watching ---------------- */

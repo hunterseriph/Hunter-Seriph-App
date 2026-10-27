@@ -25,7 +25,7 @@ function startRace(o) {
   (def.boosts || []).forEach(function (b) { var q = T.at(b[0]), lat = b[1] * def.hw * 0.6, i0 = q.i; pads.push({ i: i0, lat: lat, len: 3 }); for (var k = 0; k < 3; k++) { var a = T.S[(i0 + k) % T.N], c2 = T.S[(i0 + k + 1) % T.N]; var P = function (s, l) { return [s.x + s.nx * (lat + l), s.y + 0.04, s.z + s.nz * (lat + l)]; }; m.quad(P(a, 1.8), P(c2, 1.8), P(c2, -1.8), P(a, -1.8), [0, 1, 0, 0, 1, 0, 1, 1], A.tile('arrow'), mulc(def.light, 1.2), -1.5); } });
   (def.ramps || []).forEach(function (r) { var q = T.at(r[0]); ramps.push({ i: q.i, k: r[1] }); buildRamp(m, T, A, q.i, def); });
   (def.belts || []).forEach(function (b) { var i0 = T.idx(b[0]), n = Math.round(b[1] * T.N); for (var k = 0; k < n; k++) { var a = T.S[(i0 + k) % T.N], c3 = T.S[(i0 + k + 1) % T.N]; var P2 = function (s, l) { return [s.x + s.nx * l, s.y + 0.03, s.z + s.nz * l]; }; m.quad(P2(a, def.hw), P2(c3, def.hw), P2(c3, -def.hw), P2(a, -def.hw), [0, k, 0, k + 1, def.hw / 2, k + 1, def.hw / 2, k], A.tile('belt'), mulc(def.light, 1), -2); } });
-  m.upload();
+  bakeLights(m, B.lights); m.upload();
   var sky = R3.texture(paintSky(def.sky, T.N)), atlas = R3.texture(A.canvas);
   var karts = [], roster = [o.player].concat(o.rivals);
   roster.forEach(function (ch, i) { var k = newKart(ch, i, i > 0, cls); karts.push(k); });
@@ -165,7 +165,7 @@ function aiInput(k, dt) {
   var lane = k.lane * def.hw * 0.75;
   // go for an item box if empty-handed, steer round traps and goo ahead
   var ahead = function (x, z) { var q = T.locate(x, z, k.seg), di = (q.i - k.seg + N) % N; return { di: di, lat: q.lat }; };
-  if (!k.item && !k.roul) { var bb = null; R.boxes.forEach(function (b) { if (b.t > 0) return; var a = ahead(b.x, b.z); if (a.di > 2 && a.di < 14 && (!bb || a.di < bb.di)) bb = a; }); if (bb) lane = bb.lat; }
+  if (!k.item && !(k.roul > 0)) { var bb = null; R.boxes.forEach(function (b) { if (b.t > 0) return; var a = ahead(b.x, b.z); if (a.di > 2 && a.di < 14 && (!bb || a.di < bb.di)) bb = a; }); if (bb) lane = bb.lat; }
   R.traps.concat(R.goo).forEach(function (t) { var a = ahead(t.x, t.z); if (a.di > 0 && a.di < 10 && Math.abs(a.lat - lane) < 2.6) lane = a.lat + (a.lat > 0 ? -3.4 : 3.4); });
   lane = clamp(lane, -def.hw * 0.85, def.hw * 0.85);
   var look = Math.round((5 + Math.max(0, k.spd) * 0.32) / STEP), q = S[(k.seg + look) % N], tx = q.x + q.nx * lane - k.x, tz = q.z + q.nz * lane - k.z;
@@ -247,7 +247,7 @@ function stepRace(dt) {
   R.karts.forEach(function (k, i) {
     var inp = inputs[i]; driveKart(k, inp, dt);
     if (inp.item && R.phase === 'go') useItem(k, inp);
-    if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0 && !k.ai) sfx.play('select'); }
+    if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) { k.roul = 0; if (!k.ai) sfx.play('select'); } }
   });
   // kart against kart
   for (var a = 0; a < R.karts.length; a++) for (var b = a + 1; b < R.karts.length; b++) {
@@ -263,7 +263,7 @@ function stepRace(dt) {
   // item boxes and drops
   R.boxes.forEach(function (bx) {
     if (bx.t > 0) { bx.t -= dt; return; }
-    R.karts.forEach(function (k) { if (bx.t > 0) return; if (Math.hypot(k.x - bx.x, k.z - bx.z) < 1.9 && Math.abs(k.y - bx.y) < 2) { bx.t = 2.2; R.fx.push({ k: 'box', x: bx.x, y: bx.y + 1, z: bx.z, t: 0.35 }); if (!k.item && !k.roul) { k.item = rollItem(k); k.itemN = ITEMS[k.item].n3 || 1; k.roul = k.ai ? 0.01 : 1.1; k.itemT = 0.8 + Math.random() * 1.5; if (!k.ai) sfx.play('blip'); } } });
+    R.karts.forEach(function (k) { if (bx.t > 0) return; if (Math.hypot(k.x - bx.x, k.z - bx.z) < 1.9 && Math.abs(k.y - bx.y) < 2) { bx.t = 2.2; R.fx.push({ k: 'box', x: bx.x, y: bx.y + 1, z: bx.z, t: 0.35 }); if (!k.item && !(k.roul > 0)) { k.item = rollItem(k); k.itemN = ITEMS[k.item].n3 || 1; k.roul = k.ai ? 0.01 : 1.1; k.itemT = 0.8 + Math.random() * 1.5; if (!k.ai) sfx.play('blip'); } } });
   });
   R.drops.forEach(function (dr) {
     if (dr.t > 0) { dr.t -= dt; return; }
