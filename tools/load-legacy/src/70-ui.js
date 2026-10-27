@@ -145,7 +145,7 @@ function openArcadeMenu() {
     { icon: 'npc_potbelly', name: "PLAY POTBELLY'S ARCADE OVERDRIVE", sub: 'The gold cabinet', fn: function () { openCab('arcade-overdrive.html'); } },
     { icon: 'greebo_d', name: 'PLAY JOURNEY TO THE VOID', sub: 'Cumhead, Spermaid and Greebo', fn: function () { openCab('journey-to-the-void.html'); } },
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: function () { openLegacy(); } },
-    { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng, fn: null }
+    { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng + (META.cwins.blumc ? '  ·  King Blumhead ' + META.cwins.blumc + 'x' : '') + (META.cwins.grotto ? '  ·  Sir Johnathan ' + META.cwins.grotto + 'x' : ''), fn: null }
   ];
   openMenu({ title: 'Potbelly Arcade', note: '"Cabinets are free, kid. Play all you like."', pic: 'npc_potbelly', rows: rows });
 }
@@ -197,7 +197,7 @@ function openPause() {
     META.runeOn.forEach(function (id) { var r = RUNES.filter(function (x) { return x.id === id; })[0]; if (r) rows.push({ icon: r.icon, name: r.name.toUpperCase(), sub: r.d }); });
     if (RUN.provNames && RUN.provNames.length) { rows.push({ name: 'PROVISIONS', cls: 'head' }); RUN.provNames.forEach(function (n) { var it = null; for (var sl in PROV) PROV[sl].forEach(function (x) { if (x.name === n) it = x; }); rows.push({ icon: it ? it.icon : 'coin', name: n.toUpperCase(), sub: it ? it.d : '' }); }); }
     if (RUN.finds && RUN.finds.length) { rows.push({ name: 'FOUND THIS RUN', cls: 'head' }); RUN.finds.forEach(function (n) { rows.push({ icon: 'scrollMend', name: n.toUpperCase(), sub: 'Kept for good' }); }); }
-    rows.push({ icon: 'coin', name: 'SEALS BROKEN ' + sealCount() + '/4', sub: AREAORDER.map(function (a) { return (META.bosses[a] ? '✓ ' : '· ') + BOSSDEF[AREAS[a].boss].name; }).join('   ') });
+    rows.push({ icon: 'coin', name: 'SEALS BROKEN ' + sealCount() + '/4', sub: castleAreas().map(function (a) { return (META.bosses[a] ? '✓ ' : '· ') + BOSSDEF[AREAS[a].boss].name; }).join('   ') });
     rows.push({ icon: 'scrollWarp', name: 'SAVE AND QUIT TO TITLE', sub: 'Carry on later from this room', fn: function () { saveRun(); closeMenu(); toTitle(); } });
   } else rows.push({ icon: 'scrollWarp', name: 'QUIT TO TITLE', fn: function () { closeMenu(); toTitle(); } });
   openMenu({ title: 'Paused', note: '', pic: null, rows: rows, bank: G.mode === 'play' ? 'run' : 'town', backTxt: 'RESUME' });

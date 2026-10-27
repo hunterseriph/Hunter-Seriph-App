@@ -149,7 +149,7 @@ function openFeast(e) {
 }
 /* ---------- area quirks ---------- */
 var STREAKS = [];
-function dripC() { return G.rm && G.rm.area === 'sewer' ? ['#fff6d8', '#c8b080'] : ['#7dff3a', '#3ab43a']; } /* sewer drips are cream */
+function dripC() { return G.rm && (G.rm.area === 'sewer' || G.rm.area === 'gcellar') ? ['#fff6d8', '#c8b080'] : ['#7dff3a', '#3ab43a']; } /* sewer drips are cream */
 function quirkStep(dt) {
   if (L.arena) return;
   if (G.quirkRoom !== G.roomKey) { G.quirkRoom = G.roomKey; G.bolt = null; G.boltT = 3 + Math.random() * 3; G.windT = 0; STREAKS = []; }
@@ -240,6 +240,7 @@ function drawChand(x, e) {
   [-12, 0, 12].forEach(function (o, k) { var fl = Math.floor(G.t * 8 + k) % 2; R(ctx, '#ff7a30', x + j + o - 1, y + 1 - fl, 3, 4); R(ctx, '#ffe36a', x + j + o, y + 2 - fl, 1, 2); });
 }
 function drawPad(x, e) {
+  if (e.jelly) { drawJellyPad(x, e); return; }
   spr(e.sq > 0 ? 'p_pad1' : 'p_pad0', x, e.y + 1, false, 1);
   if (Math.floor(G.t * 3) % 2) { R(ctx, '#ffe36a', x - 1, e.y - 18, 3, 2); R(ctx, '#ffe36a', x, e.y - 19, 1, 1); }
 }
@@ -311,7 +312,8 @@ function findBlueprint(chance) {
   if (Math.random() > chance) return false;
   var f = META.found, t = tierOf(), pool = [];
   ['weapon', 'armour', 'helm'].forEach(function (slot) { var nx = f[slot] + 1; if (nx < GEAR[slot].length && nx - 1 <= t) pool.push({ slot: slot, i: nx, w: 3 }); });
-  RUNES.forEach(function (r) { if (!f.runes[r.id]) pool.push({ rune: r, w: 2 }); });
+  var here = (G.rm && castleOfArea(G.rm.area)) || (L && L.arena && BOSSDEF[L.arena] && castleOfArea(BOSSDEF[L.arena].area)) || curCastle();
+  RUNES.forEach(function (r) { if (!f.runes[r.id] && (!r.castle || r.castle === here)) pool.push({ rune: r, w: r.castle ? 4 : 2 }); }); // a castle's own runes are only found inside it
   if (!pool.length) return false;
   var tot = 0; pool.forEach(function (p) { tot += p.w; }); var v = Math.random() * tot, pk = pool[0];
   for (var i = 0; i < pool.length; i++) { v -= pool[i].w; if (v <= 0) { pk = pool[i]; break; } }

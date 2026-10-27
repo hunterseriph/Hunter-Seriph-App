@@ -13,14 +13,18 @@ function ensureEndless(n) {
   var W = WORLD;
   while (W.count < n) {
     var i = W.count, r = mulberry(hash2(W.seed, i, 777)), prev = W.list[W.list.length - 1];
-    var area = i === 0 ? 'castle' : ENDLESSAREAS[Math.floor(r() * ENDLESSAREAS.length)];
-    if (prev && area === prev.area && r() < 0.6) area = ENDLESSAREAS[Math.floor(r() * ENDLESSAREAS.length)];
+    var EA = endlessPool('areas', ENDLESSAREAS), ET = endlessPool('types', ENDLESS_TYPES), EB = endlessPool('bosses', null);
+    var area = i === 0 ? 'castle' : EA[Math.floor(r() * EA.length)];
+    if (prev && area === prev.area && r() < 0.6) area = EA[Math.floor(r() * EA.length)];
     var type = 'normal', boss = null, cw = 1;
     if (i === 0) type = 'egate';
-    else if (i % 10 === 0) { // a boss every ten screens: the three Endless bosses first, then anyone
-      type = 'bossdoor'; var order = shuffle(ENDLESS_BOSSES.slice(), mulberry(hash2(W.seed, 99, 5)));
-      boss = i <= 30 ? ['ratking', 'boner', 'hotload'][i / 10 - 1] : order[(i / 10 - 4) % order.length]; area = BOSSDEF[boss].area; }
-    else if (r() < 0.42 && !(prev && prev.type !== 'normal')) { type = ENDLESS_TYPES[Math.floor(r() * ENDLESS_TYPES.length)]; if (type === 'flume') area = 'city'; }
+    else if (i % 10 === 0) { // a boss every ten screens
+      type = 'bossdoor';
+      if (EB) { // any boss you have opened up, at random, never the same one twice in a row
+        var br = mulberry(hash2(W.seed, i, 555)), opts = EB.filter(function (q) { return q !== W.lastBoss; }); boss = opts[Math.floor(br() * opts.length)]; W.lastBoss = boss;
+      } else { var order = shuffle(ENDLESS_BOSSES.slice(), mulberry(hash2(W.seed, 99, 5))); boss = i <= 30 ? ['ratking', 'boner', 'hotload'][i / 10 - 1] : order[(i / 10 - 4) % order.length]; } // an older save keeps its old order
+      area = BOSSDEF[boss].area; }
+    else if (r() < 0.42 && !(prev && prev.type !== 'normal')) { type = ET[Math.floor(r() * ET.length)]; if (type === 'flume') area = 'city'; else if (SPECIALAREA[type]) area = SPECIALAREA[type]; }
     if (type === 'normal' && i > 1 && r() < 0.2) cw = 2;
     if (type === 'flume') cw = 3; /* the Load Flume is a long ride */
     var rm = { cx: W.next, cy: EROW, area: area, type: type, ex: { l: 1, r: 1 }, exits: [{ d: 'l', i: 0 }, { d: 'r', i: 0 }], idx: i, endless: 1, cw: cw, ch: 1, boss: boss, id: i };
@@ -29,10 +33,17 @@ function ensureEndless(n) {
     W.list.push(rm); W.next += cw; W.count++;
   }
 }
+/* what this Endless run can throw at you: fixed when the run starts, so a saved run rebuilds the same screens */
+function endlessPool(k, def) { var e = RUN && RUN.endless; return e && e[k] ? e[k] : def; }
+function endlessSetup() {
+  var areas = ENDLESSAREAS.slice(), types = ENDLESS_TYPES.slice(), bosses = ENDLESS_BOSSES.slice();
+  ['blumc', 'grotto'].forEach(function (c) { if (!castleOpen(c)) return; var C = CASTLES[c]; castleAreas(c).forEach(function (a) { areas.push(a); types.push(AREAS[a].special[0]); bosses.push(AREAS[a].boss); }); bosses.push(C.final); });
+  return { areas: areas, types: types, bosses: bosses };
+}
 function endlessTier(n) { return 1 + n * 0.12; } // keeps climbing for ever
 function startEndless(cls) {
   var seed = (Math.random() * 1e9) | 0;
-  RUN = { v: 1, seed: seed, cls: cls, card: null, provEff: {}, provNames: [], powers: [], drops: 0, rs: {}, t: 0, kills: 0, revive: 0, sw: false, room: null, endless: { n: 0, tier: 1 } };
+  RUN = { v: 1, seed: seed, cls: cls, card: null, provEff: {}, provNames: [], powers: [], drops: 0, rs: {}, t: 0, kills: 0, revive: 0, sw: false, room: null, endless: { n: 0, tier: 1 } }; var es = endlessSetup(); RUN.endless.areas = es.areas; RUN.endless.types = es.types; RUN.endless.bosses = es.bosses;
   META.started = true; saveMeta();
   genEndless(seed); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
   newPlayer(); G.mode = 'play'; G.msg = null; enterRoom(WORLD.start, null);

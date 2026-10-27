@@ -8,8 +8,8 @@ var WORLD = null;
 function key2(x, y) { return x + ',' + y; }
 var DIRV = { l: [-1, 0], r: [1, 0], u: [0, -1], d: [0, 1] }, OPP = { l: 'r', r: 'l', u: 'd', d: 'u' };
 
-function genWorld(seed) {
-  var r = mulberry(seed), rooms = {};
+function genWorld(seed, castle) {
+  var r = mulberry(seed), rooms = {}, CK = CASTLES[castle] ? castle : 'cum', CS = CASTLES[CK], HUB = CS.hub, UP = CS.up, DN = CS.down, RT = CS.right, home = CK === 'cum';
   function inArea(a, x, y) { var A = AREAS[a]; return x >= A.ox && y >= A.oy && x < A.ox + A.w && y < A.oy + A.h; }
   function add(a, x, y) { var k = key2(x, y); if (!rooms[k]) rooms[k] = { cx: x, cy: y, area: a, type: 'normal', ex: {} }; return rooms[k]; }
   function link(a, b, d) { a.ex[d] = 1; b.ex[OPP[d]] = 1; }
@@ -35,25 +35,25 @@ function genWorld(seed) {
     return list;
   }
   // the start room sits on the castle's left edge: nothing lies to the left of it
-  var C = AREAS.castle, start = add('castle', C.ox, C.oy + 2); start.type = 'start';
+  var C = AREAS[HUB], start = add(HUB, C.ox, C.oy + 2); start.type = 'start';
   // connectors out of the castle
   var upX = C.ox + 1 + Math.floor(r() * 4), dnX = C.ox + 1 + Math.floor(r() * 4), rtY = C.oy + Math.floor(r() * C.h);
   // the starting room opens up, down and right, and each way leads on towards its own area
-  var sU = add('castle', start.cx, start.cy - 1), sD = add('castle', start.cx, start.cy + 1), sR = add('castle', start.cx + 1, start.cy);
+  var sU = add(HUB, start.cx, start.cy - 1), sD = add(HUB, start.cx, start.cy + 1), sR = add(HUB, start.cx + 1, start.cy);
   link(start, sU, 'u'); link(start, sD, 'd'); link(start, sR, 'r');
-  var cu = walkTo('castle', sU, upX, C.oy), cd = walkTo('castle', sD, dnX, C.oy + C.h - 1), cr = walkTo('castle', sR, C.ox + C.w - 1, rtY);
-  start.signs = { u: 'roof', d: 'dungeon', r: 'city' };
-  grow('castle', C.rooms);
-  var ru = add('roof', upX, C.oy - 1); link(cu, ru, 'u'); ru.entry = 1;
-  var dd = add('dungeon', dnX, C.oy + C.h); link(cd, dd, 'd'); dd.entry = 1;
-  var cc = add('city', C.ox + C.w, rtY); link(cr, cc, 'r'); cc.entry = 1;
-  grow('roof', AREAS.roof.rooms); grow('city', AREAS.city.rooms); grow('dungeon', AREAS.dungeon.rooms);
-  // the secret area: not joined to the map at all. A hidden portal leads there.
-  var M = AREAS.moon, me = add('moon', M.ox, M.oy + 1 + Math.floor(r() * 2)); me.entry = 1; me.type = 'moongate'; grow('moon', M.rooms);
+  var cu = walkTo(HUB, sU, upX, C.oy), cd = walkTo(HUB, sD, dnX, C.oy + C.h - 1), cr = walkTo(HUB, sR, C.ox + C.w - 1, rtY);
+  start.signs = { u: UP, d: DN, r: RT };
+  grow(HUB, C.rooms);
+  var ru = add(UP, upX, C.oy - 1); link(cu, ru, 'u'); ru.entry = 1;
+  var dd = add(DN, dnX, C.oy + C.h); link(cd, dd, 'd'); dd.entry = 1;
+  var cc = add(RT, C.ox + C.w, rtY); link(cr, cc, 'r'); cc.entry = 1;
+  grow(UP, AREAS[UP].rooms); grow(RT, AREAS[RT].rooms); grow(DN, AREAS[DN].rooms);
+  // the secret area (only in Cumhead's Castle): not joined to the map at all. A hidden portal leads there.
+  var me = null; if (home) { var M = AREAS.moon; me = add('moon', M.ox, M.oy + 1 + Math.floor(r() * 2)); me.entry = 1; me.type = 'moongate'; grow('moon', M.rooms); }
   // special rooms per area, chosen from the rooms furthest from the way in
-  AREAORDER.concat(['moon']).forEach(function (a) {
+  castleAreas(CK).concat(home ? ['moon'] : []).forEach(function (a) {
     var list = Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (q) { return q.area === a; });
-    var src = a === 'castle' ? start : list.filter(function (q) { return q.entry; })[0], dist = {}, qu = [src]; dist[key2(src.cx, src.cy)] = 0;
+    var src = a === HUB ? start : list.filter(function (q) { return q.entry; })[0], dist = {}, qu = [src]; dist[key2(src.cx, src.cy)] = 0;
     while (qu.length) { var q = qu.shift(), dq = dist[key2(q.cx, q.cy)]; for (var d in q.ex) { var o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])]; if (o && dist[key2(o.cx, o.cy)] === undefined) { dist[key2(o.cx, o.cy)] = dq + 1; qu.push(o); } } }
     list.forEach(function (q) { q.dist = dist[key2(q.cx, q.cy)] || 0; });
     var free = list.filter(function (q) { return q.type === 'normal' && !q.entry && q !== start; }), moonA = a === 'moon';
@@ -62,7 +62,7 @@ function genWorld(seed) {
     var boss = free.shift(); if (boss) boss.type = 'bossdoor';
     shuffle(free, r);
     if (moonA) { ['merchant', 'shrine', 'powerup', 'challenge', 'ambush'].forEach(function (t) { var q = free.shift(); if (q) q.type = t; }); return; }
-    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'], extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); if (r() < 0.75) want.push(extra[1]); if (r() < 0.45) want.push(extra[2]);
+    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'].concat(AREAS[a].special || []), extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); if (r() < 0.75) want.push(extra[1]); if (r() < 0.45) want.push(extra[2]);
     want.forEach(function (t) { var q = free.shift(); if (q) q.type = t; });
     if (a === 'city') { // the Load Flume: four screens long, laid along one row of the park. Empty cells are filled in; cells already in use must be plain and have no way down
       var CA = AREAS.city, best = null, okC = function (x, y) { var q = rooms[key2(x, y)]; return !q || (q.area === 'city' && free.indexOf(q) >= 0 && !q.ex.d); };
@@ -93,10 +93,10 @@ function genWorld(seed) {
   });
   // one illusion room somewhere hides the portal in its alcove
   var ill = Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (q) { return q.type === 'illusion'; });
-  var pr = ill[Math.floor(r() * ill.length)]; if (pr) pr.portal = 1;
-  // Blumhead's Lair: not joined to the map. You are dragged down into it after Super Blumhead falls (five wins on).
-  var LA = AREAS.lair, le = add('lair', LA.ox, LA.oy + 1); le.entry = 1; le.type = 'lairgate'; var llist = grow('lair', LA.rooms);
-  (function () {
+  var pr = home ? ill[Math.floor(r() * ill.length)] : null; if (pr) pr.portal = 1;
+  // Blumhead's Lair (Cumhead's Castle only): not joined to the map. You are dragged down into it after Super Blumhead falls (five wins on).
+  var le = null; if (home) (function () {
+    var LA = AREAS.lair; le = add('lair', LA.ox, LA.oy + 1); le.entry = 1; le.type = 'lairgate'; var llist = grow('lair', LA.rooms);
     var dist = {}, qu = [le]; dist[key2(le.cx, le.cy)] = 0;
     while (qu.length) { var q = qu.shift(), dq = dist[key2(q.cx, q.cy)]; for (var d in q.ex) { var o = rooms[key2(q.cx + DIRV[d][0], q.cy + DIRV[d][1])]; if (o && o.area === 'lair' && dist[key2(o.cx, o.cy)] === undefined) { dist[key2(o.cx, o.cy)] = dq + 1; qu.push(o); } } }
     llist.forEach(function (q) { q.dist = dist[key2(q.cx, q.cy)] || 0; });
@@ -112,7 +112,7 @@ function genWorld(seed) {
   })();
   var uniq = []; Object.keys(rooms).forEach(function (k) { if (uniq.indexOf(rooms[k]) < 0) uniq.push(rooms[k]); });
   uniq.forEach(function (q, i) { q.id = i; if (!q.exits) { q.exits = []; for (var d in q.ex) q.exits.push({ d: d, i: 0 }); } });
-  return { seed: seed, rooms: rooms, list: uniq, start: key2(start.cx, start.cy), moonEntry: key2(me.cx, me.cy), lairEntry: key2(le.cx, le.cy), portalFrom: pr ? key2(pr.cx, pr.cy) : null };
+  return { seed: seed, castle: CK, rooms: rooms, list: uniq, start: key2(start.cx, start.cy), moonEntry: me ? key2(me.cx, me.cy) : null, lairEntry: le ? key2(le.cx, le.cy) : null, portalFrom: pr ? key2(pr.cx, pr.cy) : null };
 }
 
 /* ---------- building one room's tiles and contents (deterministic per room) ---------- */
@@ -164,7 +164,7 @@ function buildRoom(rm) {
   var t = rm.type, nE = 0, cx0 = ex.d ? 23 : 16, cxp = cx0 * T;
   if (rm.big) { t = 'big'; nE = 3 + Math.floor(A.tier / 2) + (rm.big === 'wide' ? 2 : 1); }
   if (t === 'start') {
-    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: 'blum' }); RS(cx0 - 5, 9, cx0 + 4, 14);
+    ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: CASTLES[(WORLD && WORLD.castle) || curCastle()].final }); RS(cx0 - 5, 9, cx0 + 4, 14);
     ents.push({ k: 'deco', d: 'throneL', x: 6 * T, y: 15 * T }); ents.push({ k: 'deco', d: 'throneR', x: 26 * T, y: 15 * T });
   } else if (t === 'bossdoor') {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: rm.boss || A.boss, lair: rm.area === 'lair' ? 1 : 0 }); RS(cx0 - 5, 9, cx0 + 4, 14);
@@ -267,7 +267,55 @@ function buildRoom(rm) {
     for (x = ax0; x <= ax1; x++) ents.push({ k: 'drop', x: x * T + 8, y: 7 * T - 2 });
     for (var fv = 0; fv < 3; fv++) { var fx = rn(4, 24), fy = rn(9, 11); if (free(fx, fy, fx + 3, fy)) { for (x = fx; x <= fx + 3; x++) S(x, fy, TV); RS(fx, fy - 2, fx + 3, fy); } }
     nE = 1 + Math.floor(A.tier / 2);
+  } else if (castleRoom(t)) { /* the castles' own rooms, below */
   } else if (t !== 'big') nE = 2 + Math.floor(A.tier / 2) + (r() < 0.5 ? 1 : 0);
+  function castleRoom(t) {
+    var far = ex.r && !ex.l ? 3 : 28, i;
+    if (t === 'pendulum') { // three great axes swing from the ceiling across the hall: time your run under them
+      [[8, 0], [16, 1.1], [24, 2.2]].forEach(function (p) { ents.push({ k: 'pend', x: p[0] * T + 8, y: T + 4, len: 11 * T, ph: p[1] + r() }); });
+      RS(3, 1, W - 4, 13); plat(3, 5, 12); plat(26, 28, 12);
+      ents.push({ k: 'chest', x: far * T + 8, y: 15 * T, big: 1 }); nE = 1; return true;
+    }
+    if (t === 'storm') { // lightning rods on the floor: they crackle, then the sky hits them
+      [7, 16, 25].forEach(function (rx, k) { ents.push({ k: 'rod', x: rx * T + 8, y: 15 * T, t: k * 1.4 + r() * 0.4 }); });
+      RS(5, 10, 27, 14); plat(10, 13, 12); plat(19, 22, 12); plat(14, 18, 9);
+      ents.push({ k: 'chest', x: 16 * T + 8, y: 9 * T, big: 1 }); nE = 2; return true;
+    }
+    if (t === 'coffins') { // a row of coffins. Each one bursts open when you walk up to it.
+      var who = ['mummy', 'vampire', 'skeleton', 'wraith', 'mummy'];
+      [5, 10, 22, 27].forEach(function (cfx) { ents.push({ k: 'coffin', x: cfx * T + 8, y: 15 * T, who: who[Math.floor(r() * who.length)] }); });
+      RS(3, 11, 29, 14); plat(13, 18, 12); ents.push({ k: 'chest', x: 16 * T, y: 12 * T, big: 1 }); nE = 0; return true;
+    }
+    if (t === 'thorns') { // thorn vines burst out of the floor one after another, like a wave: stand on the ledges and wait for the gap
+      for (i = 0; i < 7; i++) ents.push({ k: 'vine', x: (7 + i * 3) * T + 8, y: 15 * T, t: i * 0.32 });
+      RS(5, 10, 27, 14); plat(3, 5, 12); plat(12, 14, 12); plat(20, 22, 12); plat(27, 29, 12);
+      ents.push({ k: 'chest', x: far * T + 8, y: 12 * T, big: 1 }); nE = 1; return true;
+    }
+    if (t === 'conveyor') { // belts along the floor and the ledges, all running the wrong way, over a hot hob
+      ents.push({ k: 'belt', x: 3 * T, x0: 3 * T, x1: 14 * T, y: 15 * T, dir: 1 }); ents.push({ k: 'belt', x: 18 * T, x0: 18 * T, x1: 29 * T, y: 15 * T, dir: -1 });
+      for (x = 14; x <= 17; x++) if (G(x, 15) === TW) S(x, 14, TS);
+      RS(3, 13, 29, 14); plat(6, 11, 12); plat(20, 25, 12); plat(12, 19, 9);
+      ents.push({ k: 'belt', x: 6 * T, x0: 6 * T, x1: 12 * T, y: 12 * T, dir: -1 }); ents.push({ k: 'belt', x: 20 * T, x0: 20 * T, x1: 26 * T, y: 12 * T, dir: 1 });
+      ents.push({ k: 'chest', x: 16 * T, y: 9 * T, big: 1 }); nE = 2; return true;
+    }
+    if (t === 'yarn') { // Sir Johnathan's toys: balls of yarn roll across the floor. Jump them or bounce off the top.
+      ents.push({ k: 'yarnspot', x: 16 * T, y: 15 * T, t: 1.2 + r() });
+      RS(3, 10, 28, 14); plat(4, 7, 12); plat(14, 18, 12); plat(25, 28, 12); plat(9, 12, 9); plat(20, 23, 9);
+      ents.push({ k: 'chest', x: 16 * T, y: 12 * T, big: 1 }); nE = 1; return true;
+    }
+    if (t === 'vats') { // the cream vats overflow every few seconds: climb out of it
+      ents.push({ k: 'goo', t: r() * 3, top: 5, lv: 15 * T, cream: 1 });
+      [[3, 7, 11], [11, 15, 9], [19, 23, 11], [25, 28, 8], [6, 10, 7], [14, 18, 5], [21, 24, 4]].forEach(function (p) { if (free(p[0], p[2] - 2, p[1], p[2])) plat(p[0], p[1], p[2]); });
+      ents.push({ k: 'chest', x: 16 * T, y: 15 * T, big: 1 }); RS(15, 13, 17, 14); nE = 2; return true; // grab it between floods
+    }
+    if (t === 'jellies') { // a field of wobbling jellies: bounce from one to the next up to the picnic hamper
+      [6, 12, 20, 26].forEach(function (jx) { if (G(jx, 15) === TW) ents.push({ k: 'pad', jelly: 1, x: jx * T + 8, y: 15 * T }); });
+      for (x = 8; x <= 24; x++) if (G(x, 15) === TW && [12, 20].indexOf(x) < 0 && Math.abs(x - 16) > 1) S(x, 14, TS);
+      RS(3, 5, 29, 14); plat(14, 18, 12); plat(3, 5, 12); plat(27, 29, 12); plat(8, 11, 9); plat(21, 24, 9); plat(9, 12, 6); plat(20, 23, 6);
+      ents.push({ k: 'chest', x: 10 * T + 8, y: 6 * T, big: 1 }); ents.push({ k: 'chest', x: 21 * T + 8, y: 6 * T }); nE = 1; return true;
+    }
+    return false;
+  }
   // plain rooms come in several shapes, so the castle does not feel samey
   var style = 'classic';
   if (t === 'normal') { var sr = r(); style = sr < 0.34 ? 'classic' : sr < 0.47 ? 'pit' : sr < 0.6 ? 'stairs' : sr < 0.73 ? 'pillars' : sr < 0.86 ? 'tower' : 'bridge'; }
@@ -317,26 +365,26 @@ function buildRoom(rm) {
   if (rm.entry && rm.area === 'city') { ents.push({ k: 'deco', d: 'parkgate', x: 6 * T, y: 15 * T }); ents.push({ k: 'steve', x: 11 * T, y: 15 * T }); nE = 0; }
   // area quirks
   var fights = t === 'normal' || t === 'big', dark = false, wind = 0;
-  if (fights && (rm.area === 'castle' || rm.area === 'bone') && r() < 0.55) { // chandeliers that drop when you walk under them
+  if (fights && (rm.area === 'castle' || rm.area === 'bone' || rm.area === 'bkeep') && r() < 0.55) { // chandeliers that drop when you walk under them
     var nc = rn(1, rm.big === 'wide' ? 3 : 2), tries = 0;
     while (nc > 0 && tries++ < 20) { var chx = rn(4, W - 5); if (G(chx, 0) === TW && free(chx - 1, 1, chx + 1, 5)) { ents.push({ k: 'chand', x: chx * T + 8, y: T, st: 'hang' }); RS(chx - 2, 1, chx + 2, 5); nc--; } }
   }
-  if (rm.area === 'city' && t !== 'flume' && !rm.entry && r() < 0.6) { // bounce pads on the floor
+  if ((rm.area === 'city' || rm.area === 'gfair') && t !== 'flume' && t !== 'jellies' && !rm.entry && r() < 0.6) { // bounce pads on the floor (jellies at the Picnic)
     var npd = rn(1, 2), tries2 = 0;
-    while (npd > 0 && tries2++ < 30) { var pdx = rn(4, W - 5), fy = H - 2; if (G(pdx, fy + 1) === TW && free(pdx - 1, fy - 3, pdx + 1, fy)) { ents.push({ k: 'pad', x: pdx * T + 8, y: (fy + 1) * T }); RS(pdx - 1, fy - 3, pdx + 1, fy); npd--; } }
+    while (npd > 0 && tries2++ < 30) { var pdx = rn(4, W - 5), fy = H - 2; if (G(pdx, fy + 1) === TW && free(pdx - 1, fy - 3, pdx + 1, fy)) { ents.push({ k: 'pad', x: pdx * T + 8, y: (fy + 1) * T, jelly: rm.area === 'gfair' ? 1 : 0 }); RS(pdx - 1, fy - 3, pdx + 1, fy); npd--; } }
   }
   if (rm.area === 'furnace' && t !== 'flume') { var nv = rn(1, 3), tv = 0; while (nv > 0 && tv++ < 30) { var vx = rn(5, W - 6); if (G(vx, H - 1) === TW && free(vx - 1, H - 4, vx + 1, H - 2)) { ents.push({ k: 'vent', x: vx * T + 8, y: (H - 1) * T, t: r() * 3.4 }); RS(vx - 1, H - 5, vx + 1, H - 2); nv--; } } }
-  if ((rm.area === 'dungeon' || rm.area === 'sewer') && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
+  if ((rm.area === 'dungeon' || rm.area === 'sewer' || rm.area === 'bcrypt' || rm.area === 'gcellar') && t !== 'start') { // drips from the ceiling, and some rooms are pitch dark
     var ndr = rn(1, 3);
     for (var dq = 0; dq < ndr; dq++) { var drx = rn(3, W - 4); if (G(drx, 0) === TW && G(drx, 1) === TA) ents.push({ k: 'drip', x: drx * T + 8, y: T, cd: 1 + r() * 3 }); }
-    dark = rm.area === 'dungeon' && fights && r() < 0.5; /* the sewers stay lit so you can see the cream */
+    dark = (rm.area === 'dungeon' || rm.area === 'bcrypt') && fights && r() < 0.5; /* the sewers stay lit so you can see the cream */
   }
   var DECO = { sewer: [['creampool', 3, 3]], bone: [['skulls', 2, 3], ['ribs', 1, 4]], furnace: [['crucible', 2, 2]] }[rm.area];
   if (DECO && t !== 'flume') DECO.forEach(function (dd) { // each endless area dresses its floors: cream puddles, skull piles and ribcages, crucibles of lava
     var n = rn(1, dd[1]), tr = 0, half = Math.ceil(dd[2] / 2);
     while (n > 0 && tr++ < 40) { var qx = rn(3, W - 4), qy = rn(2, H - 2); if (G(qx, qy) === TA && G(qx, qy + 1) === TW && G(qx - half, qy + 1) === TW && G(qx + half, qy + 1) === TW && !res[qy * W + qx] && !ents.some(function (o) { return o.k === 'adeco' && Math.abs(o.x - (qx * T + 8)) < 40 && Math.abs(o.y - (qy + 1) * T) < 8; })) { ents.push({ k: 'adeco', s: dd[0], x: qx * T + 8, y: (qy + 1) * T, fl: r() < 0.5 }); n--; } }
   });
-  if (rm.area === 'roof' && fights && r() < 0.6) wind = r() < 0.5 ? -1 : 1; // gusts across the rooftops
+  if ((rm.area === 'roof' || rm.area === 'bspire') && fights && r() < 0.6) wind = r() < 0.5 ? -1 : 1; // gusts across the rooftops
   // stand spots for enemies and drops
   var stands = [];
   for (x = 2; x < W - 2; x++) for (y = 2; y < H - 1; y++) { var b = G(x, y + 1); if (G(x, y) === TA && G(x, y - 1) === TA && (b === TW || b === TL) && !res[y * W + x]) stands.push([x, y]); }
@@ -382,7 +430,7 @@ function buildRoom(rm) {
     }
   }
   ents.forEach(function (en, i) { en.i = i; });
-  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d || style === 'tower' ? 8 : (t === 'start' ? 10 : 16)) * T, dark: dark, wind: wind, storm: rm.area === 'roof' };
+  return { w: W, h: H, tiles: tl, ents: ents, cx0: cx0, spawnX: (ex.d || style === 'tower' ? 8 : (t === 'start' ? 10 : 16)) * T, dark: dark, wind: wind, storm: rm.area === 'roof' || rm.area === 'bspire' };
 }
 
 /* ---------- boss arenas (two screens wide). Reached through a boss door. ---------- */

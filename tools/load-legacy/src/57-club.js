@@ -47,6 +47,8 @@ function openTrophies() {
   var best = META.lb.length ? META.lb[0] : null, nb = 0; ['weapon', 'armour', 'helm'].forEach(function (s) { nb += META.found[s]; }); var nr = Object.keys(META.found.runes).length;
   var rows = [
     { icon: 'f_blum_0', name: 'BLUMHEAD BEATEN ' + META.blumWins + 'x', sub: META.seenSuper || META.superWins ? 'Super Blumhead beaten ' + META.superWins + 'x' : 'Something stirs after the fifth time...' },
+    { icon: 'f_kingblum_0', name: "BLUMHEAD'S CASTLE " + (castleOpen('blumc') ? 'BEATEN ' + (META.cwins.blumc || 0) + 'x' : 'LOCKED'), sub: castleOpen('blumc') ? 'King Blumhead waits in the Black Keep' : CASTLES.blumc.hint },
+    { icon: 'f_sirj_0', name: "GREEBO'S GROTTO " + (castleOpen('grotto') ? 'BEATEN ' + (META.cwins.grotto || 0) + 'x' : 'LOCKED'), sub: castleOpen('grotto') ? 'Sir Johnathan is still at large' : CASTLES.grotto.hint },
     { icon: 'holy', name: 'NEW GAME+ ' + META.ng, sub: 'Seals broken this time round: ' + sealCount() + '/4' },
     { icon: 'f_moon_0', name: 'THE CRIMSON MOON ' + (META.moonWins || 0) + 'x', sub: META.seenMoon ? 'The portal is always in a hidden alcove' : 'There is a secret somewhere in the castle' },
     { icon: 'scrollWarp', name: 'ENDLESS BEST: ' + (best ? 'SCREEN ' + best.screen : 'NONE YET'), sub: best ? best.name + ' as ' + best.heir : 'Through the Endless Door at the end of the room' },
@@ -59,7 +61,7 @@ function openTrophies() {
 var JUKE = [['title', 'Load Legacy'], ['town', 'Clubhouse Row'], ['castle', "Cumhead's Castle"], ['roof', 'Above the Red Moon'], ['park', 'Ejaculand Waltz'], ['dungeon', 'Chains in the Dark'], ['boss', 'Boss Fight'], ['blum', 'Blumhead'], ['super', 'Super Blumhead'], ['sewer', 'The Cream Sewers'], ['bone', 'The Bone Pit'], ['furnace', 'The Furnace'], ['moonarea', 'The Crimson Moon'], ['bbeast', 'Cum-starved Beast'], ['bdemon', 'Legion of Semen Demon'], ['bsperm', 'The Sperminator'], ['bpig', 'Brothers Load Piggy'], ['bmoon', 'Crimson Moon Boss'], ['brat', 'Cult of the Rat'], ['bboner', 'The Big Boner'], ['bhot', 'The Hot Load'], ['lair', "Blumhead's Lair"], ['bmega', 'Mega Blumhead'], ['pulsar1', "Pulsar's Track One"], ['pulsar2', "Pulsar's Track Two"], ['pulsar3', "Pulsar's Track Three"]];
 function openJukebox() {
   openMenu({ title: 'The Jukebox', note: 'Every song in the game. It plays until you leave the Clubhouse.', pic: null, bank: 'none', rebuild: function () {
-    return JUKE.map(function (j) { var on = G.juke === j[0]; return { icon: 'sage', name: j[1].toUpperCase(), price: on ? 'PLAYING' : 'PLAY', cls: on ? 'own' : '', fn: function () { G.juke = j[0]; music.play(j[0]); renderMenu(true); } }; }).concat([{ icon: 'curse', name: 'STOP', price: '', fn: function () { G.juke = null; music.play('town'); renderMenu(true); } }]);
+    return JUKE.concat(CASTLEJUKE).map(function (j) { var on = G.juke === j[0]; return { icon: 'sage', name: j[1].toUpperCase(), price: on ? 'PLAYING' : 'PLAY', cls: on ? 'own' : '', fn: function () { G.juke = j[0]; music.play(j[0]); renderMenu(true); } }; }).concat([{ icon: 'curse', name: 'STOP', price: '', fn: function () { G.juke = null; music.play('town'); renderMenu(true); } }]);
   } });
 }
 function heirNumbers(cls) { // what calcStats gives this heir right now, without starting a run

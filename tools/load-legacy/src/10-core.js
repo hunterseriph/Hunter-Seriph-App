@@ -159,11 +159,11 @@ var OPT = { mus: 1 };
 var META_KEY = 'll-meta', RUN_KEY = 'll-run';
 function freshMeta() {
   return { v: 1, bank: 0, up: {}, built: { club: 1, greebo: 1, fate: 1, arcade: 1, hatch: 1 }, gear: { weapon: 0, armour: 0, helm: 0 }, gearOwn: { weapon: 0, armour: 0, helm: 0 },
-    runes: {}, runeOn: [], found: { weapon: 0, armour: 0, helm: 0, runes: {} }, lb: [], bosses: {}, blumWins: 0, superWins: 0, ng: 0, last: null, runs: 0, legacy: [], prov: {}, card: null, started: false, totalDrops: 0, seenTown: 0 };
+    runes: {}, runeOn: [], found: { weapon: 0, armour: 0, helm: 0, runes: {} }, lb: [], bosses: {}, blumWins: 0, superWins: 0, cwins: {}, ng: 0, last: null, runs: 0, legacy: [], prov: {}, card: null, started: false, totalDrops: 0, seenTown: 0 };
 }
 var META = (function () { var d = freshMeta(); try { var s = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if (s && s.v === 1) for (var k in s) d[k] = s[k]; } catch (e) {} return d; })();
 // older saves: anything already bought counts as found
-(function () { var f = META.found || (META.found = { weapon: 0, armour: 0, helm: 0, runes: {} }); if (!f.runes) f.runes = {}; ['weapon', 'armour', 'helm'].forEach(function (s) { f[s] = Math.max(f[s] || 0, (META.gearOwn || {})[s] || 0); }); for (var r in META.runes || {}) f.runes[r] = 1; if (!META.lb) META.lb = []; META.built.hatch = 1; })();
+(function () { var f = META.found || (META.found = { weapon: 0, armour: 0, helm: 0, runes: {} }); if (!f.runes) f.runes = {}; ['weapon', 'armour', 'helm'].forEach(function (s) { f[s] = Math.max(f[s] || 0, (META.gearOwn || {})[s] || 0); }); for (var r in META.runes || {}) f.runes[r] = 1; if (!META.lb) META.lb = []; if (!META.cwins) META.cwins = {}; META.built.hatch = 1; })();
 function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(META)); } catch (e) {} }
 
 /* ---------- input: keyboard, touch pad, gamepad ---------- */

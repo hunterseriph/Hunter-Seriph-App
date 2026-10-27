@@ -36,19 +36,19 @@ function calcStats() {
   bonusStats(s); pillStats(s); homStats(s);
   return s;
 }
-function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; if (L && L.lair) return 6; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
+function tierOf() { if (RUN && RUN.endless) return RUN.endless.tier; if (L && L.lair) return 6; return L && L.arena ? (L.arena === 'blum' || L.arena === 'blum2' ? 5 : BOSSDEF[L.arena].tier || AREAS[BOSSDEF[L.arena].area].tier) : AREAS[G.rm.area].tier; }
 function dropVal() { return Math.max(1, Math.round((3 + tierOf() * 2) * ST.dropMul)); }
 
 /* ---------- starting, saving and ending runs ---------- */
-function startRun(cls) {
+function startRun(cls, castle) {
   var pv = {}, provs = [];
   for (var slot in META.prov) { var id = META.prov[slot]; (PROV[slot] || []).forEach(function (it) { if (it.id === id) { for (var k in it.eff) pv[k] = (pv[k] || 0) + it.eff[k]; provs.push(it.name); } }); }
-  RUN = { v: 1, seed: (Math.random() * 1e9) | 0, cls: cls, card: META.card, provEff: pv, provNames: provs, powers: [], drops: 0, rs: {}, t: 0, kills: 0, revive: (pv.revive || 0) + (META.card === 'blessed' ? 1 : 0), sw: false, room: null };
+  RUN = { v: 1, seed: (Math.random() * 1e9) | 0, cls: cls, card: META.card, provEff: pv, provNames: provs, powers: [], drops: 0, rs: {}, t: 0, kills: 0, revive: (pv.revive || 0) + (META.card === 'blessed' ? 1 : 0), sw: false, room: null, castle: castle && castleOpen(castle) ? castle : 'cum' };
   META.prov = {}; META.card = null; META.runs++; META.started = true; META.last = cls; saveMeta();
-  WORLD = genWorld(RUN.seed); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
+  WORLD = genWorld(RUN.seed, RUN.castle); ST = calcStats(); RUN.hp = ST.mhp; RUN.mana = ST.mmana;
   newPlayer(); G.mode = 'play'; G.msg = null; enterRoom(WORLD.start, null);
   if (homOn()) { G.banner = 2.4; G.bannerTxt = homName().toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + '  ·  ' + (HOMPOW[homBreed()] || '').toUpperCase(); return; } // he already hatched at the Hatchery
-  G.banner = 3; G.bannerTxt = CLASSES[cls].name.toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + (RUN.card ? '  ·  ' + cardName(RUN.card).toUpperCase() : '');
+  G.banner = 3; G.bannerTxt = CLASSES[cls].name.toUpperCase(); G.bannerSub = 'HEIR #' + META.runs + (RUN.castle !== 'cum' ? '  ·  ' + CASTLES[RUN.castle].name.toUpperCase() : '') + (RUN.card ? '  ·  ' + cardName(RUN.card).toUpperCase() : '');
 }
 function cardName(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i].name; return ''; }
 function saveRun() {
@@ -60,7 +60,7 @@ function clearRun() { try { localStorage.removeItem(RUN_KEY); } catch (e) {} }
 function readRun() { try { var r = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); if (r && r.v === 1 && r.cls && r.pos) return r; } catch (e) {} return null; }
 function resumeRun() {
   var r = readRun(); if (!r) return false;
-  RUN = r; if (RUN.endless) { genEndless(RUN.seed); for (var gi = 0; gi < 3000 && !WORLD.rooms[RUN.pos.key] && !WORLD.rooms[RUN.pos.ret]; gi++) ensureEndless(WORLD.count + 1); ensureEndless(WORLD.count + 3); } else WORLD = genWorld(RUN.seed); ST = calcStats(); newPlayer(); P.hp = Math.min(ST.mhp, RUN.hp); P.mana = RUN.mana; G.mode = 'play';
+  RUN = r; if (RUN.endless) { genEndless(RUN.seed); for (var gi = 0; gi < 3000 && !WORLD.rooms[RUN.pos.key] && !WORLD.rooms[RUN.pos.ret]; gi++) ensureEndless(WORLD.count + 1); ensureEndless(WORLD.count + 3); } else WORLD = genWorld(RUN.seed, RUN.castle); ST = calcStats(); newPlayer(); P.hp = Math.min(ST.mhp, RUN.hp); P.mana = RUN.mana; G.mode = 'play';
   var pos = RUN.pos; G.retKey = pos.ret;
   // a save from an older map layout: start this heir again from the first room
   if (!WORLD.rooms[pos.key] || (pos.ret && !WORLD.rooms[pos.ret])) { RUN.rs = {}; pos = RUN.pos = { key: WORLD.start, arena: null, ret: null, x: 10 * T, y: 15 * T }; G.retKey = null; }
@@ -71,11 +71,11 @@ function bankRun() { var d = Math.floor(RUN.drops); META.bank += d; META.totalDr
 function runOver(win) {
   clearRun(); var erec = RUN.endless ? recordEndless() : null;
   var area = G.rm ? AREAS[G.rm.area].name : '', got = Math.floor(RUN.drops), d = bankRun();
-  META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? (win === 3 ? 'Beat Mega Blumhead' : 'Beat Blumhead') : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
+  META.legacy.unshift({ cls: RUN.cls, hb: RUN.hom ? RUN.hom.b : undefined, area: L && L.arena ? BOSSDEF[L.arena].name : area, by: win ? (win === 3 ? 'Beat Mega Blumhead' : win === 4 ? 'Beat King Blumhead' : win === 5 ? 'Beat Sir Johnathan' : 'Beat Blumhead') : (RUN.by || 'the castle'), d: d, ng: META.ng, t: Math.round(RUN.t), win: !!win, kills: RUN.kills });
   META.legacy = META.legacy.slice(0, 30); META.nextHeir = null; saveMeta();
   G.mode = 'over'; music.stop(1.2);
-  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 3 ? 'Mega Blumhead falls' : win === 2 ? 'Super Blumhead falls' : 'Blumhead falls') : 'Your heir has fallen';
-  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (RUN.hom ? ' (' + homName().toUpperCase() + ')' : '') + (win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.';
+  el('overH').textContent = erec ? 'Endless: screen ' + erec.screen : win ? (win === 3 ? 'Mega Blumhead falls' : win === 2 ? 'Super Blumhead falls' : win === 4 ? 'King Blumhead falls' : win === 5 ? 'Sir Johnathan purrs' : 'Blumhead falls') : 'Your heir has fallen';
+  el('overTxt').textContent = CLASSES[RUN.cls].name.toUpperCase() + (RUN.hom ? ' (' + homName().toUpperCase() + ')' : '') + (win >= 4 ? ' beat ' + CASTLES[win === 4 ? 'blumc' : 'grotto'].name : win ? ' finished the legacy' : ' was slain by ' + (RUN.by || 'the castle')) + '.';
   // the stats of the run
   var st = [['TIME', fmtT(RUN.t)], ['FOES KILLED', RUN.kills], ['FELL IN', L && L.arena ? BOSSDEF[L.arena].name : area], ['POWERUPS', RUN.powers.length], ['FOUND', (RUN.finds || []).length ? RUN.finds.join(', ') : 'nothing'], ['FATE', RUN.card ? cardName(RUN.card) : 'none']];
   if (RUN.pill) st.push(["TB'S PILL", PILLS[RUN.pill].name]);
@@ -87,7 +87,7 @@ function runOver(win) {
   el('overInhN').textContent = fmtN(n0);
   (function tick(now) { var k = Math.min(1, (now - t0) / dur), v = Math.round(n0 + d * (1 - Math.pow(1 - k, 2))); el('overInhN').textContent = fmtN(v); if (Math.floor(k * 20) > ticks) { ticks = Math.floor(k * 20); sfx.pick(G.t + ticks); } if (k < 1 && G.mode === 'over') requestAnimationFrame(tick); })(t0);
   el('overInhS').textContent = '+' + fmtN(got) + ' DROPS CARRIED  ·  PASSED TO THE NEXT HEIR';
-  el('overGold').textContent = win ? 'NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '';
+  el('overGold').textContent = win >= 4 ? (win === 4 && META.cwins.blumc === 1 ? "GREEBO'S GROTTO is open at the castle gate." : 'The castle rebuilds itself for the next heir.') : win ? (win === 1 && META.blumWins === 1 ? "BLUMHEAD'S CASTLE is open at the castle gate.  " : '') + 'NEW GAME+ ' + META.ng + ': the bosses return, stronger.' : '';
   el('overBtn').textContent = 'CHOOSE THE NEXT HEIR';
   el('over').hidden = false; setMenuMode(true);
 }
@@ -195,6 +195,7 @@ function hurtP(dmg, srcx, by) {
   P.hp -= dmg; G.shake = Math.max(G.shake, 5); sfx.hurt(); pop(P.x, P.y - P.h - 4, '-' + dmg, '#ff5a60');
   P.state = 'hurt'; P.hurtT = 0.35; P.vy = -200; P.vx = (P.x < srcx ? -1 : 1) * 120; P.inv = ST.iframes; P.onGround = false;
   if (P.hp <= 0) {
+    if (runeOn('nine') && !RUN.nine) { RUN.nine = 1; P.hp = 1; P.inv = 1.6; G.banner = 1.6; G.bannerTxt = 'NINE LIVES'; G.bannerSub = 'SIR JOHNATHAN LENDS YOU ONE'; sfx.oneup(); return; }
     if (RUN.cls === 'cumhead' && !RUN.sw) { RUN.sw = true; P.hp = 1; G.banner = 1.6; G.bannerTxt = 'SECOND WIND'; G.bannerSub = ''; sfx.oneup(); return; }
     if (RUN.revive > 0) { RUN.revive--; P.hp = ST.mhp; P.inv = 2.5; G.banner = 2; G.bannerTxt = 'THE DOORS OPEN'; G.bannerSub = 'YOU COME BACK'; sfx.magic(); poof(P.x, P.y - 18, 30, ['#ffe36a', '#f1e7d0', '#ff2630']); return; }
     P.hp = 0; P.state = 'dead'; P.vy = -270; P.vx = 0; P.deadT = 0; RUN.by = by || 'the castle'; sfx.die(); clearRun();
@@ -451,6 +452,7 @@ function updateShots(dt) {
     var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt;
     if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } /* swimmers home in */
     b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.end && (b.life <= 0 || solidT(tileAt(b.x, b.y)) || tileAt(b.x, b.y) === TL)) { b.life = 0; shotEnd(b); continue; }
     if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? dripC() : b.k === 'dagger' || b.k === 'bone' ? ['#f1e7d0', '#a6968f'] : ['#ff9a40', '#ff2630']); continue; }
     if (b.safe > 0) { b.safe -= dt; continue; }
     if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
@@ -541,7 +543,7 @@ function updateRoomThings(dt) {
       if (!enemies.length) { G.chal.wait -= dt; if (G.chal.wait <= 0) { if (G.chal.wave >= 3) { rs.done = 1; G.chal = null; G.lock = false; lockExits(false); G.layer = null; sfx.goal(); G.banner = 1.8; G.bannerTxt = 'CHALLENGE CLEARED'; G.bannerSub = 'A CHEST APPEARS'; L.ents.push({ k: 'chest', x: L.cx0 * T, y: 15 * T, big: 1, chal: 1, i: 'ch', open: false }); saveRun(); } else { G.chal.wave++; G.chal.wait = 1.2; spawnWave(2 + tierOf() + G.chal.wave - 1); } } }
     }
   }
-  ambushStep(dt); quirkStep(dt); lairStep(dt);
+  ambushStep(dt); quirkStep(dt); lairStep(dt); castleRoomStep(dt);
   G.near = findNear();
 }
 function lockExits(on) {

@@ -106,7 +106,7 @@ function lairFxStep(dt) {
   LAIRFX.forEach(function (f) {
     f.t -= dt;
     if (f.k === 'sweep') { f.x += f.dir * 340 * dt; if (P.state !== 'dead' && Math.abs(P.x - f.x) < 14) hurtP(f.dmg, f.x, "Mega Blumhead's third eye"); if (Math.random() < 0.6) poof(f.x, 15 * T - 2, 2, ['#c08aff', '#ff2630']); }
-    if (f.k === 'flood') { var lv = floodY(f); if (P.state !== 'dead' && P.y > lv + 6 && P.inv <= 0) { hurtP(f.dmg, P.x - P.face, "Blumhead's goo"); P.vy = -400; } }
+    if (f.k === 'flood') { var lv = floodY(f); if (P.state !== 'dead' && P.y > lv + 6 && P.inv <= 0) { hurtP(f.dmg, P.x - P.face, f.cream ? 'the cream flood' : "Blumhead's goo"); P.vy = -400; } }
   });
   LAIRFX = LAIRFX.filter(function (f) { return f.t > 0; });
 }
@@ -116,7 +116,7 @@ function drawLairFx(cx) {
     var x = Math.round(f.x - cx), gy = 15 * T;
     if (f.k === 'warn') R(ctx, Math.floor(G.t * 14) % 2 ? '#ff2630' : '#9a4aff', x - 1, 0, 2, gy);
     else if (f.k === 'sweep') { ctx.save(); ctx.shadowColor = '#9a4aff'; ctx.shadowBlur = 16; R(ctx, '#9a4aff', x - 10, 0, 20, gy); R(ctx, '#ffd0ff', x - 4, 0, 8, gy); ctx.restore(); }
-    else if (f.k === 'flood') { var y = Math.round(floodY(f)); R(ctx, '#34106a', 0, y, VW, gy - y + 4); R(ctx, '#7a2ad8', 0, y, VW, 3); for (var wx = 0; wx < VW; wx += 4) if (Math.sin((wx + cx) * 0.1 - G.t * 5) > 0.5) R(ctx, '#c08aff', wx, y - 1, 4, 2); }
+    else if (f.k === 'flood') { var y = Math.round(floodY(f)), fc = f.cream ? ['#c8b080', '#fff6d8', '#ffffff'] : ['#34106a', '#7a2ad8', '#c08aff']; R(ctx, fc[0], 0, y, VW, gy - y + 4); R(ctx, fc[1], 0, y, VW, 3); for (var wx = 0; wx < VW; wx += 4) if (Math.sin((wx + cx) * 0.1 - G.t * 5) > 0.5) R(ctx, fc[2], wx, y - 1, 4, 2); }
   });
 }
 
@@ -136,13 +136,13 @@ function heartAI(e, dt) {
 }
 /* rising goo rooms and the wall eye */
 function lairStep(dt) {
-  if (!G.rm || G.rm.area !== 'lair' || L.arena) return;
+  if (!G.rm || L.arena || !L.ents.some(function (q) { return q.k === 'goo' || q.k === 'walleye'; })) return;
   L.ents.forEach(function (e) {
     if (e.k === 'goo') {
       e.t = (e.t + dt) % 11; var k = e.t < 4 ? 0 : e.t < 6 ? (e.t - 4) / 2 : e.t < 8.5 ? 1 : e.t < 10.5 ? 1 - (e.t - 8.5) / 2 : 0;
       e.lv = 15 * T - k * e.top * T; e.warn = e.t > 3 && e.t < 4;
-      if (e.warn && !e.said) { e.said = 1; pop(P.x, P.y - P.h - 8, 'THE GOO RISES', '#c08aff'); sfx.roar(); } if (e.t < 3) e.said = 0;
-      if (k > 0.05 && P.state === 'normal' && P.inv <= 0 && P.y > e.lv + 6) { sfx.splat(); hurtP(8 + 3 * tierOf(), P.x - P.face, "Blumhead's goo"); P.vy = -420; }
+      if (e.warn && !e.said) { e.said = 1; pop(P.x, P.y - P.h - 8, e.cream ? 'THE CREAM RISES' : 'THE GOO RISES', e.cream ? '#fff6d8' : '#c08aff'); sfx.roar(); } if (e.t < 3) e.said = 0;
+      if (k > 0.05 && P.state === 'normal' && P.inv <= 0 && P.y > e.lv + 6) { sfx.splat(); hurtP(8 + 3 * tierOf(), P.x - P.face, e.cream ? 'the cream flood' : "Blumhead's goo"); P.vy = -420; }
     } else if (e.k === 'walleye') {
       e.t += dt; var cyc = e.t % 4.2;
       e.open = cyc > 1.4; e.aim = cyc > 1.4 && cyc < 2.4; e.fire = cyc >= 2.4 && cyc < 2.75;
@@ -162,11 +162,12 @@ function drawLairBack(cx) { // drawn behind the foes
   });
 }
 function drawLairFront(cx) { // the goo and the eye's beam go over everything
-  if (!G.rm || G.rm.area !== 'lair' || L.arena) return;
+  if (!G.rm || L.arena) return;
   L.ents.forEach(function (e) {
     if (e.k === 'goo') {
       var y = Math.round(e.lv); if (e.warn) for (var b = 0; b < 8; b++) R(ctx, '#c08aff', Math.round((b * 61 + G.t * 40) % VW), 15 * T - 3 - (Math.floor(G.t * 8 + b) % 3), 2, 2);
-      if (y < 15 * T - 1) { R(ctx, '#34106a', 0, y, VW, 15 * T - y); R(ctx, '#7a2ad8', 0, y, VW, 3); R(ctx, '#5a1aa8', 0, y + 3, VW, 4); for (var wx = 0; wx < VW; wx += 4) if (Math.sin((wx + cx) * 0.12 - G.t * 4) > 0.55) R(ctx, '#e0b0ff', wx, y - 1, 4, 2); }
+      var gc = e.cream ? ['#c8b080', '#fff6d8', '#e8dcb0', '#ffffff'] : ['#34106a', '#7a2ad8', '#5a1aa8', '#e0b0ff'];
+      if (y < 15 * T - 1) { R(ctx, gc[0], 0, y, VW, 15 * T - y); R(ctx, gc[1], 0, y, VW, 3); R(ctx, gc[2], 0, y + 3, VW, 4); for (var wx = 0; wx < VW; wx += 4) if (Math.sin((wx + cx) * 0.12 - G.t * 4) > 0.55) R(ctx, gc[3], wx, y - 1, 4, 2); }
     } else if (e.k === 'walleye' && (e.aim || e.fire)) {
       var by = Math.round(e.by);
       if (e.aim) { if (Math.floor(G.t * 14) % 2) R(ctx, '#ff2630', 0, by, VW, 1); }

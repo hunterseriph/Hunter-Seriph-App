@@ -214,6 +214,7 @@ function drawBack() {
   var a = areaNow(), gx = (G.mode === 'town' ? 0 : (L && L.arena ? 0 : (G.rm ? G.rm.cx * CW * T : 0))) + G.cam.x;
   if (G.mode === 'town') { if (TOWN && TOWN.inside) clubBack(); else outdoorSky(gx, false); return; } // just the far skyline: the shops are all on the street itself
   var A = AREAS[a];
+  if (castleBack(a, gx, A)) return;
   if (a === 'moon') moonBack(gx);
   else if (a === 'lair') lairBack(gx);
   else if (a === 'roof') { outdoorSky(gx, false); roofSpires(gx); }
@@ -363,12 +364,13 @@ function drawDeco(e, cx) {
   else if (e.d === 'throneL' || e.d === 'throneR') { R(ctx, '#1a0507', x - 10, y - 50, 20, 50); R(ctx, '#5a070c', x - 8, y - 48, 16, 46); R(ctx, '#ff2630', x - 8, y - 48, 16, 2); ctx.fillStyle = 'rgba(255,170,60,0.18)'; ctx.beginPath(); ctx.arc(x, y - 58, 12, 0, 6.28); ctx.fill(); ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x, y - 58 + Math.sin(G.t * 8 + x) * 0.8, 3, 0, 6.28); ctx.fill(); }
 }
 function drawDoor(e, cx) {
-  var x = Math.round(e.x - cx), y = e.y, h = 70, dead = e.lair ? !!(RUN && RUN.lair && RUN.lair.seals[e.boss]) : e.boss !== 'blum' && !(RUN && RUN.endless) && META.bosses[BOSSDEF[e.boss].area];
-  ctx.save(); if (!dead) { ctx.shadowColor = e.lair ? '#9a4aff' : '#ff2630'; ctx.shadowBlur = 10 + Math.sin(G.t * 3) * 3; } spr(e.boss === 'blum' || e.boss === 'mega' ? 'p_blumdoor' : 'p_door', x, y, false, 1, dead ? 0.55 : 1); ctx.restore();
+  var x = Math.round(e.x - cx), y = e.y, h = 70, fin = !e.lair && !!finalBoss(e.boss) && !(RUN && RUN.endless), dead = e.lair ? !!(RUN && RUN.lair && RUN.lair.seals[e.boss]) : !fin && !(RUN && RUN.endless) && META.bosses[BOSSDEF[e.boss].area];
+  ctx.save(); if (!dead) { ctx.shadowColor = e.lair ? '#9a4aff' : '#ff2630'; ctx.shadowBlur = 10 + Math.sin(G.t * 3) * 3; } spr(fin || e.boss === 'mega' ? 'p_blumdoor' : 'p_door', x, y, false, 1, dead ? 0.55 : 1); ctx.restore();
   if (e.boss === 'mega') { /* four guardian seals over the last door */
     ['beast', 'demon', 'sperm', 'pig'].forEach(function (a, s) { var on = RUN && RUN.lair && RUN.lair.seals[a], sx = x - 27 + s * 18, sy = y - h - 14; R(ctx, '#12040a', sx - 6, sy - 6, 12, 12); R(ctx, on ? '#9a4aff' : '#2a0a3a', sx - 5, sy - 5, 10, 10); R(ctx, on ? '#e0b0ff' : '#3a1a4a', sx - 5, sy - 5, 10, 2); if (on) R(ctx, '#ffe36a', sx - 1, sy - 3, 2, 6); });
-  } else if (e.boss === 'blum') {
-    for (var s = 0; s < 4; s++) { var a = AREAORDER[s], on = META.bosses[a], sx = x - 27 + s * 18, sy = y - h - 14; R(ctx, '#12040a', sx - 6, sy - 6, 12, 12); R(ctx, on ? '#ff2630' : '#3a0a10', sx - 5, sy - 5, 10, 10); R(ctx, on ? '#ff9a9a' : '#5a1a20', sx - 5, sy - 5, 10, 2); if (on) R(ctx, '#ffe36a', sx - 1, sy - 3, 2, 6); }
+  } else if (fin) {
+    if (e.boss !== 'blum') { var fd = BOSSDEF[e.boss]; spr(fd.sp + '0', x, y - h - 22, true, Math.min(30 / SPR[fd.sp + '0'][2], 22 / SPR[fd.sp + '0'][3]), 1); }
+    for (var s = 0; s < 4; s++) { var a = castleAreas()[s], on = META.bosses[a], sx = x - 27 + s * 18, sy = y - h - 14; R(ctx, '#12040a', sx - 6, sy - 6, 12, 12); R(ctx, on ? '#ff2630' : '#3a0a10', sx - 5, sy - 5, 10, 10); R(ctx, on ? '#ff9a9a' : '#5a1a20', sx - 5, sy - 5, 10, 2); if (on) R(ctx, '#ffe36a', sx - 1, sy - 3, 2, 6); }
   } else { var d = BOSSDEF[e.boss], f = SPR[d.sp + '0'] || SPR[d.sp]; if (f) { var sc = Math.min(30 / f[2], 26 / f[3]); spr(SPR[d.sp + '0'] ? d.sp + '0' : d.sp, x, y - h - 4, true, sc, dead ? 0.3 : 1); } if (dead) text('SLAIN', x, y - 20, 'center', '#a6968f', 6); }
 }function drawChest(e, cx) {
   var x = Math.round(e.x - cx), y = e.y, nm = 'p_' + (e.big ? 'bigchest' : 'chest') + (e.open ? 'open' : '');
@@ -455,6 +457,7 @@ function drawShots(cx) {
   });
   eshots.forEach(function (b) {
     var x = Math.round(b.x - cx), y = Math.round(b.y);
+    if (drawCastleShot(b, x, y)) return;
     if (b.k === 'laser') { ctx.save(); ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 8; R(ctx, '#ff2630', x - 10, y - 2, 20, 4); R(ctx, '#ffd0d0', x - 8, y - 1, 16, 2); ctx.restore(); }
     else if (b.k === 'coin') { R(ctx, '#7a5a10', x - 4, y - 4, 8, 8); R(ctx, '#ffe36a', x - 3, y - 3, 6, 6); R(ctx, '#fff6d8', x - 2, y - 2, 2, 2); }
     else if (b.k === 'pie') { R(ctx, '#12040a', x - 6, y - 4, 12, 8); R(ctx, '#c8903a', x - 5, y - 2, 10, 5); R(ctx, '#f1e7d0', x - 5, y - 4, 10, 3); R(ctx, '#ff2630', x - 1, y - 6, 2, 2); }
@@ -527,7 +530,7 @@ function drawPrompt(cx) {
   if (!e || G.paused) { el('bBt').textContent = G.mode === 'town' ? '·' : 'HIT'; el('bB').classList.remove('use'); return; }
   var t = e.k === 'grate' ? 'DOWN' : e.k === 'chest' ? 'OPEN' : e.k === 'door' ? 'ENTER' : e.k === 'npc' ? 'TALK' : e.k === 'altar' ? 'TAKE' : e.k === 'shrine' ? 'PRAY' : e.k === 'portal' ? 'ENTER' : e.k === 'cell' ? 'FREE' : e.k === 'feast' ? 'EAT' : e.k === 'gamble' ? 'PLAY' : e.k === 'gate' ? 'ENTER' : e.k === 'exit' ? 'LEAVE' : e.k === 'st' ? 'USE' : e.k === 'bld' ? (META.built[e.b.id] ? 'ENTER' : 'BUY') : 'USE';
   el('bBt').textContent = t; el('bB').classList.add('use');
-  var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'st' || e.k === 'exit' ? e.name : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';
+  var lbl = e.k === 'bld' ? (META.built[e.b.id] ? e.b.name : 'EMPTY LOT · ' + fmtN(e.b.cost)) : e.k === 'gate' ? 'THE CASTLE' : e.k === 'st' || e.k === 'exit' ? e.name : e.k === 'door' ? (e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : e.boss === 'kingblum' ? 'THE THRONE ROOM' : e.boss === 'sirj' ? "SIR JOHNATHAN'S DOOR" : BOSSDEF[e.boss].name) : e.k === 'npc' ? MERCHNAME[e.who] : '';
   var y = e.k === 'st' || e.k === 'exit' ? 40 : e.k === 'bld' || e.k === 'gate' ? 66 : e.y - (e.k === 'door' ? 92 : 44);
   text('B ' + t, Math.round(e.x - cx), y, 'center', '#ffe36a', 7); if (lbl) text(lbl.toUpperCase(), Math.round(e.x - cx), y + 11, 'center', '#f1e7d0', 6);
 }
@@ -583,7 +586,7 @@ function render() {
     drawExits(cx);
     L.ents.forEach(function (e) { if (e.k === 'deco') drawDeco(e, cx); });
     L.ents.forEach(function (e) { if (e.k === 'steve') drawSteve(e, cx); });
-    drawFlume(cx); drawLogs(cx); drawQuirks(cx); drawLairBack(cx);
+    drawFlume(cx); drawLogs(cx); drawQuirks(cx); drawLairBack(cx); drawCastleRoom(cx, 0);
     L.ents.forEach(function (e) { if (e.k === 'door') drawDoor(e, cx); else if (e.k === 'chest') drawChest(e, cx); else if (e.k === 'altar') drawAltar(e, cx); else if (e.k === 'turret') drawTurret(e, cx); else if (e.k === 'portal') drawPortal(e, cx); else if (e.k === 'npc') drawNpcEnt(e, cx); });
   }
   for (i = 0; i < drops.length; i++) { var d = drops[i], bob = d.fly ? 0 : Math.sin(G.t * 4 + d.x * 0.05) * 1.5, dx = Math.round(d.x - cx) - 4; if (dx < -12 || dx > VW + 12) continue; if (d.fly && d.age > (d.crk ? 14 : 7) && Math.floor(G.t * 14) % 2 === 0) continue; if (d.crk) ctx.drawImage(crackerImg, dx - 2, Math.round(d.y + bob) - 7); else ctx.drawImage(dropImg, dx, Math.round(d.y + bob) - 5); }
@@ -592,7 +595,7 @@ function render() {
   drawBlumBody(cx);
   if (P.x !== undefined) drawPlayer(cx);
   if (P.bubbleOn && G.mode === 'play' && P.state !== 'dead') { ctx.strokeStyle = 'rgba(154,223,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(Math.round(P.x - cx), Math.round(P.y - P.h / 2), P.h * 0.75 + Math.sin(G.t * 5), 0, 6.28); ctx.stroke(); R(ctx, '#ffffff', Math.round(P.x - cx - P.h * 0.35), Math.round(P.y - P.h * 0.95), 2, 2); }
-  drawShots(cx); if (G.mode === 'play') { drawStorm(cx); drawMoonFx(cx); drawLairFront(cx); drawLairFx(cx); }
+  drawShots(cx); if (G.mode === 'play') { drawStorm(cx); drawMoonFx(cx); drawLairFront(cx); drawLairFx(cx); drawCastleRoom(cx, 1); }
   for (i = 0; i < parts.length; i++) if (!parts[i].spark) R(ctx, parts[i].c, Math.round(parts[i].x - cx), Math.round(parts[i].y), 2, 2);
   fx.forEach(function (f) { if (f.k === 'zap') { ctx.strokeStyle = '#fff6a0'; ctx.lineWidth = 2; ctx.globalAlpha = 1 - f.age / 0.45; ctx.beginPath(); ctx.moveTo(f.x0 - cx, f.y0); for (var zi = 1; zi < 5; zi++) ctx.lineTo(f.x0 + (f.x1 - f.x0) * zi / 5 - cx + (Math.random() * 8 - 4), f.y0 + (f.y1 - f.y0) * zi / 5 + (Math.random() * 8 - 4)); ctx.lineTo(f.x1 - cx, f.y1); ctx.stroke(); ctx.globalAlpha = 1; return; } var a = f.age / 0.45; ctx.strokeStyle = f.c || '#f1e7d0'; ctx.globalAlpha = 1 - a; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x - cx, f.y, (f.big ? 120 : 30) * a + 4, 0, 6.28); ctx.stroke(); ctx.globalAlpha = 1; });
   if (G.fakeLayer && G.mode === 'play') { ctx.globalAlpha = (RUN && RUN.card === 'haunted') ? 0.45 : (G.inFake ? 0.82 : 1); ctx.drawImage(G.fakeLayer, -cx, 0); ctx.globalAlpha = 1; for (i = 0; i < parts.length; i++) if (parts[i].spark) { var sp2 = parts[i]; ctx.fillStyle = sp2.c; ctx.fillRect(Math.round(sp2.x - cx) - 1, Math.round(sp2.y), 3, 1); ctx.fillRect(Math.round(sp2.x - cx), Math.round(sp2.y) - 1, 1, 3); } }

@@ -634,6 +634,8 @@ BOSSES = {
     'beast': (beast, 2), 'demon': (demon, 2), 'sperm': (sperm, 2), 'pig': (pig, 2), 'cowpig': (cowpig, 2),
     'blum': (lambda f: blum(f), 2), 'blum2': (lambda f: blum(f, True), 2), 'moon': (moon, 2), 'ratking': (ratking, 2), 'boner': (boner, 2), 'hotload': (hotload, 2), 'mega': (mega, 2),
 }
+from castles import CASTLE_ENEMIES, CASTLE_BOSSES
+ENEMIES.update(CASTLE_ENEMIES); BOSSES.update(CASTLE_BOSSES)
 LEFTY = {'pig': pig, 'cowpig': cowpig}  # writing on them: separate left-facing frames
 
 from props import PROPS
@@ -665,6 +667,10 @@ def main():
     preview(flat, os.path.join(HERE, 'preview.png'), 4)
     preview([brow[:6], brow[6:10] + [frames['f_pig_0L'], frames['f_cowpig_0L']], brow[10:]], os.path.join(HERE, 'preview_bosses.png'), 3)
     pk = [frames['p_' + k] for k in PROPS]; preview([pk[:8], pk[8:16], pk[16:]], os.path.join(HERE, 'preview_props.png'), 3)
+    cr = [[frames['f_%s_%d' % (k, i)] for i in range(n)] for k, (fn, n) in CASTLE_ENEMIES.items()]
+    preview([sum(cr[:4], []), sum(cr[4:8], []), sum(cr[8:12], []), sum(cr[12:], [])], os.path.join(HERE, 'preview_castles.png'), 4)
+    cb = [frames['f_%s_%d' % (k, i)] for k in CASTLE_BOSSES for i in range(2)]
+    preview([cb[:10], cb[10:]], os.path.join(HERE, 'preview_castlebosses.png'), 2)
     print('frames', len(frames), 'sheet', sheet.size)
 
 if __name__ == '__main__':

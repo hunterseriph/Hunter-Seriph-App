@@ -3,14 +3,14 @@
    opens once all four seals (bosses) are broken. Beat Blumhead five times and Super Blumhead rises after him.
    ===================================================================================================== */
 function toast(t) { G.msg = { t: t, age: 0 }; }
-function sealCount() { var n = 0; AREAORDER.forEach(function (a) { if (META.bosses[a]) n++; }); return n; }
+function sealCount(c) { var n = 0; castleAreas(c).forEach(function (a) { if (META.bosses[a]) n++; }); return n; }
 function openDoor(e) {
   if (e.lair) { lairDoor(e); return; }
   if (RUN && RUN.endless) { if (rsOf(G.roomKey).bossDone) { sfx.click(); toast('IT IS DEAD. KEEP GOING RIGHT.'); return; } sfx.door(); enterArena(e.boss); return; }
-  if (e.boss === 'blum') {
+  if (finalBoss(e.boss)) {
     var n = sealCount();
-    if (n < 4) { sfx.lock(); toast('THE BLUMHEAD DOOR  ·  SEALS BROKEN ' + n + '/4'); return; }
-    sfx.door(); enterArena('blum'); return;
+    if (n < 4) { sfx.lock(); toast((e.boss === 'blum' ? 'THE BLUMHEAD DOOR' : e.boss === 'sirj' ? "SIR JOHNATHAN'S DOOR" : 'THE THRONE ROOM') + '  ·  SEALS BROKEN ' + n + '/4'); return; }
+    sfx.door(); enterArena(e.boss); return;
   }
   if (e.boss === 'moon') { if (RUN.moonDown) { sfx.click(); toast('THE CRIMSON MOON IS DARK. FOR THIS HEIR.'); return; } sfx.door(); enterArena('moon'); return; }
   var area = BOSSDEF[e.boss].area;
@@ -18,7 +18,7 @@ function openDoor(e) {
   sfx.door(); enterArena(e.boss);
 }
 function enterArena(id, lair) {
-  G.retKey = G.roomKey; G.lairFight = !!lair; L = buildArena(id, lair); LAIRFX = []; G.lock = true; G.layer = null; G.near = null; G.winT = 0;
+  G.retKey = G.roomKey; G.lairFight = !!lair; L = buildArena(id, lair); LAIRFX = []; CASFX = []; G.kbSweep = null; G.lock = true; G.layer = null; G.near = null; G.winT = 0;
   enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {};
   P.x = 3 * T; P.y = 15 * T; P.vx = 0; P.vy = 0; P.face = 1; camSnap();
   G.superDue = id === 'blum' && META.blumWins >= 5; G.broSpawned = 0; MOONFX = []; G.eclipse = 0;
@@ -38,7 +38,8 @@ function spawnBoss(id) {
   var W = L.w * T;
   if (id === 'demon') { for (var i = 0; i < 4; i++) { var b = mkBoss('demon', W / 2, 120); b.slot = i; b.fly = true; b.cd = 1.5 + i * 0.9; bosses.push(b); } }
   else if (id === 'moon') { var mb = mkBoss('moon', W / 2, 110); mb.fly = true; bosses.push(mb); }
-  else if (id === 'blum' || id === 'blum2' || id === 'mega') { var bb = mkBoss(id, W - 200, 150); bb.fly = true; bosses.push(bb); }
+  else if (id === 'blum' || id === 'blum2' || id === 'mega' || id === 'kingblum') { var bb = mkBoss(id, W - 200, 150); bb.fly = true; bosses.push(bb); }
+  else if (BOSSDEF[id].fly) { var fb = mkBoss(id, W - 180, 100); fb.fly = true; bosses.push(fb); }
   else { var b2 = mkBoss(id, W - 160, 15 * T); bosses.push(b2); }
   G.bossGroup = id;
 }
@@ -54,8 +55,8 @@ function bossDown(b) {
   if (b.id === 'demon' && left > 0) { G.banner = 1.2; G.bannerTxt = left + ' LEFT'; G.bannerSub = ''; bosses.forEach(function (q) { if (q.alive) q.rage = (q.rage || 0) + 1; }); return; }
   if (left > 0) return;
   bosses.forEach(function (q) { if (q.alive) { q.alive = false; poof(q.x, q.y - q.h / 2, 20, ['#ff2630', '#f1e7d0']); } });
-  eshots = []; waves = []; enemies.forEach(function (e) { e.alive = false; });
-  var t = b.id === 'blum2' ? 6 : (b.id === 'blum' ? 5 : AREAS[BOSSDEF[b.id].area].tier);
+  eshots = []; waves = []; CASFX = []; G.kbSweep = null; enemies.forEach(function (e) { e.alive = false; });
+  var t = b.id === 'blum2' ? 6 : (b.id === 'blum' ? 5 : BOSSDEF[b.id].tier || AREAS[BOSSDEF[b.id].area].tier);
   for (var i = 0; i < 40; i++) { var a = -Math.PI * (0.1 + 0.8 * (i / 39)), sp = 90 + Math.random() * 140; drops.push({ x: b.x, y: b.y - b.h / 2, fly: true, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, age: 0, val: Math.round(dropVal() * 2) }); }
   RUN.drops += 120 * t * (1 + 0.3 * META.ng);
   G.findDue = 3.2; // a boss always leaves a blueprint or rune behind (shown once its own banner is done)
@@ -70,11 +71,13 @@ function bossDown(b) {
   }
   if (b.id === 'blum2') { META.superWins++; saveMeta(); if (META.superWins >= 5) { G.banner = 2.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = ''; sfx.goal(); lairTeleport(); return; } G.banner = 3.5; G.bannerTxt = 'SUPER BLUMHEAD FALLS'; G.bannerSub = 'THE LOAD IS LIFTED'; G.winT = 4; G.winKind = 2; sfx.goal(); return; }
   if (b.id === 'moon') { moonDown(b); return; }
+  if (finalBoss(b.id)) { castleWin(b); return; }
   var area = BOSSDEF[b.id].area; META.bosses[area] = 1; saveMeta();
   G.lock = false; G.layer = null; sfx.goal(); G.banner = 3; G.bannerTxt = b.d.name.toUpperCase() + ' DEFEATED'; G.bannerSub = 'SEAL ' + sealCount() + ' OF 4 BROKEN'; saveRun();
   G.sealDue = { n: sealCount(), t: 1.8 };
 }
 function finishLegacy(kind) {
+  if (kind >= 4) { saveMeta(); runOver(kind); return; } // a castle beaten: no New Game+, its seals are already mended
   META.ng++; META.bosses = {}; var bonus = Math.round((kind === 3 ? 6000 : kind === 2 ? 2500 : 1200) * META.ng); RUN.drops += bonus; saveMeta(); runOver(kind);
 }
 
@@ -155,7 +158,7 @@ var BRAIN = {
   blum2: function (b, dt, W, ph) { blumBrain(b, dt, W, ph, true); }
 };
 function blumBrain(b, dt, W, ph, sup) {
-  var hx = clamp(P.x + Math.sin(b.t * 0.7) * 150, 80, W - 80), hy = 96 + Math.sin(b.t * 1.7) * 20, cx = b.x, cy = b.y - b.h / 2;
+  var hx = clamp(P.x + Math.sin(b.t * 0.7) * 150, 80, W - 80), hy = (b.hoverY || 96) + Math.sin(b.t * 1.7) * 20, cx = b.x, cy = b.y - b.h / 2;
   if (b.st === 'idle') {
     b.x += (hx - b.x) * Math.min(1, dt * 0.9); b.y += (hy - b.y) * Math.min(1, dt * 1.5); b.face = towardP(b); b.cd -= dt;
     if (b.cd <= 0) { var o = sup ? ['ring', 'spiral', 'aim', 'summon', 'slam', 'tele'] : ['ring', 'aim', 'summon', 'slam']; b.st = o[Math.floor(Math.random() * o.length)]; if (b.st === 'summon' && enemies.length >= 3) b.st = 'ring'; b.n = 0; b.t2 = 0.4; }
