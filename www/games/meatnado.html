@@ -757,7 +757,7 @@ function hurtPlayer(srcx) {
   G.shake = 5; sfx.play('hurt'); G.stumble = 0.5; if (G.char.id === 'tb') tbSay();
   var loss = (G.drops > 0 ? 24 : 40) * (1 - U('skin') * 0.12) * (G.char.hitK || 1) * (G.hom && G.hom.b === 'guard' ? 0.75 : 1); G.gap -= loss;
   if (G.gap <= CATCH) { killPlayer(false); return; }
-  if (G.drops > 0) { var n = Math.min(G.drops, 10); for (var i = 0; i < n; i++) { var a = -Math.PI * (0.15 + 0.7 * (i / Math.max(1, n - 1))), s = 110 + Math.random() * 70; drops.push({ x: P.x, y: P.y - 20, fly: true, vx: Math.cos(a) * s * 0.6, vy: Math.sin(a) * s, age: 0 }); } G.drops = 0; }
+  // hits never cost you drops: the count on screen is what you bank
   P.state = 'hurt'; P.hurtT = 0.4; P.vy = -170; P.inv = 1.6; P.onGround = false;
 }
 function ov(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1) { return ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0; }
