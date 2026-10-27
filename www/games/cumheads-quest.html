@@ -1561,7 +1561,7 @@ function hubShop(sid, who, note) {
 /* every cabinet in Potbelly Arcade: the real games, in an iframe */
 var ARCGAMES = { meatnado: ['MEATNADO ESCAPE', 'meatnado.html'], spermhog: ['CUMHEAD THE SPERMHOG', 'spermhog.html'], survivors: ['SPERMAID SURVIVORS', 'spermaid-survivors.html'],
   willy: ['WILLY NILLY', 'willy-nilly.html'], spuzz: ["SPUZZWORLD: CUM'S ODDYSEE", 'spuzzworld.html'], grinding: ['THE GRINDING OF CUMHEAD', 'grinding-of-cumhead.html'],
-  overdrive: ["POTBELLY'S ARCADE OVERDRIVE", 'arcade-overdrive.html'], void: ['JOURNEY TO THE VOID', 'journey-to-the-void.html'] };
+  overdrive: ["POTBELLY'S ARCADE OVERDRIVE", 'arcade-overdrive.html'], void: ['JOURNEY TO THE VOID', 'journey-to-the-void.html'], kart: ['CUMHEAD KART', 'cumhead-kart.html'] };
 function arcadeRows(list) {
   Object.keys(ARCGAMES).forEach(function (k) { row(list, 'PLAY ' + ARCGAMES[k][0], function () { closeShop(); openArcade(k); }, 'Free to play. Arcade cabinet', 'use'); });
 }

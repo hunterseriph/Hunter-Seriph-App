@@ -310,7 +310,35 @@ def make_jv():
     return compose([('JOURNEY', 120, dict(arc=10, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine']))), ('TO THE', 60, dict(stretch=1.2, gap=-18, st=dict(face=[(0, '#fff6e0'), (1, '#c8b08a')]))), ('VOID', 170, dict(stripes=True))], st, mascot=party, mascot_y=0.74, extras=ex)
 
 
-LOGOS = {'ll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
+def make_ck():
+    st = dict(face=[(0, '#fff3a0'), (0.5, '#ffe36a'), (1, '#d08a10')], side=['#7a0a12', '#2a0408'], shine='#ffffff', outline=11, rim=3, depth=14, shear=-0.2)
+    head = art('droplet.webp', 300)
+    def flag(w, h, n, wave):
+        f = Image.new('RGBA', (w + 40, h + 60), (0, 0, 0, 0)); d = ImageDraw.Draw(f); cs = w // n
+        for j in range(h // cs):
+            for i in range(n):
+                off = int(math.sin(i / n * math.pi * 2) * wave)
+                d.rectangle((20 + i * cs, 20 + j * cs + off, 20 + i * cs + cs, 20 + j * cs + cs + off), fill=hexc('#f1e7d0') if (i + j) % 2 else hexc('#12040a'))
+        m = f.getchannel('A'); o = Image.new('RGBA', f.size, (0, 0, 0, 0)); o.alpha_composite(solid(dilate(m, 6), INK)); o.alpha_composite(f); return o
+    def ex(canvas, layers, st):
+        for k, im, (x, y) in [l for l in layers if l[0] == 'mascot']:
+            cx = x + im.width // 2
+            for side in (-1, 1):
+                fl = flag(200, 140, 8, 10)
+                pole = Image.new('RGBA', (fl.width, fl.height + 160), (0, 0, 0, 0)); pd = ImageDraw.Draw(pole)
+                pd.rectangle((6, 10, 22, fl.height + 150), fill=INK); pd.rectangle((10, 14, 18, fl.height + 146), fill=hexc('#a6968f')); pole.alpha_composite(fl, (10, 0))
+                pole = pole.rotate(-28 * side, expand=True, resample=Image.BICUBIC)
+                if side < 0: pole = pole.transpose(Image.FLIP_LEFT_RIGHT)
+                layers.insert(0, ('stripe', pole, (cx - pole.width + 40 if side < 0 else cx - 40, y - 30)))
+        d = Image.new('RGBA', canvas.size, (0, 0, 0, 0)); dr = ImageDraw.Draw(d)
+        for k, im, (x, y) in [l for l in layers if l[0] == 'text'][-1:]:
+            for i in range(5):  # speed lines off the back of KART
+                yy = y + 40 + i * 26; dr.rectangle((x - 140 + i * 18, yy, x + 10, yy + 9), fill=INK); dr.rectangle((x - 134 + i * 18, yy + 2, x + 4, yy + 7), fill=hexc('#ff2630' if i % 2 else '#ffe36a'))
+        layers.insert(0, ('stripe', d, (0, 0)))
+    return compose([('CUMHEAD', 112, dict(arc=10, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine']))), ('KART', 176, dict(stripes=True))], st, mascot=head, mascot_y=0.7, extras=ex)
+
+
+LOGOS = {'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
 
 if __name__ == '__main__':
     want = sys.argv[1:] or list(LOGOS)

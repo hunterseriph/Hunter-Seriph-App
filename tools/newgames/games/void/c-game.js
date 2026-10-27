@@ -69,7 +69,7 @@ function buildRoom(bid) {
   return (ROOMS[bid] = { rows: g, w: w, h: h, props: props, B: B });
 }
 var ARCADE = [['spermhog.html', 'Cumhead the Spermhog'], ['meatnado.html', 'Meatnado Escape'], ['spermaid-survivors.html', 'Spermaid Survivors'], ['willy-nilly.html', 'Willy Nilly'],
-  ['spuzzworld.html', "Spuzzworld: Cum's Oddysee"], ['grinding-of-cumhead.html', 'The Grinding of Cumhead'], ['arcade-overdrive.html', "Potbelly's Arcade Overdrive"], ['load-legacy.html', 'Load Legacy'], ['cumheads-quest.html', 'Cumheads Quest']];
+  ['spuzzworld.html', "Spuzzworld: Cum's Oddysee"], ['grinding-of-cumhead.html', 'The Grinding of Cumhead'], ['arcade-overdrive.html', "Potbelly's Arcade Overdrive"], ['load-legacy.html', 'Load Legacy'], ['cumheads-quest.html', 'Cumheads Quest'], ['cumhead-kart.html', 'Cumhead Kart']];
 
 /* ---------- the field ---------- */
 function mapRows() { if (G.mk === 'world') return OVERWORLD; if (G.mk === 'town') return buildTown(G.mid).rows; if (G.mk === 'room') return buildRoom(G.bld).rows; return FLOORS[G.floorId]; }

@@ -266,7 +266,7 @@ var KIT = (function () {
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,
     shake: function (n) { shake = Math.max(shake, n); }, flash: function (n) { flash = Math.max(flash, n || 0.12); },
-    get SPR() { return SPR; }, tick: function () { readPad(); snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
+    get SPR() { return SPR; }, get sheet() { return SHEET; }, get sheetReady() { return ready; }, tick: function () { readPad(); snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
 })();
 var sfx = KIT.sfx;
 function rnd(a, b) { return a + Math.random() * (b - a); }

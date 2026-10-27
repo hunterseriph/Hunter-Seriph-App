@@ -21,3 +21,8 @@ card(((20, 10, 14, 255), [(0, 68, (34, 24, 30))]), [(gr['gr_rock0'], 10, 30, 0.7
 card(((12, 4, 8, 255), [(0, 44, (26, 10, 18)), (45, 68, (42, 14, 18))]), [(ao['ao_cabbig'], 29, 66, 0.42, False), (B['ch_idle0'], 12, 68, 0.62, False), (B['npc_potbelly'], 50, 68, 0.62, True), (ao['ao_coin'], 22, 30, 0.6, False)], 'ao')
 card(((14, 8, 16, 255), [(0, 50, (30, 12, 24)), (51, 68, (58, 42, 52))]), [(sw['sw_mine1'], 44, 52, 1, False), (B['ch_run2'], 22, 52, 0.75, False), (B['h_gloop_teen_run0'], 40, 51, 0.9, False), (B['f_blumguard_0'], 52, 51, 0.8, True)], 'sw')
 card(((0, 0, 0, 255), [(52, 68, (20, 10, 32))]), [(jv['jv_void0'], 29, 46, 0.32, False), (B['ch_idle0'], 12, 68, 0.55, False), (B['spermaid_s0'], 29, 68, 0.55, False), (B['greebo_s0'], 47, 68, 0.55, True)], 'jv')
+ck = ex('kart')
+_ch = B['ch_idle0'].crop((0, 0, 30, 34))
+_chk = Image.new('RGBA', (59, 4)); [_chk.putpixel((x, y), (241, 231, 208, 255) if (x // 2 + y // 2) % 2 else (18, 4, 10, 255)) for x in range(59) for y in range(4)]
+_moon = Image.new('RGBA', (16, 16)); ImageDraw.Draw(_moon).ellipse((1, 1, 14, 14), fill=(196, 18, 28, 255))
+card(((10, 4, 8, 255), [(0, 44, (30, 8, 14)), (45, 68, (42, 38, 48))]), [(_moon, 44, 20, 1, False), (_chk, 29, 52, 1, False), (_ch, 26, 54, 0.62, False), (ck['ck_kart'], 28, 66, 1.0, False), (ck['ck_flame0'], 4, 63, 0.9, False)], 'ck')
