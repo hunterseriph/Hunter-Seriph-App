@@ -13,12 +13,14 @@ HERE = os.path.dirname(os.path.abspath(__file__)); SRC = os.path.join(HERE, 'src
 
 def load(n, mode='RGBA'): return Image.open(os.path.join(SRC, n + '.png')).convert(mode)
 
-CITY_H = 396  # baked at 3x its on-screen height (132), so phones draw it 1:1 and it stays sharp
+CITY_H = 288  # baked at 3x its on-screen height (96), so phones draw it 1:1 and it stays sharp
 
 def city():
-    """Hunter's own city strip (src/city-layer.png, transparent, the café on its own lot, Ejaculand at the end)"""
+    """Hunter's own city strip (src/city-layer.png, transparent, the café on its own lot, Ejaculand at the end).
+    Cropped to the buildings themselves: stray specks below them made the strip sit too high over the road."""
     im = load('city-layer'); a = np.array(im)
-    ys = np.where(a[..., 3].max(1) > 0)[0]; im = im.crop((0, 0, im.width, int(ys.max()) + 1))
+    cov = (a[..., 3] > 40).mean(1); ys = np.where(cov > 0.02)[0]
+    im = im.crop((0, max(0, int(ys.min()) - 2), im.width, int(ys.max()) + 1))
     w = round(im.width * CITY_H / im.height)
     return im.convert('RGBa').resize((w, CITY_H), Image.LANCZOS).convert('RGBA')
 

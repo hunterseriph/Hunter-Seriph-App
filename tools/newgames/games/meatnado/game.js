@@ -385,9 +385,11 @@ function endRun() {
 
 /* ---------- drawing ---------- */
 function S() { return KIT.S; }
+/* the backdrop layers are drawn darker than the source art (it looked a bit grey behind the action) */
+var DARK = { sky: 'brightness(0.62) saturate(1.15)', skyM: 'brightness(0.62) saturate(1.15)', clouds: 'brightness(0.8) saturate(1.1)', skyline: 'brightness(0.55) contrast(1.1)', city: 'brightness(0.8) contrast(1.12) saturate(1.1)' };
 function layerOf(key, img, w, h, flip) {
   if (!ok(img)) return null;
-  return KIT.layer('mn-' + key, w, h, function () { var c = KIT.ctx; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; if (flip) { c.save(); c.translate(w, 0); c.scale(-1, 1); } c.drawImage(img, 0, 0, w, h); if (flip) c.restore(); });
+  return KIT.layer('mn-' + key, w, h, function () { var c = KIT.ctx; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; if (DARK[key]) c.filter = DARK[key]; if (flip) { c.save(); c.translate(w, 0); c.scale(-1, 1); } c.drawImage(img, 0, 0, w, h); if (flip) c.restore(); c.filter = 'none'; });
 }
 function put(L, x, y, alpha) { var c = KIT.ctx, s = S(); if (alpha !== undefined) c.globalAlpha = alpha; c.drawImage(L, Math.round(x * s) / s, Math.round(y * s) / s, L.lw, L.lh); c.globalAlpha = 1; }
 function tile(L, L2, par, y, off, alpha) { if (!L) return; var w = L.lw, span = L2 ? w * 2 : w, x0 = -(((G.cam * par + off) % span) + span) % span; for (var x = x0, i = 0; x < W + w; x += w, i++) put(L2 && i % 2 ? L2 : L, x, y, alpha); }
@@ -400,7 +402,7 @@ function drawBack() {
   if (ok(IMG.clouds)) { var cl = layerOf('clouds', IMG.clouds, 653, 52); tile(cl, null, 0.08, 4, G.t * 5, 1); tile(cl, null, 0.15, 34, 260 + G.t * 9, 0.85); }
   if (G.flash > 0) R('rgba(255,50,60,' + (G.flash / 0.16 * 0.26).toFixed(3) + ')', 0, 0, W, GY);
   if (ok(IMG.skyline)) tile(layerOf('skyline', IMG.skyline, 266, 90), null, 0.25, GY - 90, 0);
-  if (ok(IMG.city)) { var ch = 132, cw = Math.round(IMG.city.naturalWidth * ch / IMG.city.naturalHeight); tile(layerOf('city', IMG.city, cw, ch), null, 0.5, GY - ch + 2, 0); }
+  if (ok(IMG.city)) { var ch = 96, cw = Math.round(IMG.city.naturalWidth * ch / IMG.city.naturalHeight); tile(layerOf('city', IMG.city, cw, ch), null, 0.5, GY - ch + 2, 0); }
 }
 function brickRect(x, y, w, h, ledge) {
   var sx = Math.round(x - G.cam); if (sx > W || sx + w < 0) return;
@@ -458,7 +460,7 @@ function drawRunner(id, x, y, o) {
     if (id === 'amy') { var sw = P.attackT > 0 ? (0.2 - P.attackT) / 0.2 : 0; spr('mn_sausage', x + 10 + Math.sin(sw * 3) * 10, y - 30 + sw * 14, { anchor: 'c', rot: -1.2 + sw * 2.6 }); }
     return;
   }
-  spr('greebo_s' + (air ? 1 : Math.floor(P.anim * 0.6) % 3), x, y - (!air && Math.floor(P.anim * 0.6) % 3 === 1 ? 1 : 0), { sc: 1.3, flash: fl, rot: dead ? 0.5 : air ? -0.15 : 0, flip: true });
+  spr('greebo_s' + (air ? 1 : Math.floor(P.anim * 0.6) % 3), x, y - (!air && Math.floor(P.anim * 0.6) % 3 === 1 ? 1 : 0), { sc: 1.3, flash: fl, rot: dead ? 0.5 : air ? -0.15 : 0 });
 }
 function drawFoe(o) {
   var F = o.F, x = Math.round(o.x - G.cam); if (x < -60 || x > W + 60) return;
