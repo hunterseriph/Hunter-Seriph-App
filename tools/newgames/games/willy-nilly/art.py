@@ -274,3 +274,48 @@ def pineapple():
         for x in range(3, 12, 3): g.put(x + (y // 3) % 2, y, 'd')
     return g, {'p': PINE, 'leaf': GREEN, 'd': '#8a6008'}
 ART.update({'wn_chilli': chilli, 'wn_garlic': garlic, 'wn_pineapple': pineapple})
+
+# ---- decor from the shop: wall lamps and a showpiece for each place ----
+BRASS = ('#ffe39a', '#c8962a', '#6a4410')
+def sconce(lit):
+    g = Grid(14, 18); g.rect(5, 0, 4, 3, 'plate'); g.rect(6, 3, 2, 4, 'arm'); g.poly([(1, 7), (13, 7), (11, 15), (3, 15)], 'shade'); g.rect(3, 15, 8, 2, 'rim')
+    if lit: g.ellipse(7, 12, 3, 2, 'glow')
+    return g, {'plate': BRASS, 'arm': BRASS, 'shade': ('#ff6a74', '#c4121c', '#5a0810'), 'rim': BRASS, 'glow': '#ffe36a'}
+def plinth(g, w=26):
+    x = (g.w - w) // 2; g.rect(x, g.h - 8, w, 8, 'plinth'); g.rect(x + 2, g.h - 10, w - 4, 2, 'plinth')
+def sp_chilli():
+    g = Grid(30, 46); plinth(g)
+    g.poly([(10, 6), (20, 6), (24, 16), (22, 30), (15, 37), (8, 30), (6, 16)], 'chilli'); g.rect(13, 1, 4, 6, 'stem'); g.line(9, 12, 10, 26, 'hi', 0.6)
+    return g, {'chilli': GOLD, 'stem': ('#9aff5a', '#4aa82a', '#1a5a10'), 'hi': '#fff8d0', 'plinth': BLACK}
+def sp_urn():
+    g = Grid(32, 46); g.rect(5, 38, 22, 8, 'base'); g.rect(9, 34, 14, 4, 'leg')
+    g.ellipse(16, 22, 12, 13, 'urn'); g.rect(13, 3, 6, 6, 'cap'); g.ellipse(16, 3, 4, 2, 'cap'); g.rect(0, 18, 4, 8, 'h'); g.rect(28, 18, 4, 8, 'h')
+    g.rect(21, 30, 6, 2, 'tap'); g.rect(25, 30, 2, 4, 'tap'); g.ellipse(16, 20, 5, 4, 'badge'); g.line(10, 14, 11, 26, 'hi', 0.6)
+    return g, {'base': BLACK, 'leg': BRASS, 'urn': BRASS, 'cap': BRASS, 'h': BRASS, 'tap': IRON, 'badge': RED, 'hi': '#fff8d0'}
+def sp_pies():
+    g = Grid(30, 46); g.rect(14, 8, 2, 38, 'pole'); g.rect(6, 44, 18, 2, 'pole')
+    for y, w in ((36, 13), (24, 11), (12, 9)):
+        g.ellipse(15, y + 3, w + 1, 2, 'plate'); g.rect(15 - w + 2, y - 2, (w - 2) * 2, 4, 'crust'); g.ellipse(15, y - 2, w - 2, 2.5, 'cream')
+    g.ellipse(15, 3, 3, 3, 'cherry')
+    return g, {'pole': BRASS, 'plate': WHITE, 'crust': BREAD, 'cream': CREAM, 'cherry': RED}
+def sp_barrel():
+    g = Grid(34, 44); g.rect(2, 38, 30, 6, 'rack'); g.rect(4, 30, 4, 8, 'rack'); g.rect(26, 30, 4, 8, 'rack')
+    g.ellipse(17, 20, 15, 15, 'wood'); g.ellipse(17, 20, 11, 11, 'end')
+    for r in (14.5, 11.5): 
+        for a in range(0, 360, 6): g.put(17 + math.cos(math.radians(a)) * r, 20 + math.sin(math.radians(a)) * r, 'hoop')
+    g.rect(15, 30, 4, 4, 'tap'); g.put(16, 35, 'drip')
+    return g, {'rack': WOOD2, 'wood': WOOD, 'end': WOOD2, 'hoop': IRON, 'tap': BRASS, 'drip': '#ffc840'}
+def sp_garlic():
+    g = Grid(32, 46); plinth(g, 28)
+    g.ellipse(16, 25, 13, 12, 'g'); g.poly([(12, 14), (16, 2), (20, 14)], 'g')
+    for x in (9, 16, 23): g.line(x, 16, x + (x - 16) * 0.2, 34, 'l', 0.4)
+    g.rect(13, 0, 6, 2, 'root')
+    return g, {'g': ('#ffffff', '#ece0d0', '#a89a88'), 'l': '#c8b8a0', 'root': '#a89a88', 'plinth': ('#5aaa3a', '#2a6a1a', '#103a08')}
+def sp_pineapple():
+    g = Grid(30, 46); plinth(g)
+    g.ellipse(15, 26, 10, 12, 'p'); g.poly([(9, 15), (15, 0), (21, 15)], 'leaf'); g.poly([(5, 12), (11, 4), (13, 15)], 'leaf'); g.poly([(17, 15), (19, 4), (25, 12)], 'leaf')
+    for y in range(17, 37, 4):
+        for x in range(8, 23, 4): g.put(x + (y // 4) % 2 * 2, y, 'd')
+    return g, {'p': PINE, 'leaf': GREEN, 'd': '#8a6008', 'plinth': RED}
+ART.update({'wn_sconce0': lambda: sconce(False), 'wn_sconce1': lambda: sconce(True), 'wn_sp_amy': sp_chilli, 'wn_sp_cafe': sp_urn, 'wn_sp_greebo': sp_pies,
+            'wn_sp_beebs': sp_barrel, 'wn_sp_ali': sp_garlic, 'wn_sp_joff': sp_pineapple})

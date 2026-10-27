@@ -14,6 +14,10 @@ var SV = KIT.load(SAVE_KEY, null) || {};
 (function migrate() { // the first version only had Amy's
   if (SV.v === 2) return; var old = SV; SV = { v: 2, places: { amy: { unl: Math.min(20, old.unlocked || 1), best: old.best || {}, stars: old.stars || {} } }, open: { amy: 1 }, host: 'amy', coins: old.coins || 0, ups: old.ups || {}, items: { popper: 1 }, last: 'amy' };
 })();
+(function migrateUps() { // the shop used to sell one level of six things
+  SV.ups = SV.ups || {}; SV.items = SV.items || {}; SV.decor = SV.decor || {}; if (SV.uv === 2) return;
+  var OLD = { shoes: 2, ladle: 3, juke: 3, cloth: 2, apron: 1, sweets: 1 }; for (var k in SV.ups) if (SV.ups[k] === true || SV.ups[k] === 1) SV.ups[k] = OLD[k] || 1; SV.uv = 2;
+})();
 function persist() { KIT.save(SAVE_KEY, SV); }
 var R = KIT.R, spr = KIT.spr, text = KIT.text;
 
@@ -72,14 +76,58 @@ function levelFor(pl, i) {
   L.goal = Math.round(L.n * (36 + avg * (1 + L.pair) * 0.75 + i * 0.4) / 10) * 10; L.expert = Math.round(L.goal * 1.35 / 10) * 10;
   return L;
 }
+/* ---------- the shop: upgrades with levels, decor for each place, and supplies for the next day ---------- */
+var CATS = [{ id: 'kitchen', n: 'KITCHEN', d: 'Cooking, carrying and walking' }, { id: 'service', n: 'SERVICE', d: 'Patience, the queue and the dining room' },
+  { id: 'money', n: 'MONEY', d: 'Bigger bills, bigger tips' }, { id: 'treats', n: 'TREATS & PARTIES', d: 'Sweets and party poppers' }];
+function pc(n) { return Math.round(n) + '%'; }
 var UPGRADES = [
-  { id: 'shoes', name: 'Comfy Shoes', d: 'Walk 20% faster.', cost: 300 },
-  { id: 'ladle', name: 'Big Ladle', d: 'Everything cooks 25% faster.', cost: 400 },
-  { id: 'juke', name: 'The Jukebox', d: 'Customers lose patience 15% slower.', cost: 500 },
-  { id: 'cloth', name: 'Fancy Tablecloths', d: 'Every bill tips 3 more.', cost: 350 },
-  { id: 'apron', name: 'Big Apron Pockets', d: 'Carry one more thing.', cost: 600 },
-  { id: 'sweets', name: 'Better Sweets', d: 'Treats from the stall give 3 hearts, not 2.', cost: 450 }
+  { id: 'shoes', cat: 'kitchen', name: 'Comfy Shoes', max: 5, cost: 250, d: function (l) { return 'Walk ' + pc(l * 10) + ' faster.'; } },
+  { id: 'ladle', cat: 'kitchen', name: 'Big Ladle', max: 5, cost: 300, d: function (l) { return 'Pots, ovens, grills and fryers cook ' + pc(l * 8) + ' faster.'; } },
+  { id: 'knives', cat: 'kitchen', name: 'Sharp Knives', max: 3, cost: 280, d: function (l) { return 'Hands-on jobs (cream, dough, toppings, the tap) go ' + pc(l * 15) + ' faster.'; } },
+  { id: 'lamps', cat: 'kitchen', name: 'Heat Lamps', max: 3, cost: 260, d: function (l) { return 'Ready food stays good ' + pc(l * 30) + ' longer before it burns or goes cold.'; } },
+  { id: 'blanket', cat: 'kitchen', name: 'Fire Blanket', max: 2, cost: 200, d: function (l) { return 'Burnt food costs ' + (10 - l * 5) + ' instead of 10.'; } },
+  { id: 'apron', cat: 'kitchen', name: 'Big Apron Pockets', max: 2, cost: 600, grow: 2.5, d: function (l) { return 'Carry ' + l + ' more thing' + (l === 1 ? '' : 's') + '.'; } },
+  { id: 'juke', cat: 'service', name: 'The Jukebox', max: 5, cost: 400, d: function (l) { return 'Customers lose patience ' + pc(l * 6) + ' slower.'; } },
+  { id: 'sofa', cat: 'service', name: 'Comfy Waiting Sofa', max: 3, cost: 300, d: function (l) { return 'The queue loses patience ' + pc(l * 15) + ' slower.'; } },
+  { id: 'menus', cat: 'service', name: 'Picture Menus', max: 3, cost: 250, d: function (l) { return 'Customers pick what they want ' + pc(l * 20) + ' faster.'; } },
+  { id: 'forks', cat: 'service', name: 'Quick Forks', max: 3, cost: 300, d: function (l) { return 'Customers eat ' + pc(l * 12) + ' faster.'; } },
+  { id: 'notepad', cat: 'service', name: 'Big Notepad', max: 2, cost: 450, grow: 2, d: function (l) { return 'Remember ' + (4 + l) + ' jobs in a row, not 4.'; } },
+  { id: 'doorman', cat: 'service', name: 'Doorman', max: 2, cost: 500, grow: 2, d: function (l) { return 'The queue holds ' + (4 + l) + ' groups, not 4.'; } },
+  { id: 'potboy', cat: 'service', name: 'Pot Boy', max: 3, cost: 700, d: function (l) { return 'Clears dirty tables by himself after ' + [0, 9, 6, 3][l] + ' seconds.'; } },
+  { id: 'machine', cat: 'service', name: 'Answering Machine', max: 3, cost: 300, d: function (l) { return 'Takeaway calls ring ' + (l * 3) + ' s longer and takeaways wait ' + pc(l * 15) + ' longer.'; } },
+  { id: 'cloth', cat: 'money', name: 'Fancy Tablecloths', max: 5, cost: 300, d: function (l) { return 'Every bill tips ' + (l * 2) + ' more.'; } },
+  { id: 'jar', cat: 'money', name: 'Bigger Tip Jar', max: 5, cost: 350, d: function (l) { return 'Tips ' + pc(l * 10) + ' bigger.'; } },
+  { id: 'prices', cat: 'money', name: 'Posh Menu Prints', max: 5, cost: 400, d: function (l) { return 'Food costs ' + pc(l * 5) + ' more, and they pay it.'; } },
+  { id: 'chain', cat: 'money', name: 'Chain Gang', max: 3, cost: 350, d: function (l) { return 'Chain bonuses are ' + (5 + l * 3) + ' a step, not 5.'; } },
+  { id: 'mama', cat: 'money', name: "Mama's Cookbook", max: 4, cost: 300, d: function (l) { return 'Kitchen Time pays ' + pc(l * 25) + ' more.'; } },
+  { id: 'piggy', cat: 'money', name: 'Piggy Bank', max: 5, cost: 250, d: function (l) { return l * 15 + ' extra tips at the end of every day, pass or fail.'; } },
+  { id: 'sweets', cat: 'treats', name: 'Better Sweets', max: 2, cost: 450, d: function (l) { return 'Treats give ' + (2 + l) + ' hearts, not 2.'; } },
+  { id: 'tray', cat: 'treats', name: 'Treat Tray', max: 2, cost: 400, d: function (l) { return 'Grab ' + (1 + l) + ' treats from the stall at once (if your hands are free).'; } },
+  { id: 'bang', cat: 'treats', name: 'Bigger Bang', max: 2, cost: 400, d: function (l) { return 'Party poppers give ' + (2 + l) + ' hearts to everyone, not 2.'; } },
+  { id: 'subs', cat: 'treats', name: 'Popper Club', max: 3, cost: 500, d: function (l) { return pc(l * 20) + ' chance of a free party popper after every day you pass.'; } }
 ];
+var UPG = {}; UPGRADES.forEach(function (u) { UPG[u.id] = u; });
+function U(id) { return (SV.ups && SV.ups[id]) || 0; }
+function upCost(u) { return Math.round(u.cost * Math.pow(u.grow || 1.6, U(u.id)) / 10) * 10; }
+/* decor: three pieces for each place, bought in order; they show up in the room and only help there */
+var DECOR = [
+  { n: 'Wall Poster', d: 'Tips 10% bigger here.', cost: 500 },
+  { n: 'Wall Lamps', d: 'Customers lose patience 10% slower here.', cost: 1000 },
+  { n: 'The Showpiece', d: 'Everything cooks 10% faster here.', cost: 2000 }
+];
+var SHOWPIECE = { amy: 'The Golden Chilli', cafe: 'The Brass Coffee Urn', greebo: 'The Pie Tower', beebs: 'The Old Barrel', ali: 'The Giant Garlic', joff: 'The Pineapple Statue' };
+function decorCost(pl, k) { return Math.round(DECOR[k].cost * (1 + pl.i * 0.4) / 10) * 10; }
+function DC(k) { return G.pl && SV.decor && (SV.decor[G.pl.id] || 0) > k; }
+/* supplies: used up on the next day you start */
+var SUPPLIES = [
+  { id: 'popper', n: 'Party Popper', d: 'Use one mid-day (Y or tap it): everyone cheers up.', cost: 150 },
+  { id: 'popper5', n: 'Box of 5 Poppers', d: 'Five party poppers for the price of four.', cost: 600, give: { popper: 5 } },
+  { id: 'espresso', n: 'Double Espresso', d: 'Your next day: walk 30% faster.', cost: 120, boost: 1 },
+  { id: 'lucky', n: 'Lucky Coin', d: 'Your next day: tips 50% bigger.', cost: 200, boost: 1 },
+  { id: 'candles', n: 'Scented Candles', d: 'Your next day: everyone loses patience 25% slower.', cost: 160, boost: 1 },
+  { id: 'rush', n: 'Rush Hour Rota', d: 'Your next day: everything cooks 25% faster.', cost: 180, boost: 1 }
+];
+function B(k) { return G.boost && G.boost[k]; }
 var POPPER_COST = 150;
 var SLOTS = [[170, 176], [290, 176], [410, 176], [170, 244], [290, 244], [410, 244]];
 var KX = [306, 350, 394, 438], EX = [84, 130];
@@ -88,7 +136,8 @@ var G = { mode: 'title', lv: 0 };
 var host, tables, sts, groups, queue, arrivals, cursor, sel, pops, parts, chain, takeaways;
 function perk(k) { return (PERK[SV.host] || {})[k]; }
 
-function startLevel(pid, i) {
+function startLevel(pid, i, keep) {
+  if (!keep || !G.boost) { G.boost = {}; SUPPLIES.forEach(function (it) { if (it.boost && SV.items[it.id] > 0) { SV.items[it.id]--; G.boost[it.id] = 1; } }); }
   var pl = PLACE[pid], L = levelFor(pl, i); G.pl = pl; G.lv = i; G.L = L; G.mode = 'intro'; G.t = 0; G.introT = 3; G.score = 0; G.served = 0; G.lost = 0; G.done = false; G.cheer = 0;
   SV.last = pid; persist();
   host = { x: 120, y: 120, face: 1, q: [], tickets: [], hands: [], walkT: 0, actT: 0, act: null };
@@ -102,9 +151,14 @@ function startLevel(pid, i) {
   music.play(pl.song);
 }
 function mkSt(key, x, y) { var K = KIND[key]; return { key: key, K: K, x: x, y: y, st: 'idle', t: 0, item: null, ring: 0 }; }
-function speedHost() { return 130 * (SV.ups.shoes ? 1.2 : 1) * (perk('speed') || 1); }
-function handsMax() { return 2 + (SV.ups.apron ? 1 : 0) + (perk('hands') || 0); }
-function cookK() { return (SV.ups.ladle ? 0.75 : 1) * (perk('cook') || 1); }
+function speedHost() { return 130 * (1 + U('shoes') * 0.1) * (B('espresso') ? 1.3 : 1) * (perk('speed') || 1); }
+function handsMax() { return 2 + U('apron') + (perk('hands') || 0); }
+function placeCook() { return (perk('cook') || 1) * (DC(2) ? 0.9 : 1) * (B('rush') ? 0.75 : 1); }
+function cookK() { return (1 - U('ladle') * 0.08) * placeCook(); }
+function prepK() { return (1 - U('knives') * 0.15) * placeCook(); }
+function tipK() { return (1 + U('jar') * 0.1) * (DC(0) ? 1.1 : 1) * (B('lucky') ? 1.5 : 1) * (perk('tip') || 1); }
+function priceK() { return 1 + U('prices') * 0.05; }
+function queueMax() { return 4 + U('doorman'); }
 function floorRect() { var n = G.L.t; return { x0: 64, x1: n >= 3 ? 476 : 356, y0: 110, y1: n >= 4 ? 268 : 210 }; }
 function done(it) { return it.step >= RECIPE[it.d].length; }
 
@@ -118,21 +172,21 @@ function newGroup() {
   else if (L.sides.length && Math.random() < L.side) order.push(pick(L.sides));
   if (pl.id === 'beebs' && main === 's' && Math.random() < 0.5) order = ['s', 'a'];
   var pat = who.reduce(function (a, f) { return Math.max(a, f.pat || 1); }, 0), tip = who.reduce(function (a, f) { return a + (f.tip || 1); }, 0) / who.length;
-  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * (SV.ups.juke ? 0.85 : 1) * (perk('pat') || 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
+  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * (1 - U('juke') * 0.06) * (DC(1) ? 0.9 : 1) * (B('candles') ? 0.75 : 1) * (perk('pat') || 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
     read: who.reduce(function (a, f) { return Math.max(a, f.read || 1); }, 0), eat: who.reduce(function (a, f) { return a + (f.eat || 1); }, 0) / who.length, bob: Math.random() * 6 };
   groups.push(g); queue.push(g); sfx.play('bell'); G.doorT = 0.8;
 }
-function queuePos(k) { return { x: 32 + (k % 2) * 4, y: 152 + k * 31 }; }
+function queuePos(k) { var gap = Math.min(31, 96 / Math.max(1, queueMax() - 1)); return { x: 32 + (k % 2) * 4, y: 152 + k * gap }; }
 var DRAIN = { queue: 0.11, order: 0.14, waitfood: 0.085, bill: 0.14 };
 function updGroups(dt) {
   queue = queue.filter(function (g) { return g.st === 'queue'; });
   queue.forEach(function (g, k) { var p = queuePos(k); g.x += clamp(p.x - g.x, -90 * dt, 90 * dt); g.y += clamp(p.y - g.y, -90 * dt, 90 * dt); });
   groups.forEach(function (g) {
     g.t += dt; g.bob += dt; if (g.happy > 0) g.happy -= dt;
-    if (DRAIN[g.st]) { g.hearts -= DRAIN[g.st] * g.pat * dt; if (g.hearts <= 0) angry(g); }
+    if (DRAIN[g.st]) { g.hearts -= DRAIN[g.st] * g.pat * (g.st === 'queue' ? 1 - U('sofa') * 0.15 : 1) * dt; if (g.hearts <= 0) angry(g); }
     if (g.st === 'walk') { var tb = tables[g.table], dx = tb.x - g.x, dy = tb.y - 2 - g.y, d = Math.hypot(dx, dy), sp = 120 * dt; if (d <= sp) { g.x = tb.x; g.y = tb.y - 2; g.st = 'menu'; g.t = 0; } else { g.x += dx / d * sp; g.y += dy / d * sp; } }
-    else if (g.st === 'menu' && g.t > 3 * g.read) { g.st = 'order'; g.t = 0; sfx.play('tick'); }
-    else if (g.st === 'eat' && g.t > 6 * g.eat) {
+    else if (g.st === 'menu' && g.t > 3 * g.read * (1 - U('menus') * 0.2)) { g.st = 'order'; g.t = 0; sfx.play('tick'); }
+    else if (g.st === 'eat' && g.t > 6 * g.eat * (1 - U('forks') * 0.12)) {
       if (G.pl.refill && !g.refilled && Math.random() < G.pl.refill) { g.refilled = 1; g.st = 'order'; g.t = 0; g.order = ['a']; pop(g.x, g.y - 64, 'ANOTHER ROUND!', '#ffc840'); sfx.play('tick'); }
       else { g.st = 'bill'; g.t = 0; sfx.play('tick'); } }
     else if (g.st === 'leave') { g.x -= 140 * dt; g.y += (156 - g.y) * Math.min(1, dt * 2); if (g.x < -40) g.gone = true; }
@@ -154,7 +208,7 @@ function stationOf(job) {
   if (job.k === 'queue') return { x: job.g.x + 26, y: job.g.y };
   var s = sts[job.i]; return { x: s.x, y: s.y + 26 };
 }
-function addJob(job) { if (host.q.length >= 4) { sfx.play('no'); pop(host.x, host.y - 50, 'TOO MANY JOBS', '#a6968f'); return; } host.q.push(job); sfx.play('blip'); }
+function addJob(job) { if (host.q.length >= 4 + U('notepad')) { sfx.play('no'); pop(host.x, host.y - 50, 'TOO MANY JOBS', '#a6968f'); return; } host.q.push(job); sfx.play('blip'); }
 function updHost(dt) {
   if (host.actT > 0) { host.actT -= dt; if (host.actT <= 0 && host.act) { var a = host.act; host.act = null; a(); } return; }
   var job = host.q[0]; if (!job) return;
@@ -163,7 +217,7 @@ function updHost(dt) {
   if (d > sp) { host.x += dx / d * sp; host.y += dy / d * sp; if (Math.abs(dx) > 2) host.face = dx > 0 ? 1 : -1; host.walkT += dt; if (Math.floor(host.walkT * 6) !== Math.floor((host.walkT - dt) * 6)) sfx.play('step'); return; }
   host.x = st.x; host.y = st.y; host.q.shift(); doJob(job); if (host.actT <= 0) host.actT = 0.2;
 }
-function giveTreat(g) { var ti = host.hands.findIndex(function (h) { return h.d === 't'; }); if (ti < 0) return false; host.hands.splice(ti, 1); cheer(g, SV.ups.sweets ? 3 : 2); pop(g.x, g.y - 64, 'A TREAT!  +HAPPY', '#ff9adf'); sfx.play('power'); return true; }
+function giveTreat(g) { var ti = host.hands.findIndex(function (h) { return h.d === 't'; }); if (ti < 0) return false; host.hands.splice(ti, 1); cheer(g, 2 + U('sweets')); pop(g.x, g.y - 64, 'A TREAT!  +HAPPY', '#ff9adf'); sfx.play('power'); return true; }
 function doJob(job) {
   if (job.k === 'queue') { giveTreat(job.g); return; }
   if (job.k === 'table') {
@@ -173,13 +227,13 @@ function doJob(job) {
     if (g.st !== 'leave' && g.st !== 'walk' && host.hands.some(function (h) { return h.d === 't'; }) && (g.st !== 'waitfood' || !host.hands.some(function (h) { return done(h) && g.need.indexOf(h.d) >= 0; }))) { if (giveTreat(g)) return; }
     if (g.st === 'order') { g.order.forEach(function (d) { host.tickets.push(d); }); g.need = g.order.slice(); g.st = 'waitfood'; g.t = 0; g.hearts = Math.min(5, g.hearts + 0.5); score(10, 'order', tb.x, tb.y - 60); sfx.play('select'); return; }
     if (g.st === 'waitfood') {
-      var gave = 0; for (var hi = host.hands.length - 1; hi >= 0; hi--) { var h = host.hands[hi], ni = g.need.indexOf(h.d); if (done(h) && ni >= 0) { g.need.splice(ni, 1); host.hands.splice(hi, 1); g.spent += DISH[h.d].p * g.who.length * (DISH[h.d].tipx || 1); gave++; } }
+      var gave = 0; for (var hi = host.hands.length - 1; hi >= 0; hi--) { var h = host.hands[hi], ni = g.need.indexOf(h.d); if (done(h) && ni >= 0) { g.need.splice(ni, 1); host.hands.splice(hi, 1); g.spent += DISH[h.d].p * g.who.length * (DISH[h.d].tipx || 1) * priceK(); gave++; } }
       if (!gave) { pop(tb.x, tb.y - 60, 'NOT THEIR ORDER', '#a6968f'); sfx.play('no'); return; }
       if (!g.need.length) { g.st = 'eat'; g.t = 0; g.hearts = Math.min(5, g.hearts + 1); score(20, 'serve', tb.x, tb.y - 60); G.served++; } else { pop(tb.x, tb.y - 60, 'AND THE REST?', '#ffe36a'); sfx.play('coin'); g.hearts = Math.min(5, g.hearts + 0.5); }
       sfx.play('coin'); return;
     }
     if (g.st === 'bill') {
-      var tip = Math.round((Math.max(0, g.hearts) * 2 * g.tip + (SV.ups.cloth ? 3 : 0)) * (perk('tip') || 1)), pay = Math.round(g.spent) + tip;
+      var tip = Math.round((Math.max(0, g.hearts) * 2 * g.tip + U('cloth') * 2) * tipK()), pay = Math.round(g.spent) + tip;
       score(pay, 'bill', tb.x, tb.y - 60, 'BILL $' + pay); sfx.play('coin');
       for (var k = 0; k < 6; k++) parts.push({ x: tb.x, y: tb.y - 30, vx: rnd(-60, 60), vy: rnd(-120, -40), t: 0.7, c: '#ffe36a' });
       g.st = 'leave'; g.table = null; tb.g = null; tb.dirty = true; return;
@@ -188,7 +242,7 @@ function doJob(job) {
   }
   var s = sts[job.i], K = s.K;
   if (K.type === 'phone') { if (s.ring > 0) { s.ring = 0; var d0 = pick(G.pl.mains); takeaways.push({ d: d0, hearts: 5 }); host.tickets.push(d0); pop(s.x, s.y - 50, 'TAKEAWAY: ' + DISH[d0].n.toUpperCase(), '#9aff5a'); sfx.play('select'); } else { pop(s.x, s.y - 50, 'NOBODY THERE', '#a6968f'); } return; }
-  if (K.type === 'shelf') { var hit = false; takeaways.forEach(function (tk) { if (tk.out || hit) return; var hi2 = host.hands.findIndex(function (h) { return h.d === tk.d && done(h); }); if (hi2 >= 0) { host.hands.splice(hi2, 1); tk.out = 1; hit = true; var pay2 = DISH[tk.d].p * 2 + Math.round(tk.hearts * 2 * (perk('tip') || 1)); score(pay2, 'bag', s.x, s.y - 50, 'TAKEAWAY $' + pay2); sfx.play('coin'); G.served++; } }); if (!hit) { pop(s.x, s.y - 50, 'NO TAKEAWAY READY', '#a6968f'); sfx.play('no'); } takeaways = takeaways.filter(function (t) { return !t.out; }); return; }
+  if (K.type === 'shelf') { var hit = false; takeaways.forEach(function (tk) { if (tk.out || hit) return; var hi2 = host.hands.findIndex(function (h) { return h.d === tk.d && done(h); }); if (hi2 >= 0) { host.hands.splice(hi2, 1); tk.out = 1; hit = true; var pay2 = Math.round(DISH[tk.d].p * 2 * priceK()) + Math.round(tk.hearts * 2 * tipK()); score(pay2, 'bag', s.x, s.y - 50, 'TAKEAWAY $' + pay2); sfx.play('coin'); G.served++; } }); if (!hit) { pop(s.x, s.y - 50, 'NO TAKEAWAY READY', '#a6968f'); sfx.play('no'); } takeaways = takeaways.filter(function (t) { return !t.out; }); return; }
   if (s.st === 'ready') { if (host.hands.length >= handsMax()) { pop(s.x, s.y - 50, 'HANDS FULL', '#a6968f'); sfx.play('no'); return; } host.hands.push(s.item); s.item = null; s.st = 'idle'; sfx.play('select'); return; }
   if (s.st === 'burnt') { var lost = s.item; s.st = 'idle'; s.item = null; host.tickets.push(lost.d); pop(s.x, s.y - 50, 'BINNED IT. MAKE IT AGAIN', '#ff9a30'); sfx.play('splat'); return; }
   if (s.st === 'cook') { pop(s.x, s.y - 50, 'NOT READY YET', '#a6968f'); return; }
@@ -201,8 +255,8 @@ function doJob(job) {
   if (!it) { var wants = host.tickets.length ? 'NOT FOR THIS ONE' : 'NO ORDER FOR THIS'; pop(s.x, s.y - 50, wants, '#a6968f'); sfx.play('no'); return; }
   if (K.type === 'grab' || K.type === 'prep') {
     if ((K.type === 'grab' || from < 0) && host.hands.length >= handsMax()) { if (from < 0 && it.d !== 't') host.tickets.push(it.d); else if (from >= 0) host.hands.push(it); pop(s.x, s.y - 50, 'HANDS FULL', '#a6968f'); sfx.play('no'); return; }
-    host.actT = K.cook * cookK(); s.st = 'busy'; sfx.play(K.type === 'grab' ? 'select' : 'pour');
-    host.act = function () { it.step++; host.hands.push(it); s.st = 'idle'; }; return;
+    host.actT = K.cook * prepK(); s.st = 'busy'; sfx.play(K.type === 'grab' ? 'select' : 'pour');
+    host.act = function () { it.step++; host.hands.push(it); s.st = 'idle'; if (it.d === 't') for (var tr = 0; tr < U('tray') && host.hands.length < handsMax(); tr++) host.hands.push({ d: 't', step: 1 }); }; return;
   }
   s.st = 'cook'; s.t = 0; s.item = it; s.need = K.cook * cookK(); sfx.play('pour');
 }
@@ -210,22 +264,22 @@ function updSts(dt) {
   sts.forEach(function (s) {
     s.t += dt;
     if (s.st === 'cook') { if (Math.random() < 0.15) sfx.play('cook'); if (s.t >= s.need) { s.st = 'ready'; s.t = 0; s.item.step++; sfx.play('bell'); } }
-    else if (s.st === 'ready' && s.K.burn && s.t > s.K.burn * (perk('burn') || 1)) { s.st = 'burnt'; s.t = 0; G.score = Math.max(0, G.score - 10); pop(s.x, s.y - 50, (s.K.bad || 'BURNT!') + '  -10', '#ff2630'); sfx.play('no'); }
+    else if (s.st === 'ready' && s.K.burn && s.t > s.K.burn * (perk('burn') || 1) * (1 + U('lamps') * 0.3)) { var bp = 10 - U('blanket') * 5; s.st = 'burnt'; s.t = 0; G.score = Math.max(0, G.score - bp); pop(s.x, s.y - 50, (s.K.bad || 'BURNT!') + (bp ? '  -' + bp : ''), '#ff2630'); sfx.play('no'); }
     if (s.K.type === 'phone') { if (s.ring > 0) { s.ring -= dt; if (Math.floor(s.ring * 4) !== Math.floor((s.ring + dt) * 4)) sfx.play('tick'); if (s.ring <= 0) { G.lost++; G.score = Math.max(0, G.score - 10); pop(s.x, s.y - 50, 'MISSED A CALL  -10', '#ff2630'); } }
-      else if (arrivals.length) { G.phoneT -= dt; if (G.phoneT <= 0) { G.phoneT = rnd(16, 26) - G.lv * 0.4; s.ring = 9; sfx.play('bell'); } } }
+      else if (arrivals.length) { G.phoneT -= dt; if (G.phoneT <= 0) { G.phoneT = rnd(16, 26) - G.lv * 0.4; s.ring = 9 + U('machine') * 3; sfx.play('bell'); } } }
   });
-  takeaways.forEach(function (tk) { tk.hearts -= 0.06 * dt * (perk('pat') || 1); if (tk.hearts <= 0 && !tk.out) { tk.out = 1; G.lost++; G.score = Math.max(0, G.score - 20); var sh = sts.filter(function (s) { return s.key === 'shelf'; })[0]; pop(sh.x, sh.y - 50, 'TAKEAWAY CANCELLED  -20', '#ff2630'); var ti = host.tickets.indexOf(tk.d); if (ti >= 0) host.tickets.splice(ti, 1); } });
+  takeaways.forEach(function (tk) { tk.hearts -= 0.06 * dt * (perk('pat') || 1) * (1 - U('machine') * 0.15); if (tk.hearts <= 0 && !tk.out) { tk.out = 1; G.lost++; G.score = Math.max(0, G.score - 20); var sh = sts.filter(function (s) { return s.key === 'shelf'; })[0]; pop(sh.x, sh.y - 50, 'TAKEAWAY CANCELLED  -20', '#ff2630'); var ti = host.tickets.indexOf(tk.d); if (ti >= 0) host.tickets.splice(ti, 1); } });
   takeaways = takeaways.filter(function (t) { return !t.out; });
 }
 function score(n, kind, x, y, label) {
   if (chain.k === kind) chain.n++; else chain = { k: kind, n: 1 };
-  var bonus = chain.n >= 2 ? 5 * (chain.n - 1) : 0; G.score += n + bonus;
+  var bonus = chain.n >= 2 ? (5 + U('chain') * 3) * (chain.n - 1) : 0; G.score += n + bonus;
   pop(x, y, (label || '+' + n) + (bonus ? '  CHAIN x' + chain.n : ''), bonus ? '#ffe36a' : '#f1e7d0');
 }
 function pop(x, y, t, c) { pops.push({ x: x, y: y, t: t, c: c, life: 1.4 }); }
 function usePopper() {
   if (!SV.items.popper || G.mode !== 'play') { sfx.play('no'); return; } SV.items.popper--; persist(); sfx.play('power'); KIT.flash(0.15); G.cheer = 1.5;
-  groups.forEach(function (g) { if (g.st !== 'leave') cheer(g, 2); }); takeaways.forEach(function (t) { t.hearts = Math.min(5, t.hearts + 2); });
+  groups.forEach(function (g) { if (g.st !== 'leave') cheer(g, 2 + U('bang')); }); takeaways.forEach(function (t) { t.hearts = Math.min(5, t.hearts + 2 + U('bang')); });
   for (var i = 0; i < 60; i++) parts.push({ x: rnd(60, W - 20), y: rnd(-20, 40), vx: rnd(-40, 40), vy: rnd(20, 120), t: 1.6, c: ['#ff2630', '#ffe36a', '#9adfff', '#9aff5a', '#ff9adf'][i % 5] });
 }
 
@@ -272,28 +326,33 @@ function update(dt) {
   if (G.mode === 'intro') { G.introT -= dt; if (G.introT <= 0 || KIT.pressed('a') || KIT.ptr.tap) G.mode = 'play'; return; }
   if (G.mode !== 'play') return;
   G.t += dt; if (G.doorT > 0) G.doorT -= dt; if (G.cheer > 0) G.cheer -= dt;
-  while (arrivals.length && G.t >= arrivals[0]) { arrivals.shift(); if (queue.length < 4) newGroup(); else { G.lost++; pop(40, 140, 'THE QUEUE WAS FULL', '#ff2630'); } }
-  inputs(); updHost(dt); updGroups(dt); updSts(dt);
+  while (arrivals.length && G.t >= arrivals[0]) { arrivals.shift(); if (queue.length < queueMax()) newGroup(); else { G.lost++; pop(40, 140, 'THE QUEUE WAS FULL', '#ff2630'); } }
+  inputs(); updHost(dt); updGroups(dt); updSts(dt); potBoy(dt);
   pops.forEach(function (p) { p.life -= dt; p.y -= 18 * dt; }); pops = pops.filter(function (p) { return p.life > 0; });
   parts.forEach(function (p) { p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; }); parts = parts.filter(function (p) { return p.t > 0; });
   var ringing = sts.some(function (s) { return s.ring > 0; });
   if (!arrivals.length && !groups.length && !takeaways.length && !ringing && !G.done) { G.done = true; G.endT = 0.9; }
   if (G.done && G.endT > 0) { G.endT -= dt; if (G.endT <= 0) endLevel(); }
 }
+function potBoy(dt) {
+  var lv = U('potboy'); if (!lv) return;
+  tables.forEach(function (tb) { if (!tb.dirty) { tb.dt = 0; return; } tb.dt = (tb.dt || 0) + dt; if (tb.dt > [0, 9, 6, 3][lv]) { tb.dirty = false; tb.dt = 0; G.score += 5; pop(tb.x, tb.y - 50, 'POT BOY CLEARED IT  +5', '#9adfff'); sfx.play('splat'); } });
+}
 function endLevel() {
   var L = G.L, st = G.score >= L.expert ? 3 : G.score >= L.goal ? 2 : G.score >= L.goal * 0.6 ? 1 : 0, pass = G.score >= L.goal, pd = SV.places[G.pl.id];
   SV.coins += G.score; if ((pd.best[G.lv] || 0) < G.score) pd.best[G.lv] = G.score; if ((pd.stars[G.lv] || 0) < st && pass) pd.stars[G.lv] = st;
   if (pass && pd.unl < G.lv + 2) pd.unl = Math.min(NDAYS, G.lv + 2);
   var nxt = PLACES[G.pl.i + 1], newPlace = null; if (pass && G.lv + 1 >= UNLOCK_AT && nxt && !SV.open[nxt.id]) { SV.open[nxt.id] = 1; SV.places[nxt.id] = SV.places[nxt.id] || { unl: 1, best: {}, stars: {} }; newPlace = nxt; }
+  var piggy = U('piggy') * 15; SV.coins += piggy; var club = pass && Math.random() < U('subs') * 0.2; if (club) SV.items.popper = (SV.items.popper || 0) + 1;
   persist(); sfx.play(pass ? 'win' : 'lose');
-  G.result = { st: st, pass: pass, newPlace: newPlace, bonus: 0 };
+  G.result = { st: st, pass: pass, newPlace: newPlace, bonus: 0, piggy: piggy, club: club };
   if (pass) startMama(); else showResult();
 }
 function showResult() {
   var r = G.result, L = G.L, last = G.lv === NDAYS - 1; G.mode = 'over'; music.play('wntitle');
   KIT.menu({ title: r.pass ? (r.st === 3 ? 'Expert Service!' : 'Day Done!') : 'Not Enough Tips', sub: G.pl.name + '  ·  Day ' + (G.lv + 1) + '  ·  ' + L.t + ' tables',
     html: '<p style="text-align:center;margin:0">Score <b>' + G.score + '</b>  ·  Goal ' + L.goal + '  ·  Expert ' + L.expert + '<br>Served ' + G.served + '  ·  Stormed out ' + G.lost + '<br>' + starStr(r.pass ? r.st : 0) +
-      (r.bonus ? '<br>Kitchen Time: <b>' + r.mama + '</b>  +' + r.bonus + ' tips' : '') + '<br>Tips in the jar: <b>' + SV.coins + '</b></p>' +
+      (r.bonus ? '<br>Kitchen Time: <b>' + r.mama + '</b>  +' + r.bonus + ' tips' : '') + (r.piggy ? '<br>Piggy Bank: +' + r.piggy + ' tips' : '') + (r.club ? '<br>Popper Club sent you a free party popper!' : '') + '<br>Tips in the jar: <b>' + SV.coins + '</b></p>' +
       (r.newPlace ? '<p style="text-align:center;color:#ffe36a">NEW PLACE: <b>' + r.newPlace.name + '</b> is open, and ' + r.newPlace.who + ' can work any kitchen now.</p>' : '') +
       (r.pass && last ? '<p style="text-align:center;color:#ffe36a">' + G.pl.name + ' is the busiest place in town. "' + G.pl.quote + '"</p>' : ''),
     items: [r.pass && !last ? { label: 'NEXT DAY', sub: 'Day ' + (G.lv + 2), fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv + 1); }, cls: 'hot', def: true } : null,
@@ -304,43 +363,58 @@ function showResult() {
 function starStr(n) { var s = ''; for (var i = 0; i < 3; i++) s += i < n ? '<b>★</b>' : '<span style="color:#4a1a1c">★</span>'; return '<span style="font-size:22px;letter-spacing:6px">' + s + '</span>'; }
 
 /* ---------- Kitchen Time: make the house dish between days, Cooking Mama style ---------- */
+/* Kitchen Time: every step is a tap (A, or touch anywhere): no swiping, no holding */
 var MAMA = {
-  amy: { dish: 'Dynamite Chilli', show: 'wn_bowld', steps: [{ k: 'chop', l: 'CHOP THE CHILLIES', s: 'wn_chilli' }, { k: 'mash', l: 'STIR THE POT', s: 'wn_potd1' }, { k: 'meter', l: 'ADD THE DYNAMITE', s: 'wn_bowld' }] },
-  cafe: { dish: 'Cumpuccino', show: 'wn_d_p', steps: [{ k: 'mash', l: 'GRIND THE BEANS', s: 'wn_st_mach0' }, { k: 'pour', l: 'POUR THE CREAM', s: 'wn_d_p' }, { k: 'meter', l: 'FROTH IT', s: 'wn_d_p' }] },
-  greebo: { dish: 'Cream Pie', show: 'wn_d_q', steps: [{ k: 'mash', l: 'ROLL THE PASTRY', s: 'wn_d_qb' }, { k: 'meter', l: 'BAKE IT', s: 'wn_st_oven1' }, { k: 'chop', l: 'PIPE THE CREAM', s: 'wn_d_q' }] },
-  beebs: { dish: 'A Pint and a Stew', show: 'wn_d_a', steps: [{ k: 'pour', l: 'PULL THE PINT', s: 'wn_d_a' }, { k: 'chop', l: 'CHOP THE VEG', s: 'wn_d_s' }, { k: 'mash', l: 'STIR THE STEW', s: 'wn_st_stew1' }] },
-  ali: { dish: 'Garlic Nuggets', show: 'wn_d_n', steps: [{ k: 'mash', l: 'PEEL THE GARLIC', s: 'wn_garlic' }, { k: 'chop', l: 'CHOP THE GARLIC', s: 'wn_garlic' }, { k: 'meter', l: 'FRY TILL GOLDEN', s: 'wn_d_n' }] },
-  joff: { dish: 'Pineapple Pizza', show: 'wn_d_x', steps: [{ k: 'mash', l: 'KNEAD THE DOUGH', s: 'wn_d_zd' }, { k: 'chop', l: 'PINEAPPLE ON', s: 'wn_pineapple' }, { k: 'meter', l: 'BAKE IT', s: 'wn_st_oven1' }] }
+  amy: { dish: 'Dynamite Chilli', show: 'wn_bowld', steps: [{ k: 'chop', l: 'CHOP THE CHILLIES', s: 'wn_chilli' }, { k: 'rapid', l: 'STIR THE POT', s: 'wn_potd1' }, { k: 'meter', l: 'ADD THE DYNAMITE', s: 'wn_bowld' }] },
+  cafe: { dish: 'Cumpuccino', show: 'wn_d_p', steps: [{ k: 'rapid', l: 'GRIND THE BEANS', s: 'wn_st_mach0' }, { k: 'pour', l: 'POUR THE CREAM', s: 'wn_d_p' }, { k: 'ring', l: 'FROTH IT', s: 'wn_d_p' }] },
+  greebo: { dish: 'Cream Pie', show: 'wn_d_q', steps: [{ k: 'rapid', l: 'ROLL THE PASTRY', s: 'wn_d_qb' }, { k: 'meter', l: 'BAKE IT', s: 'wn_st_oven1' }, { k: 'ring', l: 'PIPE THE CREAM', s: 'wn_d_q' }] },
+  beebs: { dish: 'A Pint and a Stew', show: 'wn_d_a', steps: [{ k: 'pour', l: 'PULL THE PINT', s: 'wn_d_a' }, { k: 'chop', l: 'CHOP THE VEG', s: 'wn_d_s' }, { k: 'rapid', l: 'STIR THE STEW', s: 'wn_st_stew1' }] },
+  ali: { dish: 'Garlic Nuggets', show: 'wn_d_n', steps: [{ k: 'rapid', l: 'PEEL THE GARLIC', s: 'wn_garlic' }, { k: 'chop', l: 'CHOP THE GARLIC', s: 'wn_garlic' }, { k: 'flip', l: 'TOSS THE NUGGETS', s: 'wn_d_n' }] },
+  joff: { dish: 'Pineapple Pizza', show: 'wn_d_x', steps: [{ k: 'flip', l: 'SPIN THE DOUGH', s: 'wn_d_zd' }, { k: 'chop', l: 'PINEAPPLE ON', s: 'wn_pineapple' }, { k: 'meter', l: 'BAKE IT', s: 'wn_st_oven1' }] }
 };
+var MAMAHELP = { chop: 'TAP WHEN IT IS UNDER THE KNIFE', rapid: 'TAP AS FAST AS YOU CAN!', meter: 'TAP IN THE MIDDLE', pour: 'TAP TO STOP AT THE LINE', ring: 'TAP WHEN THE RING HITS THE CIRCLE', flip: 'TAP AS IT LANDS IN THE PAN' };
 var MM = null;
 function startMama() { G.mode = 'mama'; MM = { def: MAMA[G.pl.id], i: 0, scores: [], t: 0, ph: 'title' }; music.play('wnmama'); mamaStep(); }
-function mamaStep() { var s = MM.def.steps[MM.i]; MM.s = { k: s.k, l: s.l, spr: s.s, t: 0, v: 0, dir: 1, n: 0, last: null, items: [], fill: 0, done: 0, score: 0, ph: 'show' };
-  if (s.k === 'chop') for (var i = 0; i < 6; i++) MM.s.items.push({ x: W + 40 + i * 74, hit: 0 }); MM.s.spd = 120 + G.lv * 4 + G.pl.i * 6; MM.s.vs = 0.9 + G.lv * 0.03; }
+function mamaStep() { var s = MM.def.steps[MM.i]; MM.s = { k: s.k, l: s.l, spr: s.s, t: 0, v: 0, dir: 1, n: 0, items: [], fill: 0, done: 0, score: 0, ph: 'show', got: [], wob: 0 };
+  var hard = G.lv * 0.03 + G.pl.i * 0.04;
+  if (s.k === 'chop') for (var i = 0; i < 6; i++) MM.s.items.push({ x: W + 40 + i * 74, hit: 0 });
+  MM.s.spd = 120 + G.lv * 4 + G.pl.i * 6; MM.s.vs = 0.9 + G.lv * 0.03;
+  MM.s.rt = 1.5 / (1 + hard); MM.s.r = 64; MM.s.h = 0; MM.s.vy = 0; MM.s.up = 0; }
+function mamaTap() { return KIT.pressed('a') || KIT.ptr.tap; }
+function flipToss(s) { s.vy = 260 + Math.random() * 60; s.h = 0.01; s.up = 1; }
 function mamaUpdate(dt) {
-  var s = MM.s; s.t += dt; var tap = KIT.pressed('a') || KIT.ptr.tap, hold = KIT.held('a') || KIT.ptr.down;
+  var s = MM.s; s.t += dt; var tap = mamaTap(); if (s.wob > 0) s.wob -= dt; if (s.knife > 0) s.knife -= dt;
   if (KIT.pressed('b') && !s.done) { MM.scores = MM.def.steps.map(function () { return 0.5; }); return mamaFinish(); }
-  if (s.ph === 'show') { if (s.t > 1.2) { s.ph = 'go'; s.t = 0; } return; }
+  if (s.ph === 'show') { if (s.t > 1.2) { s.ph = 'go'; s.t = 0; if (s.k === 'flip') flipToss(s); } return; }
   if (s.done) { s.done += dt; if (s.done > 1.3) { MM.scores.push(s.score); MM.i++; if (MM.i >= MM.def.steps.length) mamaFinish(); else mamaStep(); } return; }
   if (s.k === 'chop') {
     s.items.forEach(function (it) { it.x -= s.spd * dt; if (!it.hit && it.x < W / 2 - 26) { it.hit = -1; } });
     if (tap) { var c = s.items.filter(function (it) { return !it.hit && Math.abs(it.x - W / 2) < 22; })[0]; s.knife = 0.12; if (c) { var d = Math.abs(c.x - W / 2); c.hit = d < 8 ? 2 : 1; sfx.play('hit'); } else sfx.play('tick'); }
-    if (s.knife > 0) s.knife -= dt;
     if (s.items.every(function (it) { return it.hit; })) { s.score = s.items.reduce(function (a, it) { return a + (it.hit === 2 ? 1 : it.hit === 1 ? 0.7 : 0); }, 0) / s.items.length; s.done = 0.01; }
-  } else if (s.k === 'mash') {
-    var k = KIT.pressed('left') ? 'l' : KIT.pressed('right') ? 'r' : KIT.ptr.tap ? (KIT.ptr.x < W / 2 ? 'l' : 'r') : KIT.pressed('a') ? (s.last === 'l' ? 'r' : 'l') : null;
-    if (k && k !== s.last) { s.n++; s.last = k; s.wob = 0.1; sfx.play('step'); } if (s.wob > 0) s.wob -= dt;
-    if (s.t > 4) { s.score = Math.min(1, s.n / 26); s.done = 0.01; }
+  } else if (s.k === 'rapid') {
+    if (tap) { s.n++; s.dir = -s.dir; s.wob = 0.1; sfx.play('step'); }
+    if (s.t > 4) { s.score = Math.min(1, s.n / 22); s.done = 0.01; }
   } else if (s.k === 'meter') {
     s.v += s.dir * s.vs * dt; if (s.v > 1) { s.v = 1; s.dir = -1; } if (s.v < 0) { s.v = 0; s.dir = 1; }
     if (tap) { s.score = clamp(1 - Math.abs(s.v - 0.5) * 3, 0, 1); s.done = 0.01; sfx.play(s.score > 0.8 ? 'power' : 'select'); }
-  } else if (s.k === 'pour') {
-    if (hold) { s.fill += dt * (0.32 + G.lv * 0.01); s.held = 1; if (Math.random() < 0.3) sfx.play('pour'); if (s.fill > 1.05) { s.score = 0; s.done = 0.01; sfx.play('no'); } }
-    else if (s.held) { s.score = clamp(1 - Math.abs(s.fill - 0.8) * 4, 0, 1); s.done = 0.01; sfx.play(s.score > 0.8 ? 'power' : 'select'); }
+  } else if (s.k === 'pour') { // it pours by itself: tap to stop it at the line
+    s.fill += dt * (0.3 + G.lv * 0.01); if (Math.random() < 0.3) sfx.play('pour');
+    if (s.fill > 1.05) { s.score = 0; s.done = 0.01; sfx.play('no'); }
+    else if (tap) { s.score = clamp(1 - Math.abs(s.fill - 0.8) * 4, 0, 1); s.done = 0.01; sfx.play(s.score > 0.8 ? 'power' : 'select'); }
+  } else if (s.k === 'ring') { // three rings shrink onto the target: tap as each one meets it
+    s.r -= dt * 64 / s.rt;
+    var res = null; if (tap) res = clamp(1 - Math.abs(s.r - 16) / 18, 0, 1); else if (s.r < -2) res = 0;
+    if (res !== null) { s.got.push(res); s.flash = 0.2; sfx.play(res > 0.7 ? 'coin' : res > 0 ? 'select' : 'no'); s.r = 64; if (s.got.length >= 3) { s.score = s.got.reduce(function (a, b) { return a + b; }, 0) / 3; s.done = 0.01; } }
+  } else if (s.k === 'flip') { // three tosses: tap when it drops back into the pan
+    if (s.up) { s.h += s.vy * dt; s.vy -= 420 * (1 + G.lv * 0.02) * dt;
+      var r2 = null; if (tap && s.vy < 0) r2 = s.h < 10 ? 1 : s.h < 28 ? 0.6 : s.h < 50 ? 0.25 : 0; else if (tap) r2 = 0; else if (s.h < -24) r2 = 0;
+      if (r2 !== null) { s.got.push(r2); s.up = 0; s.h = 0; s.t = 0; sfx.play(r2 > 0.7 ? 'coin' : r2 > 0 ? 'select' : 'no'); if (s.got.length >= 3) { s.score = s.got.reduce(function (a, b) { return a + b; }, 0) / 3; s.done = 0.01; } } }
+    else if (s.t > 0.5) flipToss(s);
   }
 }
 function mamaFinish() {
   var tot = MM.scores.reduce(function (a, b) { return a + b; }, 0) / MM.scores.length;
-  G.result.mama = tot >= 0.9 ? 'PERFECT' : tot >= 0.7 ? 'GREAT' : tot >= 0.45 ? 'GOOD' : 'ER... EDIBLE'; G.result.bonus = Math.round(tot * 80); SV.coins += G.result.bonus; persist();
+  G.result.mama = tot >= 0.9 ? 'PERFECT' : tot >= 0.7 ? 'GREAT' : tot >= 0.45 ? 'GOOD' : 'ER... EDIBLE'; G.result.bonus = Math.round(tot * 80 * (1 + U('mama') * 0.25)); SV.coins += G.result.bonus; persist();
   MM.end = { tot: tot, t: 0 }; G.mode = 'mamaend'; sfx.play(tot >= 0.7 ? 'win' : 'select');
   setTimeout(function () { if (G.mode === 'mamaend') showResult(); }, 1800);
 }
@@ -353,18 +427,27 @@ function drawMama() {
   var s = MM.s; text(s.l, W / 2, 36, { align: 'center', size: 18, font: 'title', col: '#f1e7d0' }); text('STEP ' + (MM.i + 1) + '/' + MM.def.steps.length + '   B SKIPS', W / 2, 60, { align: 'center', size: 6, col: '#a6968f' });
   if (s.ph === 'show') { spr(s.spr, W / 2, 200, { sc: 3 }); return; }
   if (s.k === 'chop') { R('#c8a878', 80, 150, 320, 60); R('#a88858', 80, 206, 320, 4); s.items.forEach(function (it) { if (it.hit > 0) { spr(s.spr, it.x - 8, 196, { sc: 2, rot: -0.3 }); spr(s.spr, it.x + 10, 198, { sc: 2, rot: 0.3 }); } else if (it.x < W + 30) spr(s.spr, it.x, 196, { sc: 2.4, alpha: it.hit < 0 ? 0.4 : 1 }); });
-    var ky = s.knife > 0 ? 150 : 96; R('#12040a', W / 2 - 4, ky - 60, 8, 40); R('#c8c0c8', W / 2 - 18, ky - 22, 36, 30); R('#ffffff', W / 2 - 18, ky + 6, 36, 2); R('rgba(255,227,106,0.3)', W / 2 - 22, 210, 44, 4); text('A / TAP WHEN IT IS UNDER THE KNIFE', W / 2, 238, { align: 'center', size: 6, col: '#a6968f' }); }
-  else if (s.k === 'mash') { var wob = s.wob > 0 ? (s.last === 'l' ? -6 : 6) : 0; spr(s.spr, W / 2 + wob, 210, { sc: 3, rot: wob * 0.02 }); KIT.bar(140, 236, 200, 8, Math.min(1, s.n / 26), '#ffe36a'); text('< > LEFT, RIGHT, LEFT, RIGHT!  ' + Math.max(0, 4 - s.t).toFixed(1), W / 2, 224, { align: 'center', size: 6, col: '#f1e7d0' }); }
-  else if (s.k === 'meter') { spr(s.spr, W / 2, 200, { sc: 3 }); R('#12040a', 90, 80, 300, 16); R('#3a1a10', 92, 82, 296, 12); R('#ff9a30', 92 + 296 * 0.33, 82, 296 * 0.34, 12); R('#ffe36a', 92 + 296 * 0.45, 82, 296 * 0.1, 12); R('#ffffff', 92 + 296 * s.v - 2, 76, 4, 24); text('A / TAP IN THE MIDDLE', W / 2, 238, { align: 'center', size: 6, col: '#a6968f' }); }
-  else if (s.k === 'pour') { var cx = W / 2; R('#12040a', cx - 34, 110, 68, 110); R('#e8e0d8', cx - 32, 112, 64, 106); var f = Math.min(1, s.fill); R(G.pl.id === 'beebs' ? '#ffc840' : '#f1e0b0', cx - 32, 218 - 106 * f, 64, 106 * f); R('#ff2630', cx - 40, 218 - 106 * 0.8, 80, 2); if (s.fill > 0.95) R('rgba(255,255,255,0.6)', cx - 34, 100, 68, 14);
-    if (KIT.held('a') || KIT.ptr.down) R(G.pl.id === 'beebs' ? '#ffc840' : '#f1e0b0', cx - 3, 90, 6, 128 - 106 * f); text('HOLD A / TOUCH TO POUR. LET GO AT THE LINE', W / 2, 238, { align: 'center', size: 6, col: '#a6968f' }); }
+    var ky = s.knife > 0 ? 150 : 96; R('#12040a', W / 2 - 4, ky - 60, 8, 40); R('#c8c0c8', W / 2 - 18, ky - 22, 36, 30); R('#ffffff', W / 2 - 18, ky + 6, 36, 2); R('rgba(255,227,106,0.3)', W / 2 - 22, 210, 44, 4); }
+  else if (s.k === 'rapid') { var wob = s.wob > 0 ? s.dir * 6 : 0; spr(s.spr, W / 2 + wob, 210, { sc: 3, rot: wob * 0.02 }); KIT.bar(140, 236, 200, 8, Math.min(1, s.n / 22), '#ffe36a'); text(Math.max(0, 4 - s.t).toFixed(1), W / 2, 224, { align: 'center', size: 6, col: '#f1e7d0' }); }
+  else if (s.k === 'meter') { spr(s.spr, W / 2, 200, { sc: 3 }); R('#12040a', 90, 80, 300, 16); R('#3a1a10', 92, 82, 296, 12); R('#ff9a30', 92 + 296 * 0.33, 82, 296 * 0.34, 12); R('#ffe36a', 92 + 296 * 0.45, 82, 296 * 0.1, 12); R('#ffffff', 92 + 296 * s.v - 2, 76, 4, 24); }
+  else if (s.k === 'pour') { var cx = W / 2, liq = G.pl.id === 'beebs' ? '#ffc840' : '#f1e0b0'; R('#12040a', cx - 34, 110, 68, 110); R('#e8e0d8', cx - 32, 112, 64, 106); var f = Math.min(1, s.fill); R(liq, cx - 32, 218 - 106 * f, 64, 106 * f); R('#ff2630', cx - 40, 218 - 106 * 0.8, 80, 2); if (s.fill > 0.95) R('rgba(255,255,255,0.6)', cx - 34, 100, 68, 14);
+    if (!s.done) R(liq, cx - 3, 90, 6, 128 - 106 * f); }
+  else if (s.k === 'ring') { var ctx = KIT.ctx, cy = 172; spr(s.spr, W / 2, cy + 22, { sc: 2.5 });
+    ctx.lineWidth = 3; ctx.strokeStyle = '#ffe36a'; ctx.beginPath(); ctx.arc(W / 2, cy, 16, 0, Math.PI * 2); ctx.stroke();
+    if (!s.done && s.r > 0) { ctx.lineWidth = 2; ctx.strokeStyle = Math.abs(s.r - 16) < 6 ? '#9aff5a' : '#f1e7d0'; ctx.beginPath(); ctx.arc(W / 2, cy, Math.max(1, s.r), 0, Math.PI * 2); ctx.stroke(); }
+    for (var gi = 0; gi < 3; gi++) R(gi < s.got.length ? (s.got[gi] > 0.7 ? '#ffe36a' : s.got[gi] > 0 ? '#ff9a30' : '#ff2630') : '#3a1a1c', W / 2 - 22 + gi * 16, 222, 12, 6); }
+  else if (s.k === 'flip') { var py = 206; spr('wn_st_grill0', W / 2, py + 28, { sc: 1.5 }); R('#12040a', W / 2 - 34, py - 4, 68, 8); R('#3a2a30', W / 2 - 32, py - 3, 64, 5); R('#12040a', W / 2 + 32, py - 2, 40, 4);
+    spr(s.spr, W / 2, py - 2 - Math.max(-20, s.h), { sc: 2.4, rot: s.up ? s.h * 0.05 : 0 });
+    for (var fi = 0; fi < 3; fi++) R(fi < s.got.length ? (s.got[fi] > 0.7 ? '#ffe36a' : s.got[fi] > 0 ? '#ff9a30' : '#ff2630') : '#3a1a1c', W / 2 - 22 + fi * 16, 236, 12, 6); }
+  if (!s.done && s.ph === 'go') text(MAMAHELP[s.k] + '  (A OR TOUCH)', W / 2, 246, { align: 'center', size: 6, col: '#a6968f' });
   if (s.done) text(s.score >= 0.9 ? 'PERFECT!' : s.score >= 0.6 ? 'NICE!' : s.score > 0.2 ? 'OK...' : 'OOPS', W / 2, 100, { align: 'center', size: 28, font: 'title', col: s.score >= 0.6 ? '#ffe36a' : '#ff2630' });
 }
 
 /* ---------- drawing ---------- */
 function drawRoom() {
   var fr = floorRect(), th = G.pl.th, pl = G.pl;
-  KIT.blit(KIT.layer('wn-room-' + pl.id + '-' + G.L.t, W, H, function () {
+  var dec = SV.decor[pl.id] || 0;
+  KIT.blit(KIT.layer('wn-room-' + pl.id + '-' + G.L.t + '-' + dec, W, H, function () {
     R('#0a0506', 0, 0, W, H);
     R(th.wall, 0, 0, W, 110);
     if (th.planks) { for (var y0 = 0; y0 < 110; y0 += 12) { R(th.brick, 0, y0 + 1, W, 10); R(th.hi, 0, y0 + 1, W, 1); } for (var bx = 20; bx < W; bx += 90) R('#1a0e04', bx, 0, 10, 110); }
@@ -381,7 +464,14 @@ function drawRoom() {
     R('#1a0a0c', 282, 50, W - 282, 60); R('#2a0e10', 282, 50, W - 282, 2); R('#5a4a3a', 282, 104, W - 282, 6); R('#8a7a6a', 282, 104, W - 282, 2);
     // the sign
     R('#12040a', 108, 14, 140, 28); R(th.sign, 110, 16, 136, 24); R('#0a0204', 113, 19, 130, 18);
+    if (dec >= 1) { // the wall poster
+      R('#12040a', 254, 4, 40, 42); R('#6e3a1e', 255, 5, 38, 40); R('#a8643a', 255, 5, 38, 1); R('#1a0a0c', 258, 8, 32, 34); R(th.sign, 258, 8, 32, 3);
+      spr(DISH[pl.mains[pl.mains.length - 1]].s, 274, 34, { sc: 1.2 }); text('NO.1', 274, 35, { align: 'center', size: 6, col: th.sign });
+    }
+    if (dec >= 2) for (var sx = 0; sx < 2; sx++) { R('rgba(255,227,106,0.06)', 136 + sx * 60, 46, 28, 30); R('rgba(255,227,106,0.06)', 140 + sx * 60, 50, 20, 22); }
   }), 0, 0);
+  if (dec >= 2) for (var sc2 = 0; sc2 < 2; sc2++) spr(Math.floor(KIT.t * 7 + sc2 * 3) % 23 ? 'wn_sconce1' : 'wn_sconce0', 150 + sc2 * 60, 64);
+  if (dec >= 3) { R('rgba(0,0,0,0.35)', 166, 106, 28, 3); spr('wn_sp_' + pl.id, 180, 108); }
   for (var b = 0; b < 17; b++) R(Math.floor(KIT.t * 3 + b) % 3 ? th.sign : '#ffffff', 112 + b * 8, 14, 2, 2);
   text(pl.short, 178, 22, { align: 'center', size: 13, font: 'title', col: th.sign, max: 126 });
   spr(G.doorT > 0 ? 'wn_dooropen' : 'wn_door', 30, 110, {});
@@ -394,8 +484,8 @@ function drawSt(s) {
   var shake = K.type === 'phone' && s.ring > 0 ? Math.round(Math.sin(KIT.t * 50)) : 0;
   spr(f, s.x + shake, s.y + 8);
   if (s.st === 'cook') { KIT.bar(s.x - 16, s.y - 42, 32, 4, s.t / s.need, '#ffb040'); if (Math.random() < 0.25) parts.push({ x: s.x + rnd(-10, 10), y: s.y - 26, vx: 0, vy: -20, t: 0.8, c: 'rgba(200,180,170,0.6)', smoke: 1 }); }
-  if (s.st === 'busy') KIT.bar(s.x - 16, s.y - 42, 32, 4, 1 - host.actT / (K.cook * cookK()), '#9aff5a');
-  if (s.st === 'ready') { var it = s.item; spr(done(it) ? DISH[it.d].s : DISH[it.d].mid || DISH[it.d].s, s.x, s.y - 26 + Math.sin(KIT.t * 6) * 1.5); text(done(it) ? 'READY' : 'NEXT STEP', s.x, s.y - 50, { align: 'center', size: 6, col: '#ffe36a' }); if (K.burn && s.t > K.burn * 0.6) R(Math.floor(KIT.t * 8) % 2 ? '#ff2630' : '#ffb040', s.x - 14, s.y - 54, 28, 2); }
+  if (s.st === 'busy') KIT.bar(s.x - 16, s.y - 42, 32, 4, 1 - host.actT / (K.cook * prepK()), '#9aff5a');
+  if (s.st === 'ready') { var it = s.item; spr(done(it) ? DISH[it.d].s : DISH[it.d].mid || DISH[it.d].s, s.x, s.y - 26 + Math.sin(KIT.t * 6) * 1.5); text(done(it) ? 'READY' : 'NEXT STEP', s.x, s.y - 50, { align: 'center', size: 6, col: '#ffe36a' }); if (K.burn && s.t > K.burn * (perk('burn') || 1) * (1 + U('lamps') * 0.3) * 0.6) R(Math.floor(KIT.t * 8) % 2 ? '#ff2630' : '#ffb040', s.x - 14, s.y - 54, 28, 2); }
   if (s.st === 'burnt') { R('#12040a', s.x - 14, s.y - 40, 28, 10); text(K.bad ? 'COLD' : 'BURNT', s.x, s.y - 38, { align: 'center', size: 6, col: '#ff2630' }); if (Math.random() < 0.5) parts.push({ x: s.x + rnd(-10, 10), y: s.y - 26, vx: 0, vy: -26, t: 1, c: 'rgba(40,30,30,0.8)', smoke: 1 }); }
   if (K.type === 'phone' && s.ring > 0) text('RING!', s.x, s.y - 36 - Math.abs(Math.sin(KIT.t * 12)) * 3, { align: 'center', size: 6, col: '#ffe36a' });
   if (K.type === 'shelf') takeaways.forEach(function (tk, j) { spr('wn_bag', s.x - 12 + j * 12, s.y - 2, { alpha: 0.4 }); spr(DISH[tk.d].s, s.x - 12 + j * 12, s.y - 18, { sc: 0.6 }); KIT.bar(s.x - 18 + j * 12, s.y - 30, 10, 2, tk.hearts / 5, '#ff2630'); });
@@ -445,7 +535,8 @@ function draw() {
   pops.forEach(function (p) { text(p.t, p.x, p.y, { align: 'center', size: 6, col: p.c, alpha: Math.min(1, p.life * 2) }); });
   drawHud();
   if (G.cheer > 0) text('PARTY!', W / 2, 120, { align: 'center', size: 32, font: 'title', col: '#ffe36a', alpha: Math.min(1, G.cheer) });
-  if (G.mode === 'intro') { KIT.panel(W / 2 - 160, 84, 320, 104); text(G.pl.name.toUpperCase(), W / 2, 92, { align: 'center', size: 6, col: G.pl.th.sign }); text('DAY ' + (G.lv + 1), W / 2, 104, { align: 'center', size: 24, font: 'title', col: '#ff2630' });
+  if (G.mode === 'intro') { var bl = SUPPLIES.filter(function (it) { return B(it.id); }).map(function (it) { return it.n.toUpperCase(); }); KIT.panel(W / 2 - 160, 84, 320, bl.length ? 118 : 104);
+    if (bl.length) text('TODAY: ' + bl.join(' · '), W / 2, 188, { align: 'center', size: 6, col: '#9aff5a', max: 300 }); text(G.pl.name.toUpperCase(), W / 2, 92, { align: 'center', size: 6, col: G.pl.th.sign }); text('DAY ' + (G.lv + 1), W / 2, 104, { align: 'center', size: 24, font: 'title', col: '#ff2630' });
     text(G.L.t + ' TABLES  ·  ' + G.L.n + ' CUSTOMERS', W / 2, 134, { align: 'center', size: 6 }); text('GOAL ' + G.L.goal + '   EXPERT ' + G.L.expert, W / 2, 146, { align: 'center', size: 6, col: '#ffe36a' });
     var tw2 = KIT.wrap(G.lv === 0 ? G.pl.twist : '"' + G.pl.quote + '"', 290, 10, 'body'); tw2.slice(0, 2).forEach(function (l, i) { text(l, W / 2, 158 + i * 12, { align: 'center', size: 10, font: 'body', col: '#a6968f' }); }); }
 }
@@ -497,11 +588,46 @@ function daysMenu(pid) {
 function hostsMenu() {
   KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
 }
+var shopBack = null;
+function keepScroll(fn) { var box = document.querySelector('#menu .mbox'), y = box ? box.scrollTop : 0; fn(); box = document.querySelector('#menu .mbox'); if (box) box.scrollTop = y; }
 function upgradesMenu(back) {
-  back = back || titleMenu;
-  KIT.menu({ title: 'Shop', sub: 'Tips in the jar: ' + SV.coins, items: [{ label: 'PARTY POPPER  ·  $' + POPPER_COST, sub: 'Use one mid-day (Y or tap it): everyone cheers up. You have ' + (SV.items.popper || 0), dis: SV.coins < POPPER_COST, fn: function () { SV.coins -= POPPER_COST; SV.items.popper = (SV.items.popper || 0) + 1; persist(); sfx.play('coin'); upgradesMenu(back); } }]
-    .concat(UPGRADES.map(function (u) { var own = SV.ups[u.id]; return { label: u.name.toUpperCase() + (own ? '' : '  ·  $' + u.cost), sub: u.d, cls: own ? 'done' : '', dis: own || SV.coins < u.cost, fn: function () { SV.coins -= u.cost; SV.ups[u.id] = 1; persist(); sfx.play('power'); upgradesMenu(back); } }; }))
-    .concat([{ label: 'BACK', back: true, fn: back }]) });
+  if (back) shopBack = back; back = shopBack || titleMenu;
+  var lv = 0, mx = 0; UPGRADES.forEach(function (u) { lv += U(u.id); mx += u.max; });
+  var dl = 0; PLACES.forEach(function (p) { dl += (SV.decor[p.id] || 0); });
+  KIT.menu({ title: 'Shop', sub: 'Tips in the jar: $' + SV.coins + '  ·  upgrades ' + lv + ' of ' + mx + '  ·  decor ' + dl + ' of ' + PLACES.length * DECOR.length,
+    items: CATS.map(function (c) { var n = 0, m = 0; UPGRADES.forEach(function (u) { if (u.cat === c.id) { n += U(u.id); m += u.max; } }); return { label: c.n + '  ·  ' + n + '/' + m, sub: c.d, cls: n >= m ? 'done' : '', fn: function () { catMenu(c.id); } }; })
+      .concat([{ label: 'DECOR  ·  ' + dl + '/' + PLACES.length * DECOR.length, sub: 'Do up each place. It shows, and it only helps there.', fn: decorPlaces },
+        { label: 'SUPPLIES', sub: 'Party poppers, and boosts for your next day. Poppers ' + (SV.items.popper || 0), fn: function () { suppliesMenu(); } },
+        { label: 'BACK', back: true, fn: back }]) });
+}
+function catMenu(cid, focus) {
+  var c = CATS.filter(function (x) { return x.id === cid; })[0];
+  KIT.menu({ title: c.n.charAt(0) + c.n.slice(1).toLowerCase(), sub: 'Tips in the jar: $' + SV.coins,
+    items: UPGRADES.filter(function (u) { return u.cat === cid; }).map(function (u) {
+      var l = U(u.id), full = l >= u.max, cost = upCost(u);
+      return { label: u.name.toUpperCase() + '  ·  ' + l + '/' + u.max + (full ? '' : '  ·  $' + cost), sub: full ? u.d(l) : (l ? 'Now: ' + u.d(l) + ' Next: ' + u.d(l + 1) : u.d(1)), cls: full ? 'done' : '', dis: full || SV.coins < cost, def: focus === u.id,
+        fn: function () { SV.coins -= cost; SV.ups[u.id] = l + 1; persist(); sfx.play('power'); keepScroll(function () { catMenu(cid, u.id); }); } };
+    }).concat([{ label: 'BACK', back: true, fn: function () { upgradesMenu(); } }]) });
+}
+function decorPlaces() {
+  KIT.menu({ title: 'Decor', sub: 'Tips in the jar: $' + SV.coins, items: PLACES.map(function (p) { var open = SV.open[p.id], n = SV.decor[p.id] || 0;
+    return { label: p.name.toUpperCase() + '  ·  ' + n + '/' + DECOR.length, sub: open ? (n < DECOR.length ? 'Next: ' + decorName(p, n) + ' · $' + decorCost(p, n) : 'All done up') : 'Not open yet', dis: !open, cls: n >= DECOR.length ? 'done' : '', fn: function () { decorMenu(p.id); } }; })
+    .concat([{ label: 'BACK', back: true, fn: function () { upgradesMenu(); } }]) });
+}
+function decorName(p, k) { return k === 2 ? SHOWPIECE[p.id] : DECOR[k].n; }
+function decorMenu(pid) {
+  var p = PLACE[pid], n = SV.decor[pid] || 0;
+  KIT.menu({ title: p.name, sub: 'Tips in the jar: $' + SV.coins, items: DECOR.map(function (dc, k) { var own = n > k, cost = decorCost(p, k), next = k === n;
+    return { label: decorName(p, k).toUpperCase() + (own ? '' : '  ·  $' + cost), sub: dc.d + (own || next ? '' : ' Buy the ' + decorName(p, k - 1) + ' first.'), cls: own ? 'done' : '', dis: own || !next || SV.coins < cost, def: next,
+      fn: function () { SV.coins -= cost; SV.decor[pid] = k + 1; persist(); sfx.play('power'); decorMenu(pid); } }; })
+    .concat([{ label: 'BACK', back: true, fn: decorPlaces }]) });
+}
+function suppliesMenu(focus) {
+  KIT.menu({ title: 'Supplies', sub: 'Tips in the jar: $' + SV.coins + '  ·  boosts are used up on the next day you start',
+    items: SUPPLIES.map(function (it) { var have = SV.items[it.id] || 0, show = it.give ? SV.items.popper || 0 : have;
+      return { label: it.n.toUpperCase() + '  ·  $' + it.cost, sub: it.d + (it.give || it.id === 'popper' ? ' You have ' + show + ' poppers.' : have ? ' You have ' + have + ' ready.' : ''), dis: SV.coins < it.cost, def: focus === it.id,
+        fn: function () { SV.coins -= it.cost; if (it.give) for (var k in it.give) SV.items[k] = (SV.items[k] || 0) + it.give[k]; else SV.items[it.id] = have + 1; persist(); sfx.play('coin'); keepScroll(function () { suppliesMenu(it.id); }); } }; })
+    .concat([{ label: 'BACK', back: true, fn: function () { upgradesMenu(); } }]) });
 }
 function helpMenu() {
   KIT.menu({ title: 'How to Play', html: '<p>Tap a customer in the queue, then a free table to seat them. (With a controller or keys: move the cursor and press A.)</p><p>When they put a hand up (<b>!</b>) tap their table to take the order. Tap the right station to make each thing: some dishes go through two (a cream pie bakes, then gets its cream; a pizza gets its topping, then bakes). When it says READY, tap it to pick it up, then tap the table to serve.</p><p>When they want the bill (<b>$</b>), tap the table to get paid, then tap it again to clear the plates.</p><p>The <b>treat stall</b> by the sign gives out sweets: pick one up and tap a customer to cheer them up. A <b>party popper</b> (Y, or tap it bottom left) cheers up everyone at once; buy them in the shop.</p><p>You remember up to 4 jobs in a row. The same job twice in a row is a CHAIN bonus. Hearts are patience. Leave food too long and it burns. B cancels the last job.</p><p>Beat day ' + UNLOCK_AT + ' at a place to open the next one. Between days there is Kitchen Time: make the house dish for extra tips.</p>',
@@ -509,7 +635,7 @@ function helpMenu() {
 }
 function pauseMenu() {
   if (G.mode !== 'play' && G.mode !== 'intro') return;
-  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.pl.name + '  ·  Day ' + (G.lv + 1) + '  ·  $' + G.score, items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'START THE DAY AGAIN', fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv); } }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }] });
+  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.pl.name + '  ·  Day ' + (G.lv + 1) + '  ·  $' + G.score, items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'START THE DAY AGAIN', fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv, true); } }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }] });
 }
 
 /* ---------- music: every place has its own ---------- */
