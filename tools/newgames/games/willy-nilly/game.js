@@ -68,12 +68,25 @@ var PLACES = [
 var PLACE = {}; PLACES.forEach(function (p, i) { p.i = i; PLACE[p.id] = p; });
 var PERK = { amy: { burn: 1.5 }, cafe: { speed: 1.15 }, greebo: { hands: 1 }, beebs: { pat: 0.88 }, ali: { tip: 1.2 }, joff: { cook: 0.88 } };
 var NDAYS = 20, UNLOCK_AT = 5;
+/* three shifts of 20 days at every place: beat day 20 for the night shift, night 20 for the nightmare shift */
+var SHIFTS = [
+  { n: 'Day Shift', w: 'Day', col: '#ffe36a', d: 'The normal day.' },
+  { n: 'Night Shift', w: 'Night', col: '#9adfff', d: 'More tables, more customers, shorter tempers, food spoils faster.' },
+  { n: 'Nightmare Shift', w: 'Nightmare', col: '#ff2630', d: 'Packed every night, no patience at all, and the kitchen is cursed.' }
+];
+var TOTAL = NDAYS * SHIFTS.length;
+function shiftOf(i) { return Math.floor(i / NDAYS); }
+function lvName(i) { return SHIFTS[shiftOf(i)].w + ' ' + (i % NDAYS + 1); }
 function levelFor(pl, i) {
+  var sh = shiftOf(i); i = i % NDAYS;
   var L = { t: Math.min(6, 2 + Math.floor(i / 3)), n: Math.round(6 + i * 1.0 + pl.i * 0.5), pair: Math.min(0.7, 0.2 + i * 0.025), side: Math.min(0.55, 0.05 + i * 0.03), dyn: 0.35 + Math.min(0.25, i * 0.015) };
   var gk = Math.max(0, 1 - i * 0.03 - pl.i * 0.02); L.gap = [Math.max(3.3, 7 * gk + 1.6), Math.max(5, 10 * gk + 2)];
   if (pl.id === 'amy') L.sides = i >= 6 ? ['k', 'p'] : i >= 2 ? ['k'] : []; else L.sides = pl.sides;
+  L.sh = sh; L.d = i; L.k = i + sh * 8; L.patK = 1; L.burnK = 1;
+  if (sh === 1) { L.t = Math.min(6, L.t + 1); L.n = Math.round(L.n * 1.25); L.gap = [L.gap[0] * 0.85, L.gap[1] * 0.85]; L.pair = Math.min(0.8, L.pair + 0.1); L.side = Math.min(0.65, L.side + 0.1); L.patK = 1.2; L.burnK = 0.85; if (pl.id === 'amy') L.sides = ['k', 'p']; }
+  if (sh === 2) { L.t = 6; L.n = Math.round(L.n * 1.5); L.gap = [L.gap[0] * 0.72, L.gap[1] * 0.72]; L.pair = Math.min(0.9, L.pair + 0.2); L.side = Math.min(0.75, L.side + 0.2); L.dyn = Math.min(0.8, L.dyn + 0.15); L.patK = 1.45; L.burnK = 0.7; if (pl.id === 'amy') L.sides = ['k', 'p']; }
   var avg = pl.mains.reduce(function (a, d) { return a + DISH[d].p; }, 0) / pl.mains.length;
-  L.goal = Math.round(L.n * (36 + avg * (1 + L.pair) * 0.75 + i * 0.4) / 10) * 10; L.expert = Math.round(L.goal * 1.35 / 10) * 10;
+  L.goal = Math.round(L.n * (36 + avg * (1 + L.pair) * 0.75 + L.k * 0.4) / 10) * 10; L.expert = Math.round(L.goal * 1.35 / 10) * 10;
   return L;
 }
 /* ---------- the shop: upgrades with levels, decor for each place, and supplies for the next day ---------- */
@@ -164,7 +177,7 @@ function done(it) { return it.step >= RECIPE[it.d].length; }
 
 /* ---------- customers ---------- */
 function newGroup() {
-  var L = G.L, pl = G.pl, size = Math.random() < L.pair ? 2 : 1; if (pl.big && Math.random() < 0.35 + G.lv * 0.02) size = 3 + (Math.random() < 0.4 ? 1 : 0);
+  var L = G.L, pl = G.pl, size = Math.random() < L.pair ? 2 : 1; if (pl.big && Math.random() < Math.min(0.8, 0.35 + G.L.k * 0.02)) size = 3 + (Math.random() < 0.4 ? 1 : 0);
   var who = [], used = {};
   for (var k = 0; k < size; k++) { var f, tries = 0; do { f = pick(FOLK); } while (used[f.n] && tries++ < 10); used[f.n] = 1; who.push(f); }
   var main = pl.id === 'amy' ? (Math.random() < L.dyn ? 'd' : 'c') : pl.id === 'joff' ? (Math.random() < 0.45 ? 'x' : 'z') : pick(pl.mains), order = [main];
@@ -172,7 +185,7 @@ function newGroup() {
   else if (L.sides.length && Math.random() < L.side) order.push(pick(L.sides));
   if (pl.id === 'beebs' && main === 's' && Math.random() < 0.5) order = ['s', 'a'];
   var pat = who.reduce(function (a, f) { return Math.max(a, f.pat || 1); }, 0), tip = who.reduce(function (a, f) { return a + (f.tip || 1); }, 0) / who.length;
-  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * (1 - U('juke') * 0.06) * (DC(1) ? 0.9 : 1) * (B('candles') ? 0.75 : 1) * (perk('pat') || 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
+  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * G.L.patK * (1 - U('juke') * 0.06) * (DC(1) ? 0.9 : 1) * (B('candles') ? 0.75 : 1) * (perk('pat') || 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
     read: who.reduce(function (a, f) { return Math.max(a, f.read || 1); }, 0), eat: who.reduce(function (a, f) { return a + (f.eat || 1); }, 0) / who.length, bob: Math.random() * 6 };
   groups.push(g); queue.push(g); sfx.play('bell'); G.doorT = 0.8;
 }
@@ -264,11 +277,11 @@ function updSts(dt) {
   sts.forEach(function (s) {
     s.t += dt;
     if (s.st === 'cook') { if (Math.random() < 0.15) sfx.play('cook'); if (s.t >= s.need) { s.st = 'ready'; s.t = 0; s.item.step++; sfx.play('bell'); } }
-    else if (s.st === 'ready' && s.K.burn && s.t > s.K.burn * (perk('burn') || 1) * (1 + U('lamps') * 0.3)) { var bp = 10 - U('blanket') * 5; s.st = 'burnt'; s.t = 0; G.score = Math.max(0, G.score - bp); pop(s.x, s.y - 50, (s.K.bad || 'BURNT!') + (bp ? '  -' + bp : ''), '#ff2630'); sfx.play('no'); }
+    else if (s.st === 'ready' && s.K.burn && s.t > s.K.burn * G.L.burnK * (perk('burn') || 1) * (1 + U('lamps') * 0.3)) { var bp = 10 - U('blanket') * 5; s.st = 'burnt'; s.t = 0; G.score = Math.max(0, G.score - bp); pop(s.x, s.y - 50, (s.K.bad || 'BURNT!') + (bp ? '  -' + bp : ''), '#ff2630'); sfx.play('no'); }
     if (s.K.type === 'phone') { if (s.ring > 0) { s.ring -= dt; if (Math.floor(s.ring * 4) !== Math.floor((s.ring + dt) * 4)) sfx.play('tick'); if (s.ring <= 0) { G.lost++; G.score = Math.max(0, G.score - 10); pop(s.x, s.y - 50, 'MISSED A CALL  -10', '#ff2630'); } }
-      else if (arrivals.length) { G.phoneT -= dt; if (G.phoneT <= 0) { G.phoneT = rnd(16, 26) - G.lv * 0.4; s.ring = 9 + U('machine') * 3; sfx.play('bell'); } } }
+      else if (arrivals.length) { G.phoneT -= dt; if (G.phoneT <= 0) { G.phoneT = Math.max(8, rnd(16, 26) - G.L.k * 0.4); s.ring = 9 + U('machine') * 3; sfx.play('bell'); } } }
   });
-  takeaways.forEach(function (tk) { tk.hearts -= 0.06 * dt * (perk('pat') || 1) * (1 - U('machine') * 0.15); if (tk.hearts <= 0 && !tk.out) { tk.out = 1; G.lost++; G.score = Math.max(0, G.score - 20); var sh = sts.filter(function (s) { return s.key === 'shelf'; })[0]; pop(sh.x, sh.y - 50, 'TAKEAWAY CANCELLED  -20', '#ff2630'); var ti = host.tickets.indexOf(tk.d); if (ti >= 0) host.tickets.splice(ti, 1); } });
+  takeaways.forEach(function (tk) { tk.hearts -= 0.06 * dt * G.L.patK * (perk('pat') || 1) * (1 - U('machine') * 0.15); if (tk.hearts <= 0 && !tk.out) { tk.out = 1; G.lost++; G.score = Math.max(0, G.score - 20); var sh = sts.filter(function (s) { return s.key === 'shelf'; })[0]; pop(sh.x, sh.y - 50, 'TAKEAWAY CANCELLED  -20', '#ff2630'); var ti = host.tickets.indexOf(tk.d); if (ti >= 0) host.tickets.splice(ti, 1); } });
   takeaways = takeaways.filter(function (t) { return !t.out; });
 }
 function score(n, kind, x, y, label) {
@@ -341,7 +354,7 @@ function potBoy(dt) {
 function endLevel() {
   var L = G.L, st = G.score >= L.expert ? 3 : G.score >= L.goal ? 2 : G.score >= L.goal * 0.6 ? 1 : 0, pass = G.score >= L.goal, pd = SV.places[G.pl.id];
   SV.coins += G.score; if ((pd.best[G.lv] || 0) < G.score) pd.best[G.lv] = G.score; if ((pd.stars[G.lv] || 0) < st && pass) pd.stars[G.lv] = st;
-  if (pass && pd.unl < G.lv + 2) pd.unl = Math.min(NDAYS, G.lv + 2);
+  if (pass && pd.unl < G.lv + 2) pd.unl = Math.min(TOTAL, G.lv + 2);
   var nxt = PLACES[G.pl.i + 1], newPlace = null; if (pass && G.lv + 1 >= UNLOCK_AT && nxt && !SV.open[nxt.id]) { SV.open[nxt.id] = 1; SV.places[nxt.id] = SV.places[nxt.id] || { unl: 1, best: {}, stars: {} }; newPlace = nxt; }
   var piggy = U('piggy') * 15; SV.coins += piggy; var club = pass && Math.random() < U('subs') * 0.2; if (club) SV.items.popper = (SV.items.popper || 0) + 1;
   persist(); sfx.play(pass ? 'win' : 'lose');
@@ -349,13 +362,14 @@ function endLevel() {
   if (pass) startMama(); else showResult();
 }
 function showResult() {
-  var r = G.result, L = G.L, last = G.lv === NDAYS - 1; G.mode = 'over'; music.play('wntitle');
-  KIT.menu({ title: r.pass ? (r.st === 3 ? 'Expert Service!' : 'Day Done!') : 'Not Enough Tips', sub: G.pl.name + '  ·  Day ' + (G.lv + 1) + '  ·  ' + L.t + ' tables',
+  var r = G.result, L = G.L, last = G.lv === TOTAL - 1, shEnd = r.pass && G.lv % NDAYS === NDAYS - 1 && !last, nsh = SHIFTS[shiftOf(G.lv) + 1]; G.mode = 'over'; music.play('wntitle');
+  KIT.menu({ title: r.pass ? (r.st === 3 ? 'Expert Service!' : 'Day Done!') : 'Not Enough Tips', sub: G.pl.name + '  ·  ' + lvName(G.lv) + '  ·  ' + L.t + ' tables',
     html: '<p style="text-align:center;margin:0">Score <b>' + G.score + '</b>  ·  Goal ' + L.goal + '  ·  Expert ' + L.expert + '<br>Served ' + G.served + '  ·  Stormed out ' + G.lost + '<br>' + starStr(r.pass ? r.st : 0) +
       (r.bonus ? '<br>Kitchen Time: <b>' + r.mama + '</b>  +' + r.bonus + ' tips' : '') + (r.piggy ? '<br>Piggy Bank: +' + r.piggy + ' tips' : '') + (r.club ? '<br>Popper Club sent you a free party popper!' : '') + '<br>Tips in the jar: <b>' + SV.coins + '</b></p>' +
       (r.newPlace ? '<p style="text-align:center;color:#ffe36a">NEW PLACE: <b>' + r.newPlace.name + '</b> is open, and ' + r.newPlace.who + ' can work any kitchen now.</p>' : '') +
-      (r.pass && last ? '<p style="text-align:center;color:#ffe36a">' + G.pl.name + ' is the busiest place in town. "' + G.pl.quote + '"</p>' : ''),
-    items: [r.pass && !last ? { label: 'NEXT DAY', sub: 'Day ' + (G.lv + 2), fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv + 1); }, cls: 'hot', def: true } : null,
+      (shEnd ? '<p style="text-align:center;color:' + nsh.col + '">' + nsh.n.toUpperCase() + ' IS OPEN at ' + G.pl.name + '. ' + nsh.d + '</p>' : '') +
+      (r.pass && last ? '<p style="text-align:center;color:#ffe36a">' + G.pl.name + ' survived the Nightmare Shift. The busiest place in town, day and night. "' + G.pl.quote + '"</p>' : ''),
+    items: [r.pass && !last ? { label: shEnd ? 'START THE ' + nsh.n.toUpperCase() : 'NEXT DAY', sub: lvName(G.lv + 1), fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv + 1); }, cls: 'hot', def: true } : null,
       r.newPlace ? { label: 'GO TO ' + r.newPlace.short, fn: function () { KIT.closeMenu(); startLevel(r.newPlace.id, 0); } } : null,
       { label: 'TRY AGAIN', fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv); }, def: !r.pass },
       { label: 'SHOP', sub: 'Upgrades and party poppers', fn: function () { upgradesMenu(showResult); } }, { label: 'PLACES', fn: placesMenu, back: true }].filter(Boolean) });
@@ -376,9 +390,9 @@ var MAMAHELP = { chop: 'TAP WHEN IT IS UNDER THE KNIFE', rapid: 'TAP AS FAST AS 
 var MM = null;
 function startMama() { G.mode = 'mama'; MM = { def: MAMA[G.pl.id], i: 0, scores: [], t: 0, ph: 'title' }; music.play('wnmama'); mamaStep(); }
 function mamaStep() { var s = MM.def.steps[MM.i]; MM.s = { k: s.k, l: s.l, spr: s.s, t: 0, v: 0, dir: 1, n: 0, items: [], fill: 0, done: 0, score: 0, ph: 'show', got: [], wob: 0 };
-  var hard = G.lv * 0.03 + G.pl.i * 0.04;
+  var hard = G.L.k * 0.03 + G.pl.i * 0.04;
   if (s.k === 'chop') for (var i = 0; i < 6; i++) MM.s.items.push({ x: W + 40 + i * 74, hit: 0 });
-  MM.s.spd = 120 + G.lv * 4 + G.pl.i * 6; MM.s.vs = 0.9 + G.lv * 0.03;
+  MM.s.spd = 120 + G.L.k * 4 + G.pl.i * 6; MM.s.vs = Math.min(1.7, 0.9 + G.L.k * 0.03);
   MM.s.rt = 1.5 / (1 + hard); MM.s.r = 64; MM.s.h = 0; MM.s.vy = 0; MM.s.up = 0; }
 function mamaTap() { return KIT.pressed('a') || KIT.ptr.tap; }
 function flipToss(s) { s.vy = 260 + Math.random() * 60; s.h = 0.01; s.up = 1; }
@@ -398,7 +412,7 @@ function mamaUpdate(dt) {
     s.v += s.dir * s.vs * dt; if (s.v > 1) { s.v = 1; s.dir = -1; } if (s.v < 0) { s.v = 0; s.dir = 1; }
     if (tap) { s.score = clamp(1 - Math.abs(s.v - 0.5) * 3, 0, 1); s.done = 0.01; sfx.play(s.score > 0.8 ? 'power' : 'select'); }
   } else if (s.k === 'pour') { // it pours by itself: tap to stop it at the line
-    s.fill += dt * (0.3 + G.lv * 0.01); if (Math.random() < 0.3) sfx.play('pour');
+    s.fill += dt * (0.3 + G.L.k * 0.01); if (Math.random() < 0.3) sfx.play('pour');
     if (s.fill > 1.05) { s.score = 0; s.done = 0.01; sfx.play('no'); }
     else if (tap) { s.score = clamp(1 - Math.abs(s.fill - 0.8) * 4, 0, 1); s.done = 0.01; sfx.play(s.score > 0.8 ? 'power' : 'select'); }
   } else if (s.k === 'ring') { // three rings shrink onto the target: tap as each one meets it
@@ -406,7 +420,7 @@ function mamaUpdate(dt) {
     var res = null; if (tap) res = clamp(1 - Math.abs(s.r - 16) / 18, 0, 1); else if (s.r < -2) res = 0;
     if (res !== null) { s.got.push(res); s.flash = 0.2; sfx.play(res > 0.7 ? 'coin' : res > 0 ? 'select' : 'no'); s.r = 64; if (s.got.length >= 3) { s.score = s.got.reduce(function (a, b) { return a + b; }, 0) / 3; s.done = 0.01; } }
   } else if (s.k === 'flip') { // three tosses: tap when it drops back into the pan
-    if (s.up) { s.h += s.vy * dt; s.vy -= 420 * (1 + G.lv * 0.02) * dt;
+    if (s.up) { s.h += s.vy * dt; s.vy -= 420 * (1 + G.L.k * 0.02) * dt;
       var r2 = null; if (tap && s.vy < 0) r2 = s.h < 10 ? 1 : s.h < 28 ? 0.6 : s.h < 50 ? 0.25 : 0; else if (tap) r2 = 0; else if (s.h < -24) r2 = 0;
       if (r2 !== null) { s.got.push(r2); s.up = 0; s.h = 0; s.t = 0; sfx.play(r2 > 0.7 ? 'coin' : r2 > 0 ? 'select' : 'no'); if (s.got.length >= 3) { s.score = s.got.reduce(function (a, b) { return a + b; }, 0) / 3; s.done = 0.01; } } }
     else if (s.t > 0.5) flipToss(s);
@@ -470,6 +484,8 @@ function drawRoom() {
     }
     if (dec >= 2) for (var sx = 0; sx < 2; sx++) { R('rgba(255,227,106,0.06)', 136 + sx * 60, 46, 28, 30); R('rgba(255,227,106,0.06)', 140 + sx * 60, 50, 20, 22); }
   }), 0, 0);
+  if (G.L.sh === 1) { R('rgba(8,12,40,0.5)', 0, 0, W, 110); R('rgba(8,12,40,0.28)', 0, 110, W, H - 110); }
+  if (G.L.sh === 2) { var fl = Math.sin(KIT.t * 9) > 0.96 ? 0.15 : 0; R('rgba(50,0,6,' + (0.55 + fl) + ')', 0, 0, W, 110); R('rgba(40,0,6,' + (0.32 + fl) + ')', 0, 110, W, H - 110); }
   if (dec >= 2) for (var sc2 = 0; sc2 < 2; sc2++) spr(Math.floor(KIT.t * 7 + sc2 * 3) % 23 ? 'wn_sconce1' : 'wn_sconce0', 150 + sc2 * 60, 64);
   if (dec >= 3) { R('rgba(0,0,0,0.35)', 166, 106, 28, 3); spr('wn_sp_' + pl.id, 180, 108); }
   for (var b = 0; b < 17; b++) R(Math.floor(KIT.t * 3 + b) % 3 ? th.sign : '#ffffff', 112 + b * 8, 14, 2, 2);
@@ -485,7 +501,7 @@ function drawSt(s) {
   spr(f, s.x + shake, s.y + 8);
   if (s.st === 'cook') { KIT.bar(s.x - 16, s.y - 42, 32, 4, s.t / s.need, '#ffb040'); if (Math.random() < 0.25) parts.push({ x: s.x + rnd(-10, 10), y: s.y - 26, vx: 0, vy: -20, t: 0.8, c: 'rgba(200,180,170,0.6)', smoke: 1 }); }
   if (s.st === 'busy') KIT.bar(s.x - 16, s.y - 42, 32, 4, 1 - host.actT / (K.cook * prepK()), '#9aff5a');
-  if (s.st === 'ready') { var it = s.item; spr(done(it) ? DISH[it.d].s : DISH[it.d].mid || DISH[it.d].s, s.x, s.y - 26 + Math.sin(KIT.t * 6) * 1.5); text(done(it) ? 'READY' : 'NEXT STEP', s.x, s.y - 50, { align: 'center', size: 6, col: '#ffe36a' }); if (K.burn && s.t > K.burn * (perk('burn') || 1) * (1 + U('lamps') * 0.3) * 0.6) R(Math.floor(KIT.t * 8) % 2 ? '#ff2630' : '#ffb040', s.x - 14, s.y - 54, 28, 2); }
+  if (s.st === 'ready') { var it = s.item; spr(done(it) ? DISH[it.d].s : DISH[it.d].mid || DISH[it.d].s, s.x, s.y - 26 + Math.sin(KIT.t * 6) * 1.5); text(done(it) ? 'READY' : 'NEXT STEP', s.x, s.y - 50, { align: 'center', size: 6, col: '#ffe36a' }); if (K.burn && s.t > K.burn * G.L.burnK * (perk('burn') || 1) * (1 + U('lamps') * 0.3) * 0.6) R(Math.floor(KIT.t * 8) % 2 ? '#ff2630' : '#ffb040', s.x - 14, s.y - 54, 28, 2); }
   if (s.st === 'burnt') { R('#12040a', s.x - 14, s.y - 40, 28, 10); text(K.bad ? 'COLD' : 'BURNT', s.x, s.y - 38, { align: 'center', size: 6, col: '#ff2630' }); if (Math.random() < 0.5) parts.push({ x: s.x + rnd(-10, 10), y: s.y - 26, vx: 0, vy: -26, t: 1, c: 'rgba(40,30,30,0.8)', smoke: 1 }); }
   if (K.type === 'phone' && s.ring > 0) text('RING!', s.x, s.y - 36 - Math.abs(Math.sin(KIT.t * 12)) * 3, { align: 'center', size: 6, col: '#ffe36a' });
   if (K.type === 'shelf') takeaways.forEach(function (tk, j) { spr('wn_bag', s.x - 12 + j * 12, s.y - 2, { alpha: 0.4 }); spr(DISH[tk.d].s, s.x - 12 + j * 12, s.y - 18, { sc: 0.6 }); KIT.bar(s.x - 18 + j * 12, s.y - 30, 10, 2, tk.hearts / 5, '#ff2630'); });
@@ -536,9 +552,9 @@ function draw() {
   drawHud();
   if (G.cheer > 0) text('PARTY!', W / 2, 120, { align: 'center', size: 32, font: 'title', col: '#ffe36a', alpha: Math.min(1, G.cheer) });
   if (G.mode === 'intro') { var bl = SUPPLIES.filter(function (it) { return B(it.id); }).map(function (it) { return it.n.toUpperCase(); }); KIT.panel(W / 2 - 160, 84, 320, bl.length ? 118 : 104);
-    if (bl.length) text('TODAY: ' + bl.join(' · '), W / 2, 188, { align: 'center', size: 6, col: '#9aff5a', max: 300 }); text(G.pl.name.toUpperCase(), W / 2, 92, { align: 'center', size: 6, col: G.pl.th.sign }); text('DAY ' + (G.lv + 1), W / 2, 104, { align: 'center', size: 24, font: 'title', col: '#ff2630' });
+    if (bl.length) text('TODAY: ' + bl.join(' · '), W / 2, 188, { align: 'center', size: 6, col: '#9aff5a', max: 300 }); text(G.pl.name.toUpperCase(), W / 2, 92, { align: 'center', size: 6, col: G.pl.th.sign }); text(lvName(G.lv).toUpperCase(), W / 2, 104, { align: 'center', size: 24, font: 'title', col: G.L.sh ? SHIFTS[G.L.sh].col : '#ff2630' });
     text(G.L.t + ' TABLES  ·  ' + G.L.n + ' CUSTOMERS', W / 2, 134, { align: 'center', size: 6 }); text('GOAL ' + G.L.goal + '   EXPERT ' + G.L.expert, W / 2, 146, { align: 'center', size: 6, col: '#ffe36a' });
-    var tw2 = KIT.wrap(G.lv === 0 ? G.pl.twist : '"' + G.pl.quote + '"', 290, 10, 'body'); tw2.slice(0, 2).forEach(function (l, i) { text(l, W / 2, 158 + i * 12, { align: 'center', size: 10, font: 'body', col: '#a6968f' }); }); }
+    var tw2 = KIT.wrap(G.lv % NDAYS === 0 && G.L.sh ? SHIFTS[G.L.sh].d : G.lv === 0 ? G.pl.twist : '"' + G.pl.quote + '"', 290, 10, 'body'); tw2.slice(0, 2).forEach(function (l, i) { text(l, W / 2, 158 + i * 12, { align: 'center', size: 10, font: 'body', col: '#a6968f' }); }); }
 }
 function drawHost() {
   var walking = host.q.length && host.actT <= 0, f = walking ? Math.floor(host.walkT * 8) % 4 : 0, name = PLACE[SV.host].host, wk = name + '_w' + f;
@@ -550,7 +566,7 @@ function drawHost() {
 }
 function drawHud() {
   var L = G.L; KIT.panel(4, 4, 100, 34, { fill: 'rgba(14,7,8,0.85)' });
-  text('DAY ' + (G.lv + 1) + ' $' + G.score, 10, 10, { size: 6, col: '#ffe36a' });
+  text(lvName(G.lv).toUpperCase() + ' $' + G.score, 10, 10, { size: 6, col: SHIFTS[G.L.sh].col, max: 90 });
   var k = Math.min(1, G.score / L.expert); KIT.bar(10, 24, 88, 6, k, G.score >= L.goal ? '#ffe36a' : '#c4121c'); R('#f1e7d0', 10 + 88 * L.goal / L.expert, 22, 1, 10);
   KIT.panel(300, 4, 176, 40, { fill: 'rgba(14,7,8,0.85)' });
   text('WAITING ' + queue.length + '  TO COME ' + arrivals.length, 306, 9, { size: 6, col: '#a6968f' });
@@ -571,19 +587,26 @@ function drawTitle() {
 /* ---------- menus ---------- */
 function titleMenu() {
   G.mode = 'title'; G.pl = null; music.play('wntitle'); var last = PLACE[SV.last] || PLACES[0], pd = SV.places[last.id];
-  KIT.menu({ cls: 'clear', logo: '../assets/wn-logo.webp', title: 'Willy Nilly', sub: 'Six places to run, twenty days each. Seat them, feed them, take their money.',
-    items: [{ label: 'PLAY', sub: last.name + ' · Day ' + Math.min(pd.unl, NDAYS), fn: function () { KIT.closeMenu(); startLevel(last.id, Math.min(pd.unl, NDAYS) - 1); }, cls: 'hot', def: true },
+  KIT.menu({ cls: 'clear', logo: '../assets/wn-logo.webp', title: 'Willy Nilly', sub: 'Six places to run: a day shift, a night shift and a nightmare shift each. Seat them, feed them, take their money.',
+    items: [{ label: 'PLAY', sub: last.name + ' · ' + lvName(Math.min(pd.unl, TOTAL) - 1), fn: function () { KIT.closeMenu(); startLevel(last.id, Math.min(pd.unl, TOTAL) - 1); }, cls: 'hot', def: true },
       { label: 'PLACES', sub: Object.keys(SV.open).length + ' of ' + PLACES.length + ' open', fn: placesMenu }, { label: 'WHO IS WORKING', sub: PLACE[SV.host].who + ': ' + PLACE[SV.host].perk, fn: hostsMenu },
       { label: 'SHOP', sub: 'Tips in the jar: ' + SV.coins, fn: function () { upgradesMenu(titleMenu); } }, { label: 'HOW TO PLAY', fn: helpMenu }] });
 }
 function placesMenu() {
   G.mode = 'title'; G.pl = null;
-  KIT.menu({ title: 'Places', items: PLACES.map(function (p, i) { var open = SV.open[p.id], pd = SV.places[p.id]; return { label: p.name.toUpperCase(), sub: open ? 'Day ' + Math.min(pd.unl, NDAYS) + ' of ' + NDAYS + ' · ' + countStars(pd) + '★' : 'Beat day ' + UNLOCK_AT + ' at ' + PLACES[i - 1].name + ' to open it', dis: !open, fn: function () { daysMenu(p.id); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
+  KIT.menu({ title: 'Places', items: PLACES.map(function (p, i) { var open = SV.open[p.id], pd = SV.places[p.id]; return { label: p.name.toUpperCase(), sub: open ? lvName(Math.min(pd.unl, TOTAL) - 1) + ' · ' + Math.min(pd.unl, TOTAL) + ' of ' + TOTAL + ' · ' + countStars(pd) + '★' : 'Beat day ' + UNLOCK_AT + ' at ' + PLACES[i - 1].name + ' to open it', dis: !open, fn: function () { shiftsMenu(p.id); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
 }
 function countStars(pd) { var n = 0; for (var k in pd.stars) n += pd.stars[k]; return n; }
-function daysMenu(pid) {
-  var p = PLACE[pid], pd = SV.places[pid];
-  KIT.menu({ title: p.name, sub: '"' + p.quote + '"  ' + p.twist, grid: true, items: Array.from({ length: NDAYS }, function (_, i) { var lock = i + 1 > pd.unl, st = pd.stars[i] || 0; return { label: 'DAY ' + (i + 1) + (lock ? '' : ' ' + '★★★'.slice(0, st)), sub: lock ? 'Locked' : levelFor(p, i).t + ' tables · best $' + (pd.best[i] || 0), dis: lock, fn: function () { KIT.closeMenu(); startLevel(pid, i); } }; }).concat([{ label: 'BACK', back: true, fn: placesMenu }]) });
+function shiftsMenu(pid) {
+  var p = PLACE[pid], pd = SV.places[pid]; if (pd.unl <= NDAYS) return daysMenu(pid, 0);
+  KIT.menu({ title: p.name, sub: '"' + p.quote + '"', items: SHIFTS.map(function (sh, k) { var open = pd.unl > k * NDAYS, st = 0, done = 0; for (var i = k * NDAYS; i < (k + 1) * NDAYS; i++) { st += pd.stars[i] || 0; if (pd.stars[i]) done++; }
+    return { label: sh.n.toUpperCase() + (open ? '  ·  ' + st + '★' : ''), sub: open ? done + ' of ' + NDAYS + ' passed. ' + sh.d : 'Beat ' + SHIFTS[k - 1].w + ' ' + NDAYS + ' to open it.', dis: !open, def: open && pd.unl <= (k + 1) * NDAYS, cls: done >= NDAYS ? 'done' : '', fn: function () { daysMenu(pid, k); } }; })
+    .concat([{ label: 'BACK', back: true, fn: placesMenu }]) });
+}
+function daysMenu(pid, sh) {
+  var p = PLACE[pid], pd = SV.places[pid]; sh = sh || 0; var base = sh * NDAYS;
+  KIT.menu({ title: sh ? SHIFTS[sh].n : p.name, sub: sh ? p.name + '. ' + SHIFTS[sh].d : '"' + p.quote + '"  ' + p.twist, grid: true, items: Array.from({ length: NDAYS }, function (_, j) { var i = base + j, lock = i + 1 > pd.unl, st = pd.stars[i] || 0; return { label: lvName(i).toUpperCase() + (lock ? '' : ' ' + '★★★'.slice(0, st)), sub: lock ? 'Locked' : levelFor(p, i).t + ' tables · best $' + (pd.best[i] || 0), dis: lock, fn: function () { KIT.closeMenu(); startLevel(pid, i); } }; })
+    .concat([{ label: 'BACK', back: true, fn: function () { if (pd.unl > NDAYS) shiftsMenu(pid); else placesMenu(); } }]) });
 }
 function hostsMenu() {
   KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
@@ -635,7 +658,7 @@ function helpMenu() {
 }
 function pauseMenu() {
   if (G.mode !== 'play' && G.mode !== 'intro') return;
-  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.pl.name + '  ·  Day ' + (G.lv + 1) + '  ·  $' + G.score, items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'START THE DAY AGAIN', fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv, true); } }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }] });
+  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.pl.name + '  ·  ' + lvName(G.lv) + '  ·  $' + G.score, items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'START THE DAY AGAIN', fn: function () { KIT.closeMenu(); startLevel(G.pl.id, G.lv, true); } }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }] });
 }
 
 /* ---------- music: every place has its own ---------- */
