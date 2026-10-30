@@ -3,6 +3,7 @@ name: Build Android APK and PC app
 on:
   push:
     branches: [main, master]
+    paths-ignore: ['*.zip']
   workflow_dispatch:
 
 permissions:
