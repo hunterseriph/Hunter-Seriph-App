@@ -50,7 +50,7 @@ function demo() {
   music.play('ck_title');
 }
 function helpMenu() {
-  KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or down, or the left trigger). On a phone, auto accelerate is on, so you only steer.<br>' +
+  KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
     '<b>Start boost</b>: hold gas just as the 1 disappears. Too early and you spin your wheels.<br><b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
@@ -90,7 +90,7 @@ function pauseMenu() {
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu },
     R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else beginRace(R.o.course); } },
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), fn: function () { SV.auto = !SV.auto; persist(); KIT.closeMenu(); pauseMenu(); } },
-    { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
+    { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Down + Z throws behind you. On the grid, rev with A and hold the needle in the green. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
     R.net ? { label: R.net === 'host' ? 'END THE RACE FOR EVERYONE' : 'LEAVE THE ROOM', fn: function () { if (R.net === 'host') { RACE = null; GP = null; mpLobby(); } else { netLeave(); RACE = null; mpMenu(); } } } : { label: 'QUIT TO THE TITLE', fn: function () { RACE = null; GP = null; titleMenu(); } }] });
 }
 
@@ -100,8 +100,8 @@ function engine() {
   var au = KIT.sfx.audio(); if (!au) return;
   if (!ENG) { var o = au.ctx.createOscillator(), o2 = au.ctx.createOscillator(), f = au.ctx.createBiquadFilter(), g = au.ctx.createGain(); o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 500; g.gain.value = 0; o.connect(f); o2.connect(f); f.connect(g); g.connect(au.master); o.start(); o2.start(); ENG = { o: o, o2: o2, g: g, f: f }; }
   var R = RACE, on = R && !R.demo && MODE === 'race' && !KIT.menuOpen() && !KIT.sfx.muted, k = on ? R.me : null, sp = k ? Math.abs(k.spd) / k.top : 0, t = au.ctx.currentTime;
-  var fr = 46 + sp * 90 + (k && k.boostT > 0 ? 25 : 0) + (k && k.drift ? 8 : 0);
-  ENG.o.frequency.setTargetAtTime(fr, t, 0.06); ENG.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.06); ENG.g.gain.setTargetAtTime(on ? 0.035 + sp * 0.03 : 0, t, 0.08);
+  var fr = 46 + sp * 90 + (k && R.phase === 'count' ? (k.rpm || 0) * 80 : 0) + (k && k.boostT > 0 ? 25 : 0) + (k && k.drift ? 8 : 0);
+  ENG.o.frequency.setTargetAtTime(fr, t, 0.06); ENG.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.06); ENG.g.gain.setTargetAtTime(on ? 0.035 + sp * 0.03 + (R.phase === 'count' ? (k.rpm || 0) * 0.025 : 0) : 0, t, 0.08);
 }
 
 /* ---------- the loop ---------- */

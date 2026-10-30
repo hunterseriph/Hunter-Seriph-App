@@ -105,7 +105,13 @@ function drawRace(dt) {
   var sm = new R3.Mesh(), e = cam.eye, rad = 380, segs = 24, top = 130, bot = -10;
   for (var i = 0; i < segs; i++) {
     var a0 = i / segs * Math.PI * 2, a1 = (i + 1) / segs * Math.PI * 2, u0 = i / segs * 4, u1 = (i + 1) / segs * 4;
-    sm.quad([e[0] + Math.cos(a0) * rad, e[1] + bot, e[2] + Math.sin(a0) * rad], [e[0] + Math.cos(a1) * rad, e[1] + bot, e[2] + Math.sin(a1) * rad], [e[0] + Math.cos(a1) * rad, e[1] + top, e[2] + Math.sin(a1) * rad], [e[0] + Math.cos(a0) * rad, e[1] + top, e[2] + Math.sin(a0) * rad], [u0, 0.999, u1, 0.999, u1, 0.001, u0, 0.001], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    var P = function (a, h, rr) { return [e[0] + Math.cos(a) * rr, e[1] + h, e[2] + Math.sin(a) * rr]; };
+    sm.quad(P(a0, bot, rad), P(a1, bot, rad), P(a1, top, rad), P(a0, top, rad), [u0, 0.999, u1, 0.999, u1, 0.004, u0, 0.004], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    // above the picture the sky carries on in its top colour, up a tall wall and over a lid, so it never ends in a curve
+    sm.quad(P(a0, top, rad), P(a1, top, rad), P(a1, 1400, rad), P(a0, 1400, rad), [u0, 0.004, u1, 0.004, u1, 0.002, u0, 0.002], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    sm.quad(P(a0, 1400, rad), P(a1, 1400, rad), P(a1, 1400, 0), P(a0, 1400, 0), [u0, 0.002, u1, 0.002, u1, 0.002, u0, 0.002], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    // and below, a floor in the bottom colour, in case the camera sees under the ground's edge
+    sm.quad(P(a0, -400, 0), P(a1, -400, 0), P(a1, bot, rad), P(a0, bot, rad), [u0, 0.998, u1, 0.998, u1, 0.998, u0, 0.998], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
   }
   R3.snap(false); R3.draw(sm, R.sky, { noDepth: true }); R3.snap(true);
   R3.setCam(cam.eye, cam.at, R.fov, fog, def.fogR);
@@ -209,6 +215,8 @@ function drawHud() {
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts
   // countdown and banners
   if (R.phase === 'count') { var n = 3 - Math.floor(R.phaseT), f = R.phaseT % 1; text(String(n), 240, 100 - f * 6, { size: 64, align: 'center', col: n === 1 ? '#ffe36a' : '#ff2630', font: 'title', outline: true, alpha: 1 - f * 0.5 }); }
+  if (R.phase === 'count' && !k.ai && !R.demo) drawRevMeter(k);
+  if (R.startMsg) text(R.startMsg.s, 240, 58, { size: 16, align: 'center', col: R.startMsg.s === 'OVER-REVVED!' ? '#ff2630' : '#ffe36a', outline: true, alpha: Math.min(1, R.startMsg.t * 2) });
   if (R.phase === 'go' && R.t < 1.2) text('GO!', 240, 96, { size: 64, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: Math.min(1, (1.2 - R.t) * 2) });
   if (R.lapBanner > 0) text(R.bannerTxt, 240, 96, { size: 32, align: 'center', col: R.bannerTxt === 'FINAL LAP' ? '#ffe36a' : '#f1e7d0', font: 'title', outline: true, alpha: Math.min(1, R.lapBanner * 2) });
   if (k.wrongT > 1.2 && !k.done && Math.floor(R.t * 3) % 2) text('WRONG WAY', 240, 120, { size: 16, align: 'center', col: '#ff2630', outline: true });
@@ -222,6 +230,22 @@ function drawHud() {
   if (R.pillMsg) text({ rev: 'STEERING BACK TO FRONT!', tiny: 'SHRUNK!', hic: '*HIC*' }[R.pillMsg.e], 240, 118, { size: 16, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.pillMsg.t * 2) });
   if (R.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (R.flash * 4).toFixed(2) + ')'; ctx.fillRect(0, 0, 480, 270); }
   if (k.drift && k.driftLvl > 0) { var dc = ['', '#6ac8ff', '#ffb040', '#fff6d8'][k.driftLvl]; R2(dc, 216, 50, 48 * Math.min(1, k.driftLvl / 3), 2); }
+}
+/* the rev meter on the grid: hold gas to climb, let go to drop, keep the needle in the green for GO */
+function drawRevMeter(k) {
+  var ctx = KIT.ctx, cx = 240, cy = 262, r = 42, MAX = 1.08, a = function (v) { return Math.PI + Math.min(1, v / MAX) * Math.PI; }, v = k.rpm || 0, z = revZone(v);
+  ctx.save(); ctx.lineCap = 'butt';
+  ctx.fillStyle = 'rgba(7,4,5,0.85)'; ctx.beginPath(); ctx.arc(cx, cy, r + 7, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#4a1a1c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r + 7, Math.PI, 0); ctx.closePath(); ctx.stroke();
+  function band(v0, v1, col) { ctx.strokeStyle = col; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, r, a(v0), a(v1)); ctx.stroke(); }
+  band(0, REVGREEN[0], '#3a2a2c'); band(REVGREEN[0], REVGREEN[1], z === 'green' ? '#7aff6a' : '#2f9a3a'); band(REVGREEN[1], REVRED, '#3a2a2c'); band(REVRED, MAX, z === 'red' ? '#ff2630' : '#8a1018');
+  ctx.strokeStyle = '#12040a'; ctx.lineWidth = 1; for (var t = 0; t <= 10; t++) { var ta = a(t / 10 * MAX); ctx.beginPath(); ctx.moveTo(cx + Math.cos(ta) * (r - 4), cy + Math.sin(ta) * (r - 4)); ctx.lineTo(cx + Math.cos(ta) * (r + 4), cy + Math.sin(ta) * (r + 4)); ctx.stroke(); }
+  var na = a(v + (v > 0.05 ? Math.sin(RACE.t * 40) * 0.008 : 0));
+  ctx.strokeStyle = '#12040a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(na) * (r + 2), cy + Math.sin(na) * (r + 2)); ctx.stroke();
+  ctx.strokeStyle = '#f1e7d0'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#c4121c'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.3); ctx.fill();
+  ctx.restore();
+  text(z === 'red' ? 'TOO HIGH!' : z === 'green' ? 'HOLD IT!' : 'HOLD A TO REV', cx + r + 14, cy - 14, { size: 8, align: 'left', col: z === 'red' ? '#ff2630' : z === 'green' ? '#7aff6a' : '#f1e7d0', outline: true });
 }
 function drawMap(x0, y0, w, h) {
   var R = RACE, T = R.T, b = T.box, sc = Math.min(w / (b[2] - b[0] + 20), h / (b[3] - b[1] + 20)), ox = x0 + w / 2 - (b[0] + b[2]) / 2 * sc, oz = y0 + h / 2 - (b[1] + b[3]) / 2 * sc, ctx = KIT.ctx;

@@ -136,6 +136,7 @@ function paintSky(sk, seed) {
   if (sk.spires) { g.fillStyle = sk.spires; for (var q = 0; q < 9; q++) { var sx = q * 57 + rnd() * 20, sh2 = 30 + rnd() * 40; g.fillRect(sx, 128 - sh2, 12, sh2); g.beginPath(); g.moveTo(sx - 3, 128 - sh2); g.lineTo(sx + 6, 128 - sh2 - 22); g.lineTo(sx + 15, 128 - sh2); g.fill(); g.fillStyle = '#ff2630'; g.fillRect(sx + 5, 128 - sh2 + 8, 2, 3); g.fillStyle = sk.spires; } }
   if (sk.wheel) { var wx2 = 380, wy2 = 70, wr = 34; g.strokeStyle = sk.wheel; g.lineWidth = 2; g.beginPath(); g.arc(wx2, wy2, wr, 0, 6.3); g.stroke(); for (var a = 0; a < 12; a++) { g.beginPath(); g.moveTo(wx2, wy2); g.lineTo(wx2 + Math.cos(a / 12 * 6.28) * wr, wy2 + Math.sin(a / 12 * 6.28) * wr); g.stroke(); } g.beginPath(); g.moveTo(wx2 - 20, 128); g.lineTo(wx2, wy2); g.lineTo(wx2 + 20, 128); g.stroke(); }
   if (sk.nado) { g.fillStyle = sk.nado; for (var y = 20; y < 128; y += 2) { var ww = 4 + (128 - y) * 0.18, ox = 120 + Math.sin(y * 0.08) * 6; g.fillRect(ox - ww, y, ww * 2, 2); } }
+  g.fillStyle = sk.grad[0][1]; g.fillRect(0, 0, 512, 2); // a clean top row: the sky above the picture is stretched from it
   var big = document.createElement('canvas'); big.width = 1024; big.height = 256; var bg = big.getContext('2d'); bg.imageSmoothingEnabled = true; bg.drawImage(c, 0, 0, 1024, 256);
   if (sk.glow) { var gr2 = bg.createLinearGradient(0, 150, 0, 256); gr2.addColorStop(0, 'rgba(0,0,0,0)'); gr2.addColorStop(1, sk.glow); bg.fillStyle = gr2; bg.fillRect(0, 150, 1024, 106); }
   return big;

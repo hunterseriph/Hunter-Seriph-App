@@ -848,6 +848,7 @@ function paintSky(sk, seed) {
   if (sk.spires) { g.fillStyle = sk.spires; for (var q = 0; q < 9; q++) { var sx = q * 57 + rnd() * 20, sh2 = 30 + rnd() * 40; g.fillRect(sx, 128 - sh2, 12, sh2); g.beginPath(); g.moveTo(sx - 3, 128 - sh2); g.lineTo(sx + 6, 128 - sh2 - 22); g.lineTo(sx + 15, 128 - sh2); g.fill(); g.fillStyle = '#ff2630'; g.fillRect(sx + 5, 128 - sh2 + 8, 2, 3); g.fillStyle = sk.spires; } }
   if (sk.wheel) { var wx2 = 380, wy2 = 70, wr = 34; g.strokeStyle = sk.wheel; g.lineWidth = 2; g.beginPath(); g.arc(wx2, wy2, wr, 0, 6.3); g.stroke(); for (var a = 0; a < 12; a++) { g.beginPath(); g.moveTo(wx2, wy2); g.lineTo(wx2 + Math.cos(a / 12 * 6.28) * wr, wy2 + Math.sin(a / 12 * 6.28) * wr); g.stroke(); } g.beginPath(); g.moveTo(wx2 - 20, 128); g.lineTo(wx2, wy2); g.lineTo(wx2 + 20, 128); g.stroke(); }
   if (sk.nado) { g.fillStyle = sk.nado; for (var y = 20; y < 128; y += 2) { var ww = 4 + (128 - y) * 0.18, ox = 120 + Math.sin(y * 0.08) * 6; g.fillRect(ox - ww, y, ww * 2, 2); } }
+  g.fillStyle = sk.grad[0][1]; g.fillRect(0, 0, 512, 2); // a clean top row: the sky above the picture is stretched from it
   var big = document.createElement('canvas'); big.width = 1024; big.height = 256; var bg = big.getContext('2d'); bg.imageSmoothingEnabled = true; bg.drawImage(c, 0, 0, 1024, 256);
   if (sk.glow) { var gr2 = bg.createLinearGradient(0, 150, 0, 256); gr2.addColorStop(0, 'rgba(0,0,0,0)'); gr2.addColorStop(1, sk.glow); bg.fillStyle = gr2; bg.fillRect(0, 150, 1024, 106); }
   return big;
@@ -1273,12 +1274,16 @@ function buildRamp(m, T, A, i0, def) { // a wedge on the road: up over a few sam
   m.quad(Q(def.hw * 0.75, 0), Q(-def.hw * 0.75, 0), Q(-def.hw * 0.75, 1.2), Q(def.hw * 0.75, 1.2), [0, 0.5, 2, 0.5, 2, 0, 0, 0], A.tile('trim'), mulc(L, 0.6));
 }
 
+/* ---------- the start rev meter: green is a boost, red stalls you ---------- */
+var REVGREEN = [0.62, 0.82], REVRED = 0.94;
+function revZone(r) { return r >= REVRED ? 'red' : r >= REVGREEN[0] && r <= REVGREEN[1] ? 'green' : 'none'; }
+
 /* ---------- input for the player ---------- */
 function playerInput() {
   var s = KIT.stick(0), gp = KIT.gamepad, trig = function (n) { return gp && gp.buttons && gp.buttons[n] ? gp.buttons[n].value : 0; };
   var steer = s.on ? s.x : 0; if (!s.on) steer = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0);
-  var brake = KIT.held('b') || KIT.held('down') || trig(6) > 0.3, gas = KIT.held('a') || KIT.held('up') || trig(7) > 0.3 || (SV.auto && !brake);
-  return { steer: steer, gas: gas && !brake, brake: brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
+  var brake = KIT.held('b') || trig(6) > 0.3, rev = KIT.held('a') || KIT.held('up') || trig(7) > 0.3, gas = rev || (SV.auto && !brake); // down only aims items backwards now: it never brakes
+  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
 }
 
 /* ---------- one kart, one step ---------- */
@@ -1313,8 +1318,10 @@ function driveKart(k, inp, dt) {
     else k.spd -= Math.sign(k.spd) * Math.min(Math.abs(k.spd), 7 * dt);
     if (k.spd > top && !inp.brake) k.spd = Math.max(top, k.spd - 22 * dt);
     if (k.spd < -top * 0.32) k.spd = -top * 0.32;
-  } else if (R.phase !== 'go') { // the start: hold gas as GO lands for a boost (too early and you wheelspin)
-    if (inp.gas) k.rev = (k.rev || 0) + dt; else k.rev = 0;
+  } else if (R.phase === 'count') { // the start: rev the engine with gas and hold the needle in the green as GO lands
+    var hold = inp.rev !== undefined ? inp.rev : inp.gas, r = k.rpm || 0;
+    if (hold) r += (0.45 + r * 0.35) * dt; else r -= 0.85 * dt;
+    k.rpm = Math.max(0, Math.min(1.08, r));
   }
   // steering and drifting
   var st = inp.steer * (k.revT > 0 && !k.ai ? -1 : 1) + (k.wobT > 0 ? Math.sin(R.t * 23 + k.slot) * 0.5 : 0) + (k.splatT > 0 && k.ai ? Math.sin(R.t * 7 + k.slot) * 0.35 : 0), sv = Math.min(1, Math.abs(k.spd) / 9) * (k.spd < 0 ? -1 : 1), rate = k.turn * (1 - 0.22 * Math.max(0, k.spd) / Math.max(1, k.top));
@@ -1511,10 +1518,10 @@ function say(k, why) {
 /* ---------- the world ticking along ---------- */
 function stepRace(dt) {
   var R = RACE; if (!R) return; R.t += dt; R.phaseT += dt;
-  if (R.phase === 'intro') { if (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start')) { R.phase = 'count'; R.phaseT = 0; R.count = 3; sfx.play('tick'); } }
+  if (R.phase === 'intro') { if (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start')) { R.phase = 'count'; R.phaseT = 0; R.count = 3; R.karts.forEach(function (q) { q.rpm = 0; }); sfx.play('tick'); } }
   else if (R.phase === 'count') {
     var c = 3 - Math.floor(R.phaseT); if (c !== R.count && c > 0) { R.count = c; sfx.play('tick'); }
-    if (R.phaseT >= 3) { R.phase = 'go'; R.phaseT = 0; R.t = 0; sfx.play('bell'); R.karts.forEach(function (k) { k.lapStart = 0; if (k.ai) { if (Math.random() < 0.45 * R.cls.ai) k.boostT = 0.8; } else if (k.rev > 0.15 && k.rev < 1.1) { k.boostT = 1.0; sfx.play('power'); } else if (k.rev >= 1.1) { k.spinT = 0.7; } }); }
+    if (R.phaseT >= 3) { R.phase = 'go'; R.phaseT = 0; R.t = 0; sfx.play('bell'); R.karts.forEach(function (k) { k.lapStart = 0; if (k.ai) { if (Math.random() < 0.45 * R.cls.ai) k.boostT = 0.8; } else { var r = k.rpm || 0, z = revZone(r); if (z === 'green') { k.boostT = Math.abs(r - 0.72) < 0.04 ? 1.4 : 1.0; sfx.play('power'); if (k === R.me) R.startMsg = { s: k.boostT > 1.2 ? 'PERFECT START!' : 'GOOD START!', t: 1.4 }; } else if (z === 'red') { k.spinT = 0.8; sfx.play('back'); if (k === R.me) R.startMsg = { s: 'OVER-REVVED!', t: 1.4 }; } k.rpm = 0; } }); }
   }
   if (R.phase === 'go' || R.phase === 'done') R.karts.forEach(function (k) { if (!k.done) k.time = R.t; }); // a finished kart's time stays where it crossed the line
   var CL = R.net === 'client';
@@ -1559,7 +1566,7 @@ function stepRace(dt) {
   // effects
   R.fx.forEach(function (f) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; f.y += f.vy * dt; f.vy -= 20 * dt; } });
   R.fx = R.fx.filter(function (f) { return f.t > 0; });
-  if (R.lapBanner > 0) R.lapBanner -= dt; if (R.msg) { R.msg.t -= dt; if (R.msg.t <= 0) R.msg = null; } if (R.splatScreen > 0) R.splatScreen -= dt; if (R.pillMsg) { R.pillMsg.t -= dt; if (R.pillMsg.t <= 0) R.pillMsg = null; } if (R.gooScreen > 0) R.gooScreen -= dt; if (R.flash > 0) R.flash -= dt;
+  if (R.lapBanner > 0) R.lapBanner -= dt; if (R.msg) { R.msg.t -= dt; if (R.msg.t <= 0) R.msg = null; } if (R.splatScreen > 0) R.splatScreen -= dt; if (R.pillMsg) { R.pillMsg.t -= dt; if (R.pillMsg.t <= 0) R.pillMsg = null; } if (R.startMsg) { R.startMsg.t -= dt; if (R.startMsg.t <= 0) R.startMsg = null; } if (R.gooScreen > 0) R.gooScreen -= dt; if (R.flash > 0) R.flash -= dt;
   if (R.phase === 'done' && !CL) { R.doneT = (R.doneT || 0) + dt; if (R.doneT > 1 && R.karts.every(function (k) { return k.done; }) || (R.net && R.doneT > 4 && R.karts.every(function (k) { return k.done || (R.humans || []).indexOf(k.idx) < 0; })) || R.doneT > (R.net ? 30 : 9)) { if (!R.ended) { R.ended = true; endRace(); } } }
 }
 function stepProjectiles(dt) {
@@ -1705,7 +1712,13 @@ function drawRace(dt) {
   var sm = new R3.Mesh(), e = cam.eye, rad = 380, segs = 24, top = 130, bot = -10;
   for (var i = 0; i < segs; i++) {
     var a0 = i / segs * Math.PI * 2, a1 = (i + 1) / segs * Math.PI * 2, u0 = i / segs * 4, u1 = (i + 1) / segs * 4;
-    sm.quad([e[0] + Math.cos(a0) * rad, e[1] + bot, e[2] + Math.sin(a0) * rad], [e[0] + Math.cos(a1) * rad, e[1] + bot, e[2] + Math.sin(a1) * rad], [e[0] + Math.cos(a1) * rad, e[1] + top, e[2] + Math.sin(a1) * rad], [e[0] + Math.cos(a0) * rad, e[1] + top, e[2] + Math.sin(a0) * rad], [u0, 0.999, u1, 0.999, u1, 0.001, u0, 0.001], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    var P = function (a, h, rr) { return [e[0] + Math.cos(a) * rr, e[1] + h, e[2] + Math.sin(a) * rr]; };
+    sm.quad(P(a0, bot, rad), P(a1, bot, rad), P(a1, top, rad), P(a0, top, rad), [u0, 0.999, u1, 0.999, u1, 0.004, u0, 0.004], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    // above the picture the sky carries on in its top colour, up a tall wall and over a lid, so it never ends in a curve
+    sm.quad(P(a0, top, rad), P(a1, top, rad), P(a1, 1400, rad), P(a0, 1400, rad), [u0, 0.004, u1, 0.004, u1, 0.002, u0, 0.002], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    sm.quad(P(a0, 1400, rad), P(a1, 1400, rad), P(a1, 1400, 0), P(a0, 1400, 0), [u0, 0.002, u1, 0.002, u1, 0.002, u0, 0.002], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
+    // and below, a floor in the bottom colour, in case the camera sees under the ground's edge
+    sm.quad(P(a0, -400, 0), P(a1, -400, 0), P(a1, bot, rad), P(a0, bot, rad), [u0, 0.998, u1, 0.998, u1, 0.998, u0, 0.998], [0, 0, 1, 1], [0.5, 0.5, 0.5]);
   }
   R3.snap(false); R3.draw(sm, R.sky, { noDepth: true }); R3.snap(true);
   R3.setCam(cam.eye, cam.at, R.fov, fog, def.fogR);
@@ -1809,6 +1822,8 @@ function drawHud() {
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts
   // countdown and banners
   if (R.phase === 'count') { var n = 3 - Math.floor(R.phaseT), f = R.phaseT % 1; text(String(n), 240, 100 - f * 6, { size: 64, align: 'center', col: n === 1 ? '#ffe36a' : '#ff2630', font: 'title', outline: true, alpha: 1 - f * 0.5 }); }
+  if (R.phase === 'count' && !k.ai && !R.demo) drawRevMeter(k);
+  if (R.startMsg) text(R.startMsg.s, 240, 58, { size: 16, align: 'center', col: R.startMsg.s === 'OVER-REVVED!' ? '#ff2630' : '#ffe36a', outline: true, alpha: Math.min(1, R.startMsg.t * 2) });
   if (R.phase === 'go' && R.t < 1.2) text('GO!', 240, 96, { size: 64, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: Math.min(1, (1.2 - R.t) * 2) });
   if (R.lapBanner > 0) text(R.bannerTxt, 240, 96, { size: 32, align: 'center', col: R.bannerTxt === 'FINAL LAP' ? '#ffe36a' : '#f1e7d0', font: 'title', outline: true, alpha: Math.min(1, R.lapBanner * 2) });
   if (k.wrongT > 1.2 && !k.done && Math.floor(R.t * 3) % 2) text('WRONG WAY', 240, 120, { size: 16, align: 'center', col: '#ff2630', outline: true });
@@ -1822,6 +1837,22 @@ function drawHud() {
   if (R.pillMsg) text({ rev: 'STEERING BACK TO FRONT!', tiny: 'SHRUNK!', hic: '*HIC*' }[R.pillMsg.e], 240, 118, { size: 16, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.pillMsg.t * 2) });
   if (R.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (R.flash * 4).toFixed(2) + ')'; ctx.fillRect(0, 0, 480, 270); }
   if (k.drift && k.driftLvl > 0) { var dc = ['', '#6ac8ff', '#ffb040', '#fff6d8'][k.driftLvl]; R2(dc, 216, 50, 48 * Math.min(1, k.driftLvl / 3), 2); }
+}
+/* the rev meter on the grid: hold gas to climb, let go to drop, keep the needle in the green for GO */
+function drawRevMeter(k) {
+  var ctx = KIT.ctx, cx = 240, cy = 262, r = 42, MAX = 1.08, a = function (v) { return Math.PI + Math.min(1, v / MAX) * Math.PI; }, v = k.rpm || 0, z = revZone(v);
+  ctx.save(); ctx.lineCap = 'butt';
+  ctx.fillStyle = 'rgba(7,4,5,0.85)'; ctx.beginPath(); ctx.arc(cx, cy, r + 7, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#4a1a1c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r + 7, Math.PI, 0); ctx.closePath(); ctx.stroke();
+  function band(v0, v1, col) { ctx.strokeStyle = col; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, r, a(v0), a(v1)); ctx.stroke(); }
+  band(0, REVGREEN[0], '#3a2a2c'); band(REVGREEN[0], REVGREEN[1], z === 'green' ? '#7aff6a' : '#2f9a3a'); band(REVGREEN[1], REVRED, '#3a2a2c'); band(REVRED, MAX, z === 'red' ? '#ff2630' : '#8a1018');
+  ctx.strokeStyle = '#12040a'; ctx.lineWidth = 1; for (var t = 0; t <= 10; t++) { var ta = a(t / 10 * MAX); ctx.beginPath(); ctx.moveTo(cx + Math.cos(ta) * (r - 4), cy + Math.sin(ta) * (r - 4)); ctx.lineTo(cx + Math.cos(ta) * (r + 4), cy + Math.sin(ta) * (r + 4)); ctx.stroke(); }
+  var na = a(v + (v > 0.05 ? Math.sin(RACE.t * 40) * 0.008 : 0));
+  ctx.strokeStyle = '#12040a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(na) * (r + 2), cy + Math.sin(na) * (r + 2)); ctx.stroke();
+  ctx.strokeStyle = '#f1e7d0'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#c4121c'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.3); ctx.fill();
+  ctx.restore();
+  text(z === 'red' ? 'TOO HIGH!' : z === 'green' ? 'HOLD IT!' : 'HOLD A TO REV', cx + r + 14, cy - 14, { size: 8, align: 'left', col: z === 'red' ? '#ff2630' : z === 'green' ? '#7aff6a' : '#f1e7d0', outline: true });
 }
 function drawMap(x0, y0, w, h) {
   var R = RACE, T = R.T, b = T.box, sc = Math.min(w / (b[2] - b[0] + 20), h / (b[3] - b[1] + 20)), ox = x0 + w / 2 - (b[0] + b[2]) / 2 * sc, oz = y0 + h / 2 - (b[1] + b[3]) / 2 * sc, ctx = KIT.ctx;
@@ -3019,7 +3050,7 @@ function demo() {
   music.play('ck_title');
 }
 function helpMenu() {
-  KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or down, or the left trigger). On a phone, auto accelerate is on, so you only steer.<br>' +
+  KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
     '<b>Start boost</b>: hold gas just as the 1 disappears. Too early and you spin your wheels.<br><b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
@@ -3059,7 +3090,7 @@ function pauseMenu() {
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu },
     R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else beginRace(R.o.course); } },
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), fn: function () { SV.auto = !SV.auto; persist(); KIT.closeMenu(); pauseMenu(); } },
-    { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
+    { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Down + Z throws behind you. On the grid, rev with A and hold the needle in the green. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
     R.net ? { label: R.net === 'host' ? 'END THE RACE FOR EVERYONE' : 'LEAVE THE ROOM', fn: function () { if (R.net === 'host') { RACE = null; GP = null; mpLobby(); } else { netLeave(); RACE = null; mpMenu(); } } } : { label: 'QUIT TO THE TITLE', fn: function () { RACE = null; GP = null; titleMenu(); } }] });
 }
 
@@ -3069,8 +3100,8 @@ function engine() {
   var au = KIT.sfx.audio(); if (!au) return;
   if (!ENG) { var o = au.ctx.createOscillator(), o2 = au.ctx.createOscillator(), f = au.ctx.createBiquadFilter(), g = au.ctx.createGain(); o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 500; g.gain.value = 0; o.connect(f); o2.connect(f); f.connect(g); g.connect(au.master); o.start(); o2.start(); ENG = { o: o, o2: o2, g: g, f: f }; }
   var R = RACE, on = R && !R.demo && MODE === 'race' && !KIT.menuOpen() && !KIT.sfx.muted, k = on ? R.me : null, sp = k ? Math.abs(k.spd) / k.top : 0, t = au.ctx.currentTime;
-  var fr = 46 + sp * 90 + (k && k.boostT > 0 ? 25 : 0) + (k && k.drift ? 8 : 0);
-  ENG.o.frequency.setTargetAtTime(fr, t, 0.06); ENG.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.06); ENG.g.gain.setTargetAtTime(on ? 0.035 + sp * 0.03 : 0, t, 0.08);
+  var fr = 46 + sp * 90 + (k && R.phase === 'count' ? (k.rpm || 0) * 80 : 0) + (k && k.boostT > 0 ? 25 : 0) + (k && k.drift ? 8 : 0);
+  ENG.o.frequency.setTargetAtTime(fr, t, 0.06); ENG.o2.frequency.setTargetAtTime(fr * 0.5, t, 0.06); ENG.g.gain.setTargetAtTime(on ? 0.035 + sp * 0.03 + (R.phase === 'count' ? (k.rpm || 0) * 0.025 : 0) : 0, t, 0.08);
 }
 
 /* ---------- the loop ---------- */

@@ -56,12 +56,16 @@ function buildRamp(m, T, A, i0, def) { // a wedge on the road: up over a few sam
   m.quad(Q(def.hw * 0.75, 0), Q(-def.hw * 0.75, 0), Q(-def.hw * 0.75, 1.2), Q(def.hw * 0.75, 1.2), [0, 0.5, 2, 0.5, 2, 0, 0, 0], A.tile('trim'), mulc(L, 0.6));
 }
 
+/* ---------- the start rev meter: green is a boost, red stalls you ---------- */
+var REVGREEN = [0.62, 0.82], REVRED = 0.94;
+function revZone(r) { return r >= REVRED ? 'red' : r >= REVGREEN[0] && r <= REVGREEN[1] ? 'green' : 'none'; }
+
 /* ---------- input for the player ---------- */
 function playerInput() {
   var s = KIT.stick(0), gp = KIT.gamepad, trig = function (n) { return gp && gp.buttons && gp.buttons[n] ? gp.buttons[n].value : 0; };
   var steer = s.on ? s.x : 0; if (!s.on) steer = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0);
-  var brake = KIT.held('b') || KIT.held('down') || trig(6) > 0.3, gas = KIT.held('a') || KIT.held('up') || trig(7) > 0.3 || (SV.auto && !brake);
-  return { steer: steer, gas: gas && !brake, brake: brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
+  var brake = KIT.held('b') || trig(6) > 0.3, rev = KIT.held('a') || KIT.held('up') || trig(7) > 0.3, gas = rev || (SV.auto && !brake); // down only aims items backwards now: it never brakes
+  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
 }
 
 /* ---------- one kart, one step ---------- */
@@ -96,8 +100,10 @@ function driveKart(k, inp, dt) {
     else k.spd -= Math.sign(k.spd) * Math.min(Math.abs(k.spd), 7 * dt);
     if (k.spd > top && !inp.brake) k.spd = Math.max(top, k.spd - 22 * dt);
     if (k.spd < -top * 0.32) k.spd = -top * 0.32;
-  } else if (R.phase !== 'go') { // the start: hold gas as GO lands for a boost (too early and you wheelspin)
-    if (inp.gas) k.rev = (k.rev || 0) + dt; else k.rev = 0;
+  } else if (R.phase === 'count') { // the start: rev the engine with gas and hold the needle in the green as GO lands
+    var hold = inp.rev !== undefined ? inp.rev : inp.gas, r = k.rpm || 0;
+    if (hold) r += (0.45 + r * 0.35) * dt; else r -= 0.85 * dt;
+    k.rpm = Math.max(0, Math.min(1.08, r));
   }
   // steering and drifting
   var st = inp.steer * (k.revT > 0 && !k.ai ? -1 : 1) + (k.wobT > 0 ? Math.sin(R.t * 23 + k.slot) * 0.5 : 0) + (k.splatT > 0 && k.ai ? Math.sin(R.t * 7 + k.slot) * 0.35 : 0), sv = Math.min(1, Math.abs(k.spd) / 9) * (k.spd < 0 ? -1 : 1), rate = k.turn * (1 - 0.22 * Math.max(0, k.spd) / Math.max(1, k.top));
@@ -294,10 +300,10 @@ function say(k, why) {
 /* ---------- the world ticking along ---------- */
 function stepRace(dt) {
   var R = RACE; if (!R) return; R.t += dt; R.phaseT += dt;
-  if (R.phase === 'intro') { if (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start')) { R.phase = 'count'; R.phaseT = 0; R.count = 3; sfx.play('tick'); } }
+  if (R.phase === 'intro') { if (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start')) { R.phase = 'count'; R.phaseT = 0; R.count = 3; R.karts.forEach(function (q) { q.rpm = 0; }); sfx.play('tick'); } }
   else if (R.phase === 'count') {
     var c = 3 - Math.floor(R.phaseT); if (c !== R.count && c > 0) { R.count = c; sfx.play('tick'); }
-    if (R.phaseT >= 3) { R.phase = 'go'; R.phaseT = 0; R.t = 0; sfx.play('bell'); R.karts.forEach(function (k) { k.lapStart = 0; if (k.ai) { if (Math.random() < 0.45 * R.cls.ai) k.boostT = 0.8; } else if (k.rev > 0.15 && k.rev < 1.1) { k.boostT = 1.0; sfx.play('power'); } else if (k.rev >= 1.1) { k.spinT = 0.7; } }); }
+    if (R.phaseT >= 3) { R.phase = 'go'; R.phaseT = 0; R.t = 0; sfx.play('bell'); R.karts.forEach(function (k) { k.lapStart = 0; if (k.ai) { if (Math.random() < 0.45 * R.cls.ai) k.boostT = 0.8; } else { var r = k.rpm || 0, z = revZone(r); if (z === 'green') { k.boostT = Math.abs(r - 0.72) < 0.04 ? 1.4 : 1.0; sfx.play('power'); if (k === R.me) R.startMsg = { s: k.boostT > 1.2 ? 'PERFECT START!' : 'GOOD START!', t: 1.4 }; } else if (z === 'red') { k.spinT = 0.8; sfx.play('back'); if (k === R.me) R.startMsg = { s: 'OVER-REVVED!', t: 1.4 }; } k.rpm = 0; } }); }
   }
   if (R.phase === 'go' || R.phase === 'done') R.karts.forEach(function (k) { if (!k.done) k.time = R.t; }); // a finished kart's time stays where it crossed the line
   var CL = R.net === 'client';
@@ -342,7 +348,7 @@ function stepRace(dt) {
   // effects
   R.fx.forEach(function (f) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; f.y += f.vy * dt; f.vy -= 20 * dt; } });
   R.fx = R.fx.filter(function (f) { return f.t > 0; });
-  if (R.lapBanner > 0) R.lapBanner -= dt; if (R.msg) { R.msg.t -= dt; if (R.msg.t <= 0) R.msg = null; } if (R.splatScreen > 0) R.splatScreen -= dt; if (R.pillMsg) { R.pillMsg.t -= dt; if (R.pillMsg.t <= 0) R.pillMsg = null; } if (R.gooScreen > 0) R.gooScreen -= dt; if (R.flash > 0) R.flash -= dt;
+  if (R.lapBanner > 0) R.lapBanner -= dt; if (R.msg) { R.msg.t -= dt; if (R.msg.t <= 0) R.msg = null; } if (R.splatScreen > 0) R.splatScreen -= dt; if (R.pillMsg) { R.pillMsg.t -= dt; if (R.pillMsg.t <= 0) R.pillMsg = null; } if (R.startMsg) { R.startMsg.t -= dt; if (R.startMsg.t <= 0) R.startMsg = null; } if (R.gooScreen > 0) R.gooScreen -= dt; if (R.flash > 0) R.flash -= dt;
   if (R.phase === 'done' && !CL) { R.doneT = (R.doneT || 0) + dt; if (R.doneT > 1 && R.karts.every(function (k) { return k.done; }) || (R.net && R.doneT > 4 && R.karts.every(function (k) { return k.done || (R.humans || []).indexOf(k.idx) < 0; })) || R.doneT > (R.net ? 30 : 9)) { if (!R.ended) { R.ended = true; endRace(); } } }
 }
 function stepProjectiles(dt) {
