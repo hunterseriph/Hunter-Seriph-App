@@ -123,9 +123,10 @@ function titleMenu() {
   MODE = 'title'; GP = null; if (!RACE || !RACE.demo) demo();
   var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length;
   var rows = [
-    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 96 events, stars to earn', 'hot'],
+    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 120 events, stars to earn', 'hot'],
     ['gp', 'Grand Prix', 'Four races, points for every place, a trophy at the end'],
     ['race', 'Single Race', 'Any course you have opened, against seven rivals'],
+    ['chain', 'Chain Race', 'You and a partner tied together by a rope of cream'],
     ['tt', 'Time Trial', 'Just you, the clock and three Cumpuccinos'],
     ['mp', 'Online', 'Host or join a room and race your friends'],
     ['help', 'How to Drive', 'Controls, drifting and items'],
@@ -139,7 +140,7 @@ function titleMenu() {
       gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, titleMenu); },
       race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, titleMenu); },
       tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, titleMenu); },
-      exp: function () { expedition(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
+      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
     } });
 }
 /* ---------- class ---------- */
@@ -156,12 +157,12 @@ function pickChar(next, back) {
   var sel = SV.ch, redo = function () { pickChar(next, back); };
   function info(id) {
     var c = CH[id], op = charOpen(id), names = ['SPEED', 'ACCEL', 'HANDLING', 'WEIGHT'];
-    return '<div class="top">' + (op ? pic(id, 96) : '<span class="hsp-pic" style="display:inline-block;width:96px;height:96px;background:#0a0506"></span>') + '<div><h2>' + (op ? esc(c.n) : '???') + '</h2>' + (op && id === SV.ch ? '<p style="color:#ffe36a">YOUR DRIVER</p>' : '') + '</div></div>' +
+    return '<div class="top">' + (op ? pic(id, 96) : '<span class="hsp-pic" style="display:inline-block;width:96px;height:96px;background:#0a0506"></span>') + '<div><h2>' + (op ? esc(c.n) : '???') + '</h2>' + (op && id === SV.ch ? '<p style="color:#ffe36a">' + (pickChar.title ? 'YOUR PARTNER' : 'YOUR DRIVER') + '</p>' : '') + '</div></div>' +
       '<p class="fr"' + (op ? '' : ' style="color:#ff2630"') + '>' + esc(op ? c.from : 'Locked: ' + c.lock) + '</p>' +
       (op ? '<div class="ckst">' + c.st.map(function (v, i) { return '<span>' + names[i] + '</span><span class="bar">' + [0, 1, 2, 3, 4].map(function (q) { return '<i class="' + (q < v ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }).join('') + '</div>' +
         '<div class="sw">' + c.kart.map(function (k) { return '<i style="background:' + k + '"></i>'; }).join('') + '</div>' : '');
   }
-  screen({ title: 'Who is driving?', back: back || titleMenu, redo: redo, foot: 'A / TAP PICK  ·  A AGAIN OR DRIVE TO GO  ·  B BACK',
+  screen({ title: pickChar.title || 'Who is driving?', back: back || titleMenu, redo: redo, foot: 'A / TAP PICK  ·  A AGAIN OR DRIVE TO GO  ·  B BACK',
     html: '<div class="ckch"><div class="grid">' + CHARS.map(function (c) { var op = charOpen(c.id); return '<button type="button" class="ckbtn p' + (c.id === sel ? ' sel' : '') + '" data-act="ch" data-ch="' + c.id + '"' + (op ? '' : ' aria-disabled="true"') + (c.id === sel ? ' data-pad-default' : '') + ' aria-label="' + esc(op ? c.n : 'Locked') + '">' + pic(c.id) + '<span class="nm">' + esc(op ? c.n.replace(/^(The|Uncle|Sir) /, '').replace(/^King /, 'K.').split(' ')[0].toUpperCase() : '???') + '</span></button>'; }).join('') +
       '</div><div class="ckinfo"><div id="ckInfo">' + info(sel) + '</div><button type="button" class="ckbtn ckgo" data-act="go">DRIVE</button></div></div>',
     acts: {
@@ -211,6 +212,7 @@ function endRace() {
   var order = R.karts.slice().sort(function (a, b) { return a.time - b.time; }); order.forEach(function (k, i) { k.place = i + 1; });
   if (R.ev) return expEnd(R);
   if (R.tt) return ttResults();
+  if (R.chain) return chainEnd(R);
   var rows = order.map(function (k, i) { var pts = GP ? POINTS[i] : null; if (GP) GP.pts[k.idx] += pts; return { ch: k.ch, idx: k.idx, name: !k.ai && k !== R.me ? k.tag : null, me: k === R.me, time: fmtTime(k.time), pts: GP ? '+' + pts : null }; });
   var html = resultRows(rows) + (R.newLap ? '<div class="ckmsg" style="margin-top:10px">New best lap!</div>' : '');
   if (GP) {

@@ -131,7 +131,7 @@ function drawRace(dt) {
     var q = R.T.locate(kk.x, kk.z, kk.seg); flat(shm, A, kk.x, q.y + 0.05, kk.z, 1.35 * (kk._tiny || 1) * (1 - Math.min(0.5, (kk.floatY || 0) * 0.15)), 'shadow', [0.5, 0.5, 0.5], kk.yaw);
     // drift sparks and boost flames
     if (kk.drift && kk.driftLvl > 0 && !kk.air) for (var s = -1; s <= 1; s += 2) { var sx = kk.x - Math.cos(kk.yaw) * 1.1 + -Math.sin(kk.yaw) * 0.8 * s, sz = kk.z - Math.sin(kk.yaw) * 1.1 + Math.cos(kk.yaw) * 0.8 * s; { for (var j = 0; j < 3; j++) spark(glow, A, sx + (Math.random() - 0.5) * 0.4, kk.y + 0.15 + Math.random() * 0.4, sz + (Math.random() - 0.5) * 0.4, 0.1 + Math.random() * 0.08, 'halo', DRIFTC[kk.driftLvl]); spark(glow, A, sx, kk.y + 0.3, sz, 0.55, 'halo', mulc(DRIFTC[kk.driftLvl], 0.5)); } }
-    if (kk.boostT > 0 || kk.nadoT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; { var fl = Math.random(); spark(glow, A, bx - Math.cos(kk.yaw) * fl * 0.6, kk.y + 0.72, bz - Math.sin(kk.yaw) * fl * 0.6, 0.2 + Math.random() * 0.16, 'halo', fl < 0.5 ? [0.6, 0.45, 0.2] : [0.6, 0.2, 0.06]); spark(glow, A, bx, kk.y + 0.72, bz, 0.5, 'halo', [0.3, 0.15, 0.05]); } }
+    if (kk.boostT > 0 || kk.nadoT > 0 || kk.slingT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; { var fl = Math.random(); spark(glow, A, bx - Math.cos(kk.yaw) * fl * 0.6, kk.y + 0.72, bz - Math.sin(kk.yaw) * fl * 0.6, 0.2 + Math.random() * 0.16, 'halo', fl < 0.5 ? [0.6, 0.45, 0.2] : [0.6, 0.2, 0.06]); spark(glow, A, bx, kk.y + 0.72, bz, 0.5, 'halo', [0.3, 0.15, 0.05]); } }
     if (!kk.air && Math.abs(kk.lat) > def.hw + 0.6 && kk.spd > 6 && Math.random() < 0.6) R.fx.push({ k: 'dust', x: kk.x - Math.cos(kk.yaw), y: kk.y + 0.2, z: kk.z - Math.sin(kk.yaw), t: 0.35, vx: 0, vy: 1.5, vz: 0 });
   });
   R.boxes.forEach(function (b) { if (b.t > 0) return; boxModel(dm, A, b.x, b.y + 0.7 + Math.sin(R.t * 3 + b.ph) * 0.15, b.z, 0.55, R.t * 1.6 + b.ph, 'box', mulc(L, 1.25)); });
@@ -142,6 +142,7 @@ function drawRace(dt) {
     else if (f.k === 'ring') { var rr2 = (0.6 - f.t) * 16; for (var q4 = 0; q4 < 20; q4++) { var a5 = q4 / 20 * 6.283; spark(glow, A, f.x + Math.cos(a5) * rr2, f.y + 0.3, f.z + Math.sin(a5) * rr2, 0.7, 'halo', [0.5 * f.t / 0.6 + 0.08, 0.85 * f.t / 0.6 + 0.1, 1.0 * f.t / 0.6 + 0.12]); } }
     else if (f.k === 'pop') for (var q2 = 0; q2 < (f.big ? 16 : 9); q2++) { var aa = q2 / (f.big ? 16 : 9) * 6.28, rr = (0.6 - f.t) * (f.big ? 14 : 6); spark(soft, A, f.x + Math.cos(aa) * rr, f.y + Math.sin(q2 * 2.1) * rr * 0.4 + 0.3, f.z + Math.sin(aa) * rr, 0.45, 'puff', [0.62, 0.6, 0.55]); }
   });
+  if (R.chain) { drawChains(R, dm, soft, glow, A); drawChainFx(R, soft, A); }
   if (R.TH.drawDyn) R.TH.drawDyn(R, dm, sp);
   if (R.ev && typeof evDraw === 'function') evDraw(R, dm, glow, A);
   R3.draw(dm, R.atlas);
@@ -209,7 +210,7 @@ function drawHud() {
   else if (it) { spr(ITEMS[it].ic, 240, 40, { sc: it === 'sirj' ? 1.4 : 1.5 }); if (k.itemN > 1) text('×' + k.itemN, 258, 36, { size: 8, col: '#ffe36a' }); }
   if (k.shieldT > 0) { R2('#9adfff', 216, 47, 48 * k.shieldT / 14, 2); }
   // place
-  if (!R.tt) { var pl = k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
+  if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
   // map
   drawMap(392, 54, 84, 84);
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts
@@ -224,6 +225,7 @@ function drawHud() {
   if (R.msg) { var w = Math.min(420, KIT.tw(R.msg.who + ': ' + R.msg.s, 6) + 20); KIT.panel(240 - w / 2, 222, w, 20, { edge: '#4a1a1c' }); text(R.msg.who.toUpperCase() + ': ' + R.msg.s, 240, 229, { size: 6, align: 'center', col: '#f1e7d0', max: w - 10 }); }
   if (R.gooScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.75, R.gooScreen / 2.6); for (var g = 0; g < 9; g++) { var gx = (g * 61 + 17) % 470, gy = (g * 37) % 180, gl = 30 + (g * 13) % 50 + (2.6 - R.gooScreen) * 30; ctx.fillStyle = g % 2 ? '#5a1a8a' : '#9a4aff'; ctx.fillRect(gx, 0, 10, gy + gl); ctx.beginPath(); ctx.arc(gx + 5, gy + gl, 7, 0, 6.3); ctx.fill(); } ctx.restore(); }
   if (R.ev && typeof evHud === 'function') evHud(R);
+  if (R.chain) chainHud(R);
   if (R.zoneBanner && R.zoneBanner.t > 0) { R.zoneBanner.t -= 1 / 60; var za = Math.min(1, R.zoneBanner.t * 2, (2.4 - R.zoneBanner.t) * 4); text(R.zoneBanner.n.toUpperCase(), 240, 66, { size: 16, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: za }); }
   if (R.splatScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.92, R.splatScreen / 1.6); for (var sb = 0; sb < 7; sb++) { var sx2 = (sb * 83 + 40) % 440 + 20, sy2 = (sb * 53 + 30) % 190 + 30, sr = 28 + (sb * 17) % 30; ctx.fillStyle = sb % 2 ? '#f1e7d0' : '#fffbe8'; ctx.beginPath(); ctx.arc(sx2, sy2, sr, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.arc(sx2 + sr * 0.6, sy2 + sr * 0.5, sr * 0.55, 0, 6.3); ctx.fill(); ctx.fillRect(sx2 - 4, sy2, 8, sr + 18 * (2.6 - R.splatScreen)); } ctx.restore(); }
   if (k.revT > 0 && Math.floor(R.t * 3) % 2) text('BACK TO FRONT!', 240, 140, { size: 12, align: 'center', col: '#ffe36a', outline: true });

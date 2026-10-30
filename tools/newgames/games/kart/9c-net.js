@@ -95,6 +95,7 @@ function hostData(L, m) {
   if (m.t === 'ch' && CH[m.ch]) { NET.players[pi].ch = m.ch; hostLobbyPush(); netChanged(); return; }
   if (m.t === 'st') { netReport(pi, m.s); return; }
   if (m.t === 'use') { netUse(pi, m); return; }
+  if (m.t === 'chain') { var R = RACE; if (R && R.chain && R.phase === 'go') { var ck = R.all.filter(function (q) { return q.netId === NET.players[pi].id; })[0]; if (ck) chainPass(ck); } return; }
 }
 function hostDrop(L) {
   var pi = NET.players.findIndex(function (p) { return p.id === L.remote; }); NET.links = NET.links.filter(function (l) { return l !== L; }); L.close();
@@ -109,6 +110,6 @@ function clientData(L, m) {
   if (m.t === 'start') { netClientStart(m); return; }
   if (m.t === 'snap') { netSnap(m); return; }
   if (m.t === 'ev') { netEvent(m); return; }
-  if (m.t === 'end') { netClientEnd(m); return; }
+  if (m.t === 'end') { if (m.kind === 'chain' || m.kind === 'chainst') chainClientEnd(m); else netClientEnd(m); return; }
 }
 function netLost() { var e = NET.err; netLeave(); RACE = null; mpMenu(e); }

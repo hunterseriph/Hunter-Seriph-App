@@ -53,7 +53,8 @@ function helpMenu() {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
-    '<b>Start boost</b>: hold gas just as the 1 disappears. Too early and you spin your wheels.<br><b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
+    '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
+    '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
     items: [{ label: 'BACK', back: 1, fn: titleMenu }] });
 }
@@ -73,7 +74,7 @@ function beginGP(cup) { // points are kept per kart (two players can pick the sa
   if (!roster) roster = { ch: [SV.ch].concat(rivalsFor(SV.ch)), names: [], humans: [0] };
   GP = { cup: cup, cls: SV.cls, roster: roster.ch, names: roster.names, humans: roster.humans, n: 0, pts: roster.ch.map(function () { return 0; }), grid: null }; gpRace();
 }
-function gpRace() { go({ course: GP.cup.courses[GP.n], cls: GP.cls, player: GP.roster[0], rivals: GP.roster.slice(1), mode: 'gp', grid: GP.grid, humans: GP.humans, names: GP.names, fixed: 1 }); }
+function gpRace() { go({ course: GP.cup.courses[GP.n], cls: GP.cls, player: GP.roster[0], rivals: GP.roster.slice(1), mode: 'gp', grid: GP.grid, humans: GP.humans, names: GP.names, fixed: 1, chain: !!GP.chain }); }
 function beginRace(course) { GP = null; go({ course: course, cls: SV.cls, player: SV.ch, rivals: rivalsFor(SV.ch), mode: 'race' }); }
 function beginTT(course) { GP = null; go({ course: course, cls: 'hot', player: SV.ch, rivals: [], mode: 'tt' }); }
 
@@ -88,7 +89,7 @@ function pauseMenu() {
   var R = RACE;
   KIT.menu({ title: 'Paused', sub: R.def.n + (GP ? '  ·  race ' + (GP.n + 1) + ' of 4' : ''), cls: 'ck plain', items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu },
-    R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else beginRace(R.o.course); } },
+    R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else if (R.chain) beginChain(R.o.course); else beginRace(R.o.course); } },
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), fn: function () { SV.auto = !SV.auto; persist(); KIT.closeMenu(); pauseMenu(); } },
     { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Down + Z throws behind you. On the grid, rev with A and hold the needle in the green. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
     R.net ? { label: R.net === 'host' ? 'END THE RACE FOR EVERYONE' : 'LEAVE THE ROOM', fn: function () { if (R.net === 'host') { RACE = null; GP = null; mpLobby(); } else { netLeave(); RACE = null; mpMenu(); } } } : { label: 'QUIT TO THE TITLE', fn: function () { RACE = null; GP = null; titleMenu(); } }] });
@@ -115,8 +116,9 @@ function draw() {
   if (!R3.ok) return;
   if (RACE) { drawRace(1 / 60); if (!RACE.demo) drawHud(); }
 }
-KIT.start({ w: 480, h: 270, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true,
-  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] } });
+var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] }, PADCHAIN = false;
+function chainPad(on) { if (on === PADCHAIN) return; PADCHAIN = on; KIT.buildPad(on ? CHAINPAD : CKPAD); } // the CHAIN button only shows in a chain race
+KIT.start({ w: 480, h: 270, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
 if (!R3.ok) KIT.menu({ title: 'Cumhead Kart', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the karts cannot run here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }
   (function wait() { if (KIT.sheetReady && (FONTOK || Date.now() - fontT > 2500)) titleMenu(); else setTimeout(wait, 50); })(); }

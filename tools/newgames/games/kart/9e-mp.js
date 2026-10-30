@@ -65,6 +65,8 @@ function mpLobby() {
     '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b><span>Four races for points</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b><span>Any course</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b><span>Everyone at once, as ghosts</span></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b><span>Teams of two on a rope of cream, players paired in order</span></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b><span>Four chain races for team points</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition</b><span>' + (two ? 'Play through together' : 'Co-op is for exactly two players') + '</span></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
   screen({ cls: 'mplobby', title: 'Room ' + NET.code, sub: NET.players.length + ' of 8 players' + (host ? '  ·  tell your friends the code' : ''), back: function () { netLeave(); mpMenu(); }, redo: mpLobby,
     html: '<div class="mplobby" style="max-width:760px;margin:0 auto">' + (host ? '<div style="text-align:center;font-family:var(--pixel);font-size:34px;letter-spacing:.35em;color:#ffe36a;margin:4px 0 12px;text-shadow:3px 3px 0 #12040a">' + NET.code + '</div>' : '') + mpPlayers() +
@@ -73,7 +75,7 @@ function mpLobby() {
       drv: function () { pickChar(function () { if (NET.role === 'client') netSend({ t: 'ch', ch: SV.ch }); mpLobby(); }, mpLobby); },
       cls: function () { var open = CLASSES.filter(function (c) { return classOpen(c.id); }), i = open.findIndex(function (c) { return c.id === SV.cls; }); SV.cls = open[(i + 1) % open.length].id; persist(); mpLobby(); },
       leave: function () { netLeave(); mpMenu(); },
-      gp: function () { pickCup(beginGP, mpLobby); }, race: function () { pickCourse(beginRace, mpLobby); }, tt: function () { pickCourse(beginTT, mpLobby); }, exp: function () { expedition(mpLobby); }
+      gp: function () { pickCup(beginGP, mpLobby); }, race: function () { pickCourse(beginRace, mpLobby); }, tt: function () { pickCourse(beginTT, mpLobby); }, chain: function () { pickCourse(beginChain, mpLobby); }, chaingp: function () { pickCup(beginChainGP, mpLobby); }, exp: function () { expedition(mpLobby); }
     } });
 }
 /* a guest's view at the end of a race: the host's results, then wait for the host */

@@ -1259,6 +1259,8 @@ function startRace(o) {
   if (o.laps) RACE.laps = o.laps;
   if (TH.init) TH.init(RACE);
   if (RACE.tt) { RACE.karts = karts.filter(function (k, i) { return humans.indexOf(i) >= 0; }); RACE.ghosts = RACE.karts.length > 1; if (!o.noCuppa) RACE.karts.forEach(function (k) { k.item = 'cuppa3'; k.itemN = 3; }); RACE.boxes = []; }
+  if (o.chain) chainSetup(RACE);
+  if (typeof chainPad === 'function') chainPad(!!o.chain && !o.demo);
   if (RACE.ev && typeof evInit === 'function') evInit(RACE);
   music.play(def.song); return RACE;
 }
@@ -1283,7 +1285,7 @@ function playerInput() {
   var s = KIT.stick(0), gp = KIT.gamepad, trig = function (n) { return gp && gp.buttons && gp.buttons[n] ? gp.buttons[n].value : 0; };
   var steer = s.on ? s.x : 0; if (!s.on) steer = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0);
   var brake = KIT.held('b') || trig(6) > 0.3, rev = KIT.held('a') || KIT.held('up') || trig(7) > 0.3, gas = rev || (SV.auto && !brake); // down only aims items backwards now: it never brakes
-  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
+  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || (!(RACE && RACE.chain) && KIT.pressed('lb')), chain: !!(RACE && RACE.chain) && KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
 }
 
 /* ---------- one kart, one step ---------- */
@@ -1296,6 +1298,7 @@ function driveKart(k, inp, dt) {
   if (!onRoad && k.boostT <= 0 && k.nadoT <= 0) top *= def.creamOff ? 0.45 : 0.55;
   if (k.boostT > 0) { top *= 1.42; acc *= 3; k.boostT -= dt; }
   if (k.nadoT > 0) { top *= 1.25; acc *= 2.5; k.nadoT -= dt; }
+  if (k.slingT > 0) { top *= 1.36; acc *= 3.2; k.slingT -= dt; }
   if (k.gooT > 0) { top *= 0.62; k.gooT -= dt; }
   if (k.squashT > 0) { top *= 0.5; k.squashT -= dt; }
   if (k.splatT > 0) { top *= 0.86; k.splatT -= dt; }
@@ -1393,7 +1396,7 @@ function rubber(k) { // the pack stays close: AI behind you speed up a little, A
 function lapDone(k) {
   var R = RACE; if (k.lap <= 1) { k.lapStart = R.t; return; }
   k.laps.push(R.t - k.lapStart); k.lapStart = R.t;
-  if (k.lap > R.laps && !k.done) { k.done = true; k.time = R.t; R.places.push(k); if (k === R.me) finishRace(); }
+  if (k.lap > R.laps && !k.done) { k.done = true; k.time = R.t; R.places.push(k); if (k === R.me && !R.chain) finishRace(); }
   else if (k === R.me) { if (k.lap === R.laps) { R.bannerTxt = 'FINAL LAP'; R.lapBanner = 2.2; sfx.play('bell'); speedSong(1.08); } else { R.bannerTxt = 'LAP ' + k.lap + ' / ' + R.laps; R.lapBanner = 1.6; sfx.play('coin'); } }
 }
 function speedSong(k) { var id = RACE.def.song, base = music.songs[id]; if (!base) return; var c = {}; for (var q in base) c[q] = base[q]; c.bpm = Math.round(base.bpm * k); music.songs[id + '_fast'] = c; music.play(id + '_fast'); }
@@ -1529,6 +1532,7 @@ function stepRace(dt) {
     if (k.puppet) { puppetStep(k, dt); return; } // another player's kart, or anything else the host runs: shown where the host says
     if (k.remote) { if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } return; } // a player on another machine drives this one; their reports move it
     var inp = k.ai || (R.phase === 'done') ? aiInput(k, dt) : playerInput(); driveKart(k, inp, dt);
+    if (inp.chain && R.phase === 'go') chainPress(k);
     if (inp.item && R.phase === 'go') { if (CL) netSend({ t: 'use', back: !!inp.back, fwd: !!inp.fwd }); else useItem(k, inp); }
     if (!CL && k.roul > 0) { k.roul -= dt; if (k.roul <= 0) { k.roul = 0; if (k === R.me) sfx.play('select'); } }
   });
@@ -1546,6 +1550,7 @@ function stepRace(dt) {
       if ((A === R.me || B === R.me) && (A.bumpT <= 0)) { A.bumpT = 0.3; sfx.play('land'); }
     }
   }
+  if (R.chain) chainStep(R, dt);
   // item boxes and drops (the host decides who gets what)
   if (!CL) R.boxes.forEach(function (bx) {
     if (bx.t > 0) { bx.t -= dt; return; }
@@ -1562,6 +1567,7 @@ function stepRace(dt) {
   // places
   if (!CL) { var order = R.karts.slice().sort(function (p, q) { if (p.done && q.done) return p.time - q.time; if (p.done) return -1; if (q.done) return 1; return q.prog - p.prog; });
   order.forEach(function (k, i) { k.place = i + 1; }); }
+  if (R.chain) { chainPlaces(R); var me = R.me; if (R.phase === 'go' && me.done && (chainFinished(R, me) || R.t - me.time > 20)) finishRace(); }
   if (R.net === 'host') netTick(dt); else if (CL) netClientTick(dt);
   // effects
   R.fx.forEach(function (f) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; f.y += f.vy * dt; f.vy -= 20 * dt; } });
@@ -1738,7 +1744,7 @@ function drawRace(dt) {
     var q = R.T.locate(kk.x, kk.z, kk.seg); flat(shm, A, kk.x, q.y + 0.05, kk.z, 1.35 * (kk._tiny || 1) * (1 - Math.min(0.5, (kk.floatY || 0) * 0.15)), 'shadow', [0.5, 0.5, 0.5], kk.yaw);
     // drift sparks and boost flames
     if (kk.drift && kk.driftLvl > 0 && !kk.air) for (var s = -1; s <= 1; s += 2) { var sx = kk.x - Math.cos(kk.yaw) * 1.1 + -Math.sin(kk.yaw) * 0.8 * s, sz = kk.z - Math.sin(kk.yaw) * 1.1 + Math.cos(kk.yaw) * 0.8 * s; { for (var j = 0; j < 3; j++) spark(glow, A, sx + (Math.random() - 0.5) * 0.4, kk.y + 0.15 + Math.random() * 0.4, sz + (Math.random() - 0.5) * 0.4, 0.1 + Math.random() * 0.08, 'halo', DRIFTC[kk.driftLvl]); spark(glow, A, sx, kk.y + 0.3, sz, 0.55, 'halo', mulc(DRIFTC[kk.driftLvl], 0.5)); } }
-    if (kk.boostT > 0 || kk.nadoT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; { var fl = Math.random(); spark(glow, A, bx - Math.cos(kk.yaw) * fl * 0.6, kk.y + 0.72, bz - Math.sin(kk.yaw) * fl * 0.6, 0.2 + Math.random() * 0.16, 'halo', fl < 0.5 ? [0.6, 0.45, 0.2] : [0.6, 0.2, 0.06]); spark(glow, A, bx, kk.y + 0.72, bz, 0.5, 'halo', [0.3, 0.15, 0.05]); } }
+    if (kk.boostT > 0 || kk.nadoT > 0 || kk.slingT > 0) for (var s2 = -1; s2 <= 1; s2 += 2) { var bx = kk.x - Math.cos(kk.yaw) * 1.35 + -Math.sin(kk.yaw) * 0.27 * s2, bz = kk.z - Math.sin(kk.yaw) * 1.35 + Math.cos(kk.yaw) * 0.27 * s2; { var fl = Math.random(); spark(glow, A, bx - Math.cos(kk.yaw) * fl * 0.6, kk.y + 0.72, bz - Math.sin(kk.yaw) * fl * 0.6, 0.2 + Math.random() * 0.16, 'halo', fl < 0.5 ? [0.6, 0.45, 0.2] : [0.6, 0.2, 0.06]); spark(glow, A, bx, kk.y + 0.72, bz, 0.5, 'halo', [0.3, 0.15, 0.05]); } }
     if (!kk.air && Math.abs(kk.lat) > def.hw + 0.6 && kk.spd > 6 && Math.random() < 0.6) R.fx.push({ k: 'dust', x: kk.x - Math.cos(kk.yaw), y: kk.y + 0.2, z: kk.z - Math.sin(kk.yaw), t: 0.35, vx: 0, vy: 1.5, vz: 0 });
   });
   R.boxes.forEach(function (b) { if (b.t > 0) return; boxModel(dm, A, b.x, b.y + 0.7 + Math.sin(R.t * 3 + b.ph) * 0.15, b.z, 0.55, R.t * 1.6 + b.ph, 'box', mulc(L, 1.25)); });
@@ -1749,6 +1755,7 @@ function drawRace(dt) {
     else if (f.k === 'ring') { var rr2 = (0.6 - f.t) * 16; for (var q4 = 0; q4 < 20; q4++) { var a5 = q4 / 20 * 6.283; spark(glow, A, f.x + Math.cos(a5) * rr2, f.y + 0.3, f.z + Math.sin(a5) * rr2, 0.7, 'halo', [0.5 * f.t / 0.6 + 0.08, 0.85 * f.t / 0.6 + 0.1, 1.0 * f.t / 0.6 + 0.12]); } }
     else if (f.k === 'pop') for (var q2 = 0; q2 < (f.big ? 16 : 9); q2++) { var aa = q2 / (f.big ? 16 : 9) * 6.28, rr = (0.6 - f.t) * (f.big ? 14 : 6); spark(soft, A, f.x + Math.cos(aa) * rr, f.y + Math.sin(q2 * 2.1) * rr * 0.4 + 0.3, f.z + Math.sin(aa) * rr, 0.45, 'puff', [0.62, 0.6, 0.55]); }
   });
+  if (R.chain) { drawChains(R, dm, soft, glow, A); drawChainFx(R, soft, A); }
   if (R.TH.drawDyn) R.TH.drawDyn(R, dm, sp);
   if (R.ev && typeof evDraw === 'function') evDraw(R, dm, glow, A);
   R3.draw(dm, R.atlas);
@@ -1816,7 +1823,7 @@ function drawHud() {
   else if (it) { spr(ITEMS[it].ic, 240, 40, { sc: it === 'sirj' ? 1.4 : 1.5 }); if (k.itemN > 1) text('×' + k.itemN, 258, 36, { size: 8, col: '#ffe36a' }); }
   if (k.shieldT > 0) { R2('#9adfff', 216, 47, 48 * k.shieldT / 14, 2); }
   // place
-  if (!R.tt) { var pl = k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
+  if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
   // map
   drawMap(392, 54, 84, 84);
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts
@@ -1831,6 +1838,7 @@ function drawHud() {
   if (R.msg) { var w = Math.min(420, KIT.tw(R.msg.who + ': ' + R.msg.s, 6) + 20); KIT.panel(240 - w / 2, 222, w, 20, { edge: '#4a1a1c' }); text(R.msg.who.toUpperCase() + ': ' + R.msg.s, 240, 229, { size: 6, align: 'center', col: '#f1e7d0', max: w - 10 }); }
   if (R.gooScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.75, R.gooScreen / 2.6); for (var g = 0; g < 9; g++) { var gx = (g * 61 + 17) % 470, gy = (g * 37) % 180, gl = 30 + (g * 13) % 50 + (2.6 - R.gooScreen) * 30; ctx.fillStyle = g % 2 ? '#5a1a8a' : '#9a4aff'; ctx.fillRect(gx, 0, 10, gy + gl); ctx.beginPath(); ctx.arc(gx + 5, gy + gl, 7, 0, 6.3); ctx.fill(); } ctx.restore(); }
   if (R.ev && typeof evHud === 'function') evHud(R);
+  if (R.chain) chainHud(R);
   if (R.zoneBanner && R.zoneBanner.t > 0) { R.zoneBanner.t -= 1 / 60; var za = Math.min(1, R.zoneBanner.t * 2, (2.4 - R.zoneBanner.t) * 4); text(R.zoneBanner.n.toUpperCase(), 240, 66, { size: 16, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: za }); }
   if (R.splatScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.92, R.splatScreen / 1.6); for (var sb = 0; sb < 7; sb++) { var sx2 = (sb * 83 + 40) % 440 + 20, sy2 = (sb * 53 + 30) % 190 + 30, sr = 28 + (sb * 17) % 30; ctx.fillStyle = sb % 2 ? '#f1e7d0' : '#fffbe8'; ctx.beginPath(); ctx.arc(sx2, sy2, sr, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.arc(sx2 + sr * 0.6, sy2 + sr * 0.5, sr * 0.55, 0, 6.3); ctx.fill(); ctx.fillRect(sx2 - 4, sy2, 8, sr + 18 * (2.6 - R.splatScreen)); } ctx.restore(); }
   if (k.revT > 0 && Math.floor(R.t * 3) % 2) text('BACK TO FRONT!', 240, 140, { size: 12, align: 'center', col: '#ffe36a', outline: true });
@@ -3053,7 +3061,8 @@ function helpMenu() {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
-    '<b>Start boost</b>: hold gas just as the 1 disappears. Too early and you spin your wheels.<br><b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
+    '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
+    '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
     items: [{ label: 'BACK', back: 1, fn: titleMenu }] });
 }
@@ -3073,7 +3082,7 @@ function beginGP(cup) { // points are kept per kart (two players can pick the sa
   if (!roster) roster = { ch: [SV.ch].concat(rivalsFor(SV.ch)), names: [], humans: [0] };
   GP = { cup: cup, cls: SV.cls, roster: roster.ch, names: roster.names, humans: roster.humans, n: 0, pts: roster.ch.map(function () { return 0; }), grid: null }; gpRace();
 }
-function gpRace() { go({ course: GP.cup.courses[GP.n], cls: GP.cls, player: GP.roster[0], rivals: GP.roster.slice(1), mode: 'gp', grid: GP.grid, humans: GP.humans, names: GP.names, fixed: 1 }); }
+function gpRace() { go({ course: GP.cup.courses[GP.n], cls: GP.cls, player: GP.roster[0], rivals: GP.roster.slice(1), mode: 'gp', grid: GP.grid, humans: GP.humans, names: GP.names, fixed: 1, chain: !!GP.chain }); }
 function beginRace(course) { GP = null; go({ course: course, cls: SV.cls, player: SV.ch, rivals: rivalsFor(SV.ch), mode: 'race' }); }
 function beginTT(course) { GP = null; go({ course: course, cls: 'hot', player: SV.ch, rivals: [], mode: 'tt' }); }
 
@@ -3088,7 +3097,7 @@ function pauseMenu() {
   var R = RACE;
   KIT.menu({ title: 'Paused', sub: R.def.n + (GP ? '  ·  race ' + (GP.n + 1) + ' of 4' : ''), cls: 'ck plain', items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu },
-    R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else beginRace(R.o.course); } },
+    R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else if (R.chain) beginChain(R.o.course); else beginRace(R.o.course); } },
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), fn: function () { SV.auto = !SV.auto; persist(); KIT.closeMenu(); pauseMenu(); } },
     { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Down + Z throws behind you. On the grid, rev with A and hold the needle in the green. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
     R.net ? { label: R.net === 'host' ? 'END THE RACE FOR EVERYONE' : 'LEAVE THE ROOM', fn: function () { if (R.net === 'host') { RACE = null; GP = null; mpLobby(); } else { netLeave(); RACE = null; mpMenu(); } } } : { label: 'QUIT TO THE TITLE', fn: function () { RACE = null; GP = null; titleMenu(); } }] });
@@ -3115,8 +3124,9 @@ function draw() {
   if (!R3.ok) return;
   if (RACE) { drawRace(1 / 60); if (!RACE.demo) drawHud(); }
 }
-KIT.start({ w: 480, h: 270, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true,
-  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] } });
+var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] }, PADCHAIN = false;
+function chainPad(on) { if (on === PADCHAIN) return; PADCHAIN = on; KIT.buildPad(on ? CHAINPAD : CKPAD); } // the CHAIN button only shows in a chain race
+KIT.start({ w: 480, h: 270, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
 if (!R3.ok) KIT.menu({ title: 'Cumhead Kart', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the karts cannot run here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }
   (function wait() { if (KIT.sheetReady && (FONTOK || Date.now() - fontT > 2500)) titleMenu(); else setTimeout(wait, 50); })(); }
@@ -3249,9 +3259,10 @@ function titleMenu() {
   MODE = 'title'; GP = null; if (!RACE || !RACE.demo) demo();
   var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length;
   var rows = [
-    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 96 events, stars to earn', 'hot'],
+    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 120 events, stars to earn', 'hot'],
     ['gp', 'Grand Prix', 'Four races, points for every place, a trophy at the end'],
     ['race', 'Single Race', 'Any course you have opened, against seven rivals'],
+    ['chain', 'Chain Race', 'You and a partner tied together by a rope of cream'],
     ['tt', 'Time Trial', 'Just you, the clock and three Cumpuccinos'],
     ['mp', 'Online', 'Host or join a room and race your friends'],
     ['help', 'How to Drive', 'Controls, drifting and items'],
@@ -3265,7 +3276,7 @@ function titleMenu() {
       gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, titleMenu); },
       race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, titleMenu); },
       tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, titleMenu); },
-      exp: function () { expedition(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
+      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
     } });
 }
 /* ---------- class ---------- */
@@ -3282,12 +3293,12 @@ function pickChar(next, back) {
   var sel = SV.ch, redo = function () { pickChar(next, back); };
   function info(id) {
     var c = CH[id], op = charOpen(id), names = ['SPEED', 'ACCEL', 'HANDLING', 'WEIGHT'];
-    return '<div class="top">' + (op ? pic(id, 96) : '<span class="hsp-pic" style="display:inline-block;width:96px;height:96px;background:#0a0506"></span>') + '<div><h2>' + (op ? esc(c.n) : '???') + '</h2>' + (op && id === SV.ch ? '<p style="color:#ffe36a">YOUR DRIVER</p>' : '') + '</div></div>' +
+    return '<div class="top">' + (op ? pic(id, 96) : '<span class="hsp-pic" style="display:inline-block;width:96px;height:96px;background:#0a0506"></span>') + '<div><h2>' + (op ? esc(c.n) : '???') + '</h2>' + (op && id === SV.ch ? '<p style="color:#ffe36a">' + (pickChar.title ? 'YOUR PARTNER' : 'YOUR DRIVER') + '</p>' : '') + '</div></div>' +
       '<p class="fr"' + (op ? '' : ' style="color:#ff2630"') + '>' + esc(op ? c.from : 'Locked: ' + c.lock) + '</p>' +
       (op ? '<div class="ckst">' + c.st.map(function (v, i) { return '<span>' + names[i] + '</span><span class="bar">' + [0, 1, 2, 3, 4].map(function (q) { return '<i class="' + (q < v ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }).join('') + '</div>' +
         '<div class="sw">' + c.kart.map(function (k) { return '<i style="background:' + k + '"></i>'; }).join('') + '</div>' : '');
   }
-  screen({ title: 'Who is driving?', back: back || titleMenu, redo: redo, foot: 'A / TAP PICK  ·  A AGAIN OR DRIVE TO GO  ·  B BACK',
+  screen({ title: pickChar.title || 'Who is driving?', back: back || titleMenu, redo: redo, foot: 'A / TAP PICK  ·  A AGAIN OR DRIVE TO GO  ·  B BACK',
     html: '<div class="ckch"><div class="grid">' + CHARS.map(function (c) { var op = charOpen(c.id); return '<button type="button" class="ckbtn p' + (c.id === sel ? ' sel' : '') + '" data-act="ch" data-ch="' + c.id + '"' + (op ? '' : ' aria-disabled="true"') + (c.id === sel ? ' data-pad-default' : '') + ' aria-label="' + esc(op ? c.n : 'Locked') + '">' + pic(c.id) + '<span class="nm">' + esc(op ? c.n.replace(/^(The|Uncle|Sir) /, '').replace(/^King /, 'K.').split(' ')[0].toUpperCase() : '???') + '</span></button>'; }).join('') +
       '</div><div class="ckinfo"><div id="ckInfo">' + info(sel) + '</div><button type="button" class="ckbtn ckgo" data-act="go">DRIVE</button></div></div>',
     acts: {
@@ -3337,6 +3348,7 @@ function endRace() {
   var order = R.karts.slice().sort(function (a, b) { return a.time - b.time; }); order.forEach(function (k, i) { k.place = i + 1; });
   if (R.ev) return expEnd(R);
   if (R.tt) return ttResults();
+  if (R.chain) return chainEnd(R);
   var rows = order.map(function (k, i) { var pts = GP ? POINTS[i] : null; if (GP) GP.pts[k.idx] += pts; return { ch: k.ch, idx: k.idx, name: !k.ai && k !== R.me ? k.tag : null, me: k === R.me, time: fmtTime(k.time), pts: GP ? '+' + pts : null }; });
   var html = resultRows(rows) + (R.newLap ? '<div class="ckmsg" style="margin-top:10px">New best lap!</div>' : '');
   if (GP) {
@@ -3787,6 +3799,7 @@ function hostData(L, m) {
   if (m.t === 'ch' && CH[m.ch]) { NET.players[pi].ch = m.ch; hostLobbyPush(); netChanged(); return; }
   if (m.t === 'st') { netReport(pi, m.s); return; }
   if (m.t === 'use') { netUse(pi, m); return; }
+  if (m.t === 'chain') { var R = RACE; if (R && R.chain && R.phase === 'go') { var ck = R.all.filter(function (q) { return q.netId === NET.players[pi].id; })[0]; if (ck) chainPass(ck); } return; }
 }
 function hostDrop(L) {
   var pi = NET.players.findIndex(function (p) { return p.id === L.remote; }); NET.links = NET.links.filter(function (l) { return l !== L; }); L.close();
@@ -3801,7 +3814,7 @@ function clientData(L, m) {
   if (m.t === 'start') { netClientStart(m); return; }
   if (m.t === 'snap') { netSnap(m); return; }
   if (m.t === 'ev') { netEvent(m); return; }
-  if (m.t === 'end') { netClientEnd(m); return; }
+  if (m.t === 'end') { if (m.kind === 'chain' || m.kind === 'chainst') chainClientEnd(m); else netClientEnd(m); return; }
 }
 function netLost() { var e = NET.err; netLeave(); RACE = null; mpMenu(e); }
 
@@ -3812,8 +3825,8 @@ function netLost() { var e = NET.err; netLeave(); RACE = null; mpMenu(e); }
    they get an item, and when an item they used does something to themselves.
    ===================================================================================================== */
 var NETHZ = 20;
-var KF = ['x', 'y', 'z', 'yaw', 'spd', 'vy', 'seg', 'lat', 'lap', 'prog', 'time', 'drift', 'driftLvl', 'driftT', 'steerVis', 'boostT', 'nadoT', 'spinT', 'spinA', 'squashT', 'splatT', 'revT', 'tinyT', 'hicT', 'floatT', 'floatY', 'gooT', 'invT', 'shieldT', 'orbit', 'petT', 'magT', 'wobT', 'hopT'];
-var SF = ['x', 'y', 'z', 'yaw', 'spd', 'lap', 'prog', 'place', 'drift', 'driftLvl', 'steerVis', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'floatY', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'itemN', 'roul', 'time'];
+var KF = ['x', 'y', 'z', 'yaw', 'spd', 'vy', 'seg', 'lat', 'lap', 'prog', 'time', 'drift', 'driftLvl', 'driftT', 'steerVis', 'boostT', 'nadoT', 'spinT', 'spinA', 'squashT', 'splatT', 'revT', 'tinyT', 'hicT', 'floatT', 'floatY', 'gooT', 'invT', 'shieldT', 'orbit', 'petT', 'magT', 'wobT', 'hopT', 'slingT', 'slingCd'];
+var SF = ['x', 'y', 'z', 'yaw', 'spd', 'lap', 'prog', 'place', 'drift', 'driftLvl', 'steerVis', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'floatY', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'itemN', 'roul', 'time', 'slingT'];
 var GUARD = ['invT', 'shieldT', 'orbit', 'spinT', 'splatT', 'revT', 'tinyT', 'hicT', 'gooT', 'squashT'];
 var ITEMKEYS = Object.keys(ITEMS);
 function r3(v) { return typeof v === 'number' ? Math.round(v * 1000) / 1000 : v; }
@@ -3869,7 +3882,9 @@ function netTick(dt) {
     dr: R.drops.map(function (d) { return [r3(d.x), r3(d.z), d.t > 0 ? 0 : 1]; }),
     fx: fx, msg: R.msg ? [R.msg.who, R.msg.s, r3(R.msg.t)] : null,
     evs: X ? { left: r3(X.left), score: X.score, hp: X.hp, next: r3(X.next), cur: X.cur, goal: X.goal, over: X.over ? 1 : 0 } : null,
-    gates: R.gates ? R.gates.map(function (g) { return Object.keys(g.got).map(Number); }) : null };
+    gates: R.gates ? R.gates.map(function (g) { return Object.keys(g.got).map(Number); }) : null,
+    ch: R.chain ? R.teams.map(function (t) { return [r3(t.snapT), t.snag ? 1 : 0]; }) : null, cn: R.chainNote || null };
+  R.chainNote = null;
   netBroadcast(m, true);
 }
 
@@ -3898,6 +3913,8 @@ function netSnap(m) {
   m.fx.forEach(function (a) { var f = { k: a[0], x: a[1], y: a[2], z: a[3], t: a[4], big: a[8] }; if (a[5] !== null && a[5] !== undefined) { f.vx = a[5]; f.vy = a[6]; f.vz = a[7]; } R.fx.push(f); });
   if (m.msg) R.msg = { who: m.msg[0], s: m.msg[1], t: m.msg[2] };
   if (m.evs) { R.evs = R.evs || {}; for (var q in m.evs) R.evs[q] = m.evs[q]; }
+  if (m.ch && R.teams) m.ch.forEach(function (c, i) { var t = R.teams[i]; if (t) { t.snapT = c[0]; } });
+  if (m.cn && R.chain) m.cn.forEach(function (c) { var f = R.all[c[0]], to = R.all[c[1]]; if (f && to && f.team) { R.fx.push({ sent: 1, k: 'pulse', team: f.team.i, from: f === f.team.a ? 0 : 1, t: 0.45, item: 1 }); if (to === R.me) { R.chainMsg = { s: 'GOT AN ITEM FROM ' + f.c.n.toUpperCase(), t: 1.3 }; sfx.play('select'); } } });
   if (m.gates && R.gates) m.gates.forEach(function (got, i) { var g = R.gates[i]; if (!g) return; g.got = {}; got.forEach(function (l) { g.got[l] = 1; }); g.lap = g.got[R.me.lap] ? R.me.lap : -1; });
 }
 function puppetStep(k, dt) { // glide towards where the host last saw it, guessing ahead by its speed
@@ -3905,7 +3922,7 @@ function puppetStep(k, dt) { // glide towards where the host last saw it, guessi
   var ax = T.x + Math.cos(T.yaw) * T.spd * T.age, az = T.z + Math.sin(T.yaw) * T.spd * T.age, f = Math.min(1, dt * 12);
   k.x += (ax - k.x) * f; k.z += (az - k.z) * f; k.y += (T.y - k.y) * f; k.yaw += angDiff(T.yaw, k.yaw) * f;
   ['spd', 'steerVis', 'floatY'].forEach(function (q) { k[q] += (T[q] - k[q]) * f; });
-  ['lap', 'prog', 'place', 'drift', 'driftLvl', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'time'].forEach(function (q) { k[q] = T[q]; });
+  ['lap', 'prog', 'place', 'drift', 'driftLvl', 'boostT', 'slingT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'time'].forEach(function (q) { k[q] = T[q]; });
   var loc = RACE.T.locate(k.x, k.z, k.seg); k.seg = loc.i; k.lat = loc.lat;
 }
 function netEvent(m) {
@@ -3989,6 +4006,8 @@ function mpLobby() {
     '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b><span>Four races for points</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b><span>Any course</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b><span>Everyone at once, as ghosts</span></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b><span>Teams of two on a rope of cream, players paired in order</span></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b><span>Four chain races for team points</span></button>' +
     '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition</b><span>' + (two ? 'Play through together' : 'Co-op is for exactly two players') + '</span></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
   screen({ cls: 'mplobby', title: 'Room ' + NET.code, sub: NET.players.length + ' of 8 players' + (host ? '  ·  tell your friends the code' : ''), back: function () { netLeave(); mpMenu(); }, redo: mpLobby,
     html: '<div class="mplobby" style="max-width:760px;margin:0 auto">' + (host ? '<div style="text-align:center;font-family:var(--pixel);font-size:34px;letter-spacing:.35em;color:#ffe36a;margin:4px 0 12px;text-shadow:3px 3px 0 #12040a">' + NET.code + '</div>' : '') + mpPlayers() +
@@ -3997,7 +4016,7 @@ function mpLobby() {
       drv: function () { pickChar(function () { if (NET.role === 'client') netSend({ t: 'ch', ch: SV.ch }); mpLobby(); }, mpLobby); },
       cls: function () { var open = CLASSES.filter(function (c) { return classOpen(c.id); }), i = open.findIndex(function (c) { return c.id === SV.cls; }); SV.cls = open[(i + 1) % open.length].id; persist(); mpLobby(); },
       leave: function () { netLeave(); mpMenu(); },
-      gp: function () { pickCup(beginGP, mpLobby); }, race: function () { pickCourse(beginRace, mpLobby); }, tt: function () { pickCourse(beginTT, mpLobby); }, exp: function () { expedition(mpLobby); }
+      gp: function () { pickCup(beginGP, mpLobby); }, race: function () { pickCourse(beginRace, mpLobby); }, tt: function () { pickCourse(beginTT, mpLobby); }, chain: function () { pickCourse(beginChain, mpLobby); }, chaingp: function () { pickCup(beginChainGP, mpLobby); }, exp: function () { expedition(mpLobby); }
     } });
 }
 /* a guest's view at the end of a race: the host's results, then wait for the host */
@@ -4007,6 +4026,274 @@ function netClientEnd(m) {
     var X = XS(), e = expEvent(m.id); if (e) { if (m.s > (X.stars[e.id] || 0)) X.stars[e.id] = m.s; if (m.s > 0 && e.t === 'face') { X.beat[e.a] = 1; var a = EXP[e.a]; if (CH[a.r].lock) SV.unlock[a.r] = 1; } if (R) SV.drops = (SV.drops || 0) + (R.me.got || 0); persist(); }
     h = '<div style="text-align:center"><div style="font-size:54px;line-height:1;color:#ffe36a">' + starStr(m.s) + '</div><p style="font-size:16px">' + esc(m.line) + '</p><p style="color:#a6968f">Stars count for both of you.</p></div>';
   } else h = resultRows(m.rows.map(function (r) { return { ch: r.ch, me: r.idx === me, name: r.idx === me ? null : (r.idx === 0 ? NET.players[0] && NET.players[0].name : r.name), time: r.time, pts: r.pts }; }));
+  screen({ cls: 'solid', title: m.title || 'Results', sub: m.sub || '', foot: false,
+    html: h + '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for the host…</div><div class="ckacts" style="margin-top:10px"><button type="button" class="ckbtn" data-act="leave" data-pad-default>LEAVE THE ROOM</button></div>',
+    acts: { leave: function () { netLeave(); RACE = null; mpMenu(); } } });
+}
+
+/* =====================================================================================================
+   CHAIN RACE (his idea): teams of two karts tied together by a stretchy rope of cream.
+   - The rope goes slack when you are close and pulls tight when you drift apart, towing whoever is behind.
+   - SLINGSHOT: when it is tight and you are the one behind, press L (the CHAIN button) and you are flung
+     past your partner.
+   - PASS: press L with an item and your partner gets it; press it empty-handed and you take theirs.
+   - SHARED BOOST: a drift boost, a boost pad or a Cumpuccino gives your partner a share down the rope.
+   - The rope is a hazard: a tight rope clotheslines any other kart that drives into it, and if it cuts across
+     a corner it snags on the wall, grinds and slows you both (too long and it snaps).
+   - WEAK LINKS: getting spun out by a hit usually snaps the rope for a few seconds; it clips back on by itself.
+   - A team finishes when both karts are over the line; team places, team points, a Chain Grand Prix.
+   Online: each machine pulls only the karts it drives; the host decides hits, snaps, item passes.
+   ===================================================================================================== */
+var CHAIN = { L: 7.5, MAX: 15, SNAP: 3.2, SLING: 1.15, SLINGCD: 3.5, SNAGMAX: 1.6 };
+var TEAMPTS = [15, 10, 6, 3];
+var CHAINPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'lb', label: 'L', sub: 'CHAIN', cls: 'gold' }] };
+
+/* called from startRace when o.chain: karts 0+1, 2+3, 4+5, 6+7 are teams */
+function chainSetup(R) {
+  R.chain = true; R.teams = [];
+  for (var i = 0; i + 1 < R.all.length; i += 2) { var a = R.all[i], b = R.all[i + 1], t = { i: R.teams.length, a: a, b: b, snapT: 0, snagT: 0, d: 0, cd: 0 }; a.team = b.team = t; a.mate = b; b.mate = a; R.teams.push(t); }
+  if (R.all.length % 2) { var lone = R.all[R.all.length - 1]; lone.team = { i: R.teams.length, a: lone, b: lone, solo: true, snapT: 0, snagT: 0, d: 0 }; R.teams.push(lone.team); }
+  R.all.forEach(function (k) { k._pb = 0; k._ps = 0; k.slingCd = 0; });
+}
+function local(k) { return !k.remote && !k.puppet; }
+function hostSide(R) { return R.net !== 'client'; }
+
+/* weak links: a spin-out from a real hit (not a bumper or a stall) snaps the rope (four times in ten); the host decides */
+var _hitKartC = hitKart;
+hitKart = function (k, by, how, p) {
+  var r = _hitKartC(k, by, how, p), R = RACE;
+  if (r && R && R.chain && hostSide(R) && R.phase === 'go' && k.team && !k.team.solo && k.team.snapT <= 0 && (!how || how === 'spin' || how === 'toss' || how === 'pounce') && Math.random() < 0.4) { k.team.snapT = CHAIN.SNAP; k.team.snagT = 0; snapFx(R, k.team); }
+  return r;
+};
+/* the CHAIN button, on the machine that drives the kart */
+function chainPress(k) {
+  var R = RACE, t = k.team, m = k.mate; if (!t || t.solo || R.phase !== 'go' || k.done) return;
+  if (t.snapT > 0) { if (k === R.me) { R.chainMsg = { s: 'ROPE SNAPPED!', t: 1 }; sfx.play('back'); } return; }
+  if (chainCanSling(k)) { slingshot(k); return; }
+  if (hostSide(R)) chainPass(k); else netSend({ t: 'chain' });
+}
+function chainCanSling(k) { var t = k.team, m = k.mate; return t && !t.solo && t.snapT <= 0 && t.d > CHAIN.L * CHAIN.SLING && k.prog < m.prog && (k.slingCd || 0) <= 0 && k.spinT <= 0; }
+function slingshot(k) {
+  var R = RACE, m = k.mate; k.slingT = 1.1; k.slingCd = CHAIN.SLINGCD; k.spd = Math.max(k.spd, k.top * 1.05); k.drift = 0;
+  if (local(m)) m.spd *= 0.86; // the front kart takes the strain
+  R.fx.push({ sent: 1, k: 'pulse', team: k.team.i, from: k === k.team.a ? 0 : 1, t: 0.45 });
+  if (k === R.me || m === R.me || near(k)) sfx.play('power'); if (k === R.me) { R.flash = 0.08; R.chainMsg = { s: 'SLINGSHOT!', t: 1.1 }; KIT.shake(2); }
+}
+/* items down the rope (the host decides items) */
+function chainPass(k) {
+  var R = RACE, m = k.mate; if (!m || m === k) return;
+  if (k.item && !m.item && !(m.roul > 0) && !(k.roul > 0)) { m.item = k.item; m.itemN = k.itemN; k.item = null; k.itemN = 0; m.roul = 0; passFx(k, m, 'GAVE IT TO ' + m.c.n.toUpperCase(), 'GOT ' + ITEMS[m.item].n.toUpperCase() + ' FROM ' + k.c.n.toUpperCase()); }
+  else if (!k.item && m.item && !(m.roul > 0) && !(k.roul > 0)) { k.item = m.item; k.itemN = m.itemN; m.item = null; m.itemN = 0; passFx(m, k, 'TOOK IT', 'TOOK ' + ITEMS[k.item].n.toUpperCase()); }
+  else if (k === R.me) { R.chainMsg = { s: k.item ? 'THEIR HANDS ARE FULL' : 'NOTHING TO SWAP', t: 0.9 }; sfx.play('back'); }
+}
+function passFx(from, to, sFrom, sTo) {
+  var R = RACE; R.fx.push({ sent: 1, k: 'pulse', team: from.team.i, from: from === from.team.a ? 0 : 1, t: 0.45, item: 1 });
+  if (from === R.me) R.chainMsg = { s: sFrom, t: 1.1 }; if (to === R.me) R.chainMsg = { s: sTo, t: 1.3 };
+  if (from === R.me || to === R.me) sfx.play('select');
+  if (R.net === 'host') R.chainNote = (R.chainNote || []).concat([[from.idx, to.idx]]);
+}
+
+/* every frame, after the karts have moved */
+function chainStep(R, dt) {
+  var host = hostSide(R);
+  R.all.forEach(function (k) { if (k.slingCd > 0) k.slingCd -= dt; });
+  R.teams.forEach(function (t) {
+    if (t.solo) return; var a = t.a, b = t.b;
+    // weak links: a spin-out snaps the rope (the host decides)
+    if (t.snapT > 0) { t.snapT -= dt; if (t.snapT <= 0) { t.snapT = 0; if (a === R.me || b === R.me) { sfx.play('select'); R.chainMsg = { s: 'ROPE BACK ON', t: 0.9 }; } } }
+    var dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 0.001; t.d = d;
+    if (t.snapT > 0 || R.phase !== 'go' && R.phase !== 'done') { a._pb = a.boostT; b._pb = b.boostT; return; }
+    var nx = dx / d, nz = dz / d, wa = b.wt / (a.wt + b.wt), wb = 1 - wa;
+    if (d > CHAIN.L) {
+      var ex = Math.min(d - CHAIN.L, 10), corr = ex * Math.min(1, dt * 5.5);
+      if (d > CHAIN.MAX) corr = d - CHAIN.MAX + corr * 0.2; // it only stretches so far
+      corr = Math.min(corr, 40 * dt); // (and after a snap it reels you back in, it doesn't teleport you)
+      if (local(a)) { a.x += nx * corr * wa; a.z += nz * corr * wa; }
+      if (local(b)) { b.x -= nx * corr * wb; b.z -= nz * corr * wb; }
+      var back = a.prog < b.prog ? a : b, front = back === a ? b : a; // tension tows the one behind and holds the one in front back
+      if (local(back) && !back.done) back.spd = Math.min(back.top * 1.25, back.spd + ex * 2.6 * dt);
+      if (local(front) && !front.done) front.spd -= Math.min(front.spd, ex * 1.1 * dt);
+    }
+    // shared boost: a fresh boost of half a second or more sends a short one down the rope
+    var ga = a.boostT - (a._pb || 0), gb = b.boostT - (b._pb || 0);
+    if (ga >= 0.5 && local(b) && !b.done) { b.boostT = Math.max(b.boostT, 0.45); R.fx.push({ sent: 1, k: 'pulse', team: t.i, from: 0, t: 0.4 }); if (b === R.me) sfx.play('select'); }
+    if (gb >= 0.5 && local(a) && !a.done) { a.boostT = Math.max(a.boostT, 0.45); R.fx.push({ sent: 1, k: 'pulse', team: t.i, from: 1, t: 0.4 }); if (a === R.me) sfx.play('select'); }
+    a._pb = a.boostT; b._pb = b.boostT;
+    // snag: the rope cutting across a corner catches on the wall and grinds
+    var mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, q = R.T.locate(mx, mz, a.seg); t.snag = d > CHAIN.L * 0.9 && Math.abs(q.lat) > R.T.edge + 0.4 && Math.abs(a.lat) < R.T.edge && Math.abs(b.lat) < R.T.edge && !a.floatT && !b.floatT;
+    if (t.snag) {
+      t.snagT += dt; [a, b].forEach(function (k) { if (local(k) && !k.done) k.spd *= Math.pow(0.55, dt); });
+      var sd = Math.sign(q.lat), ex2 = mx - q.s.nx * sd * (Math.abs(q.lat) - R.T.edge), ez2 = mz - q.s.nz * sd * (Math.abs(q.lat) - R.T.edge);
+      if (Math.random() < 0.5) R.fx.push({ k: 'grind', x: ex2, y: q.y + 0.6, z: ez2, t: 0.25, vx: (Math.random() - 0.5) * 6, vy: 3 + Math.random() * 3, vz: (Math.random() - 0.5) * 6 });
+      if ((a === R.me || b === R.me) && !R.snagSnd) { R.snagSnd = 0.25; sfx.play('land'); }
+      if (host && t.snagT > CHAIN.SNAGMAX) { t.snapT = CHAIN.SNAP; t.snagT = 0; snapFx(R, t); }
+    } else t.snagT = Math.max(0, t.snagT - dt * 2);
+    // clothesline: a tight rope knocks over anyone from another team who drives into it
+    if (host && d > CHAIN.L * 0.8 && R.phase === 'go') R.karts.forEach(function (o) {
+      if (o.team === t || o.done || o.invT > 0 || o.floatT > 0) return;
+      var px = o.x - a.x, pz = o.z - a.z, s = (px * nx + pz * nz) / d; if (s < 0.12 || s > 0.88) return;
+      var ox = a.x + nx * d * s, oz = a.z + nz * d * s, off = Math.hypot(o.x - ox, o.z - oz), ry = a.y + (b.y - a.y) * s;
+      if (off < 0.95 && Math.abs(o.y - ry) < 1.6) { var by = a.spd > b.spd ? a : b; if (hitKart(o, by, 'spin')) { R.fx.push({ k: 'pop', x: o.x, y: o.y + 1, z: o.z, t: 0.4 }); if (by === R.me || by.mate === R.me) R.chainMsg = { s: 'CLOTHESLINED ' + o.c.n.toUpperCase() + '!', t: 1.3 }; } }
+    });
+  });
+  if (R.snagSnd > 0) R.snagSnd -= dt;
+  if (R.chainMsg) { R.chainMsg.t -= dt; if (R.chainMsg.t <= 0) R.chainMsg = null; }
+  // the AI: slingshots when it can, and now and then hands its item to a human partner who has none
+  if (host) R.karts.forEach(function (k) {
+    if (!k.ai || k.done || !k.team || k.team.solo) return;
+    if (chainCanSling(k) && Math.random() < dt * 0.9) slingshot(k);
+    var m = k.mate; if (!m.ai && k.item && !m.item && !(m.roul > 0) && !(k.roul > 0) && k.itemT > 0.3 && Math.random() < dt * 0.12) chainPass(k);
+  });
+}
+function snapFx(R, t) {
+  var a = t.a, b = t.b; R.fx.push({ k: 'pop', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + 0.6, z: (a.z + b.z) / 2, t: 0.5, col: '#f1e7d0' });
+  if (a === R.me || b === R.me) { sfx.play('splat'); R.chainMsg = { s: 'ROPE SNAPPED!', t: 1.2 }; }
+}
+/* team places: a team is as far on as its slower kart; finished teams by the later of their two times */
+function chainPlaces(R) {
+  var ts = R.teams.slice();
+  function done(t) { return t.a.done && t.b.done; }
+  function tm(t) { return Math.max(t.a.time, t.b.time); }
+  function pr(t) { return Math.min(t.a.prog, t.b.prog); }
+  ts.sort(function (p, q) { if (done(p) && done(q)) return tm(p) - tm(q); if (done(p)) return -1; if (done(q)) return 1; return pr(q) - pr(p); });
+  ts.forEach(function (t, i) { t.place = i + 1; });
+}
+/* the race only finishes for you when your partner is over the line too */
+function chainFinished(R, k) { var m = k.mate; return !m || m === k || m.done; }
+
+/* ---------- drawing: the rope of cream ---------- */
+var CREAM = [0.47, 0.45, 0.4], CREAMHOT = [0.55, 0.42, 0.3];
+function drawChains(R, m, soft, glow, A) {
+  var cr = R3.cam.right;
+  R.teams.forEach(function (t) {
+    if (t.solo) return; var a = t.a, b = t.b, ya = a.y + (a.floatY || 0) + 0.55, yb = b.y + (b.floatY || 0) + 0.55, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 0.001, nx = dx / d, nz = dz / d;
+    if (Math.abs(a.x - R3.cam.eye[0]) + Math.abs(a.z - R3.cam.eye[2]) > 220) return;
+    var ax = a.x + nx * 0.9, az = a.z + nz * 0.9, bx = b.x - nx * 0.9, bz = b.z - nz * 0.9, len = Math.max(0.1, d - 1.8);
+    if (t.snapT > 0) { // two dripping ends dragged behind
+      rope(m, [[ax, ya, az], [ax + nx * 1.4, ya - 0.3, az + nz * 1.4], [ax + nx * 2.6, a.y + 0.12, az + nz * 2.6]], CREAM, 0.13);
+      rope(m, [[bx, yb, bz], [bx - nx * 1.4, yb - 0.3, bz - nz * 1.4], [bx - nx * 2.6, b.y + 0.12, bz - nz * 2.6]], CREAM, 0.13);
+      return;
+    }
+    var slack = Math.max(0, CHAIN.L - d) / CHAIN.L, tight = clamp((d - CHAIN.L) / 4, 0, 1), pts = [], n = 10;
+    for (var i = 0; i <= n; i++) {
+      var s = i / n, x = ax + (bx - ax) * s, z = az + (bz - az) * s, y = ya + (yb - ya) * s - (0.15 + slack * 1.6) * 4 * s * (1 - s) + Math.sin(R.t * 9 + s * 6 + t.i) * 0.04 * (1 - tight);
+      var g = R.T.locate(x, z, a.seg).y + 0.1; if (y < g) y = g; pts.push([x, y, z]);
+    }
+    var col = [CREAM[0] + (CREAMHOT[0] - CREAM[0]) * tight, CREAM[1] + (CREAMHOT[1] - CREAM[1]) * tight, CREAM[2] + (CREAMHOT[2] - CREAM[2]) * tight];
+    rope(m, pts, col, 0.19 - tight * 0.06);
+    if (t.snag) spark(glow, A, (ax + bx) / 2, (ya + yb) / 2, (az + bz) / 2, 0.6, 'halo', [0.6, 0.4, 0.15]);
+    if (Math.random() < 0.08 * (1 - tight) + 0.02) { var k = 2 + Math.floor(Math.random() * 7), p = pts[k]; R.fx.push({ k: 'drip', x: p[0], y: p[1] - 0.1, z: p[2], t: 0.5, vx: 0, vy: -1, vz: 0, sent: 1 }); }
+    // a glowing blob running down the rope when something is sent along it
+    R.fx.forEach(function (f) { if (f.k !== 'pulse' || f.team !== t.i) return; var s = 1 - f.t / 0.45; if (f.from) s = 1 - s; var p = pts[Math.max(0, Math.min(n, Math.round(s * n)))]; spark(glow, A, p[0], p[1], p[2], f.item ? 0.7 : 0.55, 'halo', f.item ? [0.6, 0.5, 0.15] : [0.55, 0.5, 0.4]); });
+  });
+}
+function rope(m, pts, col, w) { // a camera-facing strip with a darker underside, so it reads as round
+  var tile = RACE.A.tile('white'), f = R3.cam.fwd;
+  for (var i = 0; i + 1 < pts.length; i++) {
+    var p = pts[i], q = pts[i + 1], sx = q[0] - p[0], sy = q[1] - p[1], sz = q[2] - p[2];
+    var ox = sy * f[2] - sz * f[1], oy = sz * f[0] - sx * f[2], oz = sx * f[1] - sy * f[0], ol = Math.hypot(ox, oy, oz) || 1; ox *= w / ol; oy *= w / ol; oz *= w / ol;
+    m.quad([p[0] - ox, p[1] - oy, p[2] - oz], [q[0] - ox, q[1] - oy, q[2] - oz], [q[0], q[1], q[2]], [p[0], p[1], p[2]], [0, 0, 1, 0, 1, 1, 0, 1], tile, mulc(col, 0.72));
+    m.quad([p[0], p[1], p[2]], [q[0], q[1], q[2]], [q[0] + ox, q[1] + oy, q[2] + oz], [p[0] + ox, p[1] + oy, p[2] + oz], [0, 0, 1, 0, 1, 1, 0, 1], tile, col);
+  }
+}
+function drawChainFx(R, soft, A) { R.fx.forEach(function (f) { if (f.k === 'drip') spark(soft, A, f.x, f.y, f.z, 0.09, 'puff', [0.6, 0.58, 0.52]); else if (f.k === 'grind') spark(soft, A, f.x, f.y, f.z, 0.08, 'halo', [0.7, 0.55, 0.25]); }); }
+
+/* ---------- the HUD ---------- */
+function fitSpr(n, cx, by, size) { var f = KIT.SPR[n]; if (!f) return; spr(n, cx, by, { sc: size / Math.max(f[2], f[3]) }); }
+function chainHud(R) {
+  var k = R.me, t = k.team; if (!t || t.solo) return; var m = k.mate, ctx = KIT.ctx;
+  // partner card under the item box: their face, their item, and the rope
+  var x = 8, y = 46; KIT.panel(x, y, 88, 30, { edge: t.snapT > 0 ? '#ff2630' : '#4a1a1c' });
+  fitSpr(m.c.f, x + 15, y + 28, 24);
+  text(m.tag && !m.ai ? m.tag.toUpperCase().slice(0, 8) : m.c.n.toUpperCase().replace(/^(THE|UNCLE|SIR|KING) /, '').split(' ')[0].slice(0, 8), x + 30, y + 5, { size: 6, col: '#f1e7d0' });
+  if (m.roul > 0) text('?', x + 76, y + 9, { size: 8, col: '#ffe36a', align: 'center' }); else if (m.item) fitSpr(ITEMS[m.item].ic, x + 76, y + 26, 18); else text('-', x + 76, y + 9, { size: 8, col: '#a6968f', align: 'center' });
+  var ten = clamp((t.d - CHAIN.L * 0.5) / (CHAIN.MAX - CHAIN.L * 0.5), 0, 1);
+  ctx.fillStyle = '#12040a'; ctx.fillRect(x + 30, y + 17, 32, 5); ctx.fillStyle = t.snapT > 0 ? '#4a1a1c' : ten > 0.6 ? '#ff2630' : '#f1e7d0'; ctx.fillRect(x + 30, y + 17, t.snapT > 0 ? 32 * (1 - t.snapT / CHAIN.SNAP) : 32 * ten, 5);
+  text(t.snapT > 0 ? 'SNAPPED' : 'ROPE', x + 30, y + 24, { size: 5, col: t.snapT > 0 ? '#ff2630' : '#a6968f' });
+  if (chainCanSling(k) && Math.floor(R.t * 4) % 2) text('L: SLINGSHOT!', 240, 86, { size: 8, align: 'center', col: '#ffe36a', outline: true });
+  if (R.chainMsg) text(R.chainMsg.s, 240, 72, { size: 10, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.chainMsg.t * 3) });
+}
+
+/* ---------- menus, results and the Chain Grand Prix ---------- */
+function chainRoster(me, mate) {
+  if (!mate || mate === me || !CH[mate]) mate = SV.mate = CHARS.filter(function (c) { return c.id !== me && charOpen(c.id); })[0].id;
+  var rest = rivalsFor(me).filter(function (c) { return c !== mate; });
+  return [me, mate].concat(rest.slice(0, 6));
+}
+function chainMenu() {
+  screen({ title: 'Chain Race', sub: 'Two karts, one rope of cream', back: titleMenu, redo: chainMenu,
+    html: '<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px"><div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' +
+      '<button type="button" class="ckbtn ckc" data-act="race" data-pad-default><b>Single Chain Race</b><span>You and a partner against three other teams</span></button>' +
+      '<button type="button" class="ckbtn ckc" data-act="gp"><b>Chain Grand Prix</b><span>Four races, points for every team place</span></button></div>' +
+      '<div class="ckmsg" style="font-size:15px;line-height:1.5;text-align:left">' + CHAINHELP + '</div></div>',
+    acts: {
+      race: function flow() { function mate() { pickMate(co, function () { pickChar(mate, flow); }); } function co() { pickCourse(beginChain, mate); } pickClass(function () { pickChar(mate, flow); }, chainMenu); },
+      gp: function flow2() { function mate() { pickMate(cup, function () { pickChar(mate, flow2); }); } function cup() { pickCup(beginChainGP, mate); } pickClass(function () { pickChar(mate, flow2); }, chainMenu); }
+    } });
+}
+var CHAINHELP = '<b>L</b> (LB on a pad, Q on a keyboard) is the CHAIN button. When the rope is tight and you are behind, it <b>slingshots</b> you past your partner. Otherwise it <b>passes</b> your item to them, or takes theirs if you have none.<br>Drift boosts and boost pads send your partner a <b>shared boost</b> down the rope.<br>A tight rope <b>clotheslines</b> anyone who drives into it. Cut a corner and it <b>snags</b> on the wall. Spin out and it <b>snaps</b> for a few seconds.<br>Your team finishes when you are both over the line.';
+function pickMate(next, back) {
+  var me = SV.ch, keep = SV.ch; if (!SV.mate || SV.mate === me || !charOpen(SV.mate)) SV.mate = CHARS.filter(function (c) { return c.id !== me && charOpen(c.id); })[0].id;
+  SV.ch = SV.mate; pickChar.title = 'Who is your partner?';
+  pickChar(function () { pickChar.title = null; var m = SV.ch; SV.ch = keep; if (m === keep) { SV.ch = keep; pickMate(next, back); return; } SV.mate = m; persist(); next(); }, function () { pickChar.title = null; SV.ch = keep; back(); });
+}
+function beginChain(course) { GP = null; go({ course: course, cls: SV.cls, player: SV.ch, rivals: chainRoster(SV.ch, SV.mate).slice(1), mode: 'race', chain: true }); }
+function beginChainGP(cup) {
+  var r = chainRoster(SV.ch, SV.mate), roster = typeof mpRoster === 'function' ? mpRoster(SV.ch, r.slice(1), 8) : null;
+  if (!roster) roster = { ch: r, names: [], humans: [0] };
+  GP = { chain: true, cup: cup, cls: SV.cls, roster: roster.ch, names: roster.names, humans: roster.humans, n: 0, pts: roster.ch.map(function () { return 0; }), grid: null }; gpRace();
+}
+function teamRows(R) {
+  return R.teams.slice().sort(function (p, q) { return p.place - q.place; }).map(function (t) {
+    var mine = t === R.me.team, pts = GP && GP.chain ? TEAMPTS[t.place - 1] || 0 : null;
+    if (GP && GP.chain) { GP.pts[t.a.idx] += pts; if (!t.solo) GP.pts[t.b.idx] += pts; }
+    return { place: t.place, a: t.a, b: t.solo ? null : t.b, me: mine, time: fmtTime(Math.max(t.a.time, t.b.time)), pts: pts !== null ? '+' + pts : null };
+  });
+}
+function teamRowsHtml(rows) {
+  function nm(k) { var R = RACE; return k === R.me ? meName() : !k.ai && k.tag ? k.tag : CH[k.ch].n; }
+  return '<div class="ckres">' + rows.map(function (r) {
+    return '<div class="ckr' + (r.me ? ' me' : '') + '" style="grid-template-columns:auto 40px 40px 1fr auto auto"><span class="pl">' + r.place + '</span>' + pic(r.a.ch, 40) + (r.b ? pic(r.b.ch, 40) : '<span></span>') + '<span class="nm">' + esc(nm(r.a)) + (r.b ? ' &amp; ' + esc(nm(r.b)) : '') + '<small>TEAM ' + (r.a.team.i + 1) + '</small></span><span class="tm">' + r.time + '</span><span class="pt">' + (r.pts || '') + '</span></div>';
+  }).join('') + '</div>';
+}
+function chainEnd(R) {
+  chainPlaces(R); var rows = teamRows(R), html = teamRowsHtml(rows), tp = R.me.team.place;
+  var wire = rows.map(function (r) { return { place: r.place, a: r.a.idx, b: r.b ? r.b.idx : -1, time: r.time, pts: r.pts }; });
+  if (GP) {
+    if (R.net === 'host') netBroadcast({ t: 'end', kind: 'chain', title: R.def.n, sub: 'Race ' + (GP.n + 1) + ' of 4', teams: wire, names: R.all.map(function (k) { return [k.ch, k.ai ? null : k.tag]; }) });
+    GP.grid = R.teams.slice().sort(function (p, q) { return p.place - q.place; }).reduce(function (g, t) { g.push(R.all.indexOf(t.a)); if (!t.solo) g.push(R.all.indexOf(t.b)); return g; }, []).reverse(); GP.n++;
+    screen({ cls: 'solid', title: R.def.n, sub: 'Race ' + GP.n + ' of 4  ·  your team came ' + ordinal(tp), html: html + '<div class="ckacts" style="margin-top:12px"><button type="button" class="ckbtn hot" data-act="next" data-pad-default>' + (GP.n < 4 ? 'STANDINGS' : 'FINAL STANDINGS') + '</button></div>', acts: { next: chainStandings }, foot: false });
+  } else {
+    if (R.net === 'host') netBroadcast({ t: 'end', kind: 'chain', title: R.def.n, sub: 'Chain race', teams: wire, names: R.all.map(function (k) { return [k.ch, k.ai ? null : k.tag]; }) });
+    screen({ cls: 'solid', title: R.def.n, sub: 'Your team came ' + ordinal(tp), back: function () { RACE = null; titleMenu(); },
+      html: html + '<div class="ckacts" style="margin-top:12px"><button type="button" class="ckbtn hot" data-act="again" data-pad-default>RACE AGAIN</button><button type="button" class="ckbtn" data-act="other">ANOTHER COURSE</button><button type="button" class="ckbtn" data-act="title">TITLE</button></div>',
+      acts: { again: function () { beginChain(R.o.course); }, other: function () { pickCourse(beginChain, function () { RACE = null; titleMenu(); }); }, title: function () { RACE = null; titleMenu(); } }, foot: false });
+  }
+}
+function chainStandings() {
+  var n = GP.roster.length, teams = []; for (var i = 0; i < n; i += 2) teams.push({ a: i, b: i + 1 < n ? i + 1 : -1, pts: GP.pts[i] });
+  teams.sort(function (p, q) { return q.pts - p.pts || p.a - q.a; }); var place = teams.findIndex(function (t) { return t.a === 0; }) + 1;
+  function nm(i) { return i === 0 ? meName() : GP.names[i] || CH[GP.roster[i]].n; }
+  var html = '<div class="ckres">' + teams.map(function (t, j) { return '<div class="ckr' + (t.a === 0 ? ' me' : '') + '" style="grid-template-columns:auto 40px 40px 1fr auto"><span class="pl">' + (j + 1) + '</span>' + pic(GP.roster[t.a], 40) + (t.b >= 0 ? pic(GP.roster[t.b], 40) : '<span></span>') + '<span class="nm">' + esc(nm(t.a)) + (t.b >= 0 ? ' &amp; ' + esc(nm(t.b)) : '') + '</span><span class="pt">' + t.pts + ' PTS</span></div>'; }).join('') + '</div>';
+  if (NET.role === 'host') netBroadcast({ t: 'end', kind: 'chainst', title: GP.n < 4 ? 'Team standings' : 'Final team standings', sub: GP.cup.n, html: html.replace(' me"', '"') });
+  if (GP.n < 4) {
+    screen({ cls: 'solid', title: 'Team standings', sub: esc(GP.cup.n) + '  ·  next: ' + esc(COURSES[GP.cup.courses[GP.n]].n), html: html + '<div class="ckacts" style="margin-top:12px"><button type="button" class="ckbtn hot" data-act="next" data-pad-default>NEXT RACE</button><button type="button" class="ckbtn" data-act="quit">QUIT THE CUP</button></div>', acts: { next: gpRace, quit: function () { RACE = null; titleMenu(); } }, foot: false });
+    return;
+  }
+  var key = 'chain_' + GP.cup.id + '_' + GP.cls, prev = SV.cups[key]; if (!prev || place < prev) SV.cups[key] = place; persist();
+  var tro = place === 1 ? 'ck_gold' : place === 2 ? 'ck_silver' : place === 3 ? 'ck_bronze' : null; music.play(place <= 3 ? 'ck_win' : 'ck_results');
+  screen({ cls: 'solid', title: place === 1 ? 'Your team wins the ' + GP.cup.n : 'Your team finishes ' + ordinal(place), sub: clsName(GP.cls) + ' class  ·  Chain Grand Prix',
+    html: (tro ? '<div style="text-align:center"><img src="' + portrait(tro, 96, '#0e0708') + '" width="96" height="96" style="image-rendering:pixelated" alt=""></div>' : '') + html + '<div class="ckacts" style="margin-top:12px"><button type="button" class="ckbtn hot" data-act="t" data-pad-default>BACK TO THE TITLE</button></div>',
+    acts: { t: function () { RACE = null; GP = null; titleMenu(); } }, foot: false });
+}
+/* a guest's copy of the team results */
+function chainClientEnd(m) {
+  var me = NET.meIdx, h;
+  if (m.kind === 'chainst') h = m.html;
+  else h = '<div class="ckres">' + m.teams.map(function (r) {
+    var mine = r.a === me || r.b === me, nm = function (i) { if (i < 0) return ''; var n = m.names[i]; return i === me ? meName() : (n[1] || CH[n[0]].n); };
+    return '<div class="ckr' + (mine ? ' me' : '') + '" style="grid-template-columns:auto 40px 40px 1fr auto auto"><span class="pl">' + r.place + '</span>' + pic(m.names[r.a][0], 40) + (r.b >= 0 ? pic(m.names[r.b][0], 40) : '<span></span>') + '<span class="nm">' + esc(nm(r.a)) + (r.b >= 0 ? ' &amp; ' + esc(nm(r.b)) : '') + '</span><span class="tm">' + r.time + '</span><span class="pt">' + (r.pts || '') + '</span></div>';
+  }).join('') + '</div>';
   screen({ cls: 'solid', title: m.title || 'Results', sub: m.sub || '', foot: false,
     html: h + '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for the host…</div><div class="ckacts" style="margin-top:10px"><button type="button" class="ckbtn" data-act="leave" data-pad-default>LEAVE THE ROOM</button></div>',
     acts: { leave: function () { netLeave(); RACE = null; mpMenu(); } } });

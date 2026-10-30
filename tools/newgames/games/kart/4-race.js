@@ -41,6 +41,8 @@ function startRace(o) {
   if (o.laps) RACE.laps = o.laps;
   if (TH.init) TH.init(RACE);
   if (RACE.tt) { RACE.karts = karts.filter(function (k, i) { return humans.indexOf(i) >= 0; }); RACE.ghosts = RACE.karts.length > 1; if (!o.noCuppa) RACE.karts.forEach(function (k) { k.item = 'cuppa3'; k.itemN = 3; }); RACE.boxes = []; }
+  if (o.chain) chainSetup(RACE);
+  if (typeof chainPad === 'function') chainPad(!!o.chain && !o.demo);
   if (RACE.ev && typeof evInit === 'function') evInit(RACE);
   music.play(def.song); return RACE;
 }
@@ -65,7 +67,7 @@ function playerInput() {
   var s = KIT.stick(0), gp = KIT.gamepad, trig = function (n) { return gp && gp.buttons && gp.buttons[n] ? gp.buttons[n].value : 0; };
   var steer = s.on ? s.x : 0; if (!s.on) steer = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0);
   var brake = KIT.held('b') || trig(6) > 0.3, rev = KIT.held('a') || KIT.held('up') || trig(7) > 0.3, gas = rev || (SV.auto && !brake); // down only aims items backwards now: it never brakes
-  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
+  return { steer: steer, gas: gas && !brake, brake: brake, rev: rev && !brake, drift: KIT.held('x') || KIT.held('rb') || KIT.held('run'), item: KIT.pressed('y') || (!(RACE && RACE.chain) && KIT.pressed('lb')), chain: !!(RACE && RACE.chain) && KIT.pressed('lb'), back: s.on ? s.y > 0.5 : KIT.held('down'), fwd: s.on ? s.y < -0.5 : KIT.held('up') };
 }
 
 /* ---------- one kart, one step ---------- */
@@ -78,6 +80,7 @@ function driveKart(k, inp, dt) {
   if (!onRoad && k.boostT <= 0 && k.nadoT <= 0) top *= def.creamOff ? 0.45 : 0.55;
   if (k.boostT > 0) { top *= 1.42; acc *= 3; k.boostT -= dt; }
   if (k.nadoT > 0) { top *= 1.25; acc *= 2.5; k.nadoT -= dt; }
+  if (k.slingT > 0) { top *= 1.36; acc *= 3.2; k.slingT -= dt; }
   if (k.gooT > 0) { top *= 0.62; k.gooT -= dt; }
   if (k.squashT > 0) { top *= 0.5; k.squashT -= dt; }
   if (k.splatT > 0) { top *= 0.86; k.splatT -= dt; }
@@ -175,7 +178,7 @@ function rubber(k) { // the pack stays close: AI behind you speed up a little, A
 function lapDone(k) {
   var R = RACE; if (k.lap <= 1) { k.lapStart = R.t; return; }
   k.laps.push(R.t - k.lapStart); k.lapStart = R.t;
-  if (k.lap > R.laps && !k.done) { k.done = true; k.time = R.t; R.places.push(k); if (k === R.me) finishRace(); }
+  if (k.lap > R.laps && !k.done) { k.done = true; k.time = R.t; R.places.push(k); if (k === R.me && !R.chain) finishRace(); }
   else if (k === R.me) { if (k.lap === R.laps) { R.bannerTxt = 'FINAL LAP'; R.lapBanner = 2.2; sfx.play('bell'); speedSong(1.08); } else { R.bannerTxt = 'LAP ' + k.lap + ' / ' + R.laps; R.lapBanner = 1.6; sfx.play('coin'); } }
 }
 function speedSong(k) { var id = RACE.def.song, base = music.songs[id]; if (!base) return; var c = {}; for (var q in base) c[q] = base[q]; c.bpm = Math.round(base.bpm * k); music.songs[id + '_fast'] = c; music.play(id + '_fast'); }
@@ -311,6 +314,7 @@ function stepRace(dt) {
     if (k.puppet) { puppetStep(k, dt); return; } // another player's kart, or anything else the host runs: shown where the host says
     if (k.remote) { if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } return; } // a player on another machine drives this one; their reports move it
     var inp = k.ai || (R.phase === 'done') ? aiInput(k, dt) : playerInput(); driveKart(k, inp, dt);
+    if (inp.chain && R.phase === 'go') chainPress(k);
     if (inp.item && R.phase === 'go') { if (CL) netSend({ t: 'use', back: !!inp.back, fwd: !!inp.fwd }); else useItem(k, inp); }
     if (!CL && k.roul > 0) { k.roul -= dt; if (k.roul <= 0) { k.roul = 0; if (k === R.me) sfx.play('select'); } }
   });
@@ -328,6 +332,7 @@ function stepRace(dt) {
       if ((A === R.me || B === R.me) && (A.bumpT <= 0)) { A.bumpT = 0.3; sfx.play('land'); }
     }
   }
+  if (R.chain) chainStep(R, dt);
   // item boxes and drops (the host decides who gets what)
   if (!CL) R.boxes.forEach(function (bx) {
     if (bx.t > 0) { bx.t -= dt; return; }
@@ -344,6 +349,7 @@ function stepRace(dt) {
   // places
   if (!CL) { var order = R.karts.slice().sort(function (p, q) { if (p.done && q.done) return p.time - q.time; if (p.done) return -1; if (q.done) return 1; return q.prog - p.prog; });
   order.forEach(function (k, i) { k.place = i + 1; }); }
+  if (R.chain) { chainPlaces(R); var me = R.me; if (R.phase === 'go' && me.done && (chainFinished(R, me) || R.t - me.time > 20)) finishRace(); }
   if (R.net === 'host') netTick(dt); else if (CL) netClientTick(dt);
   // effects
   R.fx.forEach(function (f) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; f.y += f.vy * dt; f.vy -= 20 * dt; } });

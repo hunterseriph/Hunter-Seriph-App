@@ -5,8 +5,8 @@
    they get an item, and when an item they used does something to themselves.
    ===================================================================================================== */
 var NETHZ = 20;
-var KF = ['x', 'y', 'z', 'yaw', 'spd', 'vy', 'seg', 'lat', 'lap', 'prog', 'time', 'drift', 'driftLvl', 'driftT', 'steerVis', 'boostT', 'nadoT', 'spinT', 'spinA', 'squashT', 'splatT', 'revT', 'tinyT', 'hicT', 'floatT', 'floatY', 'gooT', 'invT', 'shieldT', 'orbit', 'petT', 'magT', 'wobT', 'hopT'];
-var SF = ['x', 'y', 'z', 'yaw', 'spd', 'lap', 'prog', 'place', 'drift', 'driftLvl', 'steerVis', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'floatY', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'itemN', 'roul', 'time'];
+var KF = ['x', 'y', 'z', 'yaw', 'spd', 'vy', 'seg', 'lat', 'lap', 'prog', 'time', 'drift', 'driftLvl', 'driftT', 'steerVis', 'boostT', 'nadoT', 'spinT', 'spinA', 'squashT', 'splatT', 'revT', 'tinyT', 'hicT', 'floatT', 'floatY', 'gooT', 'invT', 'shieldT', 'orbit', 'petT', 'magT', 'wobT', 'hopT', 'slingT', 'slingCd'];
+var SF = ['x', 'y', 'z', 'yaw', 'spd', 'lap', 'prog', 'place', 'drift', 'driftLvl', 'steerVis', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'floatY', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'itemN', 'roul', 'time', 'slingT'];
 var GUARD = ['invT', 'shieldT', 'orbit', 'spinT', 'splatT', 'revT', 'tinyT', 'hicT', 'gooT', 'squashT'];
 var ITEMKEYS = Object.keys(ITEMS);
 function r3(v) { return typeof v === 'number' ? Math.round(v * 1000) / 1000 : v; }
@@ -62,7 +62,9 @@ function netTick(dt) {
     dr: R.drops.map(function (d) { return [r3(d.x), r3(d.z), d.t > 0 ? 0 : 1]; }),
     fx: fx, msg: R.msg ? [R.msg.who, R.msg.s, r3(R.msg.t)] : null,
     evs: X ? { left: r3(X.left), score: X.score, hp: X.hp, next: r3(X.next), cur: X.cur, goal: X.goal, over: X.over ? 1 : 0 } : null,
-    gates: R.gates ? R.gates.map(function (g) { return Object.keys(g.got).map(Number); }) : null };
+    gates: R.gates ? R.gates.map(function (g) { return Object.keys(g.got).map(Number); }) : null,
+    ch: R.chain ? R.teams.map(function (t) { return [r3(t.snapT), t.snag ? 1 : 0]; }) : null, cn: R.chainNote || null };
+  R.chainNote = null;
   netBroadcast(m, true);
 }
 
@@ -91,6 +93,8 @@ function netSnap(m) {
   m.fx.forEach(function (a) { var f = { k: a[0], x: a[1], y: a[2], z: a[3], t: a[4], big: a[8] }; if (a[5] !== null && a[5] !== undefined) { f.vx = a[5]; f.vy = a[6]; f.vz = a[7]; } R.fx.push(f); });
   if (m.msg) R.msg = { who: m.msg[0], s: m.msg[1], t: m.msg[2] };
   if (m.evs) { R.evs = R.evs || {}; for (var q in m.evs) R.evs[q] = m.evs[q]; }
+  if (m.ch && R.teams) m.ch.forEach(function (c, i) { var t = R.teams[i]; if (t) { t.snapT = c[0]; } });
+  if (m.cn && R.chain) m.cn.forEach(function (c) { var f = R.all[c[0]], to = R.all[c[1]]; if (f && to && f.team) { R.fx.push({ sent: 1, k: 'pulse', team: f.team.i, from: f === f.team.a ? 0 : 1, t: 0.45, item: 1 }); if (to === R.me) { R.chainMsg = { s: 'GOT AN ITEM FROM ' + f.c.n.toUpperCase(), t: 1.3 }; sfx.play('select'); } } });
   if (m.gates && R.gates) m.gates.forEach(function (got, i) { var g = R.gates[i]; if (!g) return; g.got = {}; got.forEach(function (l) { g.got[l] = 1; }); g.lap = g.got[R.me.lap] ? R.me.lap : -1; });
 }
 function puppetStep(k, dt) { // glide towards where the host last saw it, guessing ahead by its speed
@@ -98,7 +102,7 @@ function puppetStep(k, dt) { // glide towards where the host last saw it, guessi
   var ax = T.x + Math.cos(T.yaw) * T.spd * T.age, az = T.z + Math.sin(T.yaw) * T.spd * T.age, f = Math.min(1, dt * 12);
   k.x += (ax - k.x) * f; k.z += (az - k.z) * f; k.y += (T.y - k.y) * f; k.yaw += angDiff(T.yaw, k.yaw) * f;
   ['spd', 'steerVis', 'floatY'].forEach(function (q) { k[q] += (T[q] - k[q]) * f; });
-  ['lap', 'prog', 'place', 'drift', 'driftLvl', 'boostT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'time'].forEach(function (q) { k[q] = T[q]; });
+  ['lap', 'prog', 'place', 'drift', 'driftLvl', 'boostT', 'slingT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'time'].forEach(function (q) { k[q] = T[q]; });
   var loc = RACE.T.locate(k.x, k.z, k.seg); k.seg = loc.i; k.lat = loc.lat;
 }
 function netEvent(m) {
