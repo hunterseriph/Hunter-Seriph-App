@@ -11,8 +11,7 @@
 html,body{margin:0;height:100%;background:#070405;color:#f1e7d0;overflow:hidden}
 body{font-family:'Archivo Narrow','Arial Narrow',sans-serif;overscroll-behavior:none}
 a{text-decoration:none;color:inherit}
-#app{position:fixed;inset:0;left:var(--sl,0px);right:var(--sr,0px);background:#070405}
-:root{--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px)}
+#app{position:fixed;inset:0;background:#070405}
 .screen{position:absolute;left:0;right:0;top:0;bottom:calc(76px + env(safe-area-inset-bottom,0px));display:none;flex-direction:column;overflow-y:auto;overflow-x:hidden;background:#070405;padding-top:env(safe-area-inset-top,0px);-webkit-overflow-scrolling:touch}
 .screen.on{display:flex}
 .screen.full{bottom:0}
@@ -880,19 +879,6 @@ function hwBack(){
 }
 function toast(t){ var d=document.createElement('div'); d.textContent=t; d.style.cssText='position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;background:#0e0708;color:#f1e7d0;border:1px solid #4a1a1c;padding:10px 16px;font:15px "Archivo Narrow",sans-serif;letter-spacing:.04em;pointer-events:none'; document.body.appendChild(d); setTimeout(function(){ d.remove(); },1800); }
 window.hsBack=hwBack;
-/* landscape on a phone: the app draws right up to the camera notch (no grey bar); keep the content just clear of it.
-   Newer phones tell us the notch size; older ones say 0, so then leave a small gap on the camera side. */
-(function(){
-  var cap=window.Capacitor, and=!!(cap&&cap.getPlatform&&cap.getPlatform()==='android'); if(!and) return;
-  var probe=document.createElement('div'); probe.style.cssText='position:fixed;left:0;top:0;width:0;height:0;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);visibility:hidden'; document.body.appendChild(probe);
-  function fix(){
-    var cs=getComputedStyle(probe), l=parseFloat(cs.paddingLeft)||0, r=parseFloat(cs.paddingRight)||0, root=document.documentElement.style;
-    var land=innerWidth>innerHeight, t=(screen.orientation&&screen.orientation.type)||'';
-    if(l||r||!land){ root.removeProperty('--sl'); root.removeProperty('--sr'); return; }
-    if(t.indexOf('secondary')>=0){ root.setProperty('--sl','0px'); root.setProperty('--sr','30px'); } else { root.setProperty('--sl','30px'); root.setProperty('--sr','0px'); }
-  }
-  fix(); addEventListener('resize',function(){ setTimeout(fix,60); }); if(screen.orientation&&screen.orientation.addEventListener) screen.orientation.addEventListener('change',function(){ setTimeout(fix,120); });
-})();
 (function(){ var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App; if(A&&A.addListener) A.addListener('backButton',hwBack); })();
 /* ---------- in-app video player ---------- */
 function playVideo(src,title,ytUrl){
