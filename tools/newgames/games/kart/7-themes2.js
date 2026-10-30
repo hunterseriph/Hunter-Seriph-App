@@ -35,10 +35,10 @@ Object.assign(THEMES, {
     },
     scen: function (B) {
       var T = B.T, n = 0; B.bumpers = [];
-      B.along(4.5, function (q, sd, i) { var p = B.side(q, sd, 1.8); if (!B.clear(p.x, p.z, 1)) return; var ry = p.face + Math.PI / 2, c = 'rgbp'[(n++) % 4]; B.box(p.x, p.y - 0.4, p.z, 3.2, 2.6, 6, ry, 'cabside', 'cabside', [0.7, 0.6, 0.75]); var a = ahead(p, 1.32); B.panel(a.x, p.y + 1.4, a.z, 3.0, 4.2, ry, 'cab_' + c, [0.85, 0.85, 0.85]); B.box(p.x, p.y + 5.6, p.z, 3.3, 2.7, 0.4, ry, 'neon' + c, 'neon' + c, [1, 1, 1]); if (n % 3 === 0) B.light(p.x, p.y + 4, p.z, 9, { r: [0.9, 0.15, 0.5], g: [0.3, 0.9, 0.2], b: [0.3, 0.7, 0.95], p: [0.9, 0.8, 0.3] }[c], null); });
-      B.along(40, function (q, sd, i) { var p = inPlace(B, q, sd, 12, 6); if (p) B.decal(p.x, p.y - 0.5, p.z, 69 * 0.2, 72 * 0.2, p.face + Math.PI / 2, 'fac_arcade', [0.8, 0.8, 0.8]); });
+      B.along(4.5, function (q, sd, i) { var p = B.side(q, sd, 1.8); if (!B.clear(p.x, p.z, 1)) return; var ry = p.face + Math.PI / 2, c = 'rgbp'[(n++) % 4]; B.box(p.x, p.y - 0.4, p.z, 3.2, 2.6, 6, ry, 'cabside', 'cabside', [0.7, 0.6, 0.75]); var a = ahead(p, 1.42); B.panel(a.x, p.y + 1.4, a.z, 3.0, 4.2, ry, 'cab_' + c, [0.85, 0.85, 0.85]); B.box(p.x, p.y + 5.6, p.z, 3.3, 2.7, 0.4, ry, 'neon' + c, 'neon' + c, [1, 1, 1]); if (n % 3 === 0) B.light(p.x, p.y + 4, p.z, 9, { r: [0.9, 0.15, 0.5], g: [0.3, 0.9, 0.2], b: [0.3, 0.7, 0.95], p: [0.9, 0.8, 0.3] }[c], null); });
+      var big = [0.05, 0.5, 0.8]; big.forEach(function (f, j) { var p = inPlace(B, T.at(f), j % 2 ? 1 : -1, 14, 6); if (p && decalFree(B, p.x, p.z, 11.5)) B.decal(p.x, p.y, p.z, 96 * 0.12, 160 * 0.12, p.face + Math.PI / 2, 'ao_cabbig'); });
+      B.along(40, function (q, sd, i) { var p = inPlace(B, q, sd, 12, 6); if (p && decalFree(B, p.x, p.z, 13.8)) B.decal(p.x, p.y - 0.5, p.z, 69 * 0.2, 72 * 0.2, p.face + Math.PI / 2, 'fac_arcade', [0.8, 0.8, 0.8]); });
       [0.18, 0.3, 0.42, 0.62].forEach(function (f, j) { var q = T.at(f), p = T.pos(q.i, (j % 2 ? 1 : -1) * T.def.hw * 0.55); B.bumpers.push({ x: p.x, z: p.z, r: 1.3, hit: 0 }); B.cyl(p.x, p.y, p.z, 1.3, 1.2, 10, 'bumper', null, 1.3, 'glow'); });
-      var big = [0.05, 0.5, 0.8]; big.forEach(function (f, j) { var p = inPlace(B, T.at(f), j % 2 ? 1 : -1, 14, 6); if (p) B.decal(p.x, p.y, p.z, 96 * 0.12, 160 * 0.12, p.face + Math.PI / 2, 'ao_cabbig'); });
       var pb = B.side(T.S[4], 1, -1.2); B.bill(pb.x, pb.y, pb.z, 'npc_potbelly', 0.065);
     },
     kartStep: hazardStep,

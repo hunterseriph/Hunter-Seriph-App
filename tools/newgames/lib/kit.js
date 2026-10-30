@@ -225,7 +225,7 @@ var KIT = (function () {
     if (o.sub) { var s = document.createElement('p'); s.className = 'msub'; s.textContent = o.sub; box.appendChild(s); }
     if (o.html) { var hh = document.createElement('div'); hh.className = 'mhtml'; hh.innerHTML = o.html; box.appendChild(hh); }
     var list = document.createElement('div'); list.className = 'mlist' + (o.grid ? ' grid' : ''); box.appendChild(list);
-    (o.items || []).forEach(function (it, i) {
+    (o.items || []).filter(Boolean).forEach(function (it, i) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'mbtn ' + (it.cls || ''); if (it.dis) b.disabled = true;
       b.innerHTML = '<span>' + it.label + '</span>' + (it.sub ? '<small>' + it.sub + '</small>' : ''); if (it.back) b.setAttribute('data-back', ''); if (it.def) b.setAttribute('data-pad-default', '');
       b.addEventListener('click', function () { audioInit(); sfx.play(it.back ? 'back' : 'select'); if (it.fn) it.fn(); }); list.appendChild(b);

@@ -89,7 +89,7 @@ function lbText(name, heir, screen, sec) { return [String(name).trim().toUpperCa
 function lbSig(r) { return macL(lbText(r.name, r.heir, r.screen, Math.floor(r.ms / 1000))); }
 function lbOk(r) { return !!r.sig && r.sig === lbSig(r); }
 function recordEndless() {
-  var rec = { name: META.name || 'HUNTER', heir: CLASSES[RUN.cls].name + (RUN.hom ? ' (' + homName() + ')' : ''), screen: RUN.endless.max || RUN.endless.n, ms: Math.round(RUN.t * 1000), kills: RUN.kills, date: Date.now() };
+  var rec = { name: profName(), heir: CLASSES[RUN.cls].name + (RUN.hom ? ' (' + homName() + ')' : ''), screen: RUN.endless.max || RUN.endless.n, ms: Math.round(RUN.t * 1000), kills: RUN.kills, date: Date.now() };
   rec.sig = lbSig(rec); META.lb.push(rec); META.lb.sort(function (a, b) { return b.screen - a.screen || a.ms - b.ms; }); META.lb = META.lb.slice(0, 20); META.lastEndless = rec; saveMeta(); return rec;
 }
 
@@ -100,13 +100,16 @@ function openEndlessMenu() {
     return [
       { name: b ? 'BEST: SCREEN ' + b.screen + ' AS ' + b.heir.toUpperCase() : 'NO RUNS YET', cls: 'head' },
       { icon: 'scrollWarp', name: 'GO IN', sub: 'Choose any heir. Your Clubhouse levels, gear and runes come with you.', cls: 'sec', fn: openEndlessHeirs },
-      { icon: 'deck', name: 'YOUR NAME: ' + (META.name || 'HUNTER'), sub: 'The name that goes on the leaderboard', fn: askName },
+      { icon: 'deck', name: 'YOUR NAME: ' + profName(), sub: 'The name that goes on the leaderboard', fn: askName },
       { icon: 'coin', name: 'LEADERBOARD', sub: 'Names, heirs, screens and proof codes', fn: openLeaderboard },
       { icon: 'holy', name: 'VERIFY A SCREENSHOT', sub: 'Check a leaderboard screenshot is real', fn: openVerify }
     ];
   } });
 }
+/* the name comes from the app-wide profile (games/profile.js) when there is one */
+function profName() { if (window.HSProfile && HSProfile.has()) { META.name = HSProfile.name('HUNTER').toUpperCase().slice(0, 12); } return META.name || 'HUNTER'; }
 function askName() {
+  if (window.HSProfile) { HSProfile.edit(function () { profName(); saveMeta(); openEndlessMenu(); }, { title: 'YOUR NAME FOR THE LEADERBOARD' }); return; }
   openMenu({ title: 'Your Name', note: 'Up to 12 letters.', bank: 'none', rows: [], back: openEndlessMenu, custom: function (list) {
     var inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 12; inp.value = META.name || 'HUNTER'; inp.className = 'llinput';
     inp.addEventListener('input', function () { META.name = inp.value.trim().toUpperCase().slice(0, 12) || 'HUNTER'; saveMeta(); });

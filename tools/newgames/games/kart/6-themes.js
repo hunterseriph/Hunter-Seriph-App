@@ -21,13 +21,14 @@ function lamp(B, x, y, z, h, glow) { B.box(x, y, z, 0.35, 0.35, h, 0, 'trim', 't
 function inPlace(B, q, sd, dist, r) { var p = B.side(q, sd, dist); return B.clear(p.x, p.z, r || 2) ? p : null; }
 function ahead(p, d) { return { x: p.x + Math.cos(p.face) * d, z: p.z + Math.sin(p.face) * d }; }
 /* a building whose front faces the track, with a shop front stuck on it */
+function decalFree(B, x, z, w) { return !B.decals.some(function (d) { return Math.hypot(d.x - x, d.z - z) < (d.w + w) / 2 + 1; }); }
 function shopFront(B, p, f, s) {
-  var sz = KIT.size(f), w = sz.w * s, h = sz.h * s, ry = p.face + Math.PI / 2; B.box(p.x, p.y - 0.5, p.z, w * 0.95, 6, h * 0.82, ry, 'wall', 'roof');
+  var sz = KIT.size(f), w = sz.w * s, h = sz.h * s, ry = p.face + Math.PI / 2; if (!decalFree(B, p.x, p.z, w)) return; B.box(p.x, p.y - 0.5, p.z, w * 0.95, 6, h * 0.82, ry, 'wall', 'roof');
   var a = ahead(p, 3.05); B.decal(a.x, p.y - 0.5, a.z, w, h, ry, f);
 }
 /* hazards shared by several courses: things on the road that spin you out (goo puddles), and round things you bounce off (bumpers) */
 function hazardStep(R, k, loc, dt) {
-  R.goo.forEach(function (g) { if (Math.hypot(k.x - g.x, k.z - g.z) < g.r && !k.air && k.nadoT <= 0) { if (g.kind === 'goo') { if (k.gooT <= 0 && k.invT <= 0) { k.gooT = 1.2; k.spinT = Math.max(k.spinT, 0.45); if (k === R.me) sfx.play('splat'); } } } });
+  R.goo.forEach(function (g) { if (Math.hypot(k.x - g.x, k.z - g.z) < g.r && !k.air && k.nadoT <= 0) { if (g.kind === 'goo' && k.floatY < 1) { if (hitKart(k, null, 'goo')) { k.gooT = 1.4; if (k === R.me) { sfx.play('splat'); R.gooScreen = 0.8; } } } } });
   (R.bumpers || []).forEach(function (b) { var dx = k.x - b.x, dz = k.z - b.z, d = Math.hypot(dx, dz); if (d < b.r + KR && d > 0.01) { var nx = dx / d, nz = dz / d; k.x = b.x + nx * (b.r + KR); k.z = b.z + nz * (b.r + KR); k.kx += nx * 22; k.kz += nz * 22; k.spd *= 0.7; b.hit = 0.25; if (k === R.me || near(k)) sfx.play('boom'); } if (b.hit > 0) b.hit -= dt / R.karts.length; });
 }
 
@@ -44,6 +45,7 @@ var THEMES = {
     },
     scen: function (B) {
       var T = B.T, n = 0;
+      var cp = inPlace(B, T.S[Math.round(T.N * 0.5)], 1, 16, 6); if (cp) { var a2 = ahead(cp, 0); B.decal(a2.x, cp.y - 0.5, a2.z, 54 * 0.16, 118 * 0.16, cp.face + Math.PI / 2, 'fac_club'); }
       B.along(26, function (q, sd, i) { if (i < 8 || i > T.N - 10) return; var p = inPlace(B, q, sd, 5 + B.rnd() * 3, 6); if (p) shopFront(B, p, FACADES[(n++) % FACADES.length], 0.12); });
       B.along(15, function (q, sd, i) { if (i % 2) return; var p = B.side(q, sd, 0.8); lamp(B, p.x, p.y, p.z, 4.5); });
       // the castle gate behind the start, with TB waiting at it
@@ -53,7 +55,6 @@ var THEMES = {
         B.box(g.x, g.y + 7, g.z, 9, 4, 6, ry, 'tower', 'trim'); var a = ahead(g, 2.1); B.panel(a.x, g.y - 0.5, a.z, 9, 7.5, ry, 'gate');
         var t = ahead(g, 5); B.bill(t.x, g.y, t.z, 'npc_tb', 0.07);
       }
-      var cp = inPlace(B, T.S[Math.round(T.N * 0.5)], 1, 16, 6); if (cp) { var a2 = ahead(cp, 0); B.decal(a2.x, cp.y - 0.5, a2.z, 54 * 0.16, 118 * 0.16, cp.face + Math.PI / 2, 'fac_club'); }
       var st = T.S[4]; [1, -1].forEach(function (sd) { var p = B.side(st, sd, 0.3); B.bill(p.x, p.y, p.z, sd > 0 ? 'npc_kaya' : 'npc_elden', 0.065); });
     }
   },
@@ -113,7 +114,7 @@ var THEMES = {
     roadLine: true,
     scen: function (B) {
       var T = B.T, n = 0, wins = ['win1', 'win2', 'win3'];
-      B.along(14, function (q, sd, i) { var p = inPlace(B, q, sd, 4 + B.rnd() * 6, 7); if (!p) return; var h = 10 + Math.floor(B.rnd() * 26), w = 9 + B.rnd() * 6; B.box(p.x, p.y - 0.5, p.z, w, 9, h, p.face + Math.PI / 2, wins[Math.floor(B.rnd() * 3)], 'roof', null, 4); if (B.rnd() < 0.4) { var f = ['fac_amy', 'fac_joff', 'fac_beebs', 'fac_greebo', 'fac_t', 'fac_bonjo'][(n++) % 6], sz = KIT.size(f), a = ahead(p, 4.55); B.decal(a.x, p.y - 0.5, a.z, sz.w * 0.1, sz.h * 0.1, p.face + Math.PI / 2, f); } });
+      B.along(14, function (q, sd, i) { var p = inPlace(B, q, sd, 4 + B.rnd() * 6, 7); if (!p) return; var h = 10 + Math.floor(B.rnd() * 26), w = 9 + B.rnd() * 6; B.box(p.x, p.y - 0.5, p.z, w, 9, h, p.face + Math.PI / 2, wins[Math.floor(B.rnd() * 3)], 'roof', null, 4); if (B.rnd() < 0.4) { var f = ['fac_amy', 'fac_joff', 'fac_beebs', 'fac_greebo', 'fac_t', 'fac_bonjo'][(n++) % 6], sz = KIT.size(f), a = ahead(p, 4.55); if (decalFree(B, a.x, a.z, sz.w * 0.1)) B.decal(a.x, p.y - 0.5, a.z, sz.w * 0.1, sz.h * 0.1, p.face + Math.PI / 2, f); } });
       B.along(18, function (q, sd) { var p = B.side(q, sd, 0.6); lamp(B, p.x, p.y, p.z, 5); });
       // the Cum Café on its own lot right by the start
       var cf = inPlace(B, T.S[Math.round(T.N * 0.04)], 1, 4, 4) || inPlace(B, T.S[Math.round(T.N * 0.04)], -1, 4, 4); if (cf) shopFront(B, cf, 'fac_cafe', 0.12);

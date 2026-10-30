@@ -195,6 +195,7 @@ html.pc .vthumb img{transition:transform .25s,filter .25s}
 html.pc a:hover>.vthumb img{transform:scale(1.04);filter:brightness(1.12)}
 </style>
 <script src="videos.js"></script>
+<script src="games/profile.js"></script>
 <script>
 (function(){var r=document.documentElement;function f(){var pc=innerWidth>=900&&(!!window.hsDesktop||matchMedia("(pointer:fine)").matches);if(r.classList.contains("pc")!==pc){r.classList.toggle("pc",pc);window.dispatchEvent(new Event("hslayout"));}}f();addEventListener("resize",f);})();
 </script>
@@ -225,6 +226,25 @@ html.pc a:hover>.vthumb img{transform:scale(1.04);filter:brightness(1.12)}
 <a href="#/Live" style="display: flex; align-items: center; justify-content: center; height: 44px; background: linear-gradient(180deg, #d8141f 0%, #8e0c14 100%); color: #f1e7d0; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; white-space: nowrap; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)">ENTER THE STREAM</a>
 </div>
 </div>
+
+<div style="padding: 4px 16px 6px; flex: none">
+<button type="button" id="profCard" class="prof-card" aria-label="Your profile"><span id="profPic" class="prof-pic"></span><span class="prof-txt"><span class="prof-lbl">YOUR PROFILE</span><span id="profName" class="prof-name">Make your profile</span><span id="profSub" class="prof-sub">Pick a name and a character. It shows in every game.</span></span><span class="prof-edit">EDIT ›</span></button>
+</div>
+<style>
+.prof-card{display:flex;align-items:center;gap:14px;width:100%;padding:10px 14px 10px 10px;border:0;color:#f1e7d0;text-align:left;cursor:pointer;font:inherit;background:linear-gradient(180deg,#1c0a0d,#0e0708);box-shadow:inset 0 0 0 1px #4a1a1c;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.prof-pic{flex:none;width:64px;height:64px;outline:2px solid #c8b898;outline-offset:-1px;box-shadow:0 0 0 3px #12040a;background:#0e0708}
+.prof-pic .hsp-pic{display:block}
+.prof-txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.prof-lbl{font-size:11px;font-weight:700;letter-spacing:.2em;color:#ff2630}
+.prof-name{font-family:'Pirata One',serif;font-size:24px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prof-sub{font-size:12px;color:#a6968f}
+.prof-edit{flex:none;font-size:12px;font-weight:700;letter-spacing:.16em;color:#ff2630}
+html.pc .prof-card:hover{box-shadow:inset 0 0 0 1px #c4121c}
+</style>
+<script>
+(function(){function show(){if(!window.HSProfile)return;var p=HSProfile.get(),has=HSProfile.has();document.getElementById('profPic').innerHTML=HSProfile.html(p.pic,64);document.getElementById('profName').textContent=has?p.name:'Make your profile';var c=HSProfile.by[p.pic];document.getElementById('profSub').textContent=has?(c?c.n:''):'Pick a name and a character. It shows in every game.';}
+document.getElementById('profCard').addEventListener('click',function(){HSProfile.edit(show);});addEventListener('hsprofile',show);addEventListener('storage',function(e){if(e.key==='hs-profile')show();});show();})();
+</script>
 
 <div style="padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; flex: none">
 <div style="display: flex; align-items: baseline; justify-content: space-between">

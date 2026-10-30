@@ -372,6 +372,7 @@ h2{font-family:var(--display);font-weight:400;font-size:clamp(30px,8vw,46px);lin
 </div>
 
 <script src="padkit.js"></script>
+<script src="profile.js"></script>
 <script>
 (function () {
 'use strict';
@@ -2520,7 +2521,7 @@ function inMenu() { return G.state === 'inv' || G.state === 'levelup' || !!kbSco
    UPDATE 16: endless mode + leaderboard, Mk gear, four armour slots, Stacked Fate, Harold, Sir Johnathan,
    blood packs, secret rooms, floor shops, themed shop interiors, eat button.
    ===================================================================================================== */
-if (!META.lb) META.lb = []; if (!META.name) META.name = 'HUNTER'; if (!META.endless) META.endless = 0; if (!META.last) META.last = null;
+if (!META.lb) META.lb = []; if (!META.name) META.name = 'HUNTER'; if (window.HSProfile && HSProfile.has() && (META.name === 'HUNTER' || !META.nameOwn)) META.name = HSProfile.name('HUNTER').toUpperCase(); // the app profile's name, unless they typed their own here if (!META.endless) META.endless = 0; if (!META.last) META.last = null;
 var GEAR = ['weapon', 'armor', 'shield', 'head', 'arms', 'legs'];
 KINDS = ['food', 'potion', 'scroll', 'weapon', 'head', 'armor', 'arms', 'legs', 'shield'];
 function maxFloor() { return G.endless ? 9999 : (G.deep ? 60 : 50); }
@@ -2828,7 +2829,7 @@ function endlessMenu(note) {
   var list = setShop('Endless Depths', note || '"No floor limit. No mercy. Your gear scales as you fall."');
   var b = META.lb[0]; infoP(list, b ? 'BEST: B' + b.floor + 'F AS ' + b.chName.toUpperCase() : 'NO RUNS YET', true);
   var nr = document.createElement('div'); nr.style.cssText = 'display:flex;gap:8px;align-items:center'; var lab = document.createElement('span'); lab.className = 'px dim'; lab.textContent = 'NAME'; var inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 12; inp.value = META.name || 'HUNTER'; inp.style.cssText = 'flex:1;min-width:0;background:#140809;color:#f1e7d0;border:0;box-shadow:inset 0 0 0 1px #4a1a1c;font-family:inherit;font-size:12px;padding:10px;text-transform:uppercase';
-  inp.addEventListener('input', function () { META.name = inp.value.trim().toUpperCase() || 'HUNTER'; saveMeta(); }); nr.appendChild(lab); nr.appendChild(inp); list.appendChild(nr);
+  inp.addEventListener('input', function () { META.name = inp.value.trim().toUpperCase() || 'HUNTER'; META.nameOwn = true; saveMeta(); }); nr.appendChild(lab); nr.appendChild(inp); list.appendChild(nr);
   row(list, 'START ENDLESS RUN', function () { closeShop(); G.wantEndless = true; enterDungeon(); }, 'Floors never stop. Mk.2 to Mk.6 gear and potions drop as you descend.', 'act');
   row(list, 'BOARD  ·  RUN DETAILS', function () { boardMenu(); G.sBack = function () { endlessMenu(); }; el('shopClose').textContent = 'BACK'; }, 'Inspect your best and last runs', 'cat');
   row(list, 'VERIFY A SCREENSHOT', function () { verifyMenu(); }, 'Check a leaderboard screenshot is real', 'cat');

@@ -6,11 +6,12 @@
 var SUN = (function () { var v = [0.35, 0.85, 0.4], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
 function rgb01(hex) { var c = hexrgb(hex); return [c[0] / 255, c[1] / 255, c[2] / 255]; }
 /* a frame: the kart's own axes (f forward, s right, u up) placed in the world */
-function Frame(ox, oy, oz, yaw, pitch, sq, L) {
+function Frame(ox, oy, oz, yaw, pitch, sq, L, sc) {
+  sc = sc || 1;
   var cp = Math.cos(pitch), sp = Math.sin(pitch), F = [Math.cos(yaw) * cp, sp, Math.sin(yaw) * cp], U = [-Math.cos(yaw) * sp, cp, -Math.sin(yaw) * sp], Sd = [-Math.sin(yaw), 0, Math.cos(yaw)];
   var fr = {
     L: L, sq: sq || 1,
-    P: function (f, s, u) { u *= fr.sq; return [ox + F[0] * f + Sd[0] * s + U[0] * u, oy + F[1] * f + U[1] * u, oz + F[2] * f + Sd[2] * s + U[2] * u]; },
+    P: function (f, s, u) { f *= sc; s *= sc; u *= fr.sq * sc; return [ox + F[0] * f + Sd[0] * s + U[0] * u, oy + F[1] * f + U[1] * u, oz + F[2] * f + Sd[2] * s + U[2] * u]; },
     N: function (nf, ns, nu) { return [F[0] * nf + Sd[0] * ns + U[0] * nu, F[1] * nf + U[1] * nu, F[2] * nf + Sd[2] * ns + U[2] * nu]; },
     /* light a colour for a surface facing n: the course's light, more where the sun hits */
     lit: function (col, n, k) { var d = n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2], f = (0.56 + 0.72 * Math.max(0, d) + 0.1 * Math.max(0, -d)) * (k || 1) * 0.85; return [col[0] * L[0] * f, col[1] * L[1] * f, col[2] * L[2] * f]; }
@@ -148,7 +149,7 @@ function driverTex() {
     g.fillStyle = '#12040a'; g.beginPath(); g.moveTo(x + 12, y + 42); g.quadraticCurveTo(x + 32, y + 62, x + 52, y + 42); g.quadraticCurveTo(x + 32, y + 50, x + 12, y + 42); g.fill();
     g.fillStyle = '#f1e7d0'; for (var i = 0; i < 6; i++) { var tx = x + 17 + i * 5.5; g.fillRect(tx, y + 44 + Math.abs(i - 2.5) * -0.6, 3, 4); }
   });
-  DRVTEX = R3.texture(c); DRVTEX.canvas = c; return DRVTEX;
+  DRVTEX = R3.texture(c, true); DRVTEX.canvas = c; return DRVTEX;
 }
 function driver3D(m, k, fr) {
   var d = DRV3D[k.c.id] || DRV3D.cumhead, W = DRVT.white, face = DRVT[k.c.id], hf = -0.24, hu = 1.3, R = RACE, t = R ? R.t : 0;

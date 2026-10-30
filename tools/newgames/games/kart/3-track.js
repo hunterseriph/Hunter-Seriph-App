@@ -154,7 +154,7 @@ function Builder(T, A, m) {
     beam: function (i, h, tile, thick, col) { var q = S[((i % N) + N) % N], e = T.edge + 0.7, w = thick || 1.2; B.box(q.x, q.y + h, q.z, e * 2 + 1.4, w, w, Math.atan2(q.nz, q.nx), tile, tile, col); },
     tree: function (x, y, z, h, trunk, leaf, col) { B.cyl(x, y, z, h * 0.07, h * 0.45, 5, trunk, col); B.cyl(x, y + h * 0.3, z, h * 0.32, h * 0.45, 7, leaf, col, 0.02); B.cyl(x, y + h * 0.6, z, h * 0.24, h * 0.4, 7, leaf, col, 0.02); },
     /* a sprite from the sheet stuck flat on the world (shop fronts, signs): built once the sheet has loaded */
-    decals: [], decal: function (x, y, z, w, h, ry, spr, col) { B.decals.push({ x: x, y: y, z: z, w: w, h: h, ry: ry, spr: spr, col: col }); }
+    decals: [], decal: function (x, y, z, w, h, ry, spr, col) { B.decals.push({ x: x, y: y, z: z, w: w, h: h, ry: ry, spr: spr, col: col }); var sg = typeof SIGNS !== 'undefined' && SIGNS[spr]; if (sg) { var k = hexrgb(sg[2]); B.light(x, y + h + w * 0.12, z, 9, [k[0] / 300, k[1] / 300, k[2] / 300]); } }
   };
   return B;
 }

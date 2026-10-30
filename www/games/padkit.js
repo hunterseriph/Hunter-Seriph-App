@@ -54,9 +54,16 @@
   /* ---------- menus ---------- */
   function setFocus(b) {
     if (focus && focus !== b) focus.classList.remove('hs-focus');
-    focus = b; if (!b) return;
+    focus = b; if (!b) return; lastC = centre(b);
     b.classList.add('hs-focus'); if (b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (cfg.onFocus) cfg.onFocus(b);
+  }
+  /* a menu that redraws itself replaces its buttons: keep the focus on the new copy of the same button, or the one nearest where it was */
+  var lastC = null;
+  function same(old, bs) {
+    var ks = ['data-key', 'data-pic', 'data-act', 'id'];
+    for (var i = 0; i < ks.length; i++) { var v = old.getAttribute && old.getAttribute(ks[i]); if (v !== null && v !== undefined) for (var j = 0; j < bs.length; j++) if (bs[j].getAttribute(ks[i]) === v) return bs[j]; }
+    if (!lastC) return null; var best = null, bd = 1e9; bs.forEach(function (b) { var c = centre(b), d = Math.hypot(c.x - lastC.x, c.y - lastC.y); if (d < bd) { bd = d; best = b; } }); return bd < 80 ? best : null;
   }
   function move(dir) {
     var bs = buttons(scope); if (!bs.length) return;
@@ -97,11 +104,11 @@
     if (!padSeen) { padSeen = true; applyTouch(); }
     var pressed = function (k) { return s[k] && !prev[k]; };
     if (cfg.idle && cfg.idle()) { if (pressed('select') && cfg.onSelect) cfg.onSelect(); releaseAll(); prev = s; return; }
-    var sc = cfg.menu ? cfg.menu() : null;
+    var sc = document.getElementById('hsProf') || (cfg.menu ? cfg.menu() : null); // the profile editor (profile.js) sits over any game's menu
     if (sc) {
       releaseAll();
       if (sc !== scope) { scope = sc; setFocus(null); var bs = buttons(sc), def = sc.querySelector('[data-pad-default]'); setFocus(def && visible(def) ? def : bs[0] || null); prev = s; return; } // a button that opened this menu must not also press inside it (B would close it straight away)
-      else if (focus && !visible(focus)) { var bs2 = buttons(sc); setFocus(bs2[0] || null); }
+      else if (focus && !visible(focus)) { var bs2 = buttons(sc); setFocus(same(focus, bs2) || bs2[0] || null); }
       ['u', 'd', 'l', 'r'].forEach(function (k) {
         if (pressed(k)) { move(k); rep[k] = 0.38; }
         else if (s[k]) { rep[k] -= dt; if (rep[k] <= 0) { move(k); rep[k] = 0.12; } }

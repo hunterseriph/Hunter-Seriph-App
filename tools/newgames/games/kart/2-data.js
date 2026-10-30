@@ -29,30 +29,35 @@ var CLASSES = [
   { id: 'hot', n: 'Hot', sub: 'Faster karts, sharper rivals', spd: 1.14, ai: 0.93 },
   { id: 'dyn', n: 'Dynamite', sub: 'Flat out. Nobody holds back', spd: 1.28, ai: 0.985, lock: 'Win any cup on Hot' }
 ];
-/* power-ups from the item boxes */
+/* power-ups from the item boxes. Each one does its own thing to you, so getting hit by each feels different:
+   pie splats your screen, the pill does something silly, goo makes you slide, the bubble sends things back, the meatnado tosses karts in the air. */
 var ITEMS = {
-  pie: { n: 'Cream Pie', ic: 'it_pie', d: 'Throw it ahead. Hold back to throw it behind.' },
-  pie3: { n: 'Three Pies', ic: 'it_pie', n3: 3, d: 'Three cream pies to throw.' },
-  pill: { n: "TB's Silly Pill", ic: 'it_pill', d: 'Drop it behind you. Whoever drives over it goes for a spin.' },
-  sperm: { n: 'Homing Sperm', ic: 'ck_sperm', d: 'Swims after the racer in front of you.' },
+  pie: { n: 'Cream Pie', ic: 'it_pie', d: 'Throw it ahead (hold back to throw it behind). A hit splats cream over their screen and slows them.' },
+  pie3: { n: 'Three Pies', ic: 'it_pie', n3: 3, d: 'Three pies spin round you as a shield, each one stops a hit. Throw them one at a time.' },
+  pill: { n: "TB's Silly Pill", ic: 'it_pill', d: 'Drop it behind you, or push up to lob it ahead. Whoever drives over it gets something silly: back-to-front steering, shrinking, or the hiccups.' },
+  sperm: { n: 'Homing Sperm', ic: 'ck_sperm', d: 'Swims after the racer in front of you and spins them out.' },
   cuppa: { n: 'Cumpuccino', ic: 'it_espresso', d: 'A shot of speed.' },
   cuppa3: { n: 'Three Cumpuccinos', ic: 'it_espresso', n3: 3, d: 'Three shots of speed.' },
-  bubble: { n: "Spermaid's Bubble", ic: 'ck_bubble', d: 'Blocks one hit.' },
+  bubble: { n: "Spermaid's Bubble", ic: 'ck_bubble', d: 'Wraps you in a bubble. The next thing thrown at you bounces straight back at whoever threw it.' },
   cracker: { n: 'Cum Cracker', ic: 'ck_cracker', d: 'Three drops and a little push.' },
-  meatnado: { n: 'Meatnado', ic: 'ck_nado', d: 'Become a spinning meatnado for a while: faster, and you flatten everyone you touch.' },
-  goo: { n: "Blum's Goo", ic: 'ck_goo', d: 'Goo rains down on everyone ahead of you.' },
-  sirj: { n: 'Sir Johnathan', ic: 'cat', d: 'He bolts down the track and pounces on whoever is winning.' }
+  meatnado: { n: 'Meatnado', ic: 'ck_nado', d: 'Become a spinning meatnado: faster, nothing can hurt you, and anyone you touch is tossed in the air.' },
+  goo: { n: "Blum's Goo", ic: 'ck_goo', d: 'Drop a big puddle of goo behind you (or lob it ahead). Drive through it and you slide about and slow right down.' },
+  sirj: { n: 'Sir Johnathan', ic: 'cat', d: 'He bolts down the track and pounces on whoever is winning.' },
+  egg: { n: 'Homunculus Egg', ic: 'h_gloop_egg0', d: 'Hatches a little Gloop that rides on your kart for a while and bites anyone who drives beside you, stealing a drop.' },
+  balloon: { n: 'Steve Balloon', ic: 'f_balloon_0', d: 'Steve lifts your kart up over everything for a few seconds: nothing on the road can touch you.' },
+  beat: { n: "Pulsar's Beat Drop", ic: 'it_phones', d: 'A bass drop. The shockwave knocks every kart near you flying outward and pops their bubbles.' },
+  magnet: { n: "Potbelly's Coin Magnet", ic: 'ck_magnet', d: 'For a few seconds you pull drops off every kart near you, and off the road.' }
 };
 /* what the boxes give, by place (1st .. 8th): rarer and nastier things the further back you are */
 var ODDS = [
-  { pie: 30, pill: 34, bubble: 14, cracker: 22 },
-  { pie: 24, pie3: 6, pill: 22, sperm: 10, cuppa: 12, bubble: 12, cracker: 14 },
-  { pie: 18, pie3: 10, pill: 14, sperm: 18, cuppa: 16, bubble: 10, cracker: 8, cuppa3: 6 },
-  { pie: 12, pie3: 12, pill: 10, sperm: 22, cuppa: 18, cuppa3: 10, bubble: 8, goo: 2, meatnado: 4, cracker: 2 },
-  { pie: 8, pie3: 12, pill: 6, sperm: 22, cuppa: 18, cuppa3: 14, bubble: 6, goo: 4, meatnado: 8, sirj: 2 },
-  { pie3: 10, sperm: 22, cuppa: 14, cuppa3: 20, bubble: 4, goo: 6, meatnado: 16, sirj: 6, pill: 2 },
-  { pie3: 6, sperm: 18, cuppa: 10, cuppa3: 22, goo: 10, meatnado: 22, sirj: 10, bubble: 2 },
-  { sperm: 12, cuppa3: 24, goo: 14, meatnado: 30, sirj: 18, cuppa: 2 }
+  { pie: 26, pill: 26, bubble: 14, cracker: 16, goo: 10, pie3: 8 },
+  { pie: 20, pie3: 8, pill: 18, sperm: 10, cuppa: 10, bubble: 10, cracker: 10, goo: 8, egg: 6 },
+  { pie: 14, pie3: 10, pill: 12, sperm: 14, cuppa: 14, bubble: 8, goo: 8, egg: 8, magnet: 6, cuppa3: 6 },
+  { pie: 10, pie3: 10, pill: 8, sperm: 16, cuppa: 14, cuppa3: 8, bubble: 6, goo: 6, egg: 8, magnet: 8, beat: 4, meatnado: 2 },
+  { pie3: 10, pill: 6, sperm: 16, cuppa: 14, cuppa3: 12, egg: 8, magnet: 8, beat: 8, balloon: 6, meatnado: 8, sirj: 2, goo: 2 },
+  { pie3: 8, sperm: 16, cuppa: 10, cuppa3: 16, egg: 6, magnet: 8, beat: 10, balloon: 8, meatnado: 12, sirj: 6 },
+  { sperm: 14, cuppa: 8, cuppa3: 18, beat: 12, balloon: 12, meatnado: 18, sirj: 10, magnet: 8 },
+  { sperm: 10, cuppa3: 20, beat: 12, balloon: 14, meatnado: 24, sirj: 16, cuppa: 4 }
 ];
 var POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
 

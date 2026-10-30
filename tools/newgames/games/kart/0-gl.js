@@ -1,8 +1,7 @@
 /* =====================================================================================================
    CUMHEAD KART: the 3D renderer. A small WebGL 1 engine made to look like a PlayStation 1 game:
-   - the world is drawn into a 320x180 picture and scaled up with hard pixels
-   - corners snap to that pixel grid, so polygons wobble a little as they move
-   - textures are mapped without perspective correction (affine), so they swim on big polygons
+   - the world is drawn into a 400x225 picture and scaled up with hard pixels
+   - no corner snapping or affine texture swim (Hunter removes those when he emulates; they made things flicker and warp)
    - vertex colours are doubled like the PS1 did (0.5 = normal), colours are cut down to 15-bit with dithering
    - distance fog instead of a far draw distance
    Everything else (HUD, menus, sound, input) is the shared kit, drawn over it on the 480x270 canvas.
@@ -26,17 +25,21 @@ var R3 = (function () {
     '  if (uSnap > 0.5 && p.w > 0.05) { vec2 n = p.xy / p.w; n = floor(n * uRes * 0.5 + 0.5) / (uRes * 0.5); p.xy = n * p.w; }',
     '  gl_Position = p;',
     '  vec2 uv = aU + vec2(0.0, aC.a * uTime);', // the 4th colour channel scrolls a texture (cream rivers, conveyors, boost pads)
-    '  vU = vec3(uv * p.w, p.w); vT = aT; vC = aC.rgb; vF = p.w;', // uv*w and w: divided again per pixel = no perspective correction
+    '  vU = vec3(uv, 1.0); vT = aT; vC = aC.rgb; vF = p.w;', // perspective-correct textures: Hunter turns the PS1 wobble off when he emulates, so we do too
     '}'].join('\n');
+  /* far-away textures use smaller copies of themselves (mipmaps), picked by hand per tile, so distant walls and roads do not sparkle and flicker */
+  var MIP = !!(gl.getExtension('OES_standard_derivatives') && gl.getExtension('EXT_shader_texture_lod'));
   var FS = [
+    MIP ? '#extension GL_OES_standard_derivatives : enable\n#extension GL_EXT_shader_texture_lod : enable' : '',
     '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-    'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uBright; uniform float uSoft;',
+    'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uBright; uniform float uSoft; uniform float uMip; uniform vec2 uTexSize;',
     'varying vec3 vU; varying vec4 vT; varying vec3 vC; varying float vF;',
     'float b2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }',
     'float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }',
     'void main() {',
     '  vec2 uv = vU.xy / vU.z;',
-    '  vec4 t = texture2D(uTex, vT.xy + fract(uv) * vT.zw);',
+    MIP ? '  vec2 px = uv * vT.zw * uTexSize; float l = uMip > 0.5 ? clamp(0.5 * log2(max(dot(dFdx(px), dFdx(px)), dot(dFdy(px), dFdy(px)))), 0.0, 4.0) : 0.0; vec4 t = texture2DLodEXT(uTex, vT.xy + fract(uv) * vT.zw, l);'
+        : '  vec4 t = texture2D(uTex, vT.xy + fract(uv) * vT.zw);',
     '  if (t.a < (uSoft > 0.5 ? 0.02 : 0.5)) discard;',
     '  vec3 c = t.rgb * vC * 2.0 * uBright;',
     '  float f = clamp((vF - uFogR.x) / (uFogR.y - uFogR.x), 0.0, 1.0);',
@@ -53,7 +56,7 @@ var R3 = (function () {
   if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
   gl.useProgram(pr);
   var A = { p: gl.getAttribLocation(pr, 'aP'), u: gl.getAttribLocation(pr, 'aU'), t: gl.getAttribLocation(pr, 'aT'), c: gl.getAttribLocation(pr, 'aC') };
-  var U = {}; ['uM', 'uRes', 'uTime', 'uSnap', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uBright', 'uSoft'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+  var U = {}; ['uM', 'uRes', 'uTime', 'uSnap', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uBright', 'uSoft', 'uMip', 'uTexSize'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
   gl.uniform2f(U.uRes, GLW, GLH); gl.uniform1i(U.uTex, 0); gl.uniform1f(U.uAlpha, 1); gl.uniform1f(U.uBright, 1);
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
   var STRIDE = 13 * 4;
@@ -64,12 +67,17 @@ var R3 = (function () {
     gl.enableVertexAttribArray(A.c); gl.vertexAttribPointer(A.c, 4, gl.FLOAT, false, STRIDE, 36);
   }
   /* ---------- textures ---------- */
-  function texture(src) {
+  function pot(n) { return n > 0 && (n & (n - 1)) === 0; }
+  function texture(src, mip) {
     var t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); t.w = src.width; t.h = src.height; return t;
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); t.w = src.width; t.h = src.height;
+    t.mip = !!(mip && MIP && pot(src.width) && pot(src.height));
+    if (t.mip) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR); }
+    else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    return t;
   }
   function update(t, src) { gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); }
   /* ---------- buffers ---------- */
@@ -93,12 +101,13 @@ var R3 = (function () {
     if (mesh.buf) gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
     else { var arr = new Float32Array(mesh.a); gl.bindBuffer(gl.ARRAY_BUFFER, dyn); if (arr.byteLength > dynCap) { dynCap = arr.byteLength * 2; gl.bufferData(gl.ARRAY_BUFFER, dynCap, gl.DYNAMIC_DRAW); } gl.bufferSubData(gl.ARRAY_BUFFER, 0, arr); }
     attribs(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0);
+    gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0); gl.uniform1f(U.uMip, tex.mip ? 1 : 0); gl.uniform2f(U.uTexSize, tex.w, tex.h);
     if ((o.alpha !== undefined && o.alpha < 1) || (o.soft && !o.add)) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
     if (o.add) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false); }
     if (o.noDepth) gl.disable(gl.DEPTH_TEST);
+    if (o.offset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -o.offset); }
     gl.drawArrays(gl.TRIANGLES, 0, n);
-    gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.POLYGON_OFFSET_FILL); gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
   }
   /* ---------- matrices (column major) ---------- */
   function persp(fov, asp, n, f) { var t = 1 / Math.tan(fov / 2), m = new Float32Array(16); m[0] = t / asp; m[5] = t; m[10] = (f + n) / (n - f); m[11] = -1; m[14] = 2 * f * n / (n - f); return m; }
@@ -119,7 +128,7 @@ var R3 = (function () {
   function setMatrix(m) { gl.uniformMatrix4fv(U.uM, false, m); }
   function begin(clear) { gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
   function setTime(t) { gl.uniform1f(U.uTime, t); }
-  function snap(on) { gl.uniform1f(U.uSnap, on ? 1 : 0); }
+  function snap(on) { gl.uniform1f(U.uSnap, 0); } // no vertex snapping: the PS1 jitter looked bad, so polygons stay put
   function bright(b) { gl.uniform1f(U.uBright, b); }
   function clearDepth() { gl.clear(gl.DEPTH_BUFFER_BIT); }
   snap(true);

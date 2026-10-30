@@ -7,7 +7,7 @@ from PIL import Image
 from pixelkit import Grid
 import art as _A
 
-USE = ['ch_idle0', 'ch_rn2', 'ch_icon0', 'npc_*', 'greebo_s0', 'spermaid_s0', 'h_gloop_adult_idle0', 'h_*_adult_idle0', 'boss_blum', 'f_kingblum_0', 'f_sirj_0', 'cat', 'cumface',
+USE = ['h_gloop_egg0', 'h_gloop_baby_idle0', 'h_gloop_baby_idle1', 'ch_idle0', 'ch_rn2', 'ch_icon0', 'npc_*', 'greebo_s0', 'spermaid_s0', 'h_gloop_adult_idle0', 'h_*_adult_idle0', 'boss_blum', 'f_kingblum_0', 'f_sirj_0', 'cat', 'cumface',
        'fac_*', 'steve0', 'steve1', 'throne', 'f_blumling_*', 'f_blumeye_*', 'f_blumguard_*', 'f_rat_*', 'f_ant_*', 'f_wasp_*', 'f_skeleton_*', 'f_mummy_*', 'f_balloon_*', 'f_clown_*',
        'f_creamblob_*', 'f_cultrat_*', 'f_bat_*', 'f_crow_*', 'f_gargoyle_*', 'f_pieling_*', 'f_jelly_*', 'f_feather_*', 'f_toymouse_*', 'f_moon_*', 'f_ghost_*', 'f_imp_*', 'f_wraith_*',
        'p_*', 'f_knight_*', 'f_mega_*', 'f_lheart_*']
@@ -46,6 +46,15 @@ def kartside():  # a kart seen from the side, for the Games card
     g.line(28, 9, 31, 4, 'm', 0.6); g.rect(30, 3, 3, 2, 'm')
     return g, {'b': RED, 'n': ('#f1e7d0', '#c8b898', '#7a6a58'), 's': ('#3a3440', '#2a2228', '#12040a'), 'e': ('#d0c8d0', '#8a828a', '#3a343c'), 'm': ('#d0c8d0', '#8a828a', '#3a343c'), 't': ('#3a3440', '#2a2228', '#12040a'), 'h': '#a6968f'}
 ART['ck_kart'] = kartside
+def magnet():  # Potbelly's coin magnet: a red horseshoe with silver tips and a coin
+    g = Grid(18, 18)
+    for a in range(0, 181, 6):
+        import math
+        x = 9 + math.cos(math.radians(a)) * 6; y = 8 - math.sin(math.radians(-a)) * 6
+        g.ellipse(x, y, 2, 2, 'm')
+    g.rect(1, 2, 4, 6, 'm'); g.rect(13, 2, 4, 6, 'm'); g.rect(1, 1, 4, 3, 's'); g.rect(13, 1, 4, 3, 's')
+    return g, {'m': RED, 's': ('#ffffff', '#c8c0c8', '#6a646c')}
+ART['ck_magnet'] = magnet
 def cracker():
     g = Grid(18, 18); g.rect(2, 2, 14, 14, 'c')
     for (x, y) in ((5, 5), (11, 5), (5, 11), (11, 11), (8, 8)): g.put(x, y, 'h')
