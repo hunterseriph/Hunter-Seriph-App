@@ -126,7 +126,7 @@ var R3 = (function () {
     gl.uniformMatrix4fv(U.uM, false, cam.m); gl.uniform3f(U.uFog, fog[0], fog[1], fog[2]); gl.uniform2f(U.uFogR, fogR[0], fogR[1]);
   }
   function setMatrix(m) { gl.uniformMatrix4fv(U.uM, false, m); }
-  function begin(clear) { gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
+  function begin(clear) { var ww = Math.round(GLH * KIT.W / KIT.H); if (ww !== GLW) { GLW = ww; cv.width = GLW; gl.useProgram(pr); gl.uniform2f(U.uRes, GLW, GLH); } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
   function setTime(t) { gl.uniform1f(U.uTime, t); }
   function snap(on) { gl.uniform1f(U.uSnap, 0); } // no vertex snapping: the PS1 jitter looked bad, so polygons stay put
   function bright(b) { gl.uniform1f(U.uBright, b); }
@@ -135,7 +135,7 @@ var R3 = (function () {
   /* project a world point to HUD (480x270) coordinates, for name tags and markers */
   function project(x, y, z) {
     var m = cam.m; if (!m) return null; var cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
-    if (cw < 0.3) return null; return { x: (cx / cw * 0.5 + 0.5) * 480, y: (1 - (cy / cw * 0.5 + 0.5)) * 270, w: cw };
+    if (cw < 0.3) return null; return { x: (cx / cw * 0.5 + 0.5) * KIT.W, y: (1 - (cy / cw * 0.5 + 0.5)) * 270, w: cw };
   }
   return { ok: true, gl: gl, canvas: cv, Mesh: Mesh, texture: texture, update: update, draw: draw, setCam: setCam, setMatrix: setMatrix, persp: persp, look: look, mul: mul, cam: cam, begin: begin, setTime: setTime, snap: snap, bright: bright, clearDepth: clearDepth, project: project };
   }

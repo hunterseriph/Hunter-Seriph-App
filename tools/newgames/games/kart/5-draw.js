@@ -194,26 +194,44 @@ function ordinal(n) { return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'r
 function fmtTime(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + "'" + (s < 10 ? '0' : '') + s.toFixed(2).replace('.', '"'); }
 var MAPC = null;
 function drawHud() {
-  var R = RACE, ctx = KIT.ctx, k = R.me; ctx.clearRect(0, 0, 480, 270);
+  var R = RACE, ctx = KIT.ctx, k = R.me, C = Math.round((KIT.W - 480) / 2); ctx.clearRect(0, 0, KIT.W, 270);
+  ctx.save(); ctx.translate(C, 0); // the HUD is laid out on 480 wide: centred on a wider screen, with its left and right corners pushed out to the edges
+  try { hudBody(R, ctx, k, C); } finally { ctx.restore(); }
+}
+var PADE = { t: 0, x: 1e9 };
+function padEdge() { // where the on-screen buttons start, in HUD pixels (far off to the right when there are none)
+  var now = Date.now(); if (now - PADE.t < 500) return PADE.x; PADE.t = now; PADE.x = 1e9;
+  var a = document.getElementById('acts'), c = KIT.canvas; if (!a || !c || document.documentElement.classList.contains('hs-notouch')) return PADE.x;
+  var ra = a.getBoundingClientRect(), rc = c.getBoundingClientRect(); if (!ra.width || ra.left > rc.right || ra.top > rc.bottom) return PADE.x;
+  var sc = Math.min(rc.width / KIT.W, rc.height / KIT.H), ox = rc.left + (rc.width - KIT.W * sc) / 2; PADE.x = (ra.left - ox) / sc - 4; return PADE.x;
+}
+function hudBody(R, ctx, k, C) {
   if (R.phase === 'intro') {
     KIT.panel(110, 194, 260, 54); text(R.def.n.toUpperCase(), 240, 203, { align: 'center', col: '#ffe36a', size: 16, font: 'title' }); text('FROM ' + R.def.from.toUpperCase(), 240, 226, { align: 'center', size: 6, col: '#a6968f' });
     text(R.tt ? 'TIME TRIAL' : R.cls.n.toUpperCase() + '  ·  ' + R.laps + ' LAPS', 240, 236, { align: 'center', size: 6 }); return;
   }
-  // lap and time
+  // lap and time (left corner)
+  ctx.save(); ctx.translate(-C, 0);
   KIT.panel(6, 6, 104, 34); text('LAP', 14, 13, { size: 8, col: '#a6968f' }); text(Math.max(1, Math.min(R.laps, k.lap)) + '/' + R.laps, 46, 12, { size: 16, col: '#f1e7d0' });
   text(fmtTime(k.time), 14, 28, { size: 8, col: '#ffe36a' });
   // drops
   spr('mn_drop', 124, 30, { sc: 1.4 }); text('×' + k.drops, 134, 20, { size: 8, col: k.drops >= 10 ? '#ffe36a' : '#f1e7d0' });
+  if (R.chain) chainHud(R);
+  ctx.restore();
   // item slot
   KIT.panel(214, 4, 52, 44); var it = k.item;
   if (k.roul > 0) { var keys = Object.keys(ITEMS), ik = ITEMS[keys[Math.floor(R.t * 14) % keys.length]].ic; spr(ik, 240, 40, { sc: 1.5 }); sfx.play && Math.floor(R.t * 14) !== Math.floor((R.t - 1 / 60) * 14) && sfx.play('tick'); }
   else if (it) { spr(ITEMS[it].ic, 240, 40, { sc: it === 'sirj' ? 1.4 : 1.5 }); if (k.itemN > 1) text('×' + k.itemN, 258, 36, { size: 8, col: '#ffe36a' }); }
   if (k.shieldT > 0) { R2('#9adfff', 216, 47, 48 * k.shieldT / 14, 2); }
-  // place
+  // place and map (right corner), kept clear of the on-screen buttons when they are showing
+  ctx.save(); ctx.translate(Math.min(C, padEdge() - 480 - C), 0);
   if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
   // map
   drawMap(392, 54, 84, 84);
+  ctx.restore();
+  ctx.save(); ctx.translate(-C, 0);
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts
+  ctx.restore();
   // countdown and banners
   if (R.phase === 'count') { var n = 3 - Math.floor(R.phaseT), f = R.phaseT % 1; text(String(n), 240, 100 - f * 6, { size: 64, align: 'center', col: n === 1 ? '#ffe36a' : '#ff2630', font: 'title', outline: true, alpha: 1 - f * 0.5 }); }
   if (R.phase === 'count' && !k.ai && !R.demo) drawRevMeter(k);
@@ -223,14 +241,13 @@ function drawHud() {
   if (k.wrongT > 1.2 && !k.done && Math.floor(R.t * 3) % 2) text('WRONG WAY', 240, 120, { size: 16, align: 'center', col: '#ff2630', outline: true });
   if (R.phase === 'done') text(R.tt ? 'TIME!' : (k.place === 1 ? 'YOU WIN!' : 'FINISH!'), 240, 90, { size: 48, align: 'center', col: '#ffe36a', font: 'title', outline: true });
   if (R.msg) { var w = Math.min(420, KIT.tw(R.msg.who + ': ' + R.msg.s, 6) + 20); KIT.panel(240 - w / 2, 222, w, 20, { edge: '#4a1a1c' }); text(R.msg.who.toUpperCase() + ': ' + R.msg.s, 240, 229, { size: 6, align: 'center', col: '#f1e7d0', max: w - 10 }); }
-  if (R.gooScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.75, R.gooScreen / 2.6); for (var g = 0; g < 9; g++) { var gx = (g * 61 + 17) % 470, gy = (g * 37) % 180, gl = 30 + (g * 13) % 50 + (2.6 - R.gooScreen) * 30; ctx.fillStyle = g % 2 ? '#5a1a8a' : '#9a4aff'; ctx.fillRect(gx, 0, 10, gy + gl); ctx.beginPath(); ctx.arc(gx + 5, gy + gl, 7, 0, 6.3); ctx.fill(); } ctx.restore(); }
+  if (R.gooScreen > 0) { ctx.save(); ctx.translate(-C, 0); ctx.scale(KIT.W / 480, 1); ctx.globalAlpha = Math.min(0.75, R.gooScreen / 2.6); for (var g = 0; g < 9; g++) { var gx = (g * 61 + 17) % 470, gy = (g * 37) % 180, gl = 30 + (g * 13) % 50 + (2.6 - R.gooScreen) * 30; ctx.fillStyle = g % 2 ? '#5a1a8a' : '#9a4aff'; ctx.fillRect(gx, 0, 10, gy + gl); ctx.beginPath(); ctx.arc(gx + 5, gy + gl, 7, 0, 6.3); ctx.fill(); } ctx.restore(); }
   if (R.ev && typeof evHud === 'function') evHud(R);
-  if (R.chain) chainHud(R);
   if (R.zoneBanner && R.zoneBanner.t > 0) { R.zoneBanner.t -= 1 / 60; var za = Math.min(1, R.zoneBanner.t * 2, (2.4 - R.zoneBanner.t) * 4); text(R.zoneBanner.n.toUpperCase(), 240, 66, { size: 16, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: za }); }
-  if (R.splatScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.92, R.splatScreen / 1.6); for (var sb = 0; sb < 7; sb++) { var sx2 = (sb * 83 + 40) % 440 + 20, sy2 = (sb * 53 + 30) % 190 + 30, sr = 28 + (sb * 17) % 30; ctx.fillStyle = sb % 2 ? '#f1e7d0' : '#fffbe8'; ctx.beginPath(); ctx.arc(sx2, sy2, sr, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.arc(sx2 + sr * 0.6, sy2 + sr * 0.5, sr * 0.55, 0, 6.3); ctx.fill(); ctx.fillRect(sx2 - 4, sy2, 8, sr + 18 * (2.6 - R.splatScreen)); } ctx.restore(); }
+  if (R.splatScreen > 0) { ctx.save(); ctx.translate(-C, 0); ctx.scale(KIT.W / 480, 1); ctx.globalAlpha = Math.min(0.92, R.splatScreen / 1.6); for (var sb = 0; sb < 7; sb++) { var sx2 = (sb * 83 + 40) % 440 + 20, sy2 = (sb * 53 + 30) % 190 + 30, sr = 28 + (sb * 17) % 30; ctx.fillStyle = sb % 2 ? '#f1e7d0' : '#fffbe8'; ctx.beginPath(); ctx.arc(sx2, sy2, sr, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.arc(sx2 + sr * 0.6, sy2 + sr * 0.5, sr * 0.55, 0, 6.3); ctx.fill(); ctx.fillRect(sx2 - 4, sy2, 8, sr + 18 * (2.6 - R.splatScreen)); } ctx.restore(); }
   if (k.revT > 0 && Math.floor(R.t * 3) % 2) text('BACK TO FRONT!', 240, 140, { size: 12, align: 'center', col: '#ffe36a', outline: true });
   if (R.pillMsg) text({ rev: 'STEERING BACK TO FRONT!', tiny: 'SHRUNK!', hic: '*HIC*' }[R.pillMsg.e], 240, 118, { size: 16, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.pillMsg.t * 2) });
-  if (R.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (R.flash * 4).toFixed(2) + ')'; ctx.fillRect(0, 0, 480, 270); }
+  if (R.flash > 0) { ctx.fillStyle = 'rgba(255,240,200,' + (R.flash * 4).toFixed(2) + ')'; ctx.fillRect(-C, 0, KIT.W, 270); }
   if (k.drift && k.driftLvl > 0) { var dc = ['', '#6ac8ff', '#ffb040', '#fff6d8'][k.driftLvl]; R2(dc, 216, 50, 48 * Math.min(1, k.driftLvl / 3), 2); }
 }
 /* the rev meter on the grid: hold gas to climb, let go to drop, keep the needle in the green for GO */

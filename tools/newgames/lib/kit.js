@@ -12,7 +12,9 @@ var KIT = (function () {
   ctx.imageSmoothingEnabled = false;
   /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
   function fit() {
-    var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, k = Math.min(r.width / W, r.height / H) * dpr;
+    var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (cfg.wide && r.width > 0 && r.height > 0) { var nw = Math.max(cfg.w || 480, Math.min(cfg.wide, Math.round(H * r.width / r.height))); if (nw !== W) { W = nw; S = 0; } } // o.wide: the picture widens to fill wide screens (up to that many pixels) instead of leaving black bars
+    var k = Math.min(r.width / W, r.height / H) * dpr;
     var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
     if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
   }

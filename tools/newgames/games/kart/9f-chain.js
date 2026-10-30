@@ -177,8 +177,8 @@ function chainHud(R) {
   var ten = clamp((t.d - CHAIN.L * 0.5) / (CHAIN.MAX - CHAIN.L * 0.5), 0, 1);
   ctx.fillStyle = '#12040a'; ctx.fillRect(x + 30, y + 17, 32, 5); ctx.fillStyle = t.snapT > 0 ? '#4a1a1c' : ten > 0.6 ? '#ff2630' : '#f1e7d0'; ctx.fillRect(x + 30, y + 17, t.snapT > 0 ? 32 * (1 - t.snapT / CHAIN.SNAP) : 32 * ten, 5);
   text(t.snapT > 0 ? 'SNAPPED' : 'ROPE', x + 30, y + 24, { size: 5, col: t.snapT > 0 ? '#ff2630' : '#a6968f' });
-  if (chainCanSling(k) && Math.floor(R.t * 4) % 2) text('L: SLINGSHOT!', 240, 86, { size: 8, align: 'center', col: '#ffe36a', outline: true });
-  if (R.chainMsg) text(R.chainMsg.s, 240, 72, { size: 10, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.chainMsg.t * 3) });
+  if (chainCanSling(k) && Math.floor(R.t * 4) % 2) text('L: SLINGSHOT!', KIT.W / 2, 86, { size: 8, align: 'center', col: '#ffe36a', outline: true });
+  if (R.chainMsg) text(R.chainMsg.s, KIT.W / 2, 72, { size: 10, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.chainMsg.t * 3) });
 }
 
 /* ---------- menus, results and the Chain Grand Prix ---------- */

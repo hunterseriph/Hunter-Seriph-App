@@ -23,7 +23,12 @@ if (fs.existsSync(stylesPath)) {
   let s = fs.readFileSync(stylesPath, 'utf8');
   s = s.replace(/@drawable\/splash/g, '@color/hs_icon_bg');
   s = s.replace(/(<item name="windowSplashScreenBackground">)[^<]*(<\/item>)/g, '$1@color/hs_icon_bg$2');
-  s = s.replace(/(<style name="AppTheme[^"]*"[^>]*>)/g, '$1\n        <item name="android:statusBarColor">@color/hs_icon_bg</item>\n        <item name="android:navigationBarColor">@color/hs_icon_bg</item>\n        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>');
+  const ITEMS = { 'android:statusBarColor': '@color/hs_icon_bg', 'android:navigationBarColor': '@color/hs_icon_bg', 'android:windowOptOutEdgeToEdgeEnforcement': 'true',
+    'android:windowLayoutInDisplayCutoutMode': 'shortEdges', // landscape: draw up to the camera notch instead of leaving a grey bar
+    'android:windowBackground': '@color/hs_icon_bg' };
+  s = s.replace(/(<style name="AppTheme[^"]*"[^>]*>)([\s\S]*?)(<\/style>)/g, function (m, open, body, close) { // add each item a style does not have yet (a duplicate would fail the build)
+    let add = ''; for (const k in ITEMS) if (body.indexOf('name="' + k + '"') < 0) add += '\n        <item name="' + k + '">' + ITEMS[k] + '</item>';
+    return open + add + body + close; });
   fs.writeFileSync(stylesPath, s);
   console.log('styles.xml patched');
 } else console.warn('WARNING: styles.xml not found');

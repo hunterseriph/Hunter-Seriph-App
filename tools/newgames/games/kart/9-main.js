@@ -112,13 +112,13 @@ function update(dt) {
 }
 function idle(dt) { if (RACE && (RACE.demo || (RACE.net && MODE === 'race' && !RACE.ended))) stepRace(dt); engine(); } // online races don't stop while your pause menu is open
 function draw() {
-  var ctx = KIT.ctx; ctx.clearRect(0, 0, 480, 270);
+  var ctx = KIT.ctx; ctx.clearRect(0, 0, KIT.W, 270);
   if (!R3.ok) return;
   if (RACE) { drawRace(1 / 60); if (!RACE.demo) drawHud(); }
 }
 var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] }, PADCHAIN = false;
 function chainPad(on) { if (on === PADCHAIN) return; PADCHAIN = on; KIT.buildPad(on ? CHAINPAD : CKPAD); } // the CHAIN button only shows in a chain race
-KIT.start({ w: 480, h: 270, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
+KIT.start({ w: 480, h: 270, wide: 720, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
 if (!R3.ok) KIT.menu({ title: 'Cumhead Kart', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the karts cannot run here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }
   (function wait() { if (KIT.sheetReady && (FONTOK || Date.now() - fontT > 2500)) titleMenu(); else setTimeout(wait, 50); })(); }
