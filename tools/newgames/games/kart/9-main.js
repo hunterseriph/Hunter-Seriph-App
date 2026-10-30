@@ -49,14 +49,14 @@ function demo() {
   startRace({ course: pick(open), cls: 'hot', player: chars[0], rivals: chars.slice(1), mode: 'demo' }); RACE.demo = true; RACE.me.ai = true; RACE.me.skill = 1; RACE.phase = 'go'; RACE.camSnap = true;
   music.play('ck_title');
 }
-function helpMenu() {
+function helpMenu(back) {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
     '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
     '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
-    items: [{ label: 'BACK', back: 1, fn: titleMenu }] });
+    items: [{ label: 'BACK', back: 1, fn: back || titleMenu }] });
 }
 function optionsMenu() {
   KIT.menu({ cls: 'ck plain', title: 'Options', items: [

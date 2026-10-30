@@ -33,11 +33,11 @@ go = function (o) {
 function mpMenu(err) {
   if (window.HSProfile && !HSProfile.has()) { HSProfile.edit(function (p) { if (p) mpMenu(); else titleMenu(); }, { title: 'YOUR NAME FOR ONLINE RACES' }); return; }
   NET.onChange = null;
-  screen({ title: 'Online', sub: 'Race your friends (and your viewers)', back: function () { netLeave(); titleMenu(); }, redo: function () { mpMenu(err); },
-    html: '<div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">' + (err ? '<div class="ckmsg" style="color:#ff2630;font-size:18px">' + esc(err) + '</div>' : '') +
-      '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><button type="button" class="ckbtn ckc" data-act="host" data-pad-default><b>Host a room</b><span>You get a five-letter code. Give it to your friends, or show it on stream. Up to 8 players.</span></button>' +
-      '<button type="button" class="ckbtn ckc" data-act="join"><b>Join a room</b><span>Type in the code the host gives you.</span></button></div>' +
-      '<p style="margin:0;font-size:13px;color:#a6968f;line-height:1.45">Online needs the internet. Players connect straight to each other; on some networks (some mobile data and work or school wifi) that is blocked and the join will fail. Home wifi usually works.</p></div>',
+  screen({ title: 'Multiplayer', back: function () { netLeave(); titleMenu(); }, redo: function () { mpMenu(err); },
+    html: '<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px">' + (err ? '<div class="ckmsg" style="color:#ff2630;font-size:18px">' + esc(err) + '</div>' : '') +
+      '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"><button type="button" class="ckbtn ckc" data-act="host" data-pad-default><b>Host a room</b></button>' +
+      '<button type="button" class="ckbtn ckc" data-act="join"><b>Join a room</b></button></div>' +
+      '<p style="margin:0;font-size:13px;color:#a6968f">Some networks block direct connections. Home wifi works best.</p></div>',
     acts: { host: function () { mpWait('Opening a room…'); netHost(function (ok) { if (ok) mpLobby(); else mpMenu(NET.err || 'Could not open a room.'); }); }, join: function () { mpCode(''); } } });
 }
 function mpWait(txt) { screen({ cls: 'solid', title: 'Online', html: '<div class="ckmsg" style="margin-top:20px">' + esc(txt) + '</div><div class="ckacts" style="margin-top:14px"><button type="button" class="ckbtn" data-act="x" data-pad-default>CANCEL</button></div>', acts: { x: function () { netLeave(); mpMenu(); } }, foot: false }); }
@@ -62,12 +62,12 @@ function mpLobby() {
   NET.onChange = function () { if (document.querySelector('#menu .mplobby')) mpLobby(); };
   var host = NET.role === 'host', two = NET.players.length === 2;
   var modes = host ? '<div class="ckg" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-top:12px">' +
-    '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b><span>Four races for points</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b><span>Any course</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b><span>Everyone at once, as ghosts</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b><span>Teams of two on a rope of cream, players paired in order</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b><span>Four chain races for team points</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition</b><span>' + (two ? 'Play through together' : 'Co-op is for exactly two players') + '</span></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
+    '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition' + (two ? '' : ' (2 players)') + '</b></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
   screen({ cls: 'mplobby', title: 'Room ' + NET.code, sub: NET.players.length + ' of 8 players' + (host ? '  ·  tell your friends the code' : ''), back: function () { netLeave(); mpMenu(); }, redo: mpLobby,
     html: '<div class="mplobby" style="max-width:760px;margin:0 auto">' + (host ? '<div style="text-align:center;font-family:var(--pixel);font-size:34px;letter-spacing:.35em;color:#ffe36a;margin:4px 0 12px;text-shadow:3px 3px 0 #12040a">' + NET.code + '</div>' : '') + mpPlayers() +
       '<div class="ckacts" style="margin-top:10px"><button type="button" class="ckbtn" data-act="drv"' + (host ? '' : ' data-pad-default') + '>YOUR DRIVER: ' + esc(CH[SV.ch].n.toUpperCase()) + '</button>' + (host ? '<button type="button" class="ckbtn" data-act="cls">CLASS: ' + clsName(SV.cls).toUpperCase() + '</button>' : '') + '<button type="button" class="ckbtn" data-act="leave">LEAVE</button></div>' + modes + '</div>',

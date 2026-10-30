@@ -20,11 +20,11 @@ var CKCSS = [
   '.ckbtn:hover,.ckbtn.hs-focus,.ckbtn:focus-visible{background:#2a0a0e;box-shadow:inset 0 0 0 2px #ff2630;outline:none!important}',
   '.ckbtn:disabled{opacity:.42;cursor:default}',
   /* title */
-  '.ckt{display:flex;flex-direction:column;gap:12px;max-width:520px;height:100%}',
+  '.ckt{display:flex;flex-direction:column;gap:12px;max-width:380px;height:100%}',
   '.ckt .logo{width:min(300px,62%);align-self:center;filter:drop-shadow(0 4px 0 #12040a)}',
   '.ckt .list{display:flex;flex-direction:column;gap:8px}',
-  '.ckt .ckbtn{display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:54px}',
-  '.ckt .ckbtn b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1;color:var(--bone);flex:none;min-width:7.2em}',
+  '.ckt .ckbtn{display:flex;align-items:center;gap:12px;padding:8px 18px;min-height:46px}.ckt .ckbtn.back b{font-size:18px;color:var(--ash)}',
+  '.ckt .ckbtn b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1;color:var(--bone);flex:none}',
   '.ckt .ckbtn span{font-size:13px;color:var(--ash);line-height:1.25}',
   '.ckt .ckbtn.hot{background:linear-gradient(90deg,#8e0c14,#3a0608)}.ckt .ckbtn.hot b{color:#ffe36a}',
   '.ckt .note{font-size:12px;color:var(--ash);letter-spacing:.06em}',
@@ -68,7 +68,7 @@ var CKCSS = [
   '#menu.ck.plain .mclose{right:auto;left:10px;top:calc(8px + env(safe-area-inset-top,0px))}',
   '@media (max-width:640px){.ckh{padding-right:128px}.ckh h1{font-size:24px}.ckme b,.ckme small{display:none}.ckme{padding:4px}.ckg{grid-template-columns:repeat(2,minmax(0,1fr))}.ckc b{font-size:20px}}',
   '@media (max-width:640px),(orientation:portrait){.ckch{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.ckch .ckinfo{order:-1}.ckinfo .ckst{grid-template-columns:auto 1fr auto 1fr}.ckinfo .top .hsp-pic{width:72px!important;height:72px!important}.ckt .ckbtn b{min-width:0}.ckt .ckbtn{flex-direction:column;align-items:flex-start;gap:3px;min-height:0}}',
-  '@media (max-height:460px){.ckt{flex-direction:row;max-width:none;align-items:stretch}.ckt .logo{width:34%;align-self:center}.ckt .list{flex:1;overflow:auto;max-width:520px}.ckt .ckbtn{min-height:44px;padding:7px 14px}.ckt .ckbtn b{font-size:20px}.ckinfo .top .hsp-pic{width:64px!important;height:64px!important}.ckch .ckinfo p.fr{display:none}}'
+  '@media (max-height:460px){.ckt{flex-direction:row;max-width:none;align-items:center}.ckt .logo{width:34%;align-self:center}.ckt .list{flex:1;overflow:auto;max-width:340px}.ckt .ckbtn{min-height:40px;padding:6px 14px}.ckt .ckbtn b{font-size:20px}.ckinfo .top .hsp-pic{width:64px!important;height:64px!important}.ckch .ckinfo p.fr{display:none}}'
 ].join('\n');
 (function () { var s = document.createElement('style'); s.textContent = CKCSS; document.head.appendChild(s);
   var m = document.getElementById('menu'); new MutationObserver(function () { document.documentElement.classList.toggle('ckmenu', !m.hidden); }).observe(m, { attributes: true, attributeFilter: ['hidden'] }); })();
@@ -118,29 +118,26 @@ function thumb(k) {
 function clsName(id) { return CLASSES.filter(function (c) { return c.id === id; })[0].n; }
 
 /* ---------- title ---------- */
-function titleMenu() {
+function titleMenu(page) {
   if (typeof mpRoom === 'function' && mpRoom()) return mpLobby();
   MODE = 'title'; GP = null; if (!RACE || !RACE.demo) demo();
-  var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length;
-  var rows = [
-    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 120 events, stars to earn', 'hot'],
-    ['gp', 'Grand Prix', 'Four races, points for every place, a trophy at the end'],
-    ['race', 'Single Race', 'Any course you have opened, against seven rivals'],
-    ['chain', 'Chain Race', 'You and a partner tied together by a rope of cream'],
-    ['tt', 'Time Trial', 'Just you, the clock and three Cumpuccinos'],
-    ['mp', 'Online', 'Host or join a room and race your friends'],
-    ['help', 'How to Drive', 'Controls, drifting and items'],
-    ['opt', 'Options', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')]
-  ];
-  screen({ noHead: true, cls: 'title', foot: false, redo: titleMenu,
+  var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length, single = page === 'single', opts = page === 'opts';
+  var rows = single ? [['exp', 'Expedition', 'hot'], ['gp', 'Grand Prix'], ['race', 'Single Race'], ['chain', 'Chain Race'], ['tt', 'Time Trial']]
+    : opts ? [['auto', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')], ['help', 'How to Drive']]
+    : [['single', 'Single Player', 'hot'], ['mp', 'Multiplayer'], ['opt', 'Options']];
+  var redo = function () { titleMenu(page); }, back = function () { titleMenu(); };
+  screen({ noHead: true, cls: 'title', foot: false, redo: redo, back: page ? back : null,
     html: '<div style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:14px;z-index:2">' + meChip() + '</div><div class="ckt" style="padding-top:44px"><img class="logo" src="../assets/ck-logo.webp" alt="Cumhead Kart"><div class="list">' +
-      rows.map(function (r, i) { return '<button type="button" class="ckbtn ' + (r[3] || '') + '" data-act="' + r[0] + '"' + (i ? '' : ' data-pad-default') + '><b>' + r[1] + '</b><span>' + r[2] + '</span></button>'; }).join('') +
-      '</div><div class="note">DROPS ' + (SV.drops || 0) + '  ·  TROPHIES ' + trophies + '</div></div>',
+      rows.map(function (r, i) { return '<button type="button" class="ckbtn ' + (r[2] || '') + '" data-act="' + r[0] + '"' + (i ? '' : ' data-pad-default') + '><b>' + r[1] + '</b></button>'; }).join('') +
+      (page ? '<button type="button" class="ckbtn back" data-back data-act="back"><b>Back</b></button>' : '') +
+      (page ? '' : '<div class="note">DROPS ' + (SV.drops || 0) + '  ·  TROPHIES ' + trophies + '</div>') + '</div></div>',
     acts: {
-      gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, titleMenu); },
-      race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, titleMenu); },
-      tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, titleMenu); },
-      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
+      single: function () { titleMenu('single'); }, opt: function () { titleMenu('opts'); }, back: back,
+      gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, function () { titleMenu('single'); }); },
+      race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, function () { titleMenu('single'); }); },
+      tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, function () { titleMenu('single'); }); },
+      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); },
+      help: function () { helpMenu(function () { titleMenu('opts'); }); }, auto: function () { SV.auto = !SV.auto; persist(); titleMenu('opts'); }
     } });
 }
 /* ---------- class ---------- */

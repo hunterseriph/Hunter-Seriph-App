@@ -135,6 +135,20 @@
     },
     /* analogue stick for games that want it, with a dead zone */
     stick: function () { if (!S) return { x: 0, y: 0, on: false }; var x = S.sx, y = S.sy, m = Math.hypot(x, y); if (m < 0.22) { x = S.r ? 1 : S.l ? -1 : 0; y = S.d ? 1 : S.u ? -1 : 0; m = Math.hypot(x, y); if (!m) return { x: 0, y: 0, on: false }; } if (m > 1) { x /= m; y /= m; } return { x: x, y: y, on: true }; },
-    touchOn: touchOn, setTouch: setTouch, connected: function () { return !!S; }
+    touchOn: touchOn, setTouch: setTouch, connected: function () { return !!S; },
+    /* the phone's own Back button (the app asks the game first): does what B does in a menu, pauses while
+       playing, leaves an arcade cabinet. Returns false when there was nothing to go back from, so the app
+       can close the game instead. */
+    hwBack: function () {
+      if (cfg.hwBack) { var r = cfg.hwBack(); if (r !== undefined) return r; }
+      if (cfg.idle && cfg.idle()) { if (cfg.onSelect) { cfg.onSelect(); return true; } return false; }
+      var G = window.G, sig = function () { return document.body.innerHTML.length + '|' + (G && G.state) + '|' + (G && G.paused) + '|' + (G && G.mode); }, before = sig();
+      var m = document.getElementById('hsProf') || (cfg.menu ? cfg.menu() : null);
+      if (m && m.id === 'hsProf') { var pb = m.querySelector('[data-back]'); if (pb) pb.click(); }
+      else if (m) { scope = m; back(); }
+      else if (cfg.onStart) cfg.onStart();
+      else { keyEvt('keydown', 'Escape'); keyEvt('keyup', 'Escape'); }
+      return sig() !== before;
+    }
   };
 })();

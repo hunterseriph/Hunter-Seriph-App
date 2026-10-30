@@ -97,7 +97,7 @@ function expedition(back) {
     h += '</div>';
   });
   var acts = { story: expIntro }; EXP.forEach(function (a, i) { acts['a' + i] = function () { expArea(i); }; });
-  screen({ title: 'Expedition', sub: mpRoom() ? 'Co-op: you and ' + esc((NET.players[1] || {}).name || 'a friend') : 'Take back the Crimson Moon Trophy', back: function () { (EXPBACK || titleMenu)(); }, redo: function () { expedition(null); }, acts: acts,
+  screen({ title: 'Expedition', sub: mpRoom() ? 'Co-op: you and ' + esc((NET.players[1] || {}).name || 'a friend') : 'Take back the Crimson Moon Trophy', back: function () { if (EXPBACK) EXPBACK(); else titleMenu('single'); }, redo: function () { expedition(null); }, acts: acts,
     html: h + '<div class="ckacts" style="margin-top:14px"><button type="button" class="ckbtn" data-act="story">THE STORY SO FAR</button></div>' });
 }
 function expIntro() {

@@ -188,11 +188,11 @@ function chainRoster(me, mate) {
   return [me, mate].concat(rest.slice(0, 6));
 }
 function chainMenu() {
-  screen({ title: 'Chain Race', sub: 'Two karts, one rope of cream', back: titleMenu, redo: chainMenu,
-    html: '<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px"><div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' +
-      '<button type="button" class="ckbtn ckc" data-act="race" data-pad-default><b>Single Chain Race</b><span>You and a partner against three other teams</span></button>' +
-      '<button type="button" class="ckbtn ckc" data-act="gp"><b>Chain Grand Prix</b><span>Four races, points for every team place</span></button></div>' +
-      '<div class="ckmsg" style="font-size:15px;line-height:1.5;text-align:left">' + CHAINHELP + '</div></div>',
+  var back = function () { titleMenu('single'); };
+  screen({ title: 'Chain Race', back: back, redo: chainMenu,
+    html: '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));max-width:560px;margin:0 auto">' +
+      '<button type="button" class="ckbtn ckc" data-act="race" data-pad-default><b>Single Race</b></button>' +
+      '<button type="button" class="ckbtn ckc" data-act="gp"><b>Grand Prix</b></button></div>',
     acts: {
       race: function flow() { function mate() { pickMate(co, function () { pickChar(mate, flow); }); } function co() { pickCourse(beginChain, mate); } pickClass(function () { pickChar(mate, flow); }, chainMenu); },
       gp: function flow2() { function mate() { pickMate(cup, function () { pickChar(mate, flow2); }); } function cup() { pickCup(beginChainGP, mate); } pickClass(function () { pickChar(mate, flow2); }, chainMenu); }

@@ -862,6 +862,24 @@ document.addEventListener('click',function(e){
 function freshFrame(id,src){ var old=$(id), f=old.cloneNode(false); if(src) f.setAttribute('src',src); else f.removeAttribute('src'); old.parentNode.replaceChild(f,old); return f; }
 function closeGame(){ if($('gameWrap').hidden) return; $('gameWrap').hidden=true; freshFrame('gameFrame'); }
 $('gameBack').addEventListener('click',function(){ history.back(); });
+/* ---------- the phone's own Back button: step back inside the app, never straight out of it ---------- */
+var backTap=0;
+function hwBack(){
+  var pr=document.getElementById('hsProf'); if(pr){ var pb=pr.querySelector('[data-back]'); if(pb) pb.click(); return; }
+  if(!$('gameWrap').hidden){ // the game goes back first (its own menus, pause); only when it has nothing to go back from does the game close
+    try{ var w=$('gameFrame').contentWindow; if(w&&w.HSPad&&w.HSPad.hwBack&&w.HSPad.hwBack()) return; }catch(e){}
+    closeGame(); location.replace('#/'+(cur||'Main')); return;
+  }
+  if(!$('vidWrap').hidden){ closeVideo(); location.replace('#/'+(cur||'Main')); return; }
+  if(/^DxD-Log/.test(cur)){ location.replace('#/Projects'); return; }
+  if(cur&&cur!=='Main'){ location.replace('#/Main'); return; }
+  var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App, now=Date.now();
+  if(now-backTap<2000){ if(A&&A.minimizeApp) A.minimizeApp(); else if(A) A.exitApp(); return; }
+  backTap=now; toast('Press back again to leave');
+}
+function toast(t){ var d=document.createElement('div'); d.textContent=t; d.style.cssText='position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;background:#0e0708;color:#f1e7d0;border:1px solid #4a1a1c;padding:10px 16px;font:15px "Archivo Narrow",sans-serif;letter-spacing:.04em;pointer-events:none'; document.body.appendChild(d); setTimeout(function(){ d.remove(); },1800); }
+window.hsBack=hwBack;
+(function(){ var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App; if(A&&A.addListener) A.addListener('backButton',hwBack); })();
 /* ---------- in-app video player ---------- */
 function playVideo(src,title,ytUrl){
   $('vidTitle').textContent=title; $('vidYT').setAttribute('href',ytUrl);

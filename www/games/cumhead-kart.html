@@ -3057,14 +3057,14 @@ function demo() {
   startRace({ course: pick(open), cls: 'hot', player: chars[0], rivals: chars.slice(1), mode: 'demo' }); RACE.demo = true; RACE.me.ai = true; RACE.me.skill = 1; RACE.phase = 'go'; RACE.camSnap = true;
   music.play('ck_title');
 }
-function helpMenu() {
+function helpMenu(back) {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
     '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
     '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
-    items: [{ label: 'BACK', back: 1, fn: titleMenu }] });
+    items: [{ label: 'BACK', back: 1, fn: back || titleMenu }] });
 }
 function optionsMenu() {
   KIT.menu({ cls: 'ck plain', title: 'Options', items: [
@@ -3156,11 +3156,11 @@ var CKCSS = [
   '.ckbtn:hover,.ckbtn.hs-focus,.ckbtn:focus-visible{background:#2a0a0e;box-shadow:inset 0 0 0 2px #ff2630;outline:none!important}',
   '.ckbtn:disabled{opacity:.42;cursor:default}',
   /* title */
-  '.ckt{display:flex;flex-direction:column;gap:12px;max-width:520px;height:100%}',
+  '.ckt{display:flex;flex-direction:column;gap:12px;max-width:380px;height:100%}',
   '.ckt .logo{width:min(300px,62%);align-self:center;filter:drop-shadow(0 4px 0 #12040a)}',
   '.ckt .list{display:flex;flex-direction:column;gap:8px}',
-  '.ckt .ckbtn{display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:54px}',
-  '.ckt .ckbtn b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1;color:var(--bone);flex:none;min-width:7.2em}',
+  '.ckt .ckbtn{display:flex;align-items:center;gap:12px;padding:8px 18px;min-height:46px}.ckt .ckbtn.back b{font-size:18px;color:var(--ash)}',
+  '.ckt .ckbtn b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1;color:var(--bone);flex:none}',
   '.ckt .ckbtn span{font-size:13px;color:var(--ash);line-height:1.25}',
   '.ckt .ckbtn.hot{background:linear-gradient(90deg,#8e0c14,#3a0608)}.ckt .ckbtn.hot b{color:#ffe36a}',
   '.ckt .note{font-size:12px;color:var(--ash);letter-spacing:.06em}',
@@ -3204,7 +3204,7 @@ var CKCSS = [
   '#menu.ck.plain .mclose{right:auto;left:10px;top:calc(8px + env(safe-area-inset-top,0px))}',
   '@media (max-width:640px){.ckh{padding-right:128px}.ckh h1{font-size:24px}.ckme b,.ckme small{display:none}.ckme{padding:4px}.ckg{grid-template-columns:repeat(2,minmax(0,1fr))}.ckc b{font-size:20px}}',
   '@media (max-width:640px),(orientation:portrait){.ckch{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.ckch .ckinfo{order:-1}.ckinfo .ckst{grid-template-columns:auto 1fr auto 1fr}.ckinfo .top .hsp-pic{width:72px!important;height:72px!important}.ckt .ckbtn b{min-width:0}.ckt .ckbtn{flex-direction:column;align-items:flex-start;gap:3px;min-height:0}}',
-  '@media (max-height:460px){.ckt{flex-direction:row;max-width:none;align-items:stretch}.ckt .logo{width:34%;align-self:center}.ckt .list{flex:1;overflow:auto;max-width:520px}.ckt .ckbtn{min-height:44px;padding:7px 14px}.ckt .ckbtn b{font-size:20px}.ckinfo .top .hsp-pic{width:64px!important;height:64px!important}.ckch .ckinfo p.fr{display:none}}'
+  '@media (max-height:460px){.ckt{flex-direction:row;max-width:none;align-items:center}.ckt .logo{width:34%;align-self:center}.ckt .list{flex:1;overflow:auto;max-width:340px}.ckt .ckbtn{min-height:40px;padding:6px 14px}.ckt .ckbtn b{font-size:20px}.ckinfo .top .hsp-pic{width:64px!important;height:64px!important}.ckch .ckinfo p.fr{display:none}}'
 ].join('\n');
 (function () { var s = document.createElement('style'); s.textContent = CKCSS; document.head.appendChild(s);
   var m = document.getElementById('menu'); new MutationObserver(function () { document.documentElement.classList.toggle('ckmenu', !m.hidden); }).observe(m, { attributes: true, attributeFilter: ['hidden'] }); })();
@@ -3254,29 +3254,26 @@ function thumb(k) {
 function clsName(id) { return CLASSES.filter(function (c) { return c.id === id; })[0].n; }
 
 /* ---------- title ---------- */
-function titleMenu() {
+function titleMenu(page) {
   if (typeof mpRoom === 'function' && mpRoom()) return mpLobby();
   MODE = 'title'; GP = null; if (!RACE || !RACE.demo) demo();
-  var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length;
-  var rows = [
-    ['exp', 'Expedition', 'Take back the Crimson Moon Trophy: 12 areas, 120 events, stars to earn', 'hot'],
-    ['gp', 'Grand Prix', 'Four races, points for every place, a trophy at the end'],
-    ['race', 'Single Race', 'Any course you have opened, against seven rivals'],
-    ['chain', 'Chain Race', 'You and a partner tied together by a rope of cream'],
-    ['tt', 'Time Trial', 'Just you, the clock and three Cumpuccinos'],
-    ['mp', 'Online', 'Host or join a room and race your friends'],
-    ['help', 'How to Drive', 'Controls, drifting and items'],
-    ['opt', 'Options', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')]
-  ];
-  screen({ noHead: true, cls: 'title', foot: false, redo: titleMenu,
+  var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length, single = page === 'single', opts = page === 'opts';
+  var rows = single ? [['exp', 'Expedition', 'hot'], ['gp', 'Grand Prix'], ['race', 'Single Race'], ['chain', 'Chain Race'], ['tt', 'Time Trial']]
+    : opts ? [['auto', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')], ['help', 'How to Drive']]
+    : [['single', 'Single Player', 'hot'], ['mp', 'Multiplayer'], ['opt', 'Options']];
+  var redo = function () { titleMenu(page); }, back = function () { titleMenu(); };
+  screen({ noHead: true, cls: 'title', foot: false, redo: redo, back: page ? back : null,
     html: '<div style="position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:14px;z-index:2">' + meChip() + '</div><div class="ckt" style="padding-top:44px"><img class="logo" src="../assets/ck-logo.webp" alt="Cumhead Kart"><div class="list">' +
-      rows.map(function (r, i) { return '<button type="button" class="ckbtn ' + (r[3] || '') + '" data-act="' + r[0] + '"' + (i ? '' : ' data-pad-default') + '><b>' + r[1] + '</b><span>' + r[2] + '</span></button>'; }).join('') +
-      '</div><div class="note">DROPS ' + (SV.drops || 0) + '  ·  TROPHIES ' + trophies + '</div></div>',
+      rows.map(function (r, i) { return '<button type="button" class="ckbtn ' + (r[2] || '') + '" data-act="' + r[0] + '"' + (i ? '' : ' data-pad-default') + '><b>' + r[1] + '</b></button>'; }).join('') +
+      (page ? '<button type="button" class="ckbtn back" data-back data-act="back"><b>Back</b></button>' : '') +
+      (page ? '' : '<div class="note">DROPS ' + (SV.drops || 0) + '  ·  TROPHIES ' + trophies + '</div>') + '</div></div>',
     acts: {
-      gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, titleMenu); },
-      race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, titleMenu); },
-      tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, titleMenu); },
-      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); }, help: helpMenu, opt: optionsMenu
+      single: function () { titleMenu('single'); }, opt: function () { titleMenu('opts'); }, back: back,
+      gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, function () { titleMenu('single'); }); },
+      race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, function () { titleMenu('single'); }); },
+      tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, function () { titleMenu('single'); }); },
+      exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); },
+      help: function () { helpMenu(function () { titleMenu('opts'); }); }, auto: function () { SV.auto = !SV.auto; persist(); titleMenu('opts'); }
     } });
 }
 /* ---------- class ---------- */
@@ -3487,7 +3484,7 @@ function expedition(back) {
     h += '</div>';
   });
   var acts = { story: expIntro }; EXP.forEach(function (a, i) { acts['a' + i] = function () { expArea(i); }; });
-  screen({ title: 'Expedition', sub: mpRoom() ? 'Co-op: you and ' + esc((NET.players[1] || {}).name || 'a friend') : 'Take back the Crimson Moon Trophy', back: function () { (EXPBACK || titleMenu)(); }, redo: function () { expedition(null); }, acts: acts,
+  screen({ title: 'Expedition', sub: mpRoom() ? 'Co-op: you and ' + esc((NET.players[1] || {}).name || 'a friend') : 'Take back the Crimson Moon Trophy', back: function () { if (EXPBACK) EXPBACK(); else titleMenu('single'); }, redo: function () { expedition(null); }, acts: acts,
     html: h + '<div class="ckacts" style="margin-top:14px"><button type="button" class="ckbtn" data-act="story">THE STORY SO FAR</button></div>' });
 }
 function expIntro() {
@@ -3974,11 +3971,11 @@ go = function (o) {
 function mpMenu(err) {
   if (window.HSProfile && !HSProfile.has()) { HSProfile.edit(function (p) { if (p) mpMenu(); else titleMenu(); }, { title: 'YOUR NAME FOR ONLINE RACES' }); return; }
   NET.onChange = null;
-  screen({ title: 'Online', sub: 'Race your friends (and your viewers)', back: function () { netLeave(); titleMenu(); }, redo: function () { mpMenu(err); },
-    html: '<div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">' + (err ? '<div class="ckmsg" style="color:#ff2630;font-size:18px">' + esc(err) + '</div>' : '') +
-      '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><button type="button" class="ckbtn ckc" data-act="host" data-pad-default><b>Host a room</b><span>You get a five-letter code. Give it to your friends, or show it on stream. Up to 8 players.</span></button>' +
-      '<button type="button" class="ckbtn ckc" data-act="join"><b>Join a room</b><span>Type in the code the host gives you.</span></button></div>' +
-      '<p style="margin:0;font-size:13px;color:#a6968f;line-height:1.45">Online needs the internet. Players connect straight to each other; on some networks (some mobile data and work or school wifi) that is blocked and the join will fail. Home wifi usually works.</p></div>',
+  screen({ title: 'Multiplayer', back: function () { netLeave(); titleMenu(); }, redo: function () { mpMenu(err); },
+    html: '<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px">' + (err ? '<div class="ckmsg" style="color:#ff2630;font-size:18px">' + esc(err) + '</div>' : '') +
+      '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"><button type="button" class="ckbtn ckc" data-act="host" data-pad-default><b>Host a room</b></button>' +
+      '<button type="button" class="ckbtn ckc" data-act="join"><b>Join a room</b></button></div>' +
+      '<p style="margin:0;font-size:13px;color:#a6968f">Some networks block direct connections. Home wifi works best.</p></div>',
     acts: { host: function () { mpWait('Opening a room…'); netHost(function (ok) { if (ok) mpLobby(); else mpMenu(NET.err || 'Could not open a room.'); }); }, join: function () { mpCode(''); } } });
 }
 function mpWait(txt) { screen({ cls: 'solid', title: 'Online', html: '<div class="ckmsg" style="margin-top:20px">' + esc(txt) + '</div><div class="ckacts" style="margin-top:14px"><button type="button" class="ckbtn" data-act="x" data-pad-default>CANCEL</button></div>', acts: { x: function () { netLeave(); mpMenu(); } }, foot: false }); }
@@ -4003,12 +4000,12 @@ function mpLobby() {
   NET.onChange = function () { if (document.querySelector('#menu .mplobby')) mpLobby(); };
   var host = NET.role === 'host', two = NET.players.length === 2;
   var modes = host ? '<div class="ckg" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-top:12px">' +
-    '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b><span>Four races for points</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b><span>Any course</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b><span>Everyone at once, as ghosts</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b><span>Teams of two on a rope of cream, players paired in order</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b><span>Four chain races for team points</span></button>' +
-    '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition</b><span>' + (two ? 'Play through together' : 'Co-op is for exactly two players') + '</span></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
+    '<button type="button" class="ckbtn ckc" data-act="gp" data-pad-default><b>Grand Prix</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="race"><b>Single Race</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="tt"><b>Time Trial</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chain"><b>Chain Race</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="chaingp"><b>Chain Grand Prix</b></button>' +
+    '<button type="button" class="ckbtn ckc" data-act="exp"' + (two ? '' : ' disabled') + '><b>Expedition' + (two ? '' : ' (2 players)') + '</b></button></div>' : '<div class="ckmsg" style="margin-top:12px;font-size:18px">Waiting for ' + esc(NET.players[0] ? NET.players[0].name : 'the host') + ' to pick a race…</div>';
   screen({ cls: 'mplobby', title: 'Room ' + NET.code, sub: NET.players.length + ' of 8 players' + (host ? '  ·  tell your friends the code' : ''), back: function () { netLeave(); mpMenu(); }, redo: mpLobby,
     html: '<div class="mplobby" style="max-width:760px;margin:0 auto">' + (host ? '<div style="text-align:center;font-family:var(--pixel);font-size:34px;letter-spacing:.35em;color:#ffe36a;margin:4px 0 12px;text-shadow:3px 3px 0 #12040a">' + NET.code + '</div>' : '') + mpPlayers() +
       '<div class="ckacts" style="margin-top:10px"><button type="button" class="ckbtn" data-act="drv"' + (host ? '' : ' data-pad-default') + '>YOUR DRIVER: ' + esc(CH[SV.ch].n.toUpperCase()) + '</button>' + (host ? '<button type="button" class="ckbtn" data-act="cls">CLASS: ' + clsName(SV.cls).toUpperCase() + '</button>' : '') + '<button type="button" class="ckbtn" data-act="leave">LEAVE</button></div>' + modes + '</div>',
@@ -4221,11 +4218,11 @@ function chainRoster(me, mate) {
   return [me, mate].concat(rest.slice(0, 6));
 }
 function chainMenu() {
-  screen({ title: 'Chain Race', sub: 'Two karts, one rope of cream', back: titleMenu, redo: chainMenu,
-    html: '<div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px"><div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">' +
-      '<button type="button" class="ckbtn ckc" data-act="race" data-pad-default><b>Single Chain Race</b><span>You and a partner against three other teams</span></button>' +
-      '<button type="button" class="ckbtn ckc" data-act="gp"><b>Chain Grand Prix</b><span>Four races, points for every team place</span></button></div>' +
-      '<div class="ckmsg" style="font-size:15px;line-height:1.5;text-align:left">' + CHAINHELP + '</div></div>',
+  var back = function () { titleMenu('single'); };
+  screen({ title: 'Chain Race', back: back, redo: chainMenu,
+    html: '<div class="ckg" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));max-width:560px;margin:0 auto">' +
+      '<button type="button" class="ckbtn ckc" data-act="race" data-pad-default><b>Single Race</b></button>' +
+      '<button type="button" class="ckbtn ckc" data-act="gp"><b>Grand Prix</b></button></div>',
     acts: {
       race: function flow() { function mate() { pickMate(co, function () { pickChar(mate, flow); }); } function co() { pickCourse(beginChain, mate); } pickClass(function () { pickChar(mate, flow); }, chainMenu); },
       gp: function flow2() { function mate() { pickMate(cup, function () { pickChar(mate, flow2); }); } function cup() { pickCup(beginChainGP, mate); } pickClass(function () { pickChar(mate, flow2); }, chainMenu); }
