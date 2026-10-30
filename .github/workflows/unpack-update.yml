@@ -1,0 +1,36 @@
+name: Unpack an update zip
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['*.zip']
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack the zip into the repo
+        run: |
+          shopt -s nullglob
+          zips=(*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then echo "No zip found"; exit 0; fi
+          for z in "${zips[@]}"; do
+            unzip -o "$z" -x 'CLAUDE.md' '.github/*' '__MACOSX/*'
+            git rm -q "$z"
+          done
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add -A
+          git commit -m "Unpack ${zips[*]}"
+          git push
+
+      - name: Start the app build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-apk.yml --ref "${{ github.ref_name }}"
