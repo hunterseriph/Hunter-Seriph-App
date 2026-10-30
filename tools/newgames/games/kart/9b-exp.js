@@ -6,7 +6,7 @@
    Event types (EVT): race, duel, drift, rings, boost, pursuit, nado (Meatnado Escape), drops, ghost, face.
    Saves: SV.exp = { stars: {eventId: n}, beat: {areaIndex: 1}, seen: 1, won: 1 }.
    ===================================================================================================== */
-var FACE_AT = 12;
+var FACE_AT = 15;
 var EVT = {
   race: { n: 'Race', ic: 'ck_star', d: 'Finish in the top three.' },
   duel: { n: 'Duel', ic: 'ck_gold', d: 'One on one. Beat them to the line.' },
@@ -58,6 +58,16 @@ var EXP = [
     ['race', 'Moonfall', { laps: 2 }], ['boost', 'Low Gravity', { laps: 2 }], ['nado', 'Eclipse', { riv: 6, every: 18 }], ['drops', 'Moon Dust', { time: 60 }],
     ['rings', 'Crater Gates', { laps: 2 }], ['duel', 'King of the Moon', { vs: 'kingblum', laps: 2 }], ['drift', 'Crimson Drift', { time: 60 }], ['face', 'Blumhead', { laps: 3, boss: 1, final: 1 }]] }
 ];
+/* each area also runs on its place's full course, the full course backwards, and its Sprint: 10 events, the face-off on the full course */
+var LAPHALF = function (o) { var q = {}; for (var k in o) q[k] = o[k]; if (q.laps) q.laps = Math.max(1, Math.round(q.laps / 2)); return q; };
+EXP.forEach(function (a) {
+  var e = a.ev, on = function (ev, where) { var o = where === 'sprint' ? ev[2] || {} : LAPHALF(ev[2] || {}); o = Object.assign({}, o, { on: where }); if (where === 'rev') o.rev = 1; return [ev[0], ev[1], o]; };
+  var full = FULL[a.c + 'F'], sp = SPRINT[a.c + 'F'], face = e[e.length - 1];
+  a.ev = [e[0], e[1], e[2], on(e[3], 'full'), on(e[4], 'sprint'), on(e[5], 'full'), on(e[6], 'rev'),
+    ['ghost', sp.n.replace(' Sprint', '') + ' Time Attack', { laps: 2, on: 'sprint' }], ['race', full.n + ', Backwards', { laps: 1, on: 'rev', rev: 1 }],
+    [face[0], face[1], Object.assign({}, face[2], { laps: 2, on: 'full' })]];
+});
+function evCourse(e) { var a = EXP[e.a], on = e.o.on; return on === 'sprint' ? a.c + 'S' : on ? a.c + 'F' : a.c; }
 EXP.forEach(function (a, i) { a.i = i; a.events = a.ev.map(function (e, j) { return { id: i + '_' + j, a: i, j: j, t: e[0], n: e[1], o: e[2] || {} }; }); });
 function XS() { if (!SV.exp) SV.exp = { stars: {}, beat: {} }; return SV.exp; }
 function evStars(id) { return XS().stars[id] || 0; }
@@ -75,14 +85,14 @@ var EXPBACK = null;
 function expedition(back) {
   if (back) EXPBACK = back; else if (back === undefined && !mpRoom()) EXPBACK = null;
   var X = XS(); if (!X.seen) return expIntro();
-  var h = '<div class="ckmsg" style="text-align:left;font-size:18px;margin-bottom:4px">★ ' + totalStars() + ' / ' + EXP.length * 24 + '</div>';
+  var h = '<div class="ckmsg" style="text-align:left;font-size:18px;margin-bottom:4px">★ ' + totalStars() + ' / ' + EXP.length * 30 + '</div>';
   ['Cream', 'Blood', 'Moon'].forEach(function (rg) {
     h += '<div class="ckgrp">The ' + rg + ' Road</div><div class="ckg">';
     EXP.forEach(function (a, i) {
       if (a.region !== rg) return; var op = areaOpen(i), c = COURSES[a.c], beat = X.beat[i];
       h += '<button type="button" class="ckbtn ckc" data-act="a' + i + '"' + (op ? '' : ' disabled') + (op && !beat && (i === 0 || X.beat[i - 1]) ? ' data-pad-default' : '') + '><img class="th" src="' + thumb(a.c) + '" alt="">' +
         '<div style="display:flex;gap:10px;align-items:center">' + pic(a.r, 40) + '<div style="min-width:0"><b style="font-size:22px">' + (op ? esc(c.n) : '???') + '</b><span style="display:block">' + (op ? 'Rival: ' + esc(CH[a.r].n) : 'Beat the last rival to open') + '</span></div></div>' +
-        '<em>★ ' + areaStars(i) + '/24' + (beat ? '  ·  CLEARED' : '') + '</em></button>';
+        '<em>★ ' + areaStars(i) + '/30' + (beat ? '  ·  CLEARED' : '') + '</em></button>';
     });
     h += '</div>';
   });
@@ -100,12 +110,12 @@ function expIntro() {
       '<div class="ckacts"><button type="button" class="ckbtn hot" data-act="go" data-pad-default>LET\'S GO</button></div></div>', acts: { go: function () { expedition(null); } } });
 }
 function expArea(i) {
-  var a = EXP[i], c = COURSES[a.c], acts = {}, h = '<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">' + pic(a.r, 64) + '<div><div style="font-family:var(--display);font-size:22px;color:var(--bone)">' + esc(CH[a.r].n) + '</div><div style="font-size:15px;color:#ffe36a">' + esc(a.q) + '</div><div style="font-size:12px;color:var(--ash)">' + clsName(a.cls) + ' class  ·  ★ ' + areaStars(i) + '/24</div></div></div><div class="ckg">';
+  var a = EXP[i], c = COURSES[a.c], acts = {}, h = '<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">' + pic(a.r, 64) + '<div><div style="font-family:var(--display);font-size:22px;color:var(--bone)">' + esc(CH[a.r].n) + '</div><div style="font-size:15px;color:#ffe36a">' + esc(a.q) + '</div><div style="font-size:12px;color:var(--ash)">' + clsName(a.cls) + ' class  ·  ★ ' + areaStars(i) + '/30</div></div></div><div class="ckg">';
   a.events.forEach(function (e, j) {
     var op = evOpen(e), st = evStars(e.id), T = EVT[e.t], face = e.t === 'face';
     acts['e' + j] = function () { expBrief(e); };
     h += '<button type="button" class="ckbtn ckc" data-act="e' + j + '"' + (op ? '' : ' disabled') + (op && st < 3 && !h.match(/data-pad-default/) ? ' data-pad-default' : '') + (face ? ' style="box-shadow:inset 0 0 0 2px #ffe36a"' : '') + '>' +
-      '<div style="display:flex;gap:10px;align-items:center">' + (portrait(T.ic, 36, '#0a0506') ? '<img src="' + portrait(face ? 'ck_gold' : T.ic, 36, '#0a0506') + '" width="36" height="36" style="image-rendering:pixelated" alt="">' : '') + '<div style="min-width:0"><span style="font-size:11px;letter-spacing:.14em;color:' + (face ? '#ffe36a' : '#ff2630') + '">' + (j + 1) + '. ' + T.n.toUpperCase() + (e.o.rev ? ' · BACKWARDS' : '') + '</span><b style="display:block;font-size:20px">' + esc(e.n) + '</b></div></div>' +
+      '<div style="display:flex;gap:10px;align-items:center">' + (portrait(T.ic, 36, '#0a0506') ? '<img src="' + portrait(face ? 'ck_gold' : T.ic, 36, '#0a0506') + '" width="36" height="36" style="image-rendering:pixelated" alt="">' : '') + '<div style="min-width:0"><span style="font-size:11px;letter-spacing:.14em;color:' + (face ? '#ffe36a' : '#ff2630') + '">' + (j + 1) + '. ' + T.n.toUpperCase() + (e.o.rev ? ' · BACKWARDS' : '') + (e.o.on === 'sprint' ? ' · SPRINT' : e.o.on ? ' · FULL COURSE' : '') + '</span><b style="display:block;font-size:20px">' + esc(e.n) + '</b></div></div>' +
       '<em style="font-size:18px">' + starStr(st) + '</em>' + (op ? '' : '<span class="lock">' + (face ? 'Earn ' + FACE_AT + ' stars here first' : 'Locked') + '</span>') + '</button>';
   });
   screen({ title: c.n, sub: 'Expedition  ·  area ' + (i + 1) + ' of ' + EXP.length, back: function () { expedition(null); }, redo: function () { expArea(i); }, acts: acts, html: h + '</div>' });
@@ -115,13 +125,13 @@ function evGoals(e) { // what each star needs, in words
   if (t === 'race') return ['3rd', '2nd', '1st'];
   if (t === 'duel' || t === 'face') return o.hitless ? ['Win', 'Win with 1 hit or less', 'Win without being hit'] : ['Win', 'Win by 1 second', 'Win by 3 seconds'];
   if (t === 'nado') return ['Top three', 'Top two', 'Last one standing'];
-  if (t === 'pursuit') return ['Catch them', 'With 20 s left', 'With 40 s left'];
+  if (t === 'pursuit') return ['Catch them', 'With 15 s left', 'With 30 s left'];
   if (t === 'rings') return ['Reach the finish', '5 s left', '10 s left'];
   return ['Bronze', 'Silver', 'Gold'];
 }
 function expBrief(e) {
   var a = EXP[e.a], T = EVT[e.t], vs = e.t === 'face' ? a.r : e.o.vs, g = evGoals(e), st = evStars(e.id);
-  screen({ cls: 'solid', title: e.n, sub: T.n + (e.o.rev ? '  ·  backwards' : '') + '  ·  ' + esc(COURSES[a.c].n), back: function () { expArea(e.a); }, redo: function () { expBrief(e); }, foot: false,
+  screen({ cls: 'solid', title: e.n, sub: T.n + (e.o.rev ? '  ·  backwards' : '') + '  ·  ' + esc(COURSES[evCourse(e)].n), back: function () { expArea(e.a); }, redo: function () { expBrief(e); }, foot: false,
     html: '<div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px">' +
       (vs ? '<div style="display:flex;gap:12px;align-items:center">' + pic(vs, 64) + '<div><div style="font-family:var(--display);font-size:24px">' + esc(CH[vs].n) + '</div><div style="font-size:14px;color:#ffe36a">' + esc(e.t === 'face' ? a.q : (SAYS[vs] || [''])[0]) + '</div></div></div>' : '') +
       '<p style="margin:0;font-size:16px;line-height:1.45">' + esc(T.d) + (e.o.hitless ? ' Hitless: every hit you take costs a star.' : '') + (e.o.cat ? ' Watch out for Sir Johnathan.' : '') + '</p>' +
@@ -138,7 +148,8 @@ function evDefMod(e) { // how an event changes its course: backwards, extra boos
   var o = e.o, t = e.t;
   return function (def) {
     var d = {}; for (var k in def) d[k] = def[k];
-    if (o.rev) { d.pts = def.pts.slice().reverse(); d.boxes = (def.boxes || []).map(function (f) { return 1 - f; }); }
+    if (o.rev) { d.pts = def.pts.slice().reverse(); d.boxes = (def.boxes || []).map(function (f) { return 1 - f; });
+      if (def.zones) d.zones = def.zones.map(function (z, i) { var end = i + 1 < def.zones.length ? def.zones[i + 1][0] : 1; return [Math.max(0, 1 - end), z[1], z[2]]; }).sort(function (p, q) { return p[0] - q[0]; }); }
     if (t === 'boost') { d.boosts = []; for (var f = 0.04; f < 1; f += 0.07) d.boosts.push([f, ((f * 17) % 1.6) - 0.8]); d.boxes = []; }
     if (t === 'drops') { d.drops = []; for (var f2 = 0.02; f2 < 1; f2 += 0.06) d.drops.push([f2, ((f2 * 13) % 1.4) - 0.7, 4]); }
     if (t === 'pursuit') d.boxes = (def.boxes || []).concat([0.33, 0.66, 0.95]);
@@ -155,7 +166,7 @@ function expGo(e) {
   var defMod = evDefMod(e);
   EXPCUR = e; GP = null;
   var grid = t === 'nado' ? [1, 2, 0].concat(rivals.slice(2).map(function (r, i) { return i + 3; })) : null;
-  go({ grid: grid, course: a.c, cls: a.cls, player: me, rivals: rivals, mode: mode, laps: o.laps || (t === 'drift' || t === 'drops' || t === 'nado' || t === 'pursuit' ? 99 : 3), defMod: defMod, ev: e, noCuppa: true });
+  go({ grid: grid, course: evCourse(e), cls: a.cls, player: me, rivals: rivals, mode: mode, laps: o.laps || (t === 'drift' || t === 'drops' || t === 'nado' || t === 'pursuit' ? 99 : 3), defMod: defMod, ev: e, noCuppa: true });
 }
 function isHuman(R, k) { return (R.humans || [0]).indexOf(k.idx) >= 0; }
 function evHumans(R) { return R.karts.filter(function (k) { return isHuman(R, k); }); }
@@ -172,8 +183,8 @@ function evInit(R) {
   }
   if ((t === 'duel' || t === 'face') && R.foe) { var rv = R.foe; rv.skill = R.cls.ai * (t === 'face' ? (o.boss ? 1.07 : 1.04) : 1.0); rv.rival = true; if (o.boss) rv.top *= 1.04; }
   if (t === 'ghost' || t === 'boost') { var L = R.laps * par; R.evs.goal = [L * 1.1, L * 0.98, L * 0.9]; }
-  if (t === 'drift') { var s = (o.time || 60) / 60, two = evHumans(R).length > 1 ? 1.5 : 1; R.evs.goal = [1200 * s * two, 2600 * s * two, 4000 * s * two].map(function (v) { return Math.round(v / 50) * 50; }); }
-  if (t === 'drops') { var s2 = (o.time || 60) / 60, two2 = evHumans(R).length > 1 ? 1.4 : 1; R.evs.goal = [Math.round(28 * s2 * two2), Math.round(48 * s2 * two2), Math.round(66 * s2 * two2)]; }
+  if (t === 'drift') { var s = (o.time || 60) / 60, two = evHumans(R).length > 1 ? 1.5 : 1; R.evs.goal = [900 * s * two, 1900 * s * two, 3000 * s * two].map(function (v) { return Math.round(v / 50) * 50; }); }
+  if (t === 'drops') { var s2 = (o.time || 60) / 60, two2 = evHumans(R).length > 1 ? 1.4 : 1; R.evs.goal = [Math.round(22 * s2 * two2), Math.round(38 * s2 * two2), Math.round(54 * s2 * two2)]; }
 }
 function evFinish(R, ok) { // the event is over: let the karts roll on for a moment, then the results
   if (R.evs.over) return; R.evs.over = true; R.evs.ok = ok; R.phase = 'done'; R.doneT = 0; R.me.done = true; sfx.play(ok ? 'win' : 'lose'); music.play(ok ? 'ck_win' : 'ck_results');
@@ -235,7 +246,7 @@ function evResultFor(R, me) {
   if (t === 'race') { s = me.place <= 3 ? 4 - me.place : 0; line = who + ' came ' + ordinal(me.place); }
   else if (t === 'duel' || t === 'face') { var rv = R.foe, gap = rv ? rv.time - me.time : 0, hits = X.hits[me.idx] || 0; if (!rv || (me.done && gap > 0)) { s = e.o.hitless ? Math.max(1, 3 - hits) : gap >= 3 ? 3 : gap >= 1 ? 2 : 1; line = who + ' won by ' + gap.toFixed(2) + ' s' + (e.o.hitless ? '  ·  hits taken: ' + hits : ''); } else line = rv.c.n + ' won by ' + (-gap).toFixed(2) + ' s'; }
   else if (t === 'nado') { var rank = me.eatenRank || X.rank || 1; if (!me.eatenRank && X.rank && X.ok) rank = 1; s = rank === 1 ? 3 : rank === 2 ? 2 : rank === 3 ? 1 : 0; line = rank === 1 ? 'Last one standing!' : who + ' got eaten in ' + ordinal(rank) + ' place'; }
-  else if (t === 'pursuit') { if (X.ok) { s = X.left >= 40 ? 3 : X.left >= 20 ? 2 : 1; line = 'Caught with ' + X.left.toFixed(1) + ' s left'; } else line = 'They got away (' + X.hp + (X.hp === 1 ? ' hit' : ' hits') + ' short)'; }
+  else if (t === 'pursuit') { if (X.ok) { s = X.left >= 30 ? 3 : X.left >= 15 ? 2 : 1; line = 'Caught with ' + X.left.toFixed(1) + ' s left'; } else line = 'They got away (' + X.hp + (X.hp === 1 ? ' hit' : ' hits') + ' short)'; }
   else if (t === 'rings') { if (!X.over) { s = X.left >= 10 ? 3 : X.left >= 5 ? 2 : 1; line = X.score + ' gates  ·  ' + X.left.toFixed(1) + ' s left'; } else line = 'Out of time (' + X.score + ' gates)'; }
   else if (t === 'ghost' || t === 'boost') { var tm = me.done ? me.time : 1e9; s = tm <= X.goal[2] ? 3 : tm <= X.goal[1] ? 2 : tm <= X.goal[0] ? 1 : 0; line = me.done ? who + ': ' + fmtTime(tm) + '  ·  gold ' + fmtTime(X.goal[2]) : who + ' did not finish'; }
   else if (t === 'drift' || t === 'drops') { var sc = X.score; s = sc >= X.goal[2] ? 3 : sc >= X.goal[1] ? 2 : sc >= X.goal[0] ? 1 : 0; line = (t === 'drift' ? sc + ' drift points' : sc + ' drops') + '  ·  gold ' + X.goal[2]; }
@@ -268,7 +279,7 @@ function expEnding() {
       '<p style="margin:0">Blumhead skids off the edge of The Crimson Moon and drops the trophy on the way. You catch it one-handed.</p>' +
       '<div style="display:flex;gap:10px;align-items:center">' + pic('blum', 56) + '<p style="margin:0;color:#ffe36a">"THE LOAD AT THE END... next year."</p></div>' +
       '<p style="margin:0">Back on Clubhouse Row everyone you raced is waiting. TB says something unrepeatable. Greebo has made a pie.</p>' +
-      '<p style="margin:0;color:#a6968f">Stars so far: ' + totalStars() + ' / ' + EXP.length * 24 + '. Go back for the ones you missed.</p>' +
+      '<p style="margin:0;color:#a6968f">Stars so far: ' + totalStars() + ' / ' + EXP.length * 30 + '. Go back for the ones you missed.</p>' +
       '<div class="ckacts"><button type="button" class="ckbtn hot" data-act="ok" data-pad-default>BACK TO THE MAP</button></div></div>', acts: { ok: function () { RACE = null; expedition(null); } } });
 }
 

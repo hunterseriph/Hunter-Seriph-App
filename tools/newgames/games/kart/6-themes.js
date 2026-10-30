@@ -142,7 +142,7 @@ var THEMES = {
       A.add('planks', PAINT.planks(['#5a3a1e', '#4a3018', '#6a4424'], '#1a0a04')); A.add('beam', PAINT.planks(['#2a1a10', '#22140c'], '#0a0402')); A.add('gold', PAINT.solid('#c8903a'));
     },
     wallAt: function (i, band) { if (band === 1 && i % 14 === 0) return 'wallwin'; if (band === 0 && i % 14 === 7) return 'wallban'; return 'wall'; },
-    roadAt: function (f) { var r = COURSES.castle.ramps[0][0]; return f > r - 0.02 && f < r + 0.05 ? 'planks' : null; },
+    roadAt: function (f, def) { var rp = (def || COURSES.castle).ramps; if (!rp || !rp[0]) return null; var r = rp[0][0]; return f > r - 0.02 && f < r + 0.05 ? 'planks' : null; },
     scen: function (B) {
       var T = B.T; for (var i = 0; i < T.N; i += 9) B.beam(i, 8.4, 'beam', 1.2);
       for (var j = 4; j < T.N; j += 27) { var q = T.S[j]; B.light(q.x, q.y + 6, q.z, 18, [0.9, 0.6, 0.25], '#ffc060'); B.cyl(q.x, q.y + 6, q.z, 1.6, 0.4, 8, 'gold'); B.box(q.x, q.y + 6.4, q.z, 0.15, 0.15, 2, 0, 'black'); B.bill(q.x + 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8) % 2); } }); B.bill(q.x - 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8 + 1) % 2); } }); }

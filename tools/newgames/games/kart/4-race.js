@@ -15,9 +15,11 @@ function newKart(ch, slot, ai, cls) {
 function startRace(o) {
   // o: { course, cls, player: charId, rivals: [charIds], mode: 'gp' | 'race' | 'tt' }
   var def = COURSES[o.course]; if (o.defMod) def = o.defMod(def); var cls = CLASSES.filter(function (c) { return c.id === o.cls; })[0] || CLASSES[0];
-  var T = buildTrack(def), TH = THEMES[def.theme];
-  var A = Atlas(T.N * 7 + def.hw); THEME_TILES(A, TH, def); TH.tiles(A, def);
-  var m = buildWorld(T, TH, A), B = Builder(T, A, m); if (TH.scen) TH.scen(B, def);
+  var T = buildTrack(def), TH = THEMES[def.theme || (def.zones && def.zones[0][1])];
+  var A = Atlas(T.N * 7 + def.hw); THEME_TILES(A, TH, def);
+  if (def.zones) setupZones(T, def, A); else TH.tiles(A, def);
+  var m = buildWorld(T, TH, A), B;
+  if (def.zones) { B = zoneScenery(T, A, m); TH = zoneTheme(T); } else { B = Builder(T, A, m); if (TH.scen) TH.scen(B, def); }
   // item boxes, drops, boost pads and ramps
   var boxes = [], drops = [], pads = [], ramps = [];
   (def.boxes || []).forEach(function (f) { var q = T.at(f); [-0.6, -0.2, 0.2, 0.6].forEach(function (k) { var p = T.pos(q.i, k * def.hw); boxes.push({ x: p.x, z: p.z, y: q.y, t: 0, ph: Math.random() * 6 }); }); });
@@ -331,6 +333,7 @@ function stepRace(dt) {
   });
   if (!CL) stepProjectiles(dt);
   if (R.TH.step) R.TH.step(R, dt);
+  zoneTick(R);
   if (R.ev && !CL && typeof evStep === 'function') { evStep(R, dt); if (RACE !== R) return; }
   // places
   if (!CL) { var order = R.karts.slice().sort(function (p, q) { if (p.done && q.done) return p.time - q.time; if (p.done) return -1; if (q.done) return 1; return q.prog - p.prog; });

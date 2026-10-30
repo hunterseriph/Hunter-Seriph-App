@@ -27,7 +27,7 @@ function kartModel(m, A, k, dv) {
   var R = RACE, yaw = k.yaw + (k.drift ? k.drift * 0.38 : 0) + (k.spinA || 0), sq = k.squashT > 0 ? 0.45 : 1;
   var S = R.T.S, a = S[k.seg < 0 ? 0 : k.seg], b = S[(k.seg + 1) % R.T.N], pitch = k.air ? clamp(k.vy * 0.03, -0.35, 0.35) : Math.atan2(b.y - a.y, STEP);
   var hop = k.hopT > 0 ? Math.sin(k.hopT / 0.18 * Math.PI) * 0.35 : 0, bob = Math.sin(RACE.t * 30 + k.slot) * 0.02 * Math.min(1, Math.abs(k.spd) / 10);
-  var tiny = k.tinyT > 0 ? 0.62 : 1, fr = Frame(k.x, k.y + hop + bob + (k.floatY || 0), k.z, yaw, pitch, sq, R.def.light, tiny); k._tiny = tiny;
+  var tiny = k.tinyT > 0 ? 0.62 : 1, fr = Frame(k.x, k.y + hop + bob + (k.floatY || 0), k.z, yaw, pitch, sq, kartLight(R, k), tiny); k._tiny = tiny;
   kart3D(m, A, k, fr); k._drv = null;
   if (dv) { driver3D(dv, k, fr); return; }
   // no driver texture yet: the old sprite
@@ -216,6 +216,7 @@ function drawHud() {
   if (R.msg) { var w = Math.min(420, KIT.tw(R.msg.who + ': ' + R.msg.s, 6) + 20); KIT.panel(240 - w / 2, 222, w, 20, { edge: '#4a1a1c' }); text(R.msg.who.toUpperCase() + ': ' + R.msg.s, 240, 229, { size: 6, align: 'center', col: '#f1e7d0', max: w - 10 }); }
   if (R.gooScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.75, R.gooScreen / 2.6); for (var g = 0; g < 9; g++) { var gx = (g * 61 + 17) % 470, gy = (g * 37) % 180, gl = 30 + (g * 13) % 50 + (2.6 - R.gooScreen) * 30; ctx.fillStyle = g % 2 ? '#5a1a8a' : '#9a4aff'; ctx.fillRect(gx, 0, 10, gy + gl); ctx.beginPath(); ctx.arc(gx + 5, gy + gl, 7, 0, 6.3); ctx.fill(); } ctx.restore(); }
   if (R.ev && typeof evHud === 'function') evHud(R);
+  if (R.zoneBanner && R.zoneBanner.t > 0) { R.zoneBanner.t -= 1 / 60; var za = Math.min(1, R.zoneBanner.t * 2, (2.4 - R.zoneBanner.t) * 4); text(R.zoneBanner.n.toUpperCase(), 240, 66, { size: 16, align: 'center', col: '#ffe36a', font: 'title', outline: true, alpha: za }); }
   if (R.splatScreen > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.92, R.splatScreen / 1.6); for (var sb = 0; sb < 7; sb++) { var sx2 = (sb * 83 + 40) % 440 + 20, sy2 = (sb * 53 + 30) % 190 + 30, sr = 28 + (sb * 17) % 30; ctx.fillStyle = sb % 2 ? '#f1e7d0' : '#fffbe8'; ctx.beginPath(); ctx.arc(sx2, sy2, sr, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.arc(sx2 + sr * 0.6, sy2 + sr * 0.5, sr * 0.55, 0, 6.3); ctx.fill(); ctx.fillRect(sx2 - 4, sy2, 8, sr + 18 * (2.6 - R.splatScreen)); } ctx.restore(); }
   if (k.revT > 0 && Math.floor(R.t * 3) % 2) text('BACK TO FRONT!', 240, 140, { size: 12, align: 'center', col: '#ffe36a', outline: true });
   if (R.pillMsg) text({ rev: 'STEERING BACK TO FRONT!', tiny: 'SHRUNK!', hic: '*HIC*' }[R.pillMsg.e], 240, 118, { size: 16, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, R.pillMsg.t * 2) });

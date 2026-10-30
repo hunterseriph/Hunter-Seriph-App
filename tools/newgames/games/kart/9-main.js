@@ -20,6 +20,7 @@ function checkUnlocks() {
   function give(k, what) { if (!U[k]) { U[k] = 1; got.push(what); } }
   function anyCls(cup, best) { return CLASSES.some(function (c) { var p = cupPlace(cup, c.id); return p && p <= best; }); }
   if (anyCls('cream', 3)) give('cup_blood', 'The Blood Cup');
+  if (anyCls('cream', 3)) give('cup_ctour', 'The Cream Tour'); if (anyCls('blood', 3)) give('cup_btour', 'The Blood Tour'); if (anyCls('moon', 3)) give('cup_mtour', 'The Moon Tour');
   if (anyCls('blood', 3)) give('cup_moon', 'The Moon Cup');
   if (CUPS.some(function (c) { return won(c.id, 'hot') || won(c.id, 'dyn'); })) give('cls_dyn', 'Dynamite class');
   if (anyCls('cream', 1)) give('kaya', 'Kaya'); if (anyCls('blood', 1)) give('beebs', 'Uncle Beeb'); if (anyCls('moon', 1)) give('ali', 'Ali');

@@ -54,16 +54,16 @@ function bakeLights(m, lights) {
 }
 function lightK(nx, nz, base) { var d = nx * 0.55 + nz * 0.83; return base * (0.78 + 0.22 * d); } // walls facing the light are a touch brighter
 function mulc(c, k) { return [c[0] * k, c[1] * k, c[2] * k]; }
-function buildWorld(T, TH, A) {
-  var def = T.def, S = T.S, N = T.N, m = new R3.Mesh(), L = def.light, hw = def.hw, off = def.off, e1 = hw + KERB, e2 = e1 + off, wallH = def.wallH;
+function buildWorld(T, TH0, A0) {
+  var def = T.def, S = T.S, N = T.N, m = new R3.Mesh(), hw = def.hw, off = def.off, e1 = hw + KERB, e2 = e1 + off;
   var groundY = def.floating ? null : T.minY - 0.4;
-  function road(i) { var rt = TH.roadAt ? TH.roadAt(i / N) : null; return A.tile(rt || 'road'); }
   for (var i = 0; i < N; i++) {
+    // a course can run through several zones (the full courses): each brings its own tiles, walls and light
+    var Z = T.zoneAt ? T.zoneAt(i) : null, TH = Z ? Z.TH : TH0, A = Z ? Z.A : A0, L = Z ? Z.def.light : def.light, wallH = Z ? Z.def.wallH : def.wallH, flo = Z ? !!Z.def.floating : groundY === null;
     var a = S[i], b = S[(i + 1) % N], v0 = a.d / 4, v1 = (i + 1 === N ? T.len : b.d) / 4;
     function P(q, lat, dy) { return [q.x + q.nx * lat, q.y + (dy || 0), q.z + q.nz * lat]; }
-    var shadeA = mulc(L, 1), shadeB = mulc(L, 1);
     // road
-    var ce = mulc(L, 1.06), ed = mulc(L, 0.8), rs = TH.roadScroll ? TH.roadScroll(i / N) : 0, rt = road(i); // lighter down the middle, darker at the edges (Gouraud)
+    var ce = mulc(L, 1.06), ed = mulc(L, 0.8), rs = TH.roadScroll ? TH.roadScroll(i / N) : 0, rt = A.tile((TH.roadAt && TH.roadAt(i / N, Z ? Z.def : def)) || 'road'); // lighter down the middle, darker at the edges (Gouraud)
     m.quad(P(a, hw), P(b, hw), P(b, 0), P(a, 0), [0, v0, 0, v1, hw / 4, v1, hw / 4, v0], rt, [ed, ed, ce, ce], rs);
     m.quad(P(a, 0), P(b, 0), P(b, -hw), P(a, -hw), [hw / 4, v0, hw / 4, v1, hw * 2 / 4, v1, hw * 2 / 4, v0], rt, [ce, ce, ed, ed], rs);
     // kerbs: striped where the road bends, plain verge colour on straights
@@ -71,12 +71,12 @@ function buildWorld(T, TH, A) {
     m.quad(P(a, e1, 0.02), P(b, e1, 0.02), P(b, hw, 0.02), P(a, hw, 0.02), [0, v0 * 2, 0, v1 * 2, 1, v1 * 2, 1, v0 * 2], kt, mulc(L, 0.95));
     m.quad(P(a, -hw, 0.02), P(b, -hw, 0.02), P(b, -e1, 0.02), P(a, -e1, 0.02), [0, v0 * 2, 0, v1 * 2, 1, v1 * 2, 1, v0 * 2], kt, mulc(L, 0.95));
     // verges (the slow stuff either side)
-    var ot = A.tile('off'), os = def.creamOff ? 0.25 : 0;
+    var ot = A.tile('off'), os = (Z ? Z.def.creamOff : def.creamOff) ? 0.25 : 0;
     m.quad(P(a, e2, -0.02), P(b, e2, -0.02), P(b, e1, -0.02), P(a, e1, -0.02), [0, v0, 0, v1, off / 4, v1, off / 4, v0], ot, mulc(L, 0.9), os);
     m.quad(P(a, -e1, -0.02), P(b, -e1, -0.02), P(b, -e2, -0.02), P(a, -e2, -0.02), [0, v0, 0, v1, off / 4, v1, off / 4, v0], ot, mulc(L, 0.9), os);
     // walls in bands of 4 (so a band can be a window or a banner), and a skirt down to the ground under raised road
     [1, -1].forEach(function (sd) {
-      var top = wallH, botA = groundY === null ? -6 : Math.min(0, groundY - a.y), botB = groundY === null ? -6 : Math.min(0, groundY - b.y), k = lightK(-a.nx * sd, -a.nz * sd, 1);
+      var top = wallH, botA = flo ? -6 : Math.min(0, groundY - a.y), botB = flo ? -6 : Math.min(0, groundY - b.y), k = lightK(-a.nx * sd, -a.nz * sd, 1);
       function W(lat, y0a, y0b, y1, tile, kk) { m.quad(P(a, lat, y0a), P(b, lat, y0b), P(b, lat, y1), P(a, lat, y1), [v0, (y1 - y0a) / 4, v1, (y1 - y0b) / 4, v1, 0, v0, 0], A.tile(tile), [mulc(L, kk * 0.75), mulc(L, kk * 0.75), mulc(L, kk), mulc(L, kk)]); }
       if (botA < -0.05 || botB < -0.05) W(sd * e2, botA, botB, 0, top > 0 ? 'wall' : 'skirt', 0.55 * k);
       for (var y0 = 0; y0 < top - 0.01; y0 += 4) { var y1 = Math.min(top, y0 + 4), tl = TH.wallAt ? TH.wallAt(i, y0 / 4, sd) : 'wall'; W(sd * e2, y0, y0, y1, tl, k * (0.7 + 0.3 * y1 / Math.max(top, 1))); }
@@ -85,25 +85,30 @@ function buildWorld(T, TH, A) {
         m.quad(wa1, wb1, c1, c0, [v0, 0, v1, 0, v1, 0.25, v0, 0.25], A.tile('trim'), mulc(L, 1.05));
         W(sd * (e2 + 0.7), botA, botB, top, 'wall', 0.5 * k);
       }
-      if (groundY === null) m.quad(P(a, sd * e2, -0.6), P(b, sd * e2, -0.6), P(b, 0, -0.6), P(a, 0, -0.6), [0, v0, 0, v1, e2 / 4, v1, e2 / 4, v0], A.tile('skirt'), mulc(L, 0.5)); // floating road: its underside
+      if (flo) m.quad(P(a, sd * e2, -0.6), P(b, sd * e2, -0.6), P(b, 0, -0.6), P(a, 0, -0.6), [0, v0, 0, v1, e2 / 4, v1, e2 / 4, v0], A.tile('skirt'), mulc(L, 0.5)); // floating road: its underside
     });
   }
   // the start line and its gantry
-  var s0 = S[0]; function P0(lat, dy, fwd) { return [s0.x + s0.nx * lat + s0.tx * (fwd || 0), s0.y + (dy || 0), s0.z + s0.nz * lat + s0.tz * (fwd || 0)]; }
-  m.quad(P0(hw, 0.03, -1.2), P0(hw, 0.03, 1.2), P0(-hw, 0.03, 1.2), P0(-hw, 0.03, -1.2), [0, 0, 0, 0.6, hw * 2 / 2.4, 0.6, hw * 2 / 2.4, 0], A.tile('check'), mulc(L, 1));
-  // ground
+  var s0 = S[0], A1 = T.zoneAt ? T.zoneAt(0).A : A0, L1 = T.zoneAt ? T.zoneAt(0).def.light : def.light; function P0(lat, dy, fwd) { return [s0.x + s0.nx * lat + s0.tx * (fwd || 0), s0.y + (dy || 0), s0.z + s0.nz * lat + s0.tz * (fwd || 0)]; }
+  m.quad(P0(hw, 0.03, -1.2), P0(hw, 0.03, 1.2), P0(-hw, 0.03, 1.2), P0(-hw, 0.03, -1.2), [0, 0, 0, 0.6, hw * 2 / 2.4, 0.6, hw * 2 / 2.4, 0], A1.tile('check'), mulc(L1, 1));
+  // ground (each patch takes the tiles of the zone it is nearest)
   if (groundY !== null) {
-    var g = 24, gx0 = Math.floor((T.box[0] - 220) / g) * g, gz0 = Math.floor((T.box[1] - 220) / g) * g, gx1 = T.box[2] + 220, gz1 = T.box[3] + 220, gt = A.tile('ground');
-    for (var gx = gx0; gx < gx1; gx += g) for (var gz = gz0; gz < gz1; gz += g) m.quad([gx, groundY, gz], [gx + g, groundY, gz], [gx + g, groundY, gz + g], [gx, groundY, gz + g], [0, 0, g / 6, 0, g / 6, g / 6, 0, g / 6], gt, mulc(L, 0.8), TH.groundScroll || 0);
+    var g = 24, gx0 = Math.floor((T.box[0] - 220) / g) * g, gz0 = Math.floor((T.box[1] - 220) / g) * g, gx1 = T.box[2] + 220, gz1 = T.box[3] + 220;
+    for (var gx = gx0; gx < gx1; gx += g) for (var gz = gz0; gz < gz1; gz += g) {
+      var Zg = T.zoneAt ? T.zoneAt(T.locate(gx + g / 2, gz + g / 2, -1).i) : null; if (Zg && Zg.def.floating) continue;
+      var Ag = Zg ? Zg.A : A0, Lg = Zg ? Zg.def.light : def.light, THg = Zg ? Zg.TH : TH0;
+      m.quad([gx, groundY, gz], [gx + g, groundY, gz], [gx + g, groundY, gz + g], [gx, groundY, gz + g], [0, 0, g / 6, 0, g / 6, g / 6, 0, g / 6], Ag.tile('ground'), mulc(Lg, 0.8), THg.groundScroll || 0);
+    }
   }
   return m;
 }
 
 /* ---------- a scenery builder handed to each theme ---------- */
-function Builder(T, A, m) {
+function Builder(T, A, m, Z) {
   var S = T.S, N = T.N, L = T.def.light, bills = [], anims = [];
+  if (Z) { T = zoneView(T, Z); S = T.S; N = T.N; L = Z.def.light; } // a zone's scenery sees only its own stretch of road, counted from its start
   var B = {
-    T: T, A: A, m: m, bills: bills, anims: anims, rnd: srand(T.N * 13 + T.def.hw),
+    T: T, A: A, m: m, bills: bills, anims: anims, rnd: srand(T.N * 13 + T.def.hw + (Z ? Z.s * 7 : 0)),
     /* is a spot clear of the road (and its verges) by r */
     clear: function (x, z, r) { var q = T.locate(x, z, -1); return Math.abs(q.lat) > T.edge + 1 + (r || 0); },
     /* a billboard sprite standing at x,z (its feet on y) */
