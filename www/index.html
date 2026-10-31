@@ -32,6 +32,12 @@ a{text-decoration:none;color:inherit}
 #gameTitle{font:20px 'Pirata One',serif;letter-spacing:.02em;color:#f1e7d0}
 #gameFrame{flex:1;min-height:0;width:100%;border:0;background:#000}
 @media (orientation:landscape) and (max-height:520px){#gameBar{height:32px;padding-top:0}#gameBack{height:32px}}
+/* games list: logo and a play tag only, no blurb; two columns when the phone is sideways or on PC */
+.games-list>a>div:last-child>div[style*="font-weight: 500"]{display:none}
+.games-list>a{height:116px!important}
+@media (orientation:landscape){.games-list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));align-content:start}}
+/* phone held sideways: the tabs become a slim rail down the left instead of a bar eating a fifth of the height */
+@media (orientation:landscape) and (max-height:520px){html:not(.pc) #nav,html:not(.pc) #nav[hidden]{top:0;bottom:0;right:auto;width:76px;height:auto;padding:0;display:flex;flex-direction:column;justify-content:space-evenly;border-top:0;border-right:1px solid #2c1012}html:not(.pc) #nav[hidden]{display:none}html:not(.pc) .tab{flex:1;gap:3px;font-size:9px;letter-spacing:.1em}html:not(.pc) .tab svg{width:20px;height:20px}html:not(.pc) .tab.active::before{left:0;right:auto;top:20%;bottom:20%;width:2px;height:auto}html:not(.pc) .screen{left:76px;bottom:0}html:not(.pc) .screen.full{left:0}}
 
 #vidWrap{position:absolute;inset:0;z-index:20;background:#070405;display:flex;flex-direction:column}
 #vidWrap[hidden]{display:none}

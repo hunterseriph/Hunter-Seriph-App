@@ -59,8 +59,17 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 .mbtn.hot{background:#c4121c;box-shadow:inset 0 0 0 2px #ff2630}.mbtn.hot small{color:#f1e7d0}
 .mbtn.gold{box-shadow:inset 0 0 0 1px #ffe36a}.mbtn.gold span{color:var(--gold)}
 .mbtn.done span::after{content:'  \2713';color:var(--gold)}
+/* title screens (a menu with a logo): no box and no descriptions, just the logo and big buttons; sideways on a phone the logo sits left and the buttons right */
+.mbox.title{width:min(820px,100%);background:none;box-shadow:none;clip-path:none;padding:8px 6px}
+.mbox.title .msub,.mbox.title .mbtn small{display:none}
+.mbox.title .mbtn{font-family:var(--display);font-size:22px;letter-spacing:0.01em;line-height:1;padding:12px 18px;min-height:48px;justify-content:center}
+.mbox.title .mbtn.hot span{color:#ffe36a}
+.mbox.title .mlist{max-width:420px;width:100%;margin:0 auto}
+@media (orientation:landscape) and (max-height:520px){.mbox.title{display:grid;grid-template-columns:minmax(0,44%) minmax(0,1fr);grid-auto-rows:min-content;align-items:center;align-content:center;column-gap:18px;row-gap:8px;min-height:100%}.mbox.title .mlogo{grid-row:1 / span 3;max-height:min(70vh,260px);max-width:100%;margin:0}.mbox.title .mlist,.mbox.title .mnote,.mbox.title .mhtml{grid-column:2;margin:0}.mbox.title .mbtn{min-height:40px;padding:8px 16px;font-size:20px}.mbox.title .mnote{text-align:left}}
+.hs-menu #pad{visibility:hidden}
+#amb{position:absolute;inset:-4%;width:108%;height:108%;object-fit:cover;filter:blur(16px) brightness(0.5) saturate(1.2);pointer-events:none}
 </style></head><body>
-<div id="app"><div id="view"><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
+<div id="app"><div id="view"><canvas id="amb" width="64" height="36" aria-hidden="true"></canvas><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
 <div id="top"><button id="mute" type="button" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#f1e7d0"/><path class="wv" d="M16 8.5c1.5 1.8 1.5 5.2 0 7M18.5 6c3 3.2 3 8.8 0 12" fill="none" stroke-width="2"/><path class="xx" d="M16 9l5 6M21 9l-5 6" fill="none" stroke-width="2.2"/></svg></button><button id="pauseBtn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#f1e7d0"/><rect x="14" y="5" width="4" height="14" fill="#f1e7d0"/></svg></button></div>
 <div id="menu" hidden></div></div><div id="pad"></div></div>
 <script src="padkit.js"></script>
@@ -80,11 +89,20 @@ var KIT = (function () {
   ctx.imageSmoothingEnabled = false;
   /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
   function fit() {
-    var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, k = Math.min(r.width / W, r.height / H) * dpr;
+    var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (cfg.wide && r.width > 0 && r.height > 0) { var nw = Math.max(cfg.w || 480, Math.min(cfg.wide, Math.round(H * r.width / r.height))); if (nw !== W) { W = nw; S = 0; } } // o.wide: the picture widens to fill wide screens (up to that many pixels) instead of leaving black bars
+    var k = Math.min(r.width / W, r.height / H) * dpr;
     var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
     if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
   }
   window.addEventListener('resize', function () { setTimeout(fit, 50); });
+  /* the bars either side of the picture (on screens of a different shape) show a dark, blurred copy of it instead of plain black */
+  var amb = document.getElementById('amb'), ambC = amb && amb.getContext('2d');
+  function ambient() {
+    if (!ambC) return; var r = cv.getBoundingClientRect(), bars = Math.abs(r.width / r.height - W / H) > 0.05 && !cfg.wide;
+    amb.style.display = bars ? '' : 'none'; if (!bars) return;
+    try { ambC.drawImage(cv, 0, 0, amb.width, amb.height); } catch (e) {}
+  }
   /* cached layers: draw static things (floors, walls, backdrops) once into a canvas, then blit them each frame */
   var layers = {};
   function layer(key, w, h, fn) {
@@ -284,7 +302,7 @@ var KIT = (function () {
   /* menu({title, sub, note, items: [{label, sub, fn, back, dis, cls}], art, wide}) */
   function menu(o) {
     menuEl.innerHTML = ''; menuEl.hidden = false; menuEl.className = o.cls || '';
-    var box = document.createElement('div'); box.className = 'mbox' + (o.wide ? ' wide' : ''); menuEl.appendChild(box);
+    var box = document.createElement('div'); box.className = 'mbox' + (o.wide ? ' wide' : '') + (o.logo && !o.boxed ? ' title' : ''); menuEl.appendChild(box); document.documentElement.classList.add('hs-menu');
     if (o.art) { var a = document.createElement('div'); a.className = 'mart'; a.innerHTML = o.art; box.appendChild(a); }
     var bk = (o.items || []).filter(function (it) { return it && it.back; })[0];
     if (bk) { var x = document.createElement('button'); x.type = 'button'; x.className = 'mclose'; x.setAttribute('aria-label', 'Close'); x.setAttribute('data-pad-skip', ''); x.textContent = '\u2715'; x.addEventListener('click', function () { audioInit(); sfx.play('back'); if (bk.fn) bk.fn(); }); box.appendChild(x); }
@@ -301,7 +319,7 @@ var KIT = (function () {
     if (o.note) { var n = document.createElement('p'); n.className = 'mnote'; n.textContent = o.note; box.appendChild(n); }
     down = {}; touchDown = {};
   }
-  function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; }
+  function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
   function frame(t) {
@@ -314,6 +332,7 @@ var KIT = (function () {
       if (shake > 0) shake = Math.max(0, shake - 1 / 60 * 30); if (flash > 0) flash -= 1 / 60;
     }
     if ((frameN++ & 31) === 0) fit();
+    if ((frameN & 7) === 0) ambient();
     ctx = main; ctx.setTransform(S, 0, 0, S, 0, 0); ctx.globalAlpha = 1;
     if (shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
     if (cfg.draw) cfg.draw();

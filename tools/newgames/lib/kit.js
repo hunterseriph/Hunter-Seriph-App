@@ -19,6 +19,13 @@ var KIT = (function () {
     if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
   }
   window.addEventListener('resize', function () { setTimeout(fit, 50); });
+  /* the bars either side of the picture (on screens of a different shape) show a dark, blurred copy of it instead of plain black */
+  var amb = document.getElementById('amb'), ambC = amb && amb.getContext('2d');
+  function ambient() {
+    if (!ambC) return; var r = cv.getBoundingClientRect(), bars = Math.abs(r.width / r.height - W / H) > 0.05 && !cfg.wide;
+    amb.style.display = bars ? '' : 'none'; if (!bars) return;
+    try { ambC.drawImage(cv, 0, 0, amb.width, amb.height); } catch (e) {}
+  }
   /* cached layers: draw static things (floors, walls, backdrops) once into a canvas, then blit them each frame */
   var layers = {};
   function layer(key, w, h, fn) {
@@ -218,7 +225,7 @@ var KIT = (function () {
   /* menu({title, sub, note, items: [{label, sub, fn, back, dis, cls}], art, wide}) */
   function menu(o) {
     menuEl.innerHTML = ''; menuEl.hidden = false; menuEl.className = o.cls || '';
-    var box = document.createElement('div'); box.className = 'mbox' + (o.wide ? ' wide' : ''); menuEl.appendChild(box);
+    var box = document.createElement('div'); box.className = 'mbox' + (o.wide ? ' wide' : '') + (o.logo && !o.boxed ? ' title' : ''); menuEl.appendChild(box); document.documentElement.classList.add('hs-menu');
     if (o.art) { var a = document.createElement('div'); a.className = 'mart'; a.innerHTML = o.art; box.appendChild(a); }
     var bk = (o.items || []).filter(function (it) { return it && it.back; })[0];
     if (bk) { var x = document.createElement('button'); x.type = 'button'; x.className = 'mclose'; x.setAttribute('aria-label', 'Close'); x.setAttribute('data-pad-skip', ''); x.textContent = '\u2715'; x.addEventListener('click', function () { audioInit(); sfx.play('back'); if (bk.fn) bk.fn(); }); box.appendChild(x); }
@@ -235,7 +242,7 @@ var KIT = (function () {
     if (o.note) { var n = document.createElement('p'); n.className = 'mnote'; n.textContent = o.note; box.appendChild(n); }
     down = {}; touchDown = {};
   }
-  function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; }
+  function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
   function frame(t) {
@@ -248,6 +255,7 @@ var KIT = (function () {
       if (shake > 0) shake = Math.max(0, shake - 1 / 60 * 30); if (flash > 0) flash -= 1 / 60;
     }
     if ((frameN++ & 31) === 0) fit();
+    if ((frameN & 7) === 0) ambient();
     ctx = main; ctx.setTransform(S, 0, 0, S, 0, 0); ctx.globalAlpha = 1;
     if (shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
     if (cfg.draw) cfg.draw();

@@ -59,8 +59,17 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 .mbtn.hot{background:#c4121c;box-shadow:inset 0 0 0 2px #ff2630}.mbtn.hot small{color:#f1e7d0}
 .mbtn.gold{box-shadow:inset 0 0 0 1px #ffe36a}.mbtn.gold span{color:var(--gold)}
 .mbtn.done span::after{content:'  \2713';color:var(--gold)}
+/* title screens (a menu with a logo): no box and no descriptions, just the logo and big buttons; sideways on a phone the logo sits left and the buttons right */
+.mbox.title{width:min(820px,100%);background:none;box-shadow:none;clip-path:none;padding:8px 6px}
+.mbox.title .msub,.mbox.title .mbtn small{display:none}
+.mbox.title .mbtn{font-family:var(--display);font-size:22px;letter-spacing:0.01em;line-height:1;padding:12px 18px;min-height:48px;justify-content:center}
+.mbox.title .mbtn.hot span{color:#ffe36a}
+.mbox.title .mlist{max-width:420px;width:100%;margin:0 auto}
+@media (orientation:landscape) and (max-height:520px){.mbox.title{display:grid;grid-template-columns:minmax(0,44%) minmax(0,1fr);grid-auto-rows:min-content;align-items:center;align-content:center;column-gap:18px;row-gap:8px;min-height:100%}.mbox.title .mlogo{grid-row:1 / span 3;max-height:min(70vh,260px);max-width:100%;margin:0}.mbox.title .mlist,.mbox.title .mnote,.mbox.title .mhtml{grid-column:2;margin:0}.mbox.title .mbtn{min-height:40px;padding:8px 16px;font-size:20px}.mbox.title .mnote{text-align:left}}
+.hs-menu #pad{visibility:hidden}
+#amb{position:absolute;inset:-4%;width:108%;height:108%;object-fit:cover;filter:blur(16px) brightness(0.5) saturate(1.2);pointer-events:none}
 </style></head><body>
-<div id="app"><div id="view"><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
+<div id="app"><div id="view"><canvas id="amb" width="64" height="36" aria-hidden="true"></canvas><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
 <div id="top"><button id="mute" type="button" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#f1e7d0"/><path class="wv" d="M16 8.5c1.5 1.8 1.5 5.2 0 7M18.5 6c3 3.2 3 8.8 0 12" fill="none" stroke-width="2"/><path class="xx" d="M16 9l5 6M21 9l-5 6" fill="none" stroke-width="2.2"/></svg></button><button id="pauseBtn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#f1e7d0"/><rect x="14" y="5" width="4" height="14" fill="#f1e7d0"/></svg></button></div>
 <div id="menu" hidden></div></div><div id="pad"></div></div>
 <script src="padkit.js"></script>

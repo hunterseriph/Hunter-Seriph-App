@@ -350,6 +350,7 @@ function stepRain(dt) {
   rain = rain.filter(function (q) { return q.t < 1.6 && q.x > G.cam - 60; });
 }
 function update(dt) {
+  W = KIT.W; // the street widens to fill wide phone screens
   G.t += dt; G.flashT -= dt; if (G.flashT <= 0) { G.flash = 0.16; G.flashT = 4 + Math.random() * 5; } if (G.flash > 0) G.flash -= dt;
   if (G.shake > 0) G.shake -= dt * 20; if (G.banner > 0) G.banner -= dt;
   if (G.mode === 'title' || G.mode === 'over') { G.cam += 46 * dt; P.x = G.cam + PXS; P.anim += dt * 6; P.onGround = true; P.y = GY; P.state = 'normal'; G.gap = 150; rumble(0); return; }
@@ -469,6 +470,7 @@ function drawFoe(o) {
 }
 var SHOTSPR = { pie: 'mn_pie', wave: 'mn_wave', acid: 'mn_acid', balloon: 'mn_bshot', bone: 'mn_bone' };
 function draw() {
+  W = KIT.W;
   var c = KIT.ctx; R('#070405', 0, 0, W, H);
   c.save(); if (G.shake > 0) c.translate(Math.round((Math.random() - 0.5) * G.shake), Math.round((Math.random() - 0.5) * G.shake));
   drawBack(); drawGround(); ledges.forEach(function (l) { brickRect(l[0], l[1], l[2], 10, true); });
@@ -578,7 +580,7 @@ music.songs.mntitle = { bpm: 108, beats: 4, vol: 0.85, wet: 0.4, lead: 'fm', fmb
   chords: 'Em Em C B Em Em Am B',
   mel: 'e5 - - - g5 - f#5 e5 | b4 - - - - - . . | c5 - e5 - g5 - c6 - | b5 - - - d#5 - - - | e5 - g5 - b5 - e6 - | d6 - b5 - g5 - e5 - | a5 - c6 - e6 - a5 - | b5 - - - d#6 - - -' };
 
-KIT.start({ w: W, h: H, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over') update(dt); },
+KIT.start({ w: W, h: H, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over') update(dt); },
   pad: { dpad: false, btns: [{ k: 'a', label: 'A', sub: 'JUMP', cls: 'big' }, { k: 'b', label: 'B', sub: 'FIRE' }] } });
 titleMenu();
 window.__mn = { G: G, get P() { return P; }, SV: SV, CHARS: CHARS, UPS: UPS, startRun: startRun, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, get obs() { return obs; }, get pups() { return pups; }, spawnPup: spawnPup, takePup: takePup, foe: foe, endRun: endRun };
