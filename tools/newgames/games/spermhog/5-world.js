@@ -25,7 +25,7 @@ function liquidAt(px, py) { var ch = T(Math.floor(px / TS), Math.floor(py / TS))
 /* ---------- loading an act ---------- */
 function loadAct(ai) {
   LV = buildAct(ACTS[ai]); LV.ai = ai; ENTS = []; PLATS = []; SHOTS = []; FX = []; SCAT = []; TRAPOPEN = {};
-  TILESET = buildTileset(LV.zone); KIT.dropLayer();
+  TILESET = buildTileset(LV.zone); FACADE = LV.zone.id === 'city' ? buildFacade(LV.zone) : null; KIT.dropLayer();
   LV.ents.forEach(function (e) {
     var o = { k: e.k, x: e.x, y: e.y, x0: e.x, y0: e.y, t: 0, alive: true, ph: e.ph || 0 };
     for (var q in e) if (!(q in o)) o[q] = e[q];
@@ -33,8 +33,11 @@ function loadAct(ai) {
     if (e.k === 'foe') { var key = LV.zone.foes[e.f] || e.f, F = FOES[key]; o.F = F; o.key = key; o.hp = F.hp; o.dir = -1; o.cd = 1.5 + Math.random() * 2; o.y0 = e.y; if (F.beh === 'fly' || F.beh === 'dive' || F.beh === 'float') { o.y -= 40; o.y0 = o.y; } }
     if (e.k === 'movh' || e.k === 'movv' || e.k === 'crumble' || e.k === 'circle') { var p = { x: e.x - TS / 2, y: e.y, w: (e.w || 3) * TS, x0: e.x - TS / 2, y0: e.y, k: e.k, range: (e.range || 3) * TS, log: e.log, ph: Math.random() * 6, t: 0, dx: 0, dy: 0 }; PLATS.push(p); o.plat = p; o.alive = false; }
     if (e.k === 'arena') LV.arena = o;
+    if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
+      var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
     ENTS.push(o);
   });
+  LV.street = LV.sy; LV.props = LV.zone.id === 'city' ? cityProps() : [];
   LV.ents = null; G.check = null; G.boss = null; G.lock = null;
 }
 
@@ -83,7 +86,8 @@ function stepFoe(e, dt) {
   var near = p && Math.abs(p.x - e.x) < 220 && Math.abs(p.y - e.y) < 140;
   if (F.beh === 'walk') {
     var v = F.v * (F.charge && near && Math.sign(p.x - e.x) === e.dir ? 3 : 1), nx = e.x + e.dir * v * dt, f = floorAt(nx + e.dir * 8, e.y - 10, e.y + 18, true);
-    if (f === null || wallAt(nx + e.dir * 10, e.y - 8)) e.dir = -e.dir; else { e.x = nx; e.y = f; }
+    if (floorAt(e.x, e.y - 6, e.y + 3, true) === null) { e.vy = (e.vy || 0) + 900 * dt; var fy = floorAt(e.x, e.y - 2, e.y + e.vy * dt + 2, true); if (fy !== null) { e.y = fy; e.vy = 0; } else e.y += e.vy * dt; if (e.y > LV.h * TS + 40) e.alive = false; } // nothing underfoot (its floor crumbled or moved): it falls
+    else if (f === null || wallAt(nx + e.dir * 10, e.y - 8)) e.dir = -e.dir; else { e.x = nx; e.y = f; }
     if (F.trail && Math.random() < dt * 1.2) FX.push({ k: 'fire', x: e.x, y: e.y, t: 2.2, hurt: 1 });
   } else if (F.beh === 'hop') {
     e.vy = (e.vy || 0) + 900 * dt; var ny = e.y + e.vy * dt, nx2 = e.x + e.dir * F.v * dt * (e.air ? 1 : 0), f2 = floorAt(nx2, e.y - 4, ny + 1, true);
@@ -149,3 +153,18 @@ function openBox(e) {
 }
 function gotDrop(quiet) { G.drops++; if (!quiet) sfx.play('drop'); if (G.drops >= G.nextLife) { G.nextLife += 100; G.lives++; sfx.play('life'); FX.push({ k: 'item', x: PL.x, y: PL.y - 50, t: 1.4, s: 'EXTRA LIFE', vx: 0, vy: -20, g: 0 }); } }
 function poof(x, y, n, cols) { for (var i = 0; i < n; i++) { var a = Math.random() * 6.283, s = 40 + Math.random() * 100; FX.push({ k: 'bit', x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0.4 + Math.random() * 0.3, c: cols[i % cols.length] }); } }
+
+/* Night City street furniture: lamps every so often along the pavement, and bins, hydrants, benches, cones and
+   bus stops between them, only on flat ground with nothing else standing there */
+function cityProps() {
+  var out = [], last = -99, lastLamp = -99, busy = {};
+  ENTS.forEach(function (e) { if (e.k !== 'drop') busy[Math.floor(e.x / TS)] = 1; });
+  function topAt(c) { for (var r = 1; r < LV.h; r++) { var ch = T(c, r); if (ch === '.') continue; if (ch === '#' || ch === '_' || ch === '-') return T(c, r - 1) === '.' ? r : null; return null; } return null; }
+  for (var c = 6; c < LV.w - 6; c++) {
+    var r = topAt(c); if (r === null || topAt(c - 1) !== r || topAt(c + 1) !== r || topAt(c + 2) !== r || busy[c] || busy[c + 1] || busy[c - 1]) continue;
+    var h = hash2(c, r, 41), y = r * TS;
+    if (c - lastLamp >= 14) { out.push({ k: 'hog_lamp', x: c * TS + 8, y: y, lamp: 1 }); lastLamp = last = c; continue; }
+    if (c - last >= 5 && h < 0.3) { out.push({ k: ['hog_bin', 'hog_hydrant', 'hog_bench', 'hog_bus', 'hog_cone', 'hog_bin', 'hog_hydrant'][Math.floor(hash2(c, 3, 9) * 7)], x: c * TS + 8, y: y, flip: hash2(c, 5, 2) < 0.5 }); last = c; }
+  }
+  return out;
+}

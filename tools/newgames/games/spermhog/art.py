@@ -25,4 +25,31 @@ def istar():
     g = Grid(15, 15); g.poly([(7.5, 0), (9.5, 5.5), (15, 5.5), (10.5, 9), (12.5, 15), (7.5, 11.5), (2.5, 15), (4.5, 9), (0, 5.5), (5.5, 5.5)], 's')
     return g, {'s': GOLD}
 
-ART = {'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}
+IRON = ('#4a3a40', '#2a1e24', '#140c10'); LAMPC = ('#fff6c0', '#ffd860', '#c08a20'); REDP = ('#ff3a44', '#c4121c', '#6a0a10')
+
+def lamp():  # a gothic street lamp, 70 tall
+    g = Grid(18, 72); g.rect(7, 14, 4, 54, 'i'); g.rect(5, 66, 8, 6, 'i'); g.rect(4, 70, 10, 2, 'i'); g.rect(6, 40, 6, 3, 'i')
+    g.poly([(3, 6), (15, 6), (13, 14), (5, 14)], 'glass'); g.rect(2, 4, 14, 2, 'i'); g.poly([(5, 4), (9, 0), (13, 4)], 'i'); g.rect(4, 14, 10, 2, 'i'); g.line(9, 6, 9, 13, 'i')
+    return g, {'i': IRON, 'glass': LAMPC}
+
+def hydrant():
+    g = Grid(12, 16); g.rect(3, 4, 6, 10, 'r'); g.ellipse(6, 4, 3.5, 3, 'r'); g.rect(1, 7, 10, 3, 'r'); g.rect(2, 14, 8, 2, 'r'); g.rect(5, 0, 2, 2, 'r'); g.put(4, 5, 'hi')
+    return g, {'r': REDP, 'hi': '#ffd0d0'}
+
+def binb():  # a dented wheelie bin, a bit of rubbish poking out
+    g = Grid(16, 20); g.poly([(1, 5), (15, 5), (14, 18), (2, 18)], 'b'); g.rect(0, 3, 16, 3, 'lid'); g.ellipse(4, 19, 2, 1.5, 'w'); g.ellipse(12, 19, 2, 1.5, 'w'); g.rect(10, 1, 3, 2, 'trash'); g.rect(6, 9, 4, 2, 'lid')
+    return g, {'b': ('#3a3a44', '#24242c', '#121216'), 'lid': IRON, 'w': '#0a0a0c', 'trash': ('#f1e7d0', '#c8b890', '#806848')}
+
+def bench():
+    g = Grid(30, 16); g.rect(1, 2, 28, 3, 'wood'); g.rect(1, 8, 28, 3, 'wood'); g.rect(3, 5, 2, 11, 'i'); g.rect(25, 5, 2, 11, 'i'); g.rect(3, 11, 24, 1, 'i')
+    return g, {'wood': ('#8a3a2a', '#5a2018', '#2a0c08'), 'i': IRON}
+
+def busstop():  # a bus stop sign on a pole
+    g = Grid(20, 50); g.rect(9, 10, 2, 40, 'i'); g.rect(0, 0, 20, 13, 'sign'); g.text(4, 1, 'BUS', 'txt'); g.text(2, 7, 'STOP', 'txt')
+    return g, {'i': IRON, 'sign': REDP, 'txt': '#f1e7d0'}
+
+def cone():
+    g = Grid(10, 12); g.poly([(5, 0), (8, 10), (2, 10)], 'o'); g.rect(0, 10, 10, 2, 'o'); g.rect(3, 5, 4, 2, 'w')
+    return g, {'o': ('#ff8a3a', '#e05a10', '#80300a'), 'w': '#fffbe8'}
+
+ART = {'hog_lamp': lamp, 'hog_hydrant': hydrant, 'hog_bin': binb, 'hog_bench': bench, 'hog_bus': busstop, 'hog_cone': cone, 'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}

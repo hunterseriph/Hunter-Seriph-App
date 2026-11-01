@@ -63,7 +63,7 @@ function stepPlayer(dt) {
   // spikes and falling out of the world
   var spk = T(Math.floor(p.x / TS), Math.floor((p.y - 4) / TS)); if (spk === '^') hurt(p.x, true);
   if (p.y > LV.h * TS + 30) die(true);
-  p.anim += dt * (p.air ? 8 : Math.max(4, Math.abs(p.gsp) * 0.09));
+  p.anim += dt * (p.air ? 8 : Math.max(4, Math.abs(p.gsp) * 0.09)); if (!p.air) p.dist = (p.dist || 0) + Math.abs(p.gsp) * dt; // the feet follow the ground covered, so the legs never slide
   if (G.lock) { var L = G.lock; if (p.x < L.x0 + PHW) { p.x = L.x0 + PHW; p.gsp = Math.max(0, p.gsp); p.vx = Math.max(0, p.vx); } if (p.x > L.x1 - PHW) { p.x = L.x1 - PHW; p.gsp = Math.min(0, p.gsp); p.vx = Math.min(0, p.vx); } }
   if (p.x < PHW) { p.x = PHW; p.gsp = 0; p.vx = 0; }
 }

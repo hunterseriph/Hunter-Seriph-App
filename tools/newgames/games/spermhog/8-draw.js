@@ -26,6 +26,7 @@ function drawWorld() {
     else if (ch === 'Q') key = qOn(c) ? 'Q1' : 'Q';
     else if (ch === 'D') { if (TRAPOPEN[c + ',' + r]) continue; }
     else if (ch === '_' || ch === '-') key = ch + (Math.floor(G.t * 10) % 4);
+    if (key === '#' && FACADE) { g.drawImage(FACADE, (c & 7) * 16, (r & 7) * 16, 16, 16, x, y, 16, 16); continue; }
     var ti = TILEKEYS[key]; if (ti === undefined) continue;
     g.drawImage(TILESET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
@@ -35,6 +36,8 @@ function drawWorld() {
     var shk = q.touch > 0 && !q.fall ? Math.round(Math.sin(G.t * 60)) : 0;
     for (var i = 0; i < q.w / 16; i++) g.drawImage(TILESET, TILEKEYS['='] * 16, 0, 16, 16, x + i * 16 + shk, y, 16, 16);
     if (q.k === 'movv' || q.k === 'movh') { R(q.k === 'movv' ? '#ffe36a' : '#c4121c', x + q.w / 2 - 2, y + 6, 4, 2); } });
+  // street furniture, and the lamps' pools of light
+  if (LV.props.length) drawProps(g, cx, cy, W, H);
   // things
   ENTS.forEach(function (e) { drawEnt(g, e, cx, cy, W, H); });
   SCAT.forEach(function (d) { if (d.t > 2.6 && Math.floor(d.t * 12) % 2) return; spr('hog_drop', d.x - cx, d.y - cy, {}); });
@@ -51,9 +54,14 @@ function drawBack(g, Z, cx, cy, W, H) {
   var vy = Math.round(-cy * 0.08); // the backdrop rises a little as you climb
   if (Z.id === 'city') {
     if (imgOk(HOGIM.sky)) tile(g, HOGIM.sky, cx * 0.05, vy - 30, H + 40, 1);
-    if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.12 + G.t * 6, vy + 10, 70, 0.8);
-    if (imgOk(HOGIM.skyline)) tile(g, HOGIM.skyline, cx * 0.25, vy + H - 190, 120, 0.85);
-    if (imgOk(HOGIM.city)) tile(g, HOGIM.city, cx * 0.45, vy + H - 150, 150, 1);
+    if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 0.7);
+    // street level on screen, with a little depth: the city stands on the same street you run along
+    var st = streetY(cx, W); LV.street += (st - LV.street) * 0.05;
+    var base = Math.round(H * 0.72 + ((LV.street - cy) - H * 0.72) * 0.85);
+    if (imgOk(HOGIM.skyline)) tile(g, HOGIM.skyline, cx * 0.12, base - 200, 130, 0.55);
+    var mid = cityMid(), mw = 960, mx = -(((cx * 0.3) % mw) + mw) % mw; for (; mx < W; mx += mw) KIT.blit(mid, mx, base - 300 + 40);
+    if (imgOk(HOGIM.city)) tile(g, HOGIM.city, cx * 0.62, base - 196, 200, 1);
+    g.fillStyle = '#0a0305'; g.fillRect(0, base + 4, W, Math.max(0, H - base));
     return;
   }
   // moon and stars, then three painted layers
@@ -101,9 +109,17 @@ function drawPlayer(p, cx, cy) {
   else if (p.atkT > 0) n = 'ch_attack';
   else if (p.air) n = 'ch_jump' + Math.min(3, p.vy < -150 ? 0 : p.vy < 0 ? 1 : p.vy < 200 ? 2 : 3);
   else if (sp < 8) n = 'ch_idle' + (Math.floor(G.t * 6) % 7);
-  else if (sp < 150) n = 'ch_walk' + (Math.floor(p.anim) % 9);
-  else n = 'ch_run' + (Math.floor(p.anim) % 7);
+  else if (sp < 115) n = 'ch_walk' + (Math.floor((p.dist || 0) / 5.5) % 9);
+  else n = 'ch_rn' + (Math.floor((p.dist || 0) / 7.5) % 8); // his 8-frame run, one stride every 60 px
+  var ground = !p.air && p.state === 'normal', skid = ground && sp > 140 && ((KIT.held('left') && p.gsp > 0) || (KIT.held('right') && p.gsp < 0));
   var rot = !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
+  if (ground && sp >= 115 && !skid) rot += p.face * Math.min(0.12, (sp - 115) / 1400); // leans into it as he speeds up
+  if (skid) { rot -= p.face * 0.16; n = 'ch_walk0'; if (Math.random() < 0.6) FX.push({ k: 'bit', x: p.x + p.face * 6, y: p.y - 2, vx: -p.gsp * 0.2, vy: -30 - Math.random() * 40, t: 0.35, c: '#a6968f' }); }
+  // after-images at full pelt (dash pads, springs, shoes)
+  p.trail = p.trail || []; if (sp > 300 && p.state === 'normal') { p.trail.unshift({ x: p.x, y: p.y, n: n, r: rot }); if (p.trail.length > 6) p.trail.pop(); } else if (p.trail.length) p.trail.pop();
+  for (var ti = p.trail.length - 1; ti >= 1; ti -= 2) { var tr = p.trail[ti]; spr(tr.n, Math.round(tr.x - cx), Math.round(tr.y - cy) + 1, { flip: p.face < 0, rot: tr.r, alpha: 0.22 * (1 - ti / 7) }); }
+  // a puff of dust each footfall
+  if (ground && sp >= 115) { var step = Math.floor((p.dist || 0) / 30); if (step !== p.lastStep) { p.lastStep = step; FX.push({ k: 'bit', x: p.x - p.face * 6, y: p.y - 1, vx: -p.face * 30, vy: -18, t: 0.28, c: '#7a6a6a' }); } }
   spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
   if (p.shield) { var g = KIT.ctx; g.strokeStyle = 'rgba(154,223,255,' + (0.5 + 0.3 * Math.sin(G.t * 8)).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - 26, 22, 30, 0, 0, 6.3); g.stroke(); }
   if (G.star > 0) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
@@ -136,3 +152,49 @@ function drawHud() {
   if (G.bossName && bossList().length) text(G.bossName, KIT.W / 2, 22 + (G.boss2 ? 10 : 0), { size: 6, align: 'center', col: '#f1e7d0', outline: true });
   if (G.banner > 0) text(G.bannerTxt, KIT.W / 2, 90, { size: 16, align: 'center', col: '#ff2630', font: 'title', outline: true, alpha: Math.min(1, G.banner * 2) });
 }
+
+/* ---------- Night City: being in it, not looking at it ---------- */
+var FACADE = null;
+/* the ground and rooftops are buildings: brickwork with lit windows on a 64 px grid */
+function buildFacade(Z) {
+  var N = 128, c = document.createElement('canvas'); c.width = N; c.height = N; var g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data, WIN = [];
+  for (var wy0 = 0; wy0 < 4; wy0++) for (var wx0 = 0; wx0 < 4; wx0++) { var q = hash2(wx0, wy0, 17); WIN.push([6 + wx0 * 32, 10 + wy0 * 32, q < 0.55 ? 0 : q < 0.85 ? 1 : 2]); }
+  for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+    var col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.8 | 0; });
+    WIN.forEach(function (w) { var lx = x - w[0], ly = y - w[1]; if (lx >= -1 && lx <= 20 && ly >= -1 && ly <= 14) {
+      var lit = w[2]; // dark, warm or red
+      if (lx === -1 || lx === 20 || ly === -1) col = [18, 4, 10]; else if (ly === 14) col = [150, 130, 120];
+      else if (lx === 10 || ly === 6) col = [24, 8, 12];
+      else col = lit === 0 ? [30, 14, 20] : lit === 1 ? (ly < 3 ? [230, 200, 120] : [190, 140, 60]) : (ly < 3 ? [220, 70, 70] : [150, 26, 34]);
+      if (lit && lx > 13 && ly > 7 && lx < 20 && ly < 14 && lx !== 10) col = [col[0] * 0.6 | 0, col[1] * 0.6 | 0, col[2] * 0.6 | 0]; // a curtain
+    } });
+    var i4 = (y * N + x) * 4; d[i4] = col[0]; d[i4 + 1] = col[1]; d[i4 + 2] = col[2]; d[i4 + 3] = 255;
+  }
+  g.putImageData(im, 0, 0); return c;
+}
+/* the tall blocks behind Hunter's street: dark towers, window grids, water towers, aerials with red lights */
+function cityMid() {
+  return KIT.layer('citymid', 960, 300, function () {
+    var g = KIT.ctx, s = 77; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+    for (var x = -20; x < 960; ) {
+      var w = 50 + Math.floor(r() * 70), h = 120 + Math.floor(r() * 170), top = 300 - h;
+      g.fillStyle = r() < 0.5 ? '#12060a' : '#180a0e'; g.fillRect(x, top, w, h); g.fillStyle = '#060203'; g.fillRect(x + w - 4, top, 4, h); g.fillRect(x, top, w, 3);
+      for (var wy = top + 10; wy < 290; wy += 12) for (var wx = x + 6; wx < x + w - 8; wx += 9) { var q = r(); if (q < 0.18) { g.fillStyle = q < 0.04 ? 'rgba(255,60,60,0.55)' : 'rgba(255,214,120,0.45)'; g.fillRect(wx, wy, 4, 6); } else if (q < 0.5) { g.fillStyle = 'rgba(60,20,26,0.8)'; g.fillRect(wx, wy, 4, 6); } }
+      if (r() < 0.35) { g.fillStyle = '#0a0406'; g.fillRect(x + 10, top - 18, 22, 14); g.fillRect(x + 12, top - 4, 3, 4); g.fillRect(x + 27, top - 4, 3, 4); g.beginPath(); g.moveTo(x + 8, top - 18); g.lineTo(x + 21, top - 26); g.lineTo(x + 34, top - 18); g.fill(); }
+      else if (r() < 0.5) { g.fillStyle = '#0a0406'; g.fillRect(x + w / 2, top - 30, 2, 30); g.fillStyle = '#ff2630'; g.fillRect(x + w / 2 - 1, top - 32, 4, 3); }
+      x += w + Math.floor(r() * 6);
+    }
+    g.fillStyle = 'rgba(10,3,5,0.35)'; g.fillRect(0, 0, 960, 300);
+  });
+}
+function drawProps(g, cx, cy, W, H) {
+  LV.props.forEach(function (q) { var x = q.x - cx, y = q.y - cy; if (x < -60 || x > W + 60 || y < -20 || y > H + 90) return;
+    if (q.lamp) { var fl = 0.85 + Math.sin(G.t * 9 + q.x) * 0.04 + (hash2(Math.floor(G.t * 8), q.x | 0, 3) < 0.02 ? -0.4 : 0); g.save(); g.globalCompositeOperation = 'lighter';
+      var gr = g.createRadialGradient(x, y - 62, 4, x, y - 30, 70); gr.addColorStop(0, 'rgba(255,200,90,' + (0.32 * fl).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(x - 70, y - 120, 140, 124); g.restore(); }
+    spr(q.k, x, y, { flip: q.flip });
+  });
+}
+
+/* where the street is under the camera: the lowest top surface in view (rooftops sit above it), so the shops
+   always stand on the ground you are running along; eased so it never jumps */
+function streetY(cx, W) { var lo = null; for (var c = Math.floor(cx / TS) - 4; c <= Math.floor((cx + W) / TS) + 4; c += 2) { for (var r = 1; r < LV.h; r++) { var ch = T(c, r); if (ch === '.') continue; if (ch === '#' || ch === '_' || ch === '-' || surf(ch, 8) >= 0) { if (lo === null || r > lo) lo = r; } break; } } return lo === null ? LV.street : lo * TS; }
