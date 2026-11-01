@@ -127,7 +127,23 @@
   }
   function releaseAll() { var K = cfg.keys; if (!K) return; for (var k in held) if (held[k]) { held[k] = false; keyEvt('keyup', K[k]); } }
 
+  /* ---------- quiet in the background: when the app is hidden (home button, another app, screen off) every
+     sound the game made stops, and starts again when you come back. Any audio context that plays through
+     a node is remembered, whichever game made it. ---------- */
+  var ctxs = [], ours = [];
+  try { var AN = window.AudioNode && AudioNode.prototype, conn = AN && AN.connect;
+    if (conn) AN.connect = function () { var c = this.context; if (c && ctxs.indexOf(c) < 0) ctxs.push(c); if (hiddenNow && c && c.state === 'running') { c.suspend(); if (ours.indexOf(c) < 0) ours.push(c); } return conn.apply(this, arguments); };
+  } catch (e) {}
+  var hiddenNow = false;
+  function audioPause(on) {
+    hiddenNow = !!on;
+    if (on) ctxs.forEach(function (c) { if (c.state === 'running') { try { c.suspend(); } catch (e) {} if (ours.indexOf(c) < 0) ours.push(c); } });
+    else { ours.forEach(function (c) { try { c.resume(); } catch (e) {} }); ours = []; }
+    document.querySelectorAll('audio,video').forEach(function (m) { if (on && !m.paused) { m.pause(); m.dataset.hsWas = '1'; } else if (!on && m.dataset.hsWas) { delete m.dataset.hsWas; m.play().catch(function () {}); } });
+  }
+  document.addEventListener('visibilitychange', function () { audioPause(document.hidden); });
   window.HSPad = {
+    audioPause: audioPause,
     setup: function (o) {
       cfg = o || {}; css(); if (cfg.touch !== undefined || cfg.toggle) makeToggle(); applyTouch();
       window.addEventListener('gamepadconnected', function () { padSeen = true; applyTouch(); });

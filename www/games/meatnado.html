@@ -649,7 +649,7 @@ var UPS = [
   { id: 'value', n: 'Fat Drops', max: 5, cost: 100, d: function (l) { return 'Bank ' + l * 10 + '% more drops after a run.'; } },
   { id: 'shield', n: 'Bubble Shield', max: 2, cost: 300, grow: 2.2, d: function (l) { return l === 1 ? 'Start every run with a shield.' : 'Start with a shield, and it grows back once.'; } },
   { id: 'launch', n: 'Launch Pad', max: 2, cost: 400, grow: 2, d: function (l) { return 'Start every run with a ' + l * 2 + ' s rocket.'; } },
-  { id: 'revive', n: 'Second Wind', max: 1, cost: 800, d: function () { return 'Once a run, when it catches you, you burst free.'; } }
+  { id: 'revive', n: 'Second Wind', max: 1, cost: 800, d: function () { return 'Once a run, when it catches you, it flings you out on one of its sausages. Ride it until the meatnado bar is empty.'; } }
 ];
 function upCost(u) { return Math.round(u.cost * Math.pow(u.grow || 1.7, U(u.id)) / 5) * 5; }
 
@@ -684,6 +684,7 @@ var P, pits, obs, drops, ledges, shots, eshots, parts, pups, genX, lastMix, rain
 (function () { for (var i = 0; i < 16; i++) orbit.push({ a: Math.random() * 6.283, w: 1.6 + Math.random() * 2.2, rx: 58 + Math.random() * 62, y: 12 + Math.random() * 230, ry: 7 + Math.random() * 11, s: i % NB.s.length, tilt: (Math.random() - 0.5) * 0.8 });
   for (i = 0; i < 14; i++) wind.push({ x: Math.random() * 600, y: 20 + Math.random() * 200, l: 18 + Math.random() * 40, v: 260 + Math.random() * 260 }); })();
 function headStart() { return U('head') * 15; }
+function rideEnd() { return 235 + headStart(); } // the gap at which the meatnado bar reads empty
 function maxGap() { return 235 + headStart() - Math.min(75, G.time * 0.9); }
 function resetPlayer(x) {
   P = { x: x || 0, y: GY, vy: 0, onGround: true, coyote: 0, jumpBuf: 0, jumpHeld: false, jumps: 0, state: 'normal', wasG: true, lsf: 0, hurtT: 0, inv: 0, deadT: 0, attackT: 0, atkCd: 0, anim: 0, jumpStartT: 0, prevJump: false, shield: 0, regrow: 0, revive: 0, floatT: 0 };
@@ -751,7 +752,7 @@ function cull() {
 /* ---------- runs ---------- */
 function startRun() {
   KIT.closeMenu(); var c = me();
-  G.mode = 'play'; G.time = 0; G.drops = 0; G.total = 0; G.kills = 0; G.dist = 0; G.score = 0; G.nextMark = 500; G.v = 150; G.gap = 175 + headStart(); G.stumble = 0; G.caught = false; G.rainT = 9;
+  G.mode = 'play'; G.ride = 0; G.time = 0; G.drops = 0; G.total = 0; G.kills = 0; G.dist = 0; G.score = 0; G.nextMark = 500; G.v = 150; G.gap = 175 + headStart(); G.stumble = 0; G.caught = false; G.rainT = 9;
   G.pupT = 8; G.pw = {}; rain = []; pits = []; obs = []; drops = []; ledges = []; shots = []; eshots = []; parts = []; pups = []; lastMix = '';
   resetPlayer(0); P.shield = U('shield') ? 1 : 0; P.regrow = U('shield') >= 2 ? 1 : 0; P.revive = U('revive');
   if (U('launch')) G.pw.rocket = U('launch') * 2;
@@ -764,9 +765,9 @@ function poof(x, y, n, cols) { for (var i = 0; i < n; i++) { var a = Math.random
 var BLOOD = ['#ff2630', '#b3121c', '#f1e7d0'];
 function killPlayer(fall) {
   if (P.state === 'dead') return;
-  if (P.revive > 0) { // Second Wind
-    P.revive--; G.gap = Math.max(G.gap, CATCH + 110); P.inv = 2.5; P.state = 'normal'; G.banner = 1.6; G.bannerTxt = 'SECOND WIND!'; sfx.play('pup'); KIT.flash(0.2); poof(P.x, P.y - 20, 20, ['#ffe36a', '#f1e7d0']);
-    if (fall) { P.y = GY - 120; P.vy = -100; P.onGround = false; } return;
+  if (P.revive > 0 && !fall && !G.ride) { // Second Wind: only when the meatnado catches you. It flings you out on one of its sausages and you ride it until the meatnado bar is empty again
+    P.revive--; G.ride = 1; P.inv = 99; P.state = 'normal'; P.vy = 0; P.onGround = false; G.banner = 1.8; G.bannerTxt = 'SECOND WIND!'; sfx.play('pup'); KIT.flash(0.2); poof(P.x, P.y - 20, 22, ['#ffe36a', '#f1e7d0', '#c4121c']);
+    G.gap = Math.max(G.gap, CATCH + 6); return;
   }
   G.caught = G.gap <= CATCH + 2 && !fall; sfx.play('lose'); P.state = 'dead'; P.deadT = 0; P.attackT = 0; G.shake = 5;
   P.vy = fall ? 0 : -250; P.fell = !!fall; if (G.caught) P.vy = -120;
@@ -784,6 +785,7 @@ function ov(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1) { return ax0 < bx1 && ax1 > 
 var GRAV = 950, JCUT = 125, TERM = 430;
 function supported(x) { for (var i = 0; i < pits.length; i++) if (x - 4 > pits[i][0] && x + 4 < pits[i][1]) return false; return true; }
 function movePlayer(dt) {
+  if (G.ride) { var hy = GY - 34 + Math.sin(G.t * 7) * 3; P.y += (hy - P.y) * Math.min(1, dt * 8); P.vy = 0; P.onGround = false; return; } // riding the sausage: it carries you over everything
   var prevY = P.y, i; P.y += P.vy * dt; P.onGround = false;
   if (P.vy >= 0 && prevY <= GY + 0.01 && P.y >= GY && (supported(P.x) || G.pw.rocket > 0)) { P.y = GY; P.vy = 0; P.onGround = true; }
   for (i = 0; i < ledges.length; i++) { var l = ledges[i]; if (P.vy >= 0 && prevY <= l[1] + 0.01 && P.y >= l[1] && P.x + PW / 2 > l[0] && P.x - PW / 2 < l[0] + l[2]) { P.y = l[1]; P.vy = 0; P.onGround = true; } }
@@ -948,13 +950,14 @@ function update(dt) {
   if (G.mode === 'title' || G.mode === 'over') { G.cam += 46 * dt; P.x = G.cam + PXS; P.anim += dt * 6; P.onGround = true; P.y = GY; P.state = 'normal'; G.gap = 150; rumble(0); return; }
   if (G.mode !== 'play') return;
   var target = 150 + 140 * (1 - Math.exp(-G.time / 55));
+  if (G.ride) { G.pw.rocket = Math.max(G.pw.rocket, 0.05); G.gap += 70 * dt; if (G.gap >= rideEnd()) { G.ride = 0; P.inv = 1.4; P.vy = -60; G.banner = 1.2; G.bannerTxt = 'BACK ON YOUR FEET'; sfx.play('mland'); poof(P.x, P.y + 4, 14, ['#c4121c', '#f1e7d0']); } }
   if (G.pw.rocket > 0) target *= 1.6;
   if (G.stumble > 0) { G.stumble -= dt; target *= 0.5; }
   var nv;
   if (P.state === 'dead') { G.v = Math.max(0, G.v - 380 * dt); nv = 210; }
   else { G.v += (target - G.v) * Math.min(1, dt * (G.stumble > 0 ? 7 : 2)); nv = (150 + 140 * (1 - Math.exp(-G.time / 55))) * (0.95 + 0.1 * (1 - Math.exp(-G.time / 60))); }
   G.gap += (G.v - nv) * dt;
-  if (P.state !== 'dead') G.gap = Math.min(G.gap, maxGap() + (G.pw.rocket > 0 ? 40 : 0));
+  if (P.state !== 'dead' && !G.ride) G.gap = Math.min(G.gap, maxGap() + (G.pw.rocket > 0 ? 40 : 0));
   if (P.state !== 'dead') { G.time += dt; G.pupT -= dt; if (G.pupT <= 0) { G.pupT = rnd(13, 19) * (1 - U('pups') * 0.08); spawnPup(); } }
   if (P.state !== 'dead' && G.gap <= CATCH) killPlayer(false);
   if (P.state === 'dead') G.gap = Math.max(-10, G.caught ? Math.min(G.gap, CATCH - 4) : G.gap);
@@ -1086,10 +1089,11 @@ function draw() {
   eshots.forEach(function (s) { var x = s.x - G.cam; if (s.k === 'shard') { R('#12040a', x - 2, s.y - 2, 5, 5); R('#ff2630', x - 1, s.y - 1, 3, 3); } else spr(SHOTSPR[s.k] || 'mn_bone', x, s.y, { anchor: 'c', rot: s.spin }); });
   drawRain();
   var g = nadoGeom(); drawOrbit(false, g); if (!(G.caught && P.state === 'dead')) drawNadoBody(g);
-  var blink = P.inv > 0 && P.state !== 'dead' && Math.floor(G.t * 20) % 2 === 0;
+  var blink = P.inv > 0 && !G.ride && P.state !== 'dead' && Math.floor(G.t * 20) % 2 === 0;
   if (!blink && P.y < H + 60) {
     var px = P.x - G.cam;
-    if (G.pw.rocket > 0) { R('rgba(255,154,48,0.25)', px - 22, P.y - 46, 44, 50); }
+    if (G.ride) { spr('mn_sausage', px, P.y + 10, { anchor: 'c', sc: 2.2, rot: Math.sin(G.t * 9) * 0.12 }); if (Math.random() < 0.5) parts.push({ x: P.x - 14, y: P.y + 10, vx: -140, vy: rnd(-10, 20), life: 0.3, c: pick(['#c4121c', '#7a0a10', '#f1e7d0']) }); }
+    else if (G.pw.rocket > 0) { R('rgba(255,154,48,0.25)', px - 22, P.y - 46, 44, 50); }
     drawRunner(G.mode === 'play' || G.mode === 'over' ? (G.char || me()).id : me().id, px, P.y);
     if (P.shield > 0) { c.save(); c.strokeStyle = 'rgba(154,223,255,' + (0.55 + 0.25 * Math.sin(G.t * 6)).toFixed(2) + ')'; c.lineWidth = 2; c.beginPath(); c.ellipse(px, P.y - 20, 20, 26, 0, 0, 6.2832); c.stroke(); c.restore(); }
     if (G.pw.magnet > 0) { var mr = 22 + (G.t * 40) % 30; c.save(); c.strokeStyle = 'rgba(255,58,68,' + (0.5 * (1 - (mr - 22) / 30)).toFixed(2) + ')'; c.beginPath(); c.arc(px, P.y - 18, mr, 0, 6.2832); c.stroke(); c.restore(); }

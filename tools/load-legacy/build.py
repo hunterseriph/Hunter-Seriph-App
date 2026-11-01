@@ -2,9 +2,7 @@
 """Assemble Load Legacy into one self-contained HTML file, like the other games in the app.
 
 Edit the files in src/, then run:  python3 tools/load-legacy/build.py
-It writes www/games/load-legacy.html. It pulls Cumhead's atlas and the city backdrops from
-www/games/spermhog.html so that
-must be present. The homunculus art comes from tools/homunculus. sprites.png/json and icons.json were rendered from Cumheads Quest's own art.
+It writes www/games/load-legacy.html. Cumhead's atlas and the city backdrops come from tools/spermhog/assets. The homunculus art comes from tools/homunculus. sprites.png/json and icons.json were rendered from Cumheads Quest's own art.
 """
 import base64, json, os, re, sys
 
@@ -17,10 +15,13 @@ head = open(os.path.join(SRC, '00-head.html'), encoding='utf-8').read()
 parts = sorted(f for f in os.listdir(SRC) if f.endswith('.js'))
 js = '\n'.join(open(os.path.join(SRC, f), encoding='utf-8').read() for f in parts)
 
-hog = open(os.path.join(GAMES, 'spermhog.html'), encoding='utf-8').read()
-atlas = re.search(r'var ATLAS = (\{.*?\});', hog).group(1)
-srcblock = re.search(r'var SRC = \{(.*?)\};', hog, re.S).group(1)
-src = dict(re.findall(r"(\w+): '(data:[^']+)'", srcblock))
+# Cumhead's atlas and the city backdrops (first made for Cumhead the Spermhog) live in tools/spermhog/assets
+HOGA = os.path.join(HERE, '..', 'spermhog', 'assets')
+atlas = open(os.path.join(HOGA, 'atlas.json')).read().strip()
+src = {}
+for k in ['atlas', 'sky', 'clouds', 'skyline', 'city', 'bricks']:
+    f = [x for x in os.listdir(HOGA) if x.split('.')[0] == k][0]
+    src[k] = 'data:image/' + ('png' if f.endswith('png') else 'webp') + ';base64,' + base64.b64encode(open(os.path.join(HOGA, f), 'rb').read()).decode()
 assert set(['atlas', 'sky', 'clouds', 'skyline', 'city', 'bricks']) <= set(src), src.keys()
 src['sheet'] = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(HERE, 'sprites.png'), 'rb').read()).decode()
 

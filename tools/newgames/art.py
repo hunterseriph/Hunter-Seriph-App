@@ -22,10 +22,9 @@ def base():
     out.update(_sheet(os.path.join(TOOLS, 'load-legacy', 'sprites.png'), os.path.join(TOOLS, 'load-legacy', 'sprites.json')))
     out.update(_sheet(os.path.join(TOOLS, 'foes', 'foes.png'), os.path.join(TOOLS, 'foes', 'foes.json')))
     out.update(_sheet(os.path.join(TOOLS, 'homunculus', 'hom.png'), os.path.join(TOOLS, 'homunculus', 'hom.json')))
-    hog = open(os.path.join(APP, 'www', 'games', 'spermhog.html'), encoding='utf-8').read()
-    atlas = json.loads(re.search(r'var ATLAS = (\{.*?\});', hog).group(1)); atlas = atlas.get('frames', atlas)
-    src = dict(re.findall(r"(\w+): '(data:[^']+)'", re.search(r'var SRC = \{(.*?)\};', hog, re.S).group(1)))
-    im = Image.open(io.BytesIO(base64.b64decode(src['atlas'].split(',', 1)[1]))).convert('RGBA')
+    hoga = os.path.join(TOOLS, 'spermhog', 'assets') # Cumhead's own atlas (first made for Cumhead the Spermhog)
+    atlas = json.load(open(os.path.join(hoga, 'atlas.json'))); atlas = atlas.get('frames', atlas)
+    im = Image.open(os.path.join(hoga, 'atlas.png')).convert('RGBA')
     for k, v in atlas.items(): out['ch_' + k] = im.crop((v[0], v[1], v[0] + v[2], v[1] + v[3]))
     _BASE = out; return out
 
