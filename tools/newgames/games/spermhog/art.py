@@ -52,4 +52,15 @@ def cone():
     g = Grid(10, 12); g.poly([(5, 0), (8, 10), (2, 10)], 'o'); g.rect(0, 10, 10, 2, 'o'); g.rect(3, 5, 4, 2, 'w')
     return g, {'o': ('#ff8a3a', '#e05a10', '#80300a'), 'w': '#fffbe8'}
 
-ART = {'hog_lamp': lamp, 'hog_hydrant': hydrant, 'hog_bin': binb, 'hog_bench': bench, 'hog_bus': busstop, 'hog_cone': cone, 'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}
+GEMS = [('#ff8a90', '#ff2630', '#8a0a10'), ('#fff09a', '#ffc840', '#a8741a'), ('#ffffff', '#f1e0b0', '#a89070'), ('#e0a0ff', '#a040e0', '#501880'), ('#a0e0ff', '#3a8ac8', '#14406a'), ('#a0ffb0', '#30c060', '#106030'), ('#6a6070', '#2a2030', '#100810')]
+
+def chalice(i):
+    def f():
+        g = Grid(18, 22)
+        g.poly([(1, 4), (17, 4), (14, 11), (4, 11)], 'gold'); g.rect(7, 11, 4, 5, 'gold'); g.rect(4, 16, 10, 2, 'gold'); g.rect(3, 18, 12, 3, 'gold')
+        g.ellipse(9, 4, 8, 2.2, 'cream'); g.ellipse(5, 6, 1.3, 2, 'cream'); g.ellipse(13, 7, 1.2, 2.5, 'cream'); g.ellipse(9, 1.5, 2.5, 1.5, 'cream')
+        g.ellipse(9, 8, 2.2, 2.2, 'gem'); g.put(8, 7, 'hi')
+        return g, {'gold': ('#fff09a', '#ffc840', '#a8741a'), 'cream': ('#ffffff', '#fffbe8', '#d8c8a0'), 'gem': GEMS[i], 'hi': '#ffffff'}
+    return f
+
+ART = {'hog_chal0': chalice(0), 'hog_chal1': chalice(1), 'hog_chal2': chalice(2), 'hog_chal3': chalice(3), 'hog_chal4': chalice(4), 'hog_chal5': chalice(5), 'hog_chal6': chalice(6), 'hog_lamp': lamp, 'hog_hydrant': hydrant, 'hog_bin': binb, 'hog_bench': bench, 'hog_bus': busstop, 'hog_cone': cone, 'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}

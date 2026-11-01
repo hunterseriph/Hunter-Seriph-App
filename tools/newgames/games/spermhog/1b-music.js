@@ -37,4 +37,8 @@
          'f5 - ab5 - c6 - f6 - | eb6 - c6 - g5 - eb5 - | ab5 - c6 - eb6 - ab6 - | g6 - f6 - d6 - b5 - | c6 - eb6 - g6 - c7 - | ab6 - g6 - f6 - eb6 - | f6 - eb6 - d6 - bb5 - | b5 - d6 - g6 - b6 -' };
   S.hogclear = { bpm: 150, beats: 4, vol: 0.9, wet: 0.3, lead: 'pulse', bass: 'drive', acc: 'arp8', drums: 'rock', chords: 'C G C C',
     mel: 'c5 e5 g5 c6 - e6 - - | d6 - b5 - g5 - d6 - | e6 - - - c6 - - - | . . . . . . . .' };
+  // SPECIAL STAGE: dreamy and bouncy, a xylophone over a rolling arp, the maze turning under it
+  S.hogspecial = { bpm: 132, beats: 4, vol: 0.85, wet: 0.45, lead: 'xylo', bass: 'pulse16', acc: 'arp16', drums: 'shuffle', chords: 'F G Em Am F G C C Dm Em F G Dm Em F E',
+    mel: 'a5 - c6 - f6 - e6 c6 | d6 - - b5 - g5 - - | e5 - g5 b5 e6 - d6 b5 | c6 - - - a5 - e5 - | f5 - a5 - c6 - f6 e6 | d6 - b5 - g5 - d6 - | e6 - - - g6 - e6 - | c6 - - - - - . . | ' +
+      'd6 - f6 - a6 - g6 f6 | e6 - g6 - b5 - e6 - | f6 - e6 - d6 - c6 - | d6 - c6 - b5 - g5 - | a5 - d6 - f6 - e6 d6 | b5 - e6 - g6 - f6 e6 | f6 - - - a5 - c6 f6 | g#5 - - - b5 - - - ' };
 })();

@@ -16,7 +16,7 @@ function startBoss(e) {
   var B = BOSSES[e.boss]; G.boss = mkBoss(e.boss, x1 - 70, e.y); if (B.two) G.boss2 = mkBoss(e.boss, x1 - 150, e.y); else G.boss2 = null;
   G.bossName = B.name; G.banner = 2.4; G.bannerTxt = B.name; music.play(B.song); G.arena = e;
 }
-function mkBoss(id, x, y) { var B = BOSSES[id], f = KIT.SPR[B.spr + '0'] || [0, 0, 80, 80]; return { id: id, B: B, x: x, y: y, w: f[2] * 0.42, h: f[3] * 0.9, hp: B.hp, alive: true, st: 'intro', t: 1.6, mi: 0, dir: -1, vy: 0, hitT: 0, flash: 0, fx: 0 }; }
+function mkBoss(id, x, y) { var B = BOSSES[id], f = KIT.SPR[B.spr + '0'] || [0, 0, 80, 80]; return { id: id, B: B, x: x, y: y, gy: y, w: f[2] * 0.42, h: f[3] * 0.9, hp: B.hp, alive: true, st: 'intro', t: 1.6, mi: 0, dir: -1, vy: 0, hitT: 0, flash: 0, fx: 0 }; }
 function bossList() { return [G.boss, G.boss2].filter(function (b) { return b && b.alive; }); }
 function bossHitBy(x, y) { var hit = null; bossList().forEach(function (b) { if (!hit && b.hitT <= 0 && Math.abs(x - b.x) < b.w && y > b.y - b.h && y < b.y) hit = b; }); G.lastBossHit = hit; return !!hit; }
 function hitBoss(n, b) {
@@ -29,8 +29,9 @@ function stepBoss(dt) {
   if (G.bossDone > 0) { G.bossDone -= dt; if (G.bossDone <= 0) { G.bossDone = 0; freeCage(); } }
 }
 function stepOne(b, dt) {
-  var p = PL, L = G.lock, sp = (b.hp <= 3 ? 1.35 : 1) * (b.B.fast || 1), fl = function (x) { var f = floorAt(x, b.y - 60, b.y + 60, false); return f === null ? b.y : f; };
+  var p = PL, L = G.lock, sp = (b.hp <= 3 ? 1.35 : 1) * (b.B.fast || 1), fl = function (x) { var f = floorAt(x, Math.min(b.y, b.gy) - 60, LV.h * TS, false); return f === null ? b.gy : f; }; // always finds the arena floor, however high he leapt
   if (b.hitT > 0) b.hitT -= dt; b.t -= dt * sp; b.fx += dt;
+  if ((b.st === 'intro' || b.st === 'idle') && b.y < fl(b.x) - 2) { b.vy = (b.vy || 0) + 990 * dt; b.y = Math.min(fl(b.x), b.y + b.vy * dt); } else if (b.st === 'idle') b.vy = 0;
   if (b.st === 'intro' || b.st === 'idle') { b.dir = p.x < b.x ? -1 : 1; if (b.t <= 0) { b.st = b.B.moves[b.mi % b.B.moves.length]; b.mi++; b.t = 0; b.s = 0; } }
   else if (b.st === 'charge') { if (!b.s) { b.s = 1; b.t = 0.6; b.cdir = p.x < b.x ? -1 : 1; b.dir = b.cdir; } if (b.t <= 0) { b.x += b.cdir * 270 * sp * dt; b.y = fl(b.x); if ((b.cdir < 0 && b.x < L.x0 + b.w + 6) || (b.cdir > 0 && b.x > L.x1 - b.w - 6)) { b.x = Math.max(L.x0 + b.w + 6, Math.min(L.x1 - b.w - 6, b.x)); G.shake = 4; sfx.play('thud'); idle(b, 1.0); } } }
   else if (b.st === 'leap') { if (!b.s) { b.s = 1; b.vy = -520; b.vx = (p.x - b.x) / 1.05; b.air = true; sfx.play('jump'); } b.vy += 990 * dt; b.x += b.vx * dt; b.x = Math.max(L.x0 + b.w, Math.min(L.x1 - b.w, b.x)); b.y += b.vy * dt; var f = fl(b.x); if (b.vy > 0 && b.y >= f) { b.y = f; G.shake = 6; sfx.play('thud'); wave(b.x, b.y); idle(b, 1.1); } }

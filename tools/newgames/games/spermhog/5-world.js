@@ -25,7 +25,7 @@ function liquidAt(px, py) { var ch = T(Math.floor(px / TS), Math.floor(py / TS))
 /* ---------- loading an act ---------- */
 function loadAct(ai) {
   LV = buildAct(ACTS[ai]); LV.ai = ai; ENTS = []; PLATS = []; SHOTS = []; FX = []; SCAT = []; TRAPOPEN = {};
-  TILESET = buildTileset(LV.zone); FACADE = LV.zone.id === 'city' ? buildFacade(LV.zone) : null; KIT.dropLayer();
+  TILESET = buildTileset(LV.zone); KIT.dropLayer();
   LV.ents.forEach(function (e) {
     var o = { k: e.k, x: e.x, y: e.y, x0: e.x, y0: e.y, t: 0, alive: true, ph: e.ph || 0 };
     for (var q in e) if (!(q in o)) o[q] = e[q];
@@ -37,7 +37,7 @@ function loadAct(ai) {
       var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
     ENTS.push(o);
   });
-  LV.street = LV.sy; LV.props = LV.zone.id === 'city' ? cityProps() : [];
+  LV.props = LV.zone.id === 'city' ? cityProps() : [];
   LV.ents = null; G.check = null; G.boss = null; G.lock = null;
 }
 
@@ -133,6 +133,8 @@ function touch(e, dt) {
   if (k === 'box') { if (e.alive && Math.abs(px - e.x) < 14 && py > e.y - 26 && py - PH < e.y) { if (p.air || Math.abs(p.gsp) > 200) { openBox(e); if (p.vy > 0) p.vy = -280; } else if (px < e.x) { p.x = e.x - 14 - PHW; p.gsp = 0; } else { p.x = e.x + 14 + PHW; p.gsp = 0; } } return; }
   if (k === 'check') { if (!e.on && Math.abs(px - e.x) < 14 && py > e.y - 40) { e.on = true; G.check = { x: e.x, y: e.y }; sfx.play('check'); FX.push({ k: 'ring', x: e.x, y: e.y - 40, t: 0.5 }); } return; }
   if (k === 'goal') { if (!e.hit && px > e.x) { e.hit = true; e.spin = 2.4; sfx.play('goal'); actClear(); } if (e.spin > 0) e.spin -= dt; return; }
+  if (k === 'portal') { // the giant ring into a special stage: 50 drops to open it, once per act
+    if (e.used || chalCount() >= 7) return; if (Math.abs(px - e.x) < 22 && py > e.y - 46 && py - PH < e.y + 6) { if (G.drops >= 50) { e.used = true; startSpecial(e); } else if (!e.told) { e.told = 1; G.banner = 1.6; G.bannerTxt = '50 DROPS TO ENTER'; } } else e.told = 0; return; }
   if (k === 'arena') { if (!G.lock && px > e.c0 * TS + 80) startBoss(e); return; }
   // hazards
   if (k === 'jet') { var c = (G.t + e.ph * 2) % 3, on = c > 2.0; e.on = on; e.warn = c > 1.6 && c <= 2.0; if (on && Math.abs(px - e.x) < 10 && py > e.y - 56) hurt(e.x); return; }
@@ -157,14 +159,21 @@ function poof(x, y, n, cols) { for (var i = 0; i < n; i++) { var a = Math.random
 /* Night City street furniture: lamps every so often along the pavement, and bins, hydrants, benches, cones and
    bus stops between them, only on flat ground with nothing else standing there */
 function cityProps() {
-  var out = [], last = -99, lastLamp = -99, busy = {};
+  var out = [], last = -99, lastLamp = -99, busy = {}, shopEnd = -99, si = Math.floor(hash2(LV.ai, 7, 3) * SHOPCUTS.length);
   ENTS.forEach(function (e) { if (e.k !== 'drop') busy[Math.floor(e.x / TS)] = 1; });
   function topAt(c) { for (var r = 1; r < LV.h; r++) { var ch = T(c, r); if (ch === '.') continue; if (ch === '#' || ch === '_' || ch === '-') return T(c, r - 1) === '.' ? r : null; return null; } return null; }
+  function flat(c, n) { var r = topAt(c); if (r === null) return null; for (var i = 1; i < n; i++) if (topAt(c + i) !== r) return null; return r; }
   for (var c = 6; c < LV.w - 6; c++) {
+    // one of Hunter's buildings now and then, standing on a flat bit of street
+    if (c - shopEnd > 40) { var cut = SHOPCUTS[si % SHOPCUTS.length], wc = Math.ceil((cut[1] - cut[0]) * SHOPSC / TS) + 2, rs = flat(c, wc);
+      if (rs !== null) { out.push({ shop: cut, x: c * TS + TS, y: rs * TS }); shopEnd = c + wc; si++; lastLamp = c + wc - 8; } }
+    if (c < shopEnd) continue;
     var r = topAt(c); if (r === null || topAt(c - 1) !== r || topAt(c + 1) !== r || topAt(c + 2) !== r || busy[c] || busy[c + 1] || busy[c - 1]) continue;
     var h = hash2(c, r, 41), y = r * TS;
     if (c - lastLamp >= 14) { out.push({ k: 'hog_lamp', x: c * TS + 8, y: y, lamp: 1 }); lastLamp = last = c; continue; }
     if (c - last >= 5 && h < 0.3) { out.push({ k: ['hog_bin', 'hog_hydrant', 'hog_bench', 'hog_bus', 'hog_cone', 'hog_bin', 'hog_hydrant'][Math.floor(hash2(c, 3, 9) * 7)], x: c * TS + 8, y: y, flip: hash2(c, 5, 2) < 0.5 }); last = c; }
   }
-  return out;
+  return out.sort(function (a, b) { return (b.shop ? 1 : 0) - (a.shop ? 1 : 0); }); // buildings first, street things in front
 }
+/* Hunter's shops and billboards, cut from his Night City strip (x from, x to), drawn at SHOPSC */
+var SHOPSC = 0.8, SHOPCUTS = [[125, 290], [355, 500], [525, 665], [835, 955], [1100, 1245], [1495, 1625], [1665, 1800], [1900, 2040], [2205, 2320], [2445, 2560], [2838, 2925], [3085, 3230], [3245, 3375]];

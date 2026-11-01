@@ -63,6 +63,15 @@ var EXTRA = [
   [[['run', 12, 'm'], ['saws', 4], ['run', 10, 'n'], ['trapdoors', 5], ['electric', 4], ['run', 10, 'p'], ['box', 'drops'], ['platPit', 6, 'N'], ['crushers', 5], ['jets', 5], ['check']],
    [['run', 12, 'n'], ['saws', 5, 1], ['run', 10, 'm'], ['electric', 6], ['trapdoors', 7], ['run', 10, 'p'], ['box', 'drops'], ['pool', 34, 1], ['crushers', 6], ['platPit', 7, 'N'], ['jets', 6], ['saws', 5], ['trapdoors', 6], ['check']]]
 ];
+/* two forks in every act: three routes each (high road, street, low road). One of them hides the act's chalice portal */
+var FORKHZ = [['m', 'spike', 'n', 'm'], ['m', 'n', 'spike', 'p'], ['m', 'p', 'spike', 'n'], ['m', 'spike', 'n', 'p'], ['jet', 'm', 'jet', 'n'], ['jet', 'm', 'n', 'jet', 'p']];
+ACTS.forEach(function (a, ai) { var hz = FORKHZ[a.z], ins = [];
+  a.plan.forEach(function (p, i) { if (p[0] === 'check') ins.push(i + 1); });
+  if (ins.length >= 3) { a.plan.splice(ins[2], 0, ['fork', 64, hz.concat(['spike', 'm']), 'shoes', ai % 2 ? 'high' : null]); }
+  if (ins.length >= 1) { a.plan.splice(ins[0], 0, ['fork', 56, hz, 'shield', ai % 2 ? null : 'high']); }
+  // act 2s hide theirs on the low road of the second fork instead
+  if (a.act === 2) a.plan.forEach(function (p) { if (p[0] === 'fork' && p[4] === 'high') p[4] = 'low'; });
+});
 ACTS.forEach(function (a) { var n = 0, at = -1; a.plan.forEach(function (p, i) { if (p[0] === 'check' && ++n === 2) at = i + 1; }); if (at > 0) Array.prototype.splice.apply(a.plan, [at, 0].concat(EXTRA[a.z][a.act - 1])); });
 /* lay an act's tiles: returns the finished level (tile grid, things, size) */
 function buildAct(a) {
@@ -72,7 +81,7 @@ function buildAct(a) {
   var lo = b.ROWS, hi = 0; b.top.forEach(function (t) { if (t !== null && t !== undefined) { lo = Math.min(lo, t); hi = Math.max(hi, t); } });
   b.ents.forEach(function (e) { lo = Math.min(lo, e.row); });
   b.cols.forEach(function (col) { for (var y = 0; y < b.ROWS; y++) if (col[y] !== '.' && col[y] !== '#') { lo = Math.min(lo, y); break; } });
-  var y0 = Math.max(0, lo - 14), y1 = Math.min(b.ROWS, hi + 5), H = y1 - y0, W = b.cols.length;
+  var y0 = Math.max(0, Math.floor(lo) - 14), y1 = Math.min(b.ROWS, hi + 5), H = y1 - y0, W = b.cols.length;
   var t = new Array(W * H);
   for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) t[y * W + x] = b.cols[x][y + y0];
   b.ents.forEach(function (e) { e.x = e.c * TS + TS / 2; e.y = (e.row - y0) * TS; }); // y: the top of that tile row (where a thing standing there has its feet)

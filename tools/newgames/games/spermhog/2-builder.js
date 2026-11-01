@@ -110,6 +110,26 @@ var SEC = {
   trapdoors: function (b, n) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(3); b.trap(2); b.thing(-2, 'trap', 0, { ph: i * 0.6 }); } b.ground(4); return b; }, // floors that drop open over a pit
   saws: function (b, n, vert) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(7); b.thing(-4, 'saw', vert ? 2 : 1, { vert: vert ? 1 : 0, ph: i * 1.1 }); } b.ground(3); return b; },
   crumbleBridge: function (b, n) { b.ground(3); var c0 = b.col; b.gap(n); for (var x = 0; x < n; x++) b.ent('crumble', c0 + x, b.h, { w: 1 }); b.drops(-n + 1, Math.floor(n / 2), 2, null, 2); b.ground(4); return b; },
+  fork: function (b, n, hz, item, portal) { // three ways through: a spring to the high road, the street with its foes, or a hole down to the low road
+    n = Math.max(48, n || 56); b.ground(4); b.thing(-2, 'spring', 0, { pow: 1 }); b.drops(-2, 3, 4, null, 1); b.ground(2);
+    var c0 = b.col, H = b.h; b.ground(n);
+    // high road: a solid deck seven up, drops along it, a box, a flyer
+    for (var x = c0 + 2; x < c0 + n - 6; x++) { b.set(x, H - 7, '#'); b.set(x, H - 6, '#'); }
+    for (var d = c0 + 5; d < c0 + n - 10; d += 9) for (var k = 0; k < 4; k++) b.ent('drop', d + k * 1.3, H - 9 - Math.sin((k + 0.5) / 4 * Math.PI) * 2);
+    b.ent('box', c0 + Math.floor(n / 2), H - 8, { item: item || 'shield' }); b.ent('foe', c0 + Math.floor(n * 0.7), H - 9, { f: 'w' });
+    if (portal === 'high') b.ent('portal', c0 + n - 12, H - 10);
+    // low road: a hole, a tunnel under the street full of drops, a spring back up through a second hole
+    var h0 = c0 + 7, h1 = c0 + n - 13;
+    for (var hx = 0; hx < 3; hx++) for (var y = H; y <= H + 6; y++) { b.set(h0 + hx, y, '.'); b.set(h1 + hx, y, '.'); }
+    for (var tx = h0 + 3; tx < h1; tx++) for (var ty = H + 2; ty <= H + 6; ty++) b.set(tx, ty, '.');
+    b.ent('spring', h1 + 1, H + 7, { pow: 1 }); for (var dd = h0 + 1; dd < h1 - 1; dd += 1.6) b.ent('drop', dd, H + 5);
+    b.ent('drop', h0 + 1, H - 2); b.ent('drop', h0 + 1, H - 4); // a trail into the hole
+    if (portal === 'low') b.ent('portal', Math.floor((h0 + h1) / 2), H + 6);
+    // the street: the zone's hazards, kept clear of the holes
+    var at = h0 + 6, step = Math.max(5, Math.floor((h1 - h0 - 10) / Math.max(1, (hz || []).length)));
+    (hz || []).forEach(function (k) { if (k === 'spike') { b.set(at, H - 1, '^'); b.set(at + 1, H - 1, '^'); } else if (k.length === 1) b.ent('foe', at, H, { f: k }); else b.ent(k, at, H, { ph: at * 0.3 }); at += step; });
+    b.ground(4); return b;
+  },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(22); b.ceil(-2, 2, 0, 20, 'W'); return b; },
   arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(3); b.ceil(-3, 3, 0, 18, 'W'); return b; }
 };

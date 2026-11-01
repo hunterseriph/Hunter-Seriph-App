@@ -26,7 +26,6 @@ function drawWorld() {
     else if (ch === 'Q') key = qOn(c) ? 'Q1' : 'Q';
     else if (ch === 'D') { if (TRAPOPEN[c + ',' + r]) continue; }
     else if (ch === '_' || ch === '-') key = ch + (Math.floor(G.t * 10) % 4);
-    if (key === '#' && FACADE) { g.drawImage(FACADE, (c & 7) * 16, (r & 7) * 16, 16, 16, x, y, 16, 16); continue; }
     var ti = TILEKEYS[key]; if (ti === undefined) continue;
     g.drawImage(TILESET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
@@ -55,13 +54,9 @@ function drawBack(g, Z, cx, cy, W, H) {
   if (Z.id === 'city') {
     if (imgOk(HOGIM.sky)) tile(g, HOGIM.sky, cx * 0.05, vy - 30, H + 40, 1);
     if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 0.7);
-    // street level on screen, with a little depth: the city stands on the same street you run along
-    var st = streetY(cx, W); LV.street += (st - LV.street) * 0.05;
-    var base = Math.round(H * 0.72 + ((LV.street - cy) - H * 0.72) * 0.85);
-    if (imgOk(HOGIM.skyline)) tile(g, HOGIM.skyline, cx * 0.12, base - 200, 130, 0.55);
-    var mid = cityMid(), mw = 960, mx = -(((cx * 0.3) % mw) + mw) % mw; for (; mx < W; mx += mw) KIT.blit(mid, mx, base - 300 + 40);
-    if (imgOk(HOGIM.city)) tile(g, HOGIM.city, cx * 0.62, base - 196, 200, 1);
-    g.fillStyle = '#0a0305'; g.fillRect(0, base + 4, W, Math.max(0, H - base));
+    if (imgOk(HOGIM.skyline)) tile(g, HOGIM.skyline, cx * 0.12, vy + H - 200, 130, 0.5);
+    // black towers flood the back, two depths; Hunter's own buildings stand on the street itself (cityProps)
+    [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, Math.round(vy * (1 + L[0])) + H - 300 + L[2]); g.globalAlpha = 1; });
     return;
   }
   // moon and stars, then three painted layers
@@ -84,6 +79,11 @@ function drawEnt(g, e, cx, cy, W, H) {
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
   if (k === 'spring') { var sq = e.t > 0 ? 0.5 : 1; R('#12040a', x - 11, y - 6, 22, 6); R('#8a828a', x - 10, y - 5, 20, 4); R(e.pow === 2 ? '#ff2630' : '#ffe36a', x - 11, y - 6 - 10 * sq, 22, 5); R('#12040a', x - 11, y - 6 - 10 * sq, 22, 1); for (var i = 0; i < 3; i++) R('#d0c8d0', x - 6 + i * 5, y - 6 - 10 * sq + 5, 2, 10 * sq - 5); return; }
   if (k === 'dash') { for (var j = 0; j < 3; j++) { var a = (Math.floor(G.t * 8) + j) % 3 === 0; R(a ? '#ffe36a' : '#c4121c', x - 12 + j * 8, y - 3, 6, 3); } return; }
+  if (k === 'portal') { if (e.used || chalCount() >= 7) return; var op = G.drops >= 50, rr = 18 + Math.sin(G.t * 3) * 1.5, cyp = y - 26; g.save(); g.globalAlpha = op ? 1 : 0.45;
+    g.lineWidth = 7; g.strokeStyle = '#12040a'; g.beginPath(); g.ellipse(x, cyp, rr * Math.abs(Math.cos(G.t * 1.6)) + 3, rr + 3, 0, 0, 6.3); g.stroke();
+    g.lineWidth = 5; g.strokeStyle = '#ffc840'; g.beginPath(); g.ellipse(x, cyp, rr * Math.abs(Math.cos(G.t * 1.6)) + 3, rr + 3, 0, 0, 6.3); g.stroke();
+    g.lineWidth = 1.5; g.strokeStyle = '#fff09a'; g.beginPath(); g.ellipse(x - 1, cyp - 1, rr * Math.abs(Math.cos(G.t * 1.6)) + 2, rr + 2, 0, 3.4, 5.6); g.stroke(); g.restore();
+    if (op && Math.random() < 0.3) FX.push({ k: 'spark', x: e.x + (Math.random() - 0.5) * 40, y: e.y - 26 + (Math.random() - 0.5) * 40, t: 0.25 }); else if (!op) text('50', x, cyp - 4, { size: 8, align: 'center', col: '#ffe36a', outline: true }); return; }
   if (k === 'bumper') { var r = e.t > 0 ? 13 : 11; g.fillStyle = '#12040a'; g.beginPath(); g.arc(x, y - 10, r + 1, 0, 6.3); g.fill(); g.fillStyle = '#c4121c'; g.beginPath(); g.arc(x, y - 10, r, 0, 6.3); g.fill(); g.fillStyle = '#ffe36a'; g.beginPath(); g.arc(x, y - 10, r * 0.55, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(x - 4, y - 16, 3, 3); return; }
   if (k === 'box') { if (!e.alive) { R('#3a343c', x - 10, y - 4, 20, 4); return; } R('#12040a', x - 12, y - 24, 24, 24); R('#8a828a', x - 11, y - 23, 22, 22); R('#3a343c', x - 8, y - 20, 16, 14); spr(ITEMICON[e.item || 'drops'], x, y - 13, { anchor: 'c' }); R('#fffbe8', x - 11, y - 23, 22, 1); return; }
   if (k === 'check') { R('#12040a', x - 2, y - 44, 4, 44); R('#a6968f', x - 1, y - 43, 2, 43); g.fillStyle = e.on ? (Math.floor(G.t * 4) % 2 ? '#ff2630' : '#ffe36a') : '#4a1a1c'; g.beginPath(); g.arc(x, y - 46, 5, 0, 6.3); g.fill(); return; }
@@ -120,9 +120,12 @@ function drawPlayer(p, cx, cy) {
   for (var ti = p.trail.length - 1; ti >= 1; ti -= 2) { var tr = p.trail[ti]; spr(tr.n, Math.round(tr.x - cx), Math.round(tr.y - cy) + 1, { flip: p.face < 0, rot: tr.r, alpha: 0.22 * (1 - ti / 7) }); }
   // a puff of dust each footfall
   if (ground && sp >= 115) { var step = Math.floor((p.dist || 0) / 30); if (step !== p.lastStep) { p.lastStep = step; FX.push({ k: 'bit', x: p.x - p.face * 6, y: p.y - 1, vx: -p.face * 30, vy: -18, t: 0.28, c: '#7a6a6a' }); } }
-  spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
+  if (G.super) { var gl = g0(); gl.save(); gl.globalCompositeOperation = 'lighter'; var ga = gl.createRadialGradient(x, y - 28, 4, x, y - 28, 46); ga.addColorStop(0, 'rgba(255,220,80,' + (0.35 + 0.1 * Math.sin(G.t * 20)).toFixed(2) + ')'); ga.addColorStop(1, 'rgba(255,160,0,0)'); gl.fillStyle = ga; gl.fillRect(x - 50, y - 80, 100, 100); gl.restore();
+    var gf = goldFrame(n); if (gf) { gl.save(); gl.translate(x, y + 1); if (rot) gl.rotate(rot); if (p.face < 0) gl.scale(-1, 1); gl.drawImage(gf, -gf.width / 2, -gf.height); gl.restore(); }
+    if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 30, y: p.y - Math.random() * 50, vx: 0, vy: -40, t: 0.4, c: Math.random() < 0.5 ? '#ffe36a' : '#fffbe8' });
+  } else spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
   if (p.shield) { var g = KIT.ctx; g.strokeStyle = 'rgba(154,223,255,' + (0.5 + 0.3 * Math.sin(G.t * 8)).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - 26, 22, 30, 0, 0, 6.3); g.stroke(); }
-  if (G.star > 0) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
+  if (G.star > 0 && !G.super) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
   if (G.shoes > 0 && sp > 120 && Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - p.face * 8, y: p.y - 4, vx: -p.face * 40, vy: -20, t: 0.3, c: '#ffe36a' });
 }
 function drawBoss(b, cx, cy) {
@@ -154,28 +157,10 @@ function drawHud() {
 }
 
 /* ---------- Night City: being in it, not looking at it ---------- */
-var FACADE = null;
-/* the ground and rooftops are buildings: brickwork with lit windows on a 64 px grid */
-function buildFacade(Z) {
-  var N = 128, c = document.createElement('canvas'); c.width = N; c.height = N; var g = c.getContext('2d'), im = g.createImageData(N, N), d = im.data, WIN = [];
-  for (var wy0 = 0; wy0 < 4; wy0++) for (var wx0 = 0; wx0 < 4; wx0++) { var q = hash2(wx0, wy0, 17); WIN.push([6 + wx0 * 32, 10 + wy0 * 32, q < 0.55 ? 0 : q < 0.85 ? 1 : 2]); }
-  for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
-    var col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.8 | 0; });
-    WIN.forEach(function (w) { var lx = x - w[0], ly = y - w[1]; if (lx >= -1 && lx <= 20 && ly >= -1 && ly <= 14) {
-      var lit = w[2]; // dark, warm or red
-      if (lx === -1 || lx === 20 || ly === -1) col = [18, 4, 10]; else if (ly === 14) col = [150, 130, 120];
-      else if (lx === 10 || ly === 6) col = [24, 8, 12];
-      else col = lit === 0 ? [30, 14, 20] : lit === 1 ? (ly < 3 ? [230, 200, 120] : [190, 140, 60]) : (ly < 3 ? [220, 70, 70] : [150, 26, 34]);
-      if (lit && lx > 13 && ly > 7 && lx < 20 && ly < 14 && lx !== 10) col = [col[0] * 0.6 | 0, col[1] * 0.6 | 0, col[2] * 0.6 | 0]; // a curtain
-    } });
-    var i4 = (y * N + x) * 4; d[i4] = col[0]; d[i4 + 1] = col[1]; d[i4 + 2] = col[2]; d[i4 + 3] = 255;
-  }
-  g.putImageData(im, 0, 0); return c;
-}
 /* the tall blocks behind Hunter's street: dark towers, window grids, water towers, aerials with red lights */
-function cityMid() {
-  return KIT.layer('citymid', 960, 300, function () {
-    var g = KIT.ctx, s = 77; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+function cityMid(id) {
+  return KIT.layer(id, 960, 300, function () {
+    var g = KIT.ctx, s = id === 'citymid0' ? 191 : 77; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
     for (var x = -20; x < 960; ) {
       var w = 50 + Math.floor(r() * 70), h = 120 + Math.floor(r() * 170), top = 300 - h;
       g.fillStyle = r() < 0.5 ? '#12060a' : '#180a0e'; g.fillRect(x, top, w, h); g.fillStyle = '#060203'; g.fillRect(x + w - 4, top, 4, h); g.fillRect(x, top, w, 3);
@@ -188,13 +173,25 @@ function cityMid() {
   });
 }
 function drawProps(g, cx, cy, W, H) {
-  LV.props.forEach(function (q) { var x = q.x - cx, y = q.y - cy; if (x < -60 || x > W + 60 || y < -20 || y > H + 90) return;
+  LV.props.forEach(function (q) { var x = q.x - cx, y = q.y - cy; if (x < -300 || x > W + 60 || y < -20 || y > H + 220) return;
     if (q.lamp) { var fl = 0.85 + Math.sin(G.t * 9 + q.x) * 0.04 + (hash2(Math.floor(G.t * 8), q.x | 0, 3) < 0.02 ? -0.4 : 0); g.save(); g.globalCompositeOperation = 'lighter';
       var gr = g.createRadialGradient(x, y - 62, 4, x, y - 30, 70); gr.addColorStop(0, 'rgba(255,200,90,' + (0.32 * fl).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(x - 70, y - 120, 140, 124); g.restore(); }
+    if (q.shop) { if (!imgOk(HOGIM.city)) return; var sw = q.shop[1] - q.shop[0], sh = HOGIM.city.naturalHeight; g.drawImage(HOGIM.city, q.shop[0], 0, sw, sh, Math.round(x), Math.round(y - (sh - 6) * SHOPSC), Math.round(sw * SHOPSC), Math.round(sh * SHOPSC)); return; }
     spr(q.k, x, y, { flip: q.flip });
   });
 }
 
-/* where the street is under the camera: the lowest top surface in view (rooftops sit above it), so the shops
-   always stand on the ground you are running along; eased so it never jumps */
-function streetY(cx, W) { var lo = null; for (var c = Math.floor(cx / TS) - 4; c <= Math.floor((cx + W) / TS) + 4; c += 2) { for (var r = 1; r < LV.h; r++) { var ch = T(c, r); if (ch === '.') continue; if (ch === '#' || ch === '_' || ch === '-' || surf(ch, 8) >= 0) { if (lo === null || r > lo) lo = r; } break; } } return lo === null ? LV.street : lo * TS; }
+
+/* Super Cumhead's golden frames, made once from his own */
+var GOLD = {};
+function g0() { return KIT.ctx; }
+function goldFrame(n) {
+  if (GOLD[n]) return GOLD[n]; var f = KIT.SPR[n]; if (!f || !KIT.sheetReady) return null;
+  var c = document.createElement('canvas'); c.width = f[2]; c.height = f[3]; var g = c.getContext('2d');
+  g.drawImage(KIT.sheet, f[0], f[1], f[2], f[3], 0, 0, f[2], f[3]);
+  var im = g.getImageData(0, 0, f[2], f[3]), d = im.data;
+  for (var i = 0; i < d.length; i += 4) { if (!d[i + 3]) continue; var l = (d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15) / 255;
+    if (l < 0.06) { d[i] = 110; d[i + 1] = 56; d[i + 2] = 8; continue; } // the outline turns deep gold
+    d[i] = Math.min(255, 200 + l * 60); d[i + 1] = Math.min(255, 140 + l * 115); d[i + 2] = Math.min(255, 30 + l * 150); }
+  g.putImageData(im, 0, 0); return (GOLD[n] = c);
+}

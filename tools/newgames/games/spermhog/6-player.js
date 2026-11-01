@@ -7,11 +7,11 @@ var PL = null;
 function newPlayer(x, y) { PL = { x: x, y: y, vx: 0, vy: 0, gsp: 0, air: false, face: 1, jumps: 0, state: 'normal', inv: 0, hurtT: 0, deadT: 0, atkT: 0, atkCd: 0, anim: 0, lock: 0, spring: 0, slope: 0, shield: 0, prevJ: false, prevA: false, idle: 0 }; }
 function pIn() {
   var s = KIT.stick(0), l = KIT.held('left') || (s.on && s.x < -0.4), r = KIT.held('right') || (s.on && s.x > 0.4);
-  return { dir: (r ? 1 : 0) - (l ? 1 : 0), j: KIT.held('a'), at: KIT.held('b') || KIT.held('x'), down: KIT.held('down') };
+  return { dir: (r ? 1 : 0) - (l ? 1 : 0), j: KIT.held('a'), at: KIT.held('b') || KIT.held('x'), down: KIT.held('down'), up: KIT.held('up') || (s.on && s.y < -0.5) };
 }
 function sensors(x, y, y0, y1, ow) { var a = floorAt(x - 5, y0, y1, ow), b = floorAt(x + 5, y0, y1, ow); return { l: a, r: b, f: a === null ? b : b === null ? a : Math.min(a, b) }; }
 function stepPlayer(dt) {
-  var p = PL, inp = G.mode === 'clear' || G.ctl === false ? { dir: G.mode === 'clear' ? 1 : 0, j: false, at: false } : pIn(), K = PHYS;
+  var p = PL, inp = G.mode === 'clear' || G.ctl === false ? { dir: G.mode === 'clear' ? 1 : 0, j: false, at: false } : pIn(), K = G.super ? SUPERK : PHYS;
   var jp = inp.j && !p.prevJ, ap = inp.at && !p.prevA; p.prevJ = inp.j; p.prevA = inp.at;
   if (p.inv > 0) p.inv -= dt; if (p.atkT > 0) p.atkT -= dt; if (p.atkCd > 0) p.atkCd -= dt; if (p.lock > 0) p.lock -= dt; if (p.spring > 0) p.spring -= dt;
   if (p.state === 'dead') { p.vy += K.grav * dt; p.y += p.vy * dt; p.deadT += dt; if (p.deadT > 2) loseLife(); return; }
@@ -20,6 +20,8 @@ function stepPlayer(dt) {
   if (p.state === 'hurt') { p.hurtT -= dt; if (p.hurtT <= 0 && !p.air) p.state = 'normal'; }
   var ctl = p.state === 'normal' && p.lock <= 0, dir = ctl ? inp.dir : 0;
   if (dir) p.face = dir;
+  // SUPER CUMHEAD: all seven Cum Chalices, 50 drops, in the air: hold up and press B
+  if (ap && p.air && inp.up && !G.super && canSuper() && p.state === 'normal') { goSuper(); ap = false; }
   // the shot
   if (ap && p.atkCd <= 0 && p.state === 'normal') { p.atkT = 0.2; p.atkCd = 0.32; SHOTS.push({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 330 + p.gsp * 0.3, vy: 0, life: 0.55, k: 'sperm', mine: true }); sfx.play('shoot'); }
   if (!p.air) {
@@ -77,3 +79,12 @@ function hurt(srcx, hazard) {
 }
 function knock(srcx, k) { var p = PL; p.state = 'hurt'; p.hurtT = 0.5; p.air = true; p.vy = -300 * k; p.vx = (p.x < srcx ? -1 : 1) * 160 * k; p.gsp = 0; G.shake = Math.max(G.shake, 3); }
 function die(fell) { var p = PL; if (p.state === 'dead') return; p.state = 'dead'; p.deadT = 0; p.vy = fell ? 0 : -420; p.shield = 0; G.shoes = 0; G.star = 0; sfx.play('die'); music.stop(0.4); }
+
+/* ---------- Super Cumhead ---------- */
+var SUPERK = (function () { var k = {}; for (var q in PHYS) k[q] = PHYS[q]; k.acc *= 1.7; k.top *= 1.4; k.maxg *= 1.2; k.jumpv *= 1.12; k.jump2 *= 1.12; k.airacc *= 1.5; return k; })();
+function canSuper() { return chalCount() >= 7 && G.drops >= 50; }
+function goSuper() { G.super = 1; G.superT = 0; PL.vy = Math.min(PL.vy, -120); sfx.play('super'); G.shake = 5; G.banner = 1.6; G.bannerTxt = 'SUPER CUMHEAD!'; for (var i = 0; i < 16; i++) FX.push({ k: 'bit', x: PL.x, y: PL.y - 24, vx: Math.cos(i / 16 * 6.28) * 200, vy: Math.sin(i / 16 * 6.28) * 200, t: 0.5, c: i % 2 ? '#ffe36a' : '#fffbe8' }); }
+function stepSuper(dt) {
+  if (!G.super) return; if (PL.state === 'dead' || G.mode !== 'play') { G.super = 0; return; }
+  G.star = Math.max(G.star, 0.1); G.superT += dt; if (G.superT >= 1) { G.superT -= 1; G.drops--; if (G.drops <= 0) { G.drops = 0; G.super = 0; G.star = 0; G.banner = 1; G.bannerTxt = 'OUT OF DROPS'; } }
+}
