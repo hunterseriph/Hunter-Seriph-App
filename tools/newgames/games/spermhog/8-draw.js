@@ -26,15 +26,20 @@ function drawWorld() {
     else if (ch === 'Q') key = qOn(c) ? 'Q1' : 'Q';
     else if (ch === 'D') { if (TRAPOPEN[c + ',' + r]) continue; }
     else if (ch === '_' || ch === '-') key = ch + (Math.floor(G.t * 10) % 4);
-    if (ch !== 'k' && !isSolid(ch, c, r) && (T(c, r - 1) === 'k' || T(c - 1, r) === 'k' || T(c + 1, r) === 'k')) g.drawImage(TILESET, TILEKEYS.k * 16, 0, 16, 16, x, y, 16, 16);
+    var TSET = tilesFor(c, r);
+    if (ch !== 'k' && !isSolid(ch, c, r) && (T(c, r - 1) === 'k' || T(c - 1, r) === 'k' || T(c + 1, r) === 'k')) g.drawImage(TSET, TILEKEYS.k * 16, 0, 16, 16, x, y, 16, 16);
     var ti = TILEKEYS[key]; if (ti === undefined) continue;
-    g.drawImage(TILESET, ti * 16, 0, 16, 16, x, y, 16, 16);
+    g.drawImage(TSET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
   // platforms
   PLATS.forEach(function (q) { if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
-    if (q.log) { spr('p_logboat', x + q.w / 2, y + 14, { sc: q.w / 60 }); return; }
+    if (q.log) { if (distAt(Math.floor(q.x / TS))) spr('hog_barge', x + q.w / 2, y + 16, { sc: q.w / 64 }); else spr('p_logboat', x + q.w / 2, y + 14, { sc: q.w / 60 }); return; }
+    if (q.k === 'line') { spr('hog_washline', x + q.w / 2, y + 18, {}); R('#12040a', x - 2, y - 2, 3, 120); R('#12040a', x + q.w, y - 2, 3, 120); return; }
+    var dq = distAt(Math.floor(q.x / TS));
+    if (dq === 'site') { R('#12040a', x - 1, y - 1, q.w + 2, 10); R('#c43a10', x, y, q.w, 3); R('#c43a10', x, y + 6, q.w, 2); for (var gi = 0; gi < q.w; gi += 8) R('#ff6a3a', x + gi, y + 3, 2, 3); if (q.k === 'movv' || q.k === 'movh') { R('#3a343c', x + q.w / 2 - 1, y - 400, 2, 399); } return; }
+    if (dq === 'docks' && q.k === 'crumble') { var sh2 = q.touch > 0 && !q.fall ? Math.round(Math.sin(G.t * 60)) : 0; spr('hog_crate', x + q.w / 2 + sh2, y + 20, { sc: q.w / 20 }); return; }
     var shk = q.touch > 0 && !q.fall ? Math.round(Math.sin(G.t * 60)) : 0;
-    for (var i = 0; i < q.w / 16; i++) g.drawImage(TILESET, TILEKEYS['='] * 16, 0, 16, 16, x + i * 16 + shk, y, 16, 16);
+    var PT = tilesFor(Math.floor(q.x / TS), Math.floor(q.y / TS)); for (var i = 0; i < q.w / 16; i++) g.drawImage(PT, TILEKEYS['='] * 16, 0, 16, 16, x + i * 16 + shk, y, 16, 16);
     if (q.k === 'movv' || q.k === 'movh') { R(q.k === 'movv' ? '#ffe36a' : '#c4121c', x + q.w / 2 - 2, y + 6, 4, 2); } });
   // street furniture, and the lamps' pools of light
   if (LV.props.length) drawProps(g, cx, cy, W, H);
@@ -56,8 +61,8 @@ function drawBack(g, Z, cx, cy, W, H) {
     if (imgOk(HOGIM.sky)) tile(g, HOGIM.sky, cx * 0.05, vy - 30, H + 40, 1);
     if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 0.7);
     if (imgOk(HOGIM.skyline)) tile(g, HOGIM.skyline, cx * 0.12, vy + H - 200, 130, 0.5);
-    // black towers flood the back, two depths; Hunter's own buildings stand on the street itself (cityProps)
-    [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(vy * (1 + L[0])) + H - 300 + L[2]; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); g.globalAlpha = 1; if (L[3] === 1 && my + 300 < H) { g.fillStyle = '#0d0507'; g.fillRect(0, my + 299, W, H - my - 299); } }); // the towers never end above the bottom of the screen
+    if (LV.dists && LV.dists.length) drawDistrictBack(g, cx, vy, W, H); else
+    [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(vy * (1 + L[0])) + H - 300 + L[2]; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); g.globalAlpha = 1; if (L[3] === 1 && my + 300 < H) { g.fillStyle = '#0d0507'; g.fillRect(0, my + 299, W, H - my - 299); } });
     return;
   }
   // moon and stars, then three painted layers
@@ -73,10 +78,12 @@ function drawLiquid(g, ch, x, y, c) {
   else g.fillRect(x, y, 16, 16);
 }
 function drawEnt(g, e, cx, cy, W, H) {
-  var x = e.x - cx, y = e.y - cy; if (x < -160 || x > W + 400 || y < -200 || y > H + 220) return;
+  var x = e.x - cx, y = e.y - cy; if (!(e.k === 'traffic' || e.k === 'train') && (x < -160 || x > W + 400 || y < -200 || y > H + 220)) return;
   var k = e.k;
   if (TRAPKINDS[k]) { drawTrap(g, e, cx, cy); return; }
+  if (SETKINDS[k]) { drawSetpiece(g, e, cx, cy); return; }
   if (k === 'loop') { drawLoop(g, e, cx, cy); return; }
+  if (k === 'dsign') { var D = DIST[e.id]; if (!D) return; R('#12040a', x - 2, y - 46, 4, 46); R('#5a545c', x - 1, y - 46, 2, 46); var tw = D.name.length * 6 + 10; R('#12040a', x - tw / 2 - 1, y - 62, tw + 2, 16); R('#2a0a10', x - tw / 2, y - 61, tw, 14); R('#c4121c', x - tw / 2, y - 61, tw, 1); R('#c4121c', x - tw / 2, y - 48, tw, 1); text(D.name, x, y - 58, { size: 6, align: 'center', col: '#f1e7d0' }); return; }
   if (k === 'drop') { if (e.alive) spr('hog_drop', x, y - 2 + Math.sin(G.t * 4 + e.x * 0.1) * 1.5, {}); return; }
   if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0; if (rs <= 0.02) return; spr(fr, x, y + (1 - rs) * 26, { flip: e.dir < 0 }); return; }
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
@@ -178,7 +185,7 @@ function cityMid(id) {
 function drawProps(g, cx, cy, W, H) {
   LV.props.forEach(function (q) { var x = q.x - cx, y = q.y - cy; if (x < -120 || x > W + 120 || y < -20 || y > H + 260) return;
     if (q.lamp) { var fl = 0.85 + Math.sin(G.t * 9 + q.x) * 0.04 + (hash2(Math.floor(G.t * 8), q.x | 0, 3) < 0.02 ? -0.4 : 0); g.save(); g.globalCompositeOperation = 'lighter';
-      var gr = g.createRadialGradient(x, y - 62, 4, x, y - 30, 70); gr.addColorStop(0, 'rgba(255,200,90,' + (0.32 * fl).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(x - 70, y - 120, 140, 124); g.restore(); }
+      var lx2 = q.k === 'hog_lamp2' ? x + 8 : x, ly2 = q.k === 'hog_lamp2' ? y - 72 : y - 62, gr = g.createRadialGradient(lx2, ly2, 4, lx2, y - 30, 80); gr.addColorStop(0, 'rgba(255,200,90,' + (0.32 * fl).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(x - 70, y - 120, 140, 124); g.restore(); }
     if (q.shop) { var ff = KIT.SPR[q.shop]; spr(q.shop, x, y + 1, { sc: q.sc }); var nn = SHOPNEON[q.shop]; if (nn && ff) { var ty = y - ff[3] * q.sc - 6; text(nn[0], x, ty - 9, { size: 6, align: 'center', col: nn[2], outline: true }); text(nn[1], x, ty, { size: 6, align: 'center', col: nn[2], outline: true }); } return; }
     spr(q.k, x, y, { flip: q.flip });
   });
@@ -197,4 +204,13 @@ function goldFrame(n) {
     if (l < 0.06) { d[i] = 110; d[i + 1] = 56; d[i + 2] = 8; continue; } // the outline turns deep gold
     d[i] = Math.min(255, 200 + l * 60); d[i + 1] = Math.min(255, 140 + l * 115); d[i + 2] = Math.min(255, 30 + l * 150); }
   g.putImageData(im, 0, 0); return (GOLD[n] = c);
+}
+
+/* the name of the part of town you just walked into, slid in along the bottom like a title */
+function drawDistBanner() {
+  if (!LV.dists || !LV.dists.length || !PL) return; var id = distAt(Math.floor(PL.x / TS));
+  if (id !== G.curDist) { if (G.curDist !== undefined && G.mode === 'play') { G.distT = 3; G.distName = DIST[id].name; } G.curDist = id; }
+  if (!(G.distT > 0)) return; var W = KIT.W, H = KIT.H, t = 3 - G.distT, k = t < 0.35 ? t / 0.35 : G.distT < 0.4 ? G.distT / 0.4 : 1, x = -W * (1 - k), y = H - 62;
+  R('#12040a', x, y, W * 0.62 + 4, 34); R('#c4121c', x, y + 2, W * 0.62, 30); R('#2a0a10', x, y + 6, W * 0.62 - 6, 22);
+  text(G.distName, x + 16, y + 9, { size: 16, col: '#f1e7d0', font: 'title', outline: true }); text(LV.zone.name + '  ·  ACT ' + ACTS[G.ai].act, x + W * 0.62 - 12, y + 12, { size: 6, align: 'right', col: '#ffe36a' });
 }

@@ -25,19 +25,20 @@ function liquidAt(px, py) { var ch = T(Math.floor(px / TS), Math.floor(py / TS))
 /* ---------- loading an act ---------- */
 function loadAct(ai) {
   LV = buildAct(ACTS[ai]); LV.ai = ai; ENTS = []; PLATS = []; SHOTS = []; FX = []; SCAT = []; TRAPOPEN = {};
-  TILESET = buildTileset(LV.zone); KIT.dropLayer();
+  TILESET = buildTileset(LV.zone); TILESETS = {}; KIT.dropLayer();
   LV.ents.forEach(function (e) {
     var o = { k: e.k, x: e.x, y: e.y, x0: e.x, y0: e.y, t: 0, alive: true, ph: e.ph || 0 };
     for (var q in e) if (!(q in o)) o[q] = e[q];
     if (e.k === 'start') { LV.sx = e.x; LV.sy = e.y; return; }
     if (e.k === 'foe') { var key = LV.zone.foes[e.f] || e.f, F = FOES[key]; o.F = F; o.key = key; o.hp = F.hp; o.dir = -1; o.cd = 1.5 + Math.random() * 2; o.y0 = e.y; if (F.beh === 'fly' || F.beh === 'dive' || F.beh === 'float') { o.y -= 40; o.y0 = o.y; } }
+    if (e.k === 'line') { PLATS.push({ x: e.x - TS / 2, y: e.y, w: 4 * TS, x0: e.x - TS / 2, y0: e.y, k: 'line', t: 0, dx: 0, dy: 0, ph: 0, range: 0 }); return; }
     if (e.k === 'movh' || e.k === 'movv' || e.k === 'crumble' || e.k === 'circle') { var p = { x: e.x - TS / 2, y: e.y, w: (e.w || 3) * TS, x0: e.x - TS / 2, y0: e.y, k: e.k, range: (e.range || 3) * TS, log: e.log, ph: Math.random() * 6, t: 0, dx: 0, dy: 0 }; PLATS.push(p); o.plat = p; o.alive = false; }
     if (e.k === 'arena') LV.arena = o;
     if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
       var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
     ENTS.push(o);
   });
-  LV.props = LV.zone.id === 'city' ? cityProps() : [];
+  LV.props = LV.dists && LV.dists.length ? distProps() : LV.zone.id === 'city' ? cityProps() : [];
   LV.ents = null; G.check = null; G.boss = null; G.lock = null;
 }
 
@@ -60,7 +61,7 @@ function stepWorld(dt) {
     if (e.k === 'trap') { var c = (G.t + e.ph * 3) % 3.2, open = c > 2.1; var cx = Math.floor(e.x / TS), cy = Math.floor(e.y / TS); for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) if (T(cx + dx, cy + dy) === 'D') TRAPOPEN[(cx + dx) + ',' + (cy + dy)] = open; e.open = open; e.warn = c > 1.6 && c <= 2.1; }
   });
   // traps
-  if (p) ENTS.forEach(function (e) { if (TRAPKINDS[e.k] && Math.abs(e.x - G.cam - KIT.W / 2) < KIT.W * 1.2) trapStep(e, dt); });
+  if (p) ENTS.forEach(function (e) { if (TRAPKINDS[e.k] && Math.abs(e.x - G.cam - KIT.W / 2) < KIT.W * 1.2) trapStep(e, dt); else if (SETPIECE[e.k] && Math.abs(e.x - G.cam - KIT.W / 2) < KIT.W * 3) SETPIECE[e.k](e, dt); });
   // foes
   ENTS.forEach(function (e) { if (e.k === 'foe' && e.alive) stepFoe(e, dt); });
   // things you touch
@@ -135,6 +136,8 @@ function touch(e, dt) {
   if (k === 'box') { if (e.alive && Math.abs(px - e.x) < 14 && py > e.y - 26 && py - PH < e.y) { if (p.air || Math.abs(p.gsp) > 200) { openBox(e); if (p.vy > 0) p.vy = -280; } else if (px < e.x) { p.x = e.x - 14 - PHW; p.gsp = 0; } else { p.x = e.x + 14 + PHW; p.gsp = 0; } } return; }
   if (k === 'check') { if (!e.on && Math.abs(px - e.x) < 14 && py > e.y - 40) { e.on = true; G.check = { x: e.x, y: e.y }; sfx.play('check'); FX.push({ k: 'ring', x: e.x, y: e.y - 40, t: 0.5 }); } return; }
   if (k === 'goal') { if (!e.hit && px > e.x) { e.hit = true; e.spin = 2.4; sfx.play('goal'); G.lock = { x0: -1e9, x1: 1e9, cam: Math.max(0, e.x - KIT.W * 0.5) }; actClear(); } /* the camera stays on the sign and he runs off screen */ if (e.spin > 0) e.spin -= dt; return; }
+  if (k === 'awning') { awningTouch(e, dt); return; }
+  if (k === 'ramp') { rampTouch(e, dt); return; }
   if (k === 'portal') { // the giant ring into a special stage: 50 drops to open it, once per act
     if (e.used || chalCount() >= 7) return; if (Math.abs(px - e.x) < 22 && py > e.y - 46 && py - PH < e.y + 6) { if (G.drops >= 50) { e.used = true; startSpecial(e); } else if (!e.told) { e.told = 1; G.banner = 1.6; G.bannerTxt = '50 DROPS TO ENTER'; } } else e.told = 0; return; }
   if (k === 'arena') { if (!G.lock && px > e.c0 * TS + 80) startBoss(e); return; }
@@ -182,3 +185,32 @@ function cityProps() {
 var SHOPS = ['fac_cafe', 'fac_arcade', 'fac_amy', 'fac_club', 'fac_beebs', 'fac_t', 'fac_tb', 'fac_greebo', 'fac_saba', 'fac_joff', 'fac_sanct', 'fac_pulsar', 'fac_bonjo'];
 var SHOPNEON = {}; // names are baked into every shop front's marquee (tools/load-legacy/facnames.py): never draw them on top
 function shopSc(f) { return Math.min(1.7, 150 / f[3], 112 / f[2]); }
+
+/* street furniture district by district: each district's own things (the high road and the low road have
+   theirs), never the same thing twice in a row, its own shops spread along its longest flat stretches */
+function distProps() {
+  var out = [], busy = {}, lastK = null, last = -99, lastLamp = -99;
+  var hard = {}; ENTS.forEach(function (e) { if (e.k !== 'drop') { var c = Math.floor(e.x / TS); busy[c] = busy[c - 1] = busy[c + 1] = 1; if (e.k !== 'foe' && e.k !== 'box') hard[c] = hard[c - 1] = hard[c + 1] = 1; } }); // shops may stand behind foes and boxes
+  function surfAt(c, r) { var ch = T(c, r); return (ch === '#' || ch === '_' || ch === '-') && (T(c, r - 1) === '.' || T(c, r - 1) === 'k') && isSolid(T(c, r + 1), c, r + 1); }
+  function deep(c, r) { for (var y = r; y < Math.min(LV.h, r + 3); y++) if (T(c, y) !== '#') return false; return true; } // the street over the low road counts
+  // shops first: in each district, the flat solid stretches long enough, spread out
+  LV.dists.forEach(function (d, i) { var D = DIST[d.id], c1 = i + 1 < LV.dists.length ? LV.dists[i + 1].c : LV.w; if (!D || !D.shops.length) return;
+    var spots = [];
+    for (var c = d.c + 8; c < c1 - 8; c++) { var r = null; for (var y = 1; y < LV.h; y++) if (surfAt(c, y)) { r = y; break; } if (r === null || bandAt(c, r) !== 'mid') continue;
+      var f = KIT.SPR[D.shops[0]], w = f ? Math.ceil(f[2] * shopSc(f) / TS) : 7, ok = true; for (var k = 0; k < w; k++) if (!surfAt(c + k, r) || !deep(c + k, r) || hard[c + k]) { ok = false; break; } if (ok) spots.push([c, r]); }
+    var n = D.shops.length, used = [];
+    D.shops.forEach(function (id, j) { var want = d.c + (c1 - d.c) * (j + 0.5) / n, best = null; spots.forEach(function (s) { if (used.some(function (u) { return Math.abs(u - s[0]) < 14; })) return; if (!best || Math.abs(s[0] - want) < Math.abs(best[0] - want)) best = s; });
+      if (!best) return; used.push(best[0]); var f = KIT.SPR[id]; if (!f) return; var sc = shopSc(f), wc = Math.ceil(f[2] * sc / TS);
+      out.push({ shop: id, sc: sc, x: best[0] * TS + wc * TS / 2, y: best[1] * TS }); for (var k = -2; k <= wc + 2; k++) busy[best[0] + k] = 1; });
+  });
+  // then the furniture, on every walkable surface, high road and low road included
+  for (var c = 4; c < LV.w - 4; c++) { var id = distAt(c); if (!id) continue;
+    for (var r = 1; r < LV.h; r++) { if (!surfAt(c, r) || !surfAt(c + 1, r) || !surfAt(c - 1, r) || busy[c]) continue;
+      var band = bandAt(c, r), S = styleOf(id, band), list = S.props || [], h = hash2(c, r, 61), lampy = band === 'mid' && (id === 'row' || id === 'cafe' || id === 'plaza' || id === 'downtown');
+      if (lampy && c - lastLamp >= 15) { out.push({ k: id === 'downtown' || id === 'plaza' ? 'hog_lamp2' : 'hog_lamp', x: c * TS + 8, y: r * TS, lamp: 1 }); lastLamp = c; busy[c] = busy[c + 1] = 1; continue; }
+      if (c - last < 5 || h > 0.32 || !list.length) continue;
+      var k2 = list[Math.floor(hash2(c, 7, 3) * list.length)]; if (k2 === lastK) k2 = list[(list.indexOf(k2) + 1) % list.length]; lastK = k2; last = c;
+      out.push({ k: 'hog_' + k2, x: c * TS + 8, y: r * TS + (k2 === 'puddle' || k2 === 'grate' ? 3 : 0), flip: hash2(c, 5, 2) < 0.5 && k2 !== 'subsign' && k2 !== 'roadsign' && k2 !== 'neonarrow' }); busy[c] = busy[c + 1] = 1;
+    } }
+  return out.sort(function (a, b) { return (b.shop ? 1 : 0) - (a.shop ? 1 : 0); });
+}

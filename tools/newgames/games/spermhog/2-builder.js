@@ -8,7 +8,7 @@
    'k' open space underground (drawn as a dark back wall, not sky)
    ===================================================================================================== */
 function Builder(zone, seed) {
-  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1 };
+  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [] };
   var r = seed || 1; b.rnd = function () { r = (r * 16807) % 2147483647; return (r - 1) / 2147483646; };
   function colAt(c) { while (b.cols.length <= c) { var a = []; for (var i = 0; i < ROWS; i++) a.push('.'); b.cols.push(a); b.top.push(null); } return b.cols[c]; }
   b.set = function (c, row, ch) { if (row < 0 || row >= ROWS || c < 0) return; colAt(c)[row] = ch; };
@@ -50,6 +50,7 @@ function Builder(zone, seed) {
 
 /* ---------- set pieces: each lays tiles from b.col at b.h and moves on. 'm' 'n' 'p' 'q' are the zone's walkers, 'w' its flyer ---------- */
 var SEC = {
+  district: function (b, id) { b.dists.push({ c: b.col, id: id }); b.ent('dsign', b.col + 3, b.h, { id: id }); return b; }, // a new part of town starts here
   start: function (b) { b.ground(16); b.thing(-13, 'start'); b.drops(-9, 5, 2); return b; },
   run: function (b, n, foe) { b.ground(n); if (n >= 8) b.drops(-n + 2, Math.floor(n / 3), 2); if (foe) b.foe(-Math.floor(n / 2), foe); return b; },
   rollers: function (b, k) { // gentle hills: speed
@@ -62,14 +63,15 @@ var SEC = {
     b.ground(5); return b;
   },
   stairs: function (b, k, dir) { for (var i = 0; i < k; i++) { b.ground(4); b.step(dir === 'down' ? 2 : -2); } b.ground(4); b.drops(-4, 3, 2); return b; },
-  platPit: function (b, k, style, foe) { // a pit with floating platforms; style '=' thin, 'F' crumbling, 'M' moving, 'N' lifts
-    b.ground(4); var c0 = b.col, n = 0;
+  platPit: function (b, k, style, foe, safe) { // a pit with floating platforms; style '=' thin, 'F' crumbling, 'M' moving, 'N' lifts. safe: a spiked floor and a spring out instead of a drop to your death
+    b.ground(4); var c0 = b.col, n = 0, realGap = b.gap;
+    if (safe) b.gap = function (m) { for (var i = 0; i < m; i++) { var c = b.col; b.h += 5; b.ground(1); b.h -= 5; b.set(c, b.h + 4, '^'); } return b; };
     for (var i = 0; i < k; i++) {
       var dy = [2, 3, 1, 3, 2][i % 5], w = style === 'M' ? 3 : style === 'N' ? 3 : 4, gapw = style === 'M' ? 4 : 3;
       b.gap(gapw); b.ledge(0, dy, w, style || '='); b.drops(0, w - 1, dy + 2, null, 1); if (foe && style === '=' && i === 2) b.ent('foe', b.col + 1, b.h - dy, { f: foe });
       b.gap(w); n++;
     }
-    b.gap(3); b.ground(5); return b;
+    b.gap(3); if (safe) { b.gap = realGap; for (var sc = c0; sc < b.col; sc += 9) { b.set(sc, b.h + 4, '.'); b.ent('spring', sc, b.h + 5, { pow: 1 }); } } b.ground(5); return b;
   },
   springTower: function (b, foeLow) { // a spring up to a high route over a lower one with foes and spikes; they meet again
     b.ground(5); b.thing(-2, 'spring', 0, { pow: 1 }); var c0 = b.col;
@@ -120,6 +122,13 @@ var SEC = {
   rollers2: function (b, n) { b.ground(6); b.thing(0, 'roller', 0, { n: n || 2 }); b.ground(26); b.drops(-20, 6, 2, null, 2); return b; }, // bins, barrels, boulders roll at you
   wires: function (b, n) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(6); b.thing(-5, 'arc', 0, { w: 4, ph: i * 0.8 }); } b.ground(4); return b; }, // live wires that spark across
   loop: function (b) { b.ground(10); b.thing(-6, 'loop', 0); b.drops(-9, 4, 2, null, 1.2); b.ground(10); return b; },
+  /* ---------- Night City set pieces (one district each) ---------- */
+  awnings: function (b, n) { b.ground(4); for (var i = 0; i < n; i++) { b.ground(7); b.thing(-4, 'awning', 3); b.drops(-4, 3, 9, 'arc', 1); } b.ledge(-12, 9, 6, '='); b.thing(-9, 'box', 9, { item: 'drops' }); b.ground(6); return b; }, // shop awnings to bounce up on, a ledge only they reach
+  traffic: function (b, n, foe) { b.ground(2); b.thing(0, 'traffic', 0, { w: n }); b.ground(n); if (foe) b.foe(-Math.floor(n / 2), foe); b.drops(-n + 4, Math.floor(n / 3), 2, null, 2); return b; }, // cabs come down the street at you
+  subway: function (b, n) { b.ground(2); b.thing(0, 'train', 0, { w: n, ph: 0.5 }); var c0 = b.col; b.ground(n); for (var x = 4; x < n - 6; x += 13) { b.ledge(-n + x, 3, 6, '='); b.drops(-n + x + 1, 4, 5, null, 1); } return b; }, // platforms to wait on while the train goes through
+  ramps: function (b, n) { b.ground(4); for (var i = 0; i < n; i++) { b.thing(0, 'dash', 0, { dir: 1 }); b.ground(6); b.thing(-1, 'ramp', 0); var w = 7; b.drops(0, w, 5, 'arc', 1); for (var k = 0; k < w; k++) { b.ground(1); b.set(b.col - 1, b.h - 1, '^'); } b.ground(8); } return b; }, // dash, ramp, fly the spike strip
+  washlines: function (b, n) { b.ground(3); var c0 = b.col; for (var i = 0; i < n; i++) { b.ground(6); b.surface(-6, 6, 'Q'); b.thing(-3, 'zap', 0, { ph: i * 0.8 }); b.thing(-6, 'line', 3 + (i % 2) * 2); b.drops(-5, 3, 6 + (i % 2) * 2, null, 1); } b.ground(4); return b; }, // electric puddles under washing lines you can stand on
+  graves: function (b, n) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(5); if (i % 2) b.foe(-2, 'gravehand'); SEC.ditch(b, 3); } b.ground(3); return b; }, // open graves and the hands that come out of them
   /* ---------- LANES: three routes side by side for a long stretch: the high road (rooftops, gantries, ledges),
      the street, and the low road underneath. Fall through a gap in one and you land on the one below, so a slip
      costs you the better route, not a life. Springs and steam lead up, holes lead down. ---------- */
@@ -132,7 +141,7 @@ var SEC = {
     var LF = H + 11, TF = H - 9, L = Builder(Z, b.seed + 77), Tp = Builder(Z, b.seed + 99);
     L.col = s0; L.h = LF; (spec.low || []).forEach(function (p) { SEC[p[0]].apply(null, [L].concat(p.slice(1))); });
     Tp.col = s0 + 3; Tp.h = TF; (spec.top || []).forEach(function (p) { SEC[p[0]].apply(null, [Tp].concat(p.slice(1))); });
-    var E = Math.max(b.col, L.col + 2, Tp.col + 4) + 8; b.ground(E - b.col); L.ground(E - L.col);
+    var E = Math.max(b.col, L.col + 2, Tp.col + 4) + 8; b.ground(E - b.col); L.ground(E - L.col); b.bands.push({ c0: s0 - 2, c1: E, H: H });
     // low road: everything under the street is carved out down to its floor, open space shows a back wall
     for (var c = s0; c < E - 1; c++) { var t = b.top[c], from = t === null || t === undefined ? H : t + 3;
       for (var y = Math.min(from, H + 3); y < b.ROWS; y++) { if (t !== null && t !== undefined && y < t + 3) continue; var ch = L.get(c, y); b.set(c, y, ch === '.' ? 'k' : ch); }

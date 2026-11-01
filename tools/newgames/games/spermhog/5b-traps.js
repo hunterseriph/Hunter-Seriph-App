@@ -43,6 +43,7 @@ function trapStep(e, dt) {
     if (e.on && p.state === 'normal' && p.x > e.x && p.x < x1 && p.y > e.y - 26) hurt(p.x); return; }
 }
 var TRAPKINDS = { swing: 1, vent: 1, faller: 1, roller: 1, arc: 1 };
+var SETKINDS = { traffic: 1, train: 1, awning: 1, ramp: 1 };
 function drawTrap(g, e, cx, cy) {
   var L = TRAPLOOK[LV.zone.id] || TRAPLOOK.city, k = e.k, x = Math.round(e.x - cx), y = Math.round(e.y - cy);
   if (k === 'swing' && e.bx !== undefined) { var px = Math.round(e.px - cx), py = Math.round(e.py - cy), bx = e.bx - cx, by = e.by - cy;
@@ -92,4 +93,38 @@ function drawLoop(g, e, cx, cy, front) { // the ring: its far half behind Cumhea
   g.lineWidth = 7; g.strokeStyle = col; g.beginPath(); g.arc(x, y, LOOPR + 5, 0, 6.3); g.stroke();
   g.lineWidth = 2; g.strokeStyle = LV.zone.edge[0]; g.beginPath(); g.arc(x, y, LOOPR + 2, 0, 6.3); g.stroke();
   for (var i = 0; i < 16; i++) { var a = i / 16 * 6.283; R('#12040a', x + Math.cos(a) * (LOOPR + 5) - 1, y + Math.sin(a) * (LOOPR + 5) - 1, 3, 3); }
+}
+/* ---------- Night City set pieces: each lives in one district only ---------- */
+// traffic on the downtown street: cabs come at you from the right; jump them or bounce off their roofs
+function trafficStep(e, dt) {
+  var p = PL; if (!e.cars) { e.cars = []; e.cd = 1; }
+  if (Math.abs(p.x - e.x) < (e.w || 40) * TS && Math.abs(p.y - e.y) < 60) { e.cd -= dt; if (e.cd <= 0) { e.cd = 3.2 + Math.random() * 1.6; e.warn = 0.9; e.cars.push({ x: p.x + KIT.W * 0.75 + 40, y: e.y, delay: 0.9, alive: true }); } }
+  if (e.warn > 0) e.warn -= dt;
+  e.cars.forEach(function (c) { if (c.delay > 0) { c.delay -= dt; return; } c.x -= 300 * dt; if (c.x < e.x - 60 || c.x < p.x - KIT.W) c.alive = false;
+    if (c.alive && p.state === 'normal' && Math.abs(p.x - c.x) < 30 + PHW && p.y > c.y - 26 && p.y - PH < c.y) { if (p.vy > 40 && p.y - p.vy / 60 <= c.y - 18) { p.vy = -520; p.air = true; sfx.play('spring'); G.score += 100; } else hurt(c.x); } });
+  e.cars = e.cars.filter(function (c) { return c.alive; });
+}
+// the subway: a warning light and horn, then a train sweeps the tracks. Wait up on the platforms
+function trainStep(e, dt) {
+  var p = PL; if (e.t2 === undefined) { e.t2 = 2 + e.ph; e.tx = null; }
+  var near = Math.abs(p.x - e.x) < (e.w || 40) * TS / 2 + 200 && Math.abs(p.y - e.y) < 60;
+  if (e.tx === null) { if (near) { e.t2 -= dt; e.warn = e.t2 < 1.4; if (e.t2 <= 0) { e.tx = p.x + KIT.W * 0.7 + 60; sfx.play('roar'); } } else e.warn = false; }
+  else { e.tx -= 560 * dt; e.warn = false; if (e.tx < p.x - KIT.W - 500) { e.tx = null; e.t2 = 4.5 + Math.random() * 2; }
+    if (p.state === 'normal' && p.x > e.tx - 70 && p.x < e.tx + 3 * 140 && p.y > e.y - 44 && p.y - PH < e.y) hurt(p.x + 30); }
+}
+// awnings on the cafe fronts: land on one and it throws you high
+function awningTouch(e, dt) { var p = PL; if (p.state === 'normal' && p.vy > 0 && Math.abs(p.x - e.x) < 24 && p.y >= e.y - 14 && p.y - p.vy / 60 <= e.y - 10) { p.y = e.y - 14; p.vy = -600; p.air = true; p.jumps = 1; e.t = 0.2; sfx.play('bump'); } if (e.t > 0) e.t -= dt; }
+// highway ramps: hit one at speed and you fly
+function rampTouch(e, dt) { var p = PL; if (!p.air && p.state === 'normal' && p.gsp > 120 && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 8) { p.vx = Math.max(p.gsp, 430); p.gsp = p.vx; p.vy = -560; p.air = true; p.jumps = 1; p.spring = 0.4; sfx.play('dash'); } }
+var SETPIECE = { traffic: trafficStep, train: trainStep };
+function drawSetpiece(g, e, cx, cy) {
+  var x = Math.round(e.x - cx), y = Math.round(e.y - cy);
+  if (e.k === 'traffic') { (e.cars || []).forEach(function (c) { if (c.delay > 0) { var wx = KIT.W - 18, a = Math.floor(G.t * 10) % 2; if (a) { g.fillStyle = 'rgba(255,246,192,0.8)'; g.beginPath(); g.arc(wx, c.y - cy - 10, 8, 0, 6.3); g.fill(); } text('!', wx, c.y - cy - 40, { size: 12, align: 'center', col: '#ffe36a', outline: true }); return; }
+      spr('hog_car', c.x - cx, c.y - cy + 1, { flip: true }); g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(255,240,180,0.18)'; g.beginPath(); g.moveTo(c.x - cx - 30, c.y - cy - 10); g.lineTo(c.x - cx - 110, c.y - cy - 24); g.lineTo(c.x - cx - 110, c.y - cy); g.fill(); g.restore(); }); return; }
+  if (e.k === 'train') { // the warning light on the wall, then the train
+    var lx = Math.min(KIT.W - 20, Math.max(20, x)), on = e.warn && Math.floor(G.t * 8) % 2; R('#12040a', lx - 6, y - 64, 12, 18); R(on ? '#ff2630' : '#3a0a10', lx - 4, y - 62, 8, 6); R(e.warn && !on ? '#ffe36a' : '#3a3010', lx - 4, y - 54, 8, 6);
+    if (e.tx !== null && e.tx !== undefined) for (var i = 0; i < 3; i++) spr('hog_train', e.tx - cx + 70 + i * 142, y + 2, { flip: i === 0 ? false : false });
+    return; }
+  if (e.k === 'awning') { spr('hog_awning', x, y - (e.t > 0 ? 3 : 0), { anchor: 'b' }); R('#12040a', x - 22, y, 2, 40); R('#12040a', x + 20, y, 2, 40); return; }
+  if (e.k === 'ramp') { var gq = KIT.ctx; gq.fillStyle = '#12040a'; gq.beginPath(); gq.moveTo(x - 30, y); gq.lineTo(x + 10, y - 22); gq.lineTo(x + 10, y); gq.fill(); gq.fillStyle = '#ffe36a'; gq.beginPath(); gq.moveTo(x - 27, y - 1); gq.lineTo(x + 8, y - 20); gq.lineTo(x + 8, y - 1); gq.fill(); for (var s = 0; s < 4; s++) { gq.fillStyle = '#12040a'; gq.fillRect(x - 18 + s * 7, y - 6 - s * 4, 4, 3); } return; }
 }

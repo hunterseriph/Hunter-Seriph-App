@@ -61,12 +61,24 @@ function ACT(z, act, seed, a, b, c, d) {
   return { z: z, act: act, seed: seed, plan: plan };
 }
 var ACTS = [
-  ACT(0, 1, 11, [['run', 16, 'm'], ['rollers', 3], ['fallers', 2], ['run', 10, 'n'], ['loop'], ['box', 'drops'], ['swings', 1], ['run', 12, 'p']],
-    [['rollers', 2], ['wires', 2], ['run', 10, 'm'], ['springTower', 'n'], ['ditch', 3], ['dash'], ['loop'], ['rollers2', 2], ['box', 'shield'], ['valley', 3], ['run', 12, 'n']],
-    [['run', 10, 'm'], ['swings', 2], ['fallers', 3], ['dash'], ['rollers', 3], ['wires', 2], ['ditch', 4, 'n'], ['run', 14]]),
-  ACT(0, 2, 12, [['rollers', 2], ['run', 12, 'n'], ['swings', 2], ['loop'], ['rollers2', 2], ['box', 'shoes'], ['run', 10, 'm']],
-    [['valley', 4], ['fallers', 3], ['wires', 3], ['springTower', 'm'], ['ditch', 4, 'n'], ['loop'], ['swings', 2], ['ditch', 4], ['box', 'shield'], ['run', 12, 'p']],
-    [['rollers2', 3], ['wires', 3], ['swings', 2], ['dash'], ['fallers', 3, 'n'], ['ditch', 4], ['run', 10]]),
+  // NIGHT CITY act 1: west to the middle of town. Clubhouse Row, the cafe quarter, the building site, downtown (rooftops, the street, the
+  // subway), Potbelly Plaza. Every district has its own look, shops and trap; nothing repeats
+  { z: 0, act: 1, seed: 11, plan: [['district', 'row'], ['start'], ['run', 18, 'm'], ['rollers', 2], ['box', 'drops'], ['run', 14, 'n'], ['valley', 3], ['run', 12], ['loop'], ['springTower', 'p'], ['run', 16, 'n'], ['dash'], ['rollers', 3], ['run', 12, 'm'], ['check'],
+    ['district', 'cafe'], ['run', 14, 'w'], ['awnings', 3], ['run', 12, 'm'], ['stairs', 2, 'up'], ['awnings', 2], ['run', 10, 'w'], ['box', 'shield'], ['stairs', 2, 'down'], ['run', 10, 'n'], ['awnings', 4], ['run', 14], ['check'],
+    ['district', 'site'], ['run', 8, 'p'], ['swings', 2], ['run', 10], ['platPit', 4, 'N', null, 1], ['run', 8, 'm'], ['fallers', 3], ['climb', 9, 'n'], ['platPit', 4, 'M', null, 1], ['run', 8], ['swings', 1], ['fallers', 2], ['drop', 6], ['run', 10, 'p'], ['check'],
+    ['district', 'downtown'], ['lanes', { top: [['run', 12], ['gaps', 2, 4], ['vents', 2], ['run', 10, 'w'], ['gaps', 2, 5], ['box', 'shoes'], ['run', 12], ['gaps', 2, 4], ['run', 10], ['vents', 3], ['gaps', 3, 4], ['run', 10, 'w'], ['gaps', 2, 5], ['run', 14]],
+      mid: [['run', 8, 'm'], ['traffic', 40, 'n'], ['run', 8], ['box', 'drops'], ['traffic', 46, 'p'], ['run', 10, 'm'], ['traffic', 50, 'n'], ['run', 12]],
+      low: [['run', 6, 'n'], ['subway', 50], ['run', 6, 'm'], ['wires', 2], ['subway', 44], ['box', 'drops'], ['run', 8, 'n'], ['subway', 46], ['wires', 2], ['run', 10]], portal: 'top' }], ['check'],
+    ['district', 'plaza'], ['run', 16], ['dash'], ['run', 20], ['goal']] },
+  // NIGHT CITY act 2: the middle of town to the storm drain. Red Light Alley, the cream docks (containers, the pier, the canal), the overpass,
+  // old town, and the Beast waiting in the drain
+  { z: 0, act: 2, seed: 12, plan: [['district', 'alley'], ['start'], ['run', 14, 'n'], ['washlines', 3], ['run', 10, 'm'], ['rollers2', 3], ['run', 12, 'n'], ['box', 'shoes'], ['washlines', 2], ['stairs', 2, 'up'], ['rollers2', 2], ['stairs', 2, 'down'], ['washlines', 3], ['run', 12], ['check'],
+    ['district', 'docks'], ['lanes', { top: [['run', 10], ['crumbleBridge', 6], ['run', 8, 'w'], ['gaps', 2, 4], ['crumbleBridge', 8], ['box', 'shield'], ['run', 10], ['gaps', 3, 4], ['crumbleBridge', 10], ['run', 8, 'w'], ['gaps', 2, 5], ['run', 12]],
+      mid: [['run', 10, 'm'], ['gaps', 2, 4, 'n'], ['run', 12, 'p'], ['gaps', 2, 5], ['run', 14, 'm'], ['box', 'drops'], ['run', 10, 'n'], ['gaps', 3, 4, 'p'], ['run', 12, 'm'], ['gaps', 2, 5], ['run', 12]],
+      low: [['run', 6], ['pool', 34, 1], ['run', 8, 'q'], ['pool', 30, 1], ['run', 8, 'n'], ['box', 'drops'], ['pool', 36, 1], ['run', 10]], portal: 'low' }], ['check'],
+    ['district', 'highway'], ['run', 10], ['dash'], ['loop'], ['ramps', 2], ['rollers', 3], ['dash'], ['loop'], ['ramps', 1], ['valley', 5], ['dash'], ['ramps', 2], ['loop'], ['run', 12], ['check'],
+    ['district', 'oldtown'], ['run', 12, 'w'], ['graves', 4], ['run', 10, 'm'], ['valley', 4], ['box', 'shield'], ['stairs', 3, 'up'], ['graves', 3], ['run', 10, 'w'], ['stairs', 3, 'down'], ['graves', 2], ['run', 12, 'w'], ['check'],
+    ['district', 'drain'], ['run', 12], ['arena', 'beast']] },
   ACT(1, 1, 21, [['run', 14, 'm'], ['pool', 18], ['run', 10, 'n'], ['conveyor', 16, 1, 'm'], ['box', 'drops'], ['fallers', 2]],
     [['pool', 24, 1], ['springTower', 'p'], ['conveyor', 20, -1, 'n'], ['rollers2', 2], ['ditch', 3], ['valley', 4], ['box', 'shield'], ['pool', 22, 1], ['run', 12, 'm']],
     [['vents', 2], ['conveyor', 18, 1, 'n'], ['fallers', 3], ['pool', 26, 1], ['ditch', 4, 'p'], ['run', 12]]),
@@ -111,5 +123,6 @@ function buildAct(a) {
   var t = new Array(W * H);
   for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) t[y * W + x] = b.cols[x][y + y0];
   b.ents.forEach(function (e) { e.x = e.c * TS + TS / 2; e.y = (e.row - y0) * TS; }); // y: the top of that tile row (where a thing standing there has its feet)
-  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a };
+  var dc = null; if (b.dists.length) { dc = new Array(W); var di = 0, cur = b.dists[0].id; for (var cx = 0; cx < W; cx++) { while (di < b.dists.length && b.dists[di].c <= cx) { cur = b.dists[di].id; di++; } dc[cx] = cur; } }
+  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
 }

@@ -33,7 +33,7 @@ function newGame(zone) { G.lives = 3; G.score = 0; G.kills = 0; beginAct(zone * 
 function beginAct(ai, fromCheck) {
   KIT.closeMenu(); var keep = fromCheck ? G.check : null;
   G.ai = ai; loadAct(ai); G.check = keep; var sx = keep ? keep.x : LV.sx, sy = keep ? keep.y : LV.sy;
-  newPlayer(sx, sy); G.time = keep ? keep.time || 0 : 0; G.drops = 0; G.nextLife = 100; G.shoes = 0; G.star = 0; G.bossDone = 0; G.boss = G.boss2 = null; G.lock = null; G.bossName = null; G.pendingBoss = null; G.super = 0;
+  newPlayer(sx, sy); G.time = keep ? keep.time || 0 : 0; G.drops = 0; G.nextLife = 100; G.shoes = 0; G.star = 0; G.bossDone = 0; G.boss = G.boss2 = null; G.lock = null; G.bossName = null; G.pendingBoss = null; G.super = 0; G.curDist = undefined; G.distT = 0;
   if (keep) ENTS.forEach(function (e) { if (e.k === 'check' && Math.abs(e.x - keep.x) < 4) e.on = true; });
   CAM.x = Math.max(0, sx - KIT.W * 0.42); CAM.y = Math.max(0, sy - KIT.H * 0.62);
   G.mode = 'card'; G.cardT = 0; music.play(LV.zone.song); G.ctl = true;
@@ -92,7 +92,7 @@ function pauseMenu() {
 }
 /* ---------- the loop ---------- */
 function update(dt) {
-  G.t += dt; if (G.banner > 0) G.banner -= dt;
+  G.t += dt; if (G.banner > 0) G.banner -= dt; if (G.distT > 0) G.distT -= dt;
   if (G.mode === 'title') { CAM.x += 30 * dt; if (CAM.x > LV.w * TS - KIT.W) CAM.x = 0; G.cam = CAM.x; return; }
   if (G.mode === 'special') { if (!KIT.menuOpen()) stepSpecial(dt); return; }
   if (G.mode === 'card') { G.cardT += dt; if (G.cardT > 2.4) { G.mode = 'play'; } stepWorld(dt); camera(dt); return; }
@@ -111,7 +111,7 @@ function draw() {
   if (!LV || !TILESET) return;
   drawWorld();
   if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') return;
-  drawHud();
+  drawHud(); drawDistBanner();
   if (G.mode === 'card') drawCard(G.cardT);
   if (G.mode === 'clear' && G.clearT > 1) drawTally();
 }

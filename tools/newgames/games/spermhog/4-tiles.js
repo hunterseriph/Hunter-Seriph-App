@@ -26,6 +26,19 @@ function fillPix(Z, wx, wy) {
   if (st === 'plate') { var px = ((wx % 32) + 32) % 32, py = ((wy % 32) + 32) % 32;
     if (px === 0 || py === 0) return L; if (px === 31 || py === 31) return D; if ((px === 3 || px === 28) && (py === 3 || py === 28)) return [200, 196, 206]; if (py === 16 && px > 6 && px < 26) return [140, 20, 26];
     return n < 0.12 ? D : M; }
+  if (st === 'cobble') { var cbx = Math.floor((wx + (Math.floor(wy / 8) % 2) * 4) / 8), cby = Math.floor(wy / 8), lx = ((wx + (Math.floor(wy / 8) % 2) * 4) % 8 + 8) % 8, ly = ((wy % 8) + 8) % 8, hc = hash2(cbx, cby, 21);
+    if (lx === 0 || ly === 0) return D; if (lx === 1 && ly === 1) return L; return hc < 0.3 ? L.map(function (v, i) { return (v + M[i]) >> 1; }) : M; }
+  if (st === 'concrete') { var cr = hash2(wx >> 1, wy >> 1, 13), yy2 = ((wy % 16) + 16) % 16; if (yy2 === 0) return D; if (yy2 === 1) return L; if (cr < 0.05) return D; if (hash2(wx, wy, 5) < 0.03) return [150, 80, 50]; return cr > 0.9 ? L : M; }
+  if (st === 'tar') { var g2 = hash2(wx, wy, 31); return g2 < 0.18 ? L : g2 < 0.4 ? D : M; }
+  if (st === 'paving') { var px2 = ((wx % 16) + 16) % 16, py2 = ((wy % 16) + 16) % 16; if (px2 === 0 || py2 === 0) return D; if (px2 === 1 || py2 === 1) return L; return n < 0.1 ? D : M; }
+  if (st === 'tile') { var tx = ((wx % 8) + 8) % 8, ty = ((wy % 8) + 8) % 8; if (tx === 7 || ty === 7) return D; var dirt = hash2(wx >> 3, wy >> 2, 3); return dirt < 0.2 ? M.map(function (v) { return v * 0.8 | 0; }) : (tx === 0 && ty === 0 ? [255, 250, 230] : L); }
+  if (st === 'checker') { var cx2 = Math.floor(wx / 8), cy2 = Math.floor(wy / 8); return (cx2 + cy2) % 2 ? M : D; }
+  if (st === 'wetbrick') { var row2 = Math.floor(wy / 8), off2 = (row2 % 2) * 8, bx3 = ((wx + off2) % 16 + 16) % 16, by3 = ((wy % 8) + 8) % 8; if (by3 === 7 || bx3 === 15) return D; if (hash2(wx >> 2, wy >> 1, 17) < 0.05) return [140, 20, 40]; return by3 === 0 ? L : M; }
+  if (st === 'plank') { var pyy = ((wy % 8) + 8) % 8, seg = Math.floor((wx + (Math.floor(wy / 8) % 2) * 8) / 16); if (pyy === 7) return D; if (((wx + (Math.floor(wy / 8) % 2) * 8) % 16 + 16) % 16 === 0) return D; if (hash2(seg, Math.floor(wy / 8), 2) < 0.15 && pyy === 3 && ((wx % 5) === 0)) return D; return pyy === 0 ? L : (hash2(wx >> 3, wy, 7) < 0.2 ? D.map(function (v, i) { return (v + M[i]) >> 1; }) : M); }
+  if (st === 'container') { var cxx = ((wx % 8) + 8) % 8; if (cxx === 0) return D; if (cxx === 1) return L; if (hash2(wx >> 2, wy >> 2, 9) < 0.08) return [120, 60, 30]; return M; }
+  if (st === 'asphalt') { var a2 = hash2(wx, wy, 41); return a2 < 0.12 ? L : a2 < 0.3 ? D : M; }
+  if (st === 'stone') { var sr = Math.floor(wy / 8), so = (sr % 2) * 8, sx = ((wx + so) % 16 + 16) % 16, sy = ((wy % 8) + 8) % 8, hs = hash2(Math.floor((wx + so) / 16), sr, 4);
+    if (sy === 7 || sx === 15) return D; if (sy === 0 || sx === 0) return L; if (hs < 0.25 && hash2(wx, wy, 8) < 0.25) return [70, 90, 50]; return hs > 0.7 ? D.map(function (v, i) { return (v + M[i]) >> 1; }) : M; }
   return M;
 }
 /* the edge along a top surface: depth d pixels below the surface */
@@ -37,6 +50,12 @@ function edgePix(Z, wx, d) {
   if (st === 'bulbs') { if (d <= 4) { var bulb = x % 8 >= 2 && x % 8 <= 5 && d >= 1 && d <= 3; return bulb ? (d === 1 ? [255, 255, 220] : e[0]) : d === 4 ? e[2] : e[1]; } return null; }
   if (st === 'skulls') { if (d <= 5) { var sk = (x % 8), skull = sk >= 1 && sk <= 6 && d >= 1 && d <= 4; if (skull) return (sk === 2 || sk === 5) && d === 2 ? OUTL : e[0]; return d <= 2 ? e[2] : null; } return null; }
   if (st === 'grate') { if (d <= 4) return d === 1 ? e[0] : (x % 4 === 0 ? OUTL : (d === 4 ? e[2] : e[1])); return null; }
+  if (st === 'parapet') { if (d <= 4) return d === 1 ? e[0] : d === 4 ? e[2] : e[1]; return null; }
+  if (st === 'platform') { if (d <= 5) { if (d <= 2) return e[0]; var bump = x % 4 < 2; return d === 5 ? e[2] : (bump ? e[1] : e[0]); } return null; }
+  if (st === 'plankedge') { if (d <= 3) return d === 1 ? e[0] : e[1]; return null; }
+  if (st === 'rim') { if (d <= 3) return d === 1 ? e[0] : (x % 8 === 0 ? OUTL : e[1]); return null; }
+  if (st === 'road') { if (d <= 4) return d === 1 ? e[1] : d === 2 && x < 8 ? e[0] : d === 4 ? e[2] : e[1]; return null; }
+  if (st === 'moss') { var ml = hash2(wx >> 1, 0, 9) < 0.4 ? 5 : 3; return d === 1 ? e[0] : d <= ml ? (d === ml ? e[2] : e[1]) : null; }
   if (st === 'hazard') { if (d <= 5) { var s2 = (((wx + d) % 8) + 8) % 8; return d === 1 ? [255, 200, 200] : (s2 < 4 ? e[0] : [20, 16, 22]); } return null; }
   return null;
 }
