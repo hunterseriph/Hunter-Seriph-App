@@ -15,6 +15,8 @@ function stepPlayer(dt) {
   var jp = inp.j && !p.prevJ, ap = inp.at && !p.prevA; p.prevJ = inp.j; p.prevA = inp.at;
   if (p.inv > 0) p.inv -= dt; if (p.atkT > 0) p.atkT -= dt; if (p.atkCd > 0) p.atkCd -= dt; if (p.lock > 0) p.lock -= dt; if (p.spring > 0) p.spring -= dt;
   if (p.state === 'dead') { p.vy += K.grav * dt; p.y += p.vy * dt; p.deadT += dt; if (p.deadT > 2) loseLife(); return; }
+  if (p.loopCd > 0) p.loopCd -= dt;
+  if (p.loop || (p.state === 'normal' && loopStart(p))) { loopStep(p, dt); p.anim += dt * 8; return; }
   var liq = liquidAt(p.x, p.y - 10), wet = liq === 'cream', top = K.top * (G.shoes > 0 ? 1.45 : 1) * (wet ? 0.6 : 1);
   if (liq === 'lava') { hurt(p.x, true); p.vy = -460; p.air = true; }
   if (p.state === 'hurt') { p.hurtT -= dt; if (p.hurtT <= 0 && !p.air) p.state = 'normal'; }

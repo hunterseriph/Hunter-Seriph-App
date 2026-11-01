@@ -10,7 +10,7 @@ var PHYS = { acc: 430, dec: 520, brake: 1150, top: 235, maxg: 560, airacc: 380, 
 /* the zones: look, music, foes, gimmicks. pal: ground fill colours (light, mid, dark), top: edge colours */
 var ZONES = [
   { id: 'city', name: 'NIGHT CITY', song: 'hogcity', boss: 'beast', fill: 'brick', top: 'curb', pal: ['#7a2a2e', '#4e1418', '#24080a'], edge: ['#b8a8a0', '#6a5a58', '#2a1e1e'], sky: ['#0a0204', '#1c0508', '#3a0a10'],
-    foes: { m: 'crawler', n: 'clown', p: 'rat', w: 'bat', q: 'balloon' }, tint: null },
+    foes: { m: 'crawler', n: 'rat', p: 'crawler', w: 'crow', q: 'bat' }, tint: null },
   { id: 'sewer', name: 'CREAM SEWERS', song: 'hogsewer', boss: 'kraken', fill: 'sewer', top: 'slime', pal: ['#4a5a4a', '#2c3a2e', '#121a14'], edge: ['#fffbe8', '#f1e0b0', '#8a7a50'], sky: ['#050a06', '#0c1810', '#16281a'],
     foes: { m: 'rat', n: 'cultrat', p: 'creamblob', w: 'crow', q: 'slime' }, liquid: 'cream' },
   { id: 'park', name: 'EJACULAND', song: 'hogpark', boss: 'pig', fill: 'stripe', top: 'bulbs', pal: ['#c4121c', '#1a0a0c', '#0a0405'], edge: ['#ffe36a', '#c4121c', '#3a0408'], sky: ['#06020a', '#14061a', '#2a0a20'],
