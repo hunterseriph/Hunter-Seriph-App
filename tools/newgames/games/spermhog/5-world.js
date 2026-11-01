@@ -178,7 +178,7 @@ function cityProps() {
   }
   return out.sort(function (a, b) { return (b.shop ? 1 : 0) - (a.shop ? 1 : 0); }); // buildings first, street things in front
 }
-/* the town's shop fronts from Load Legacy (same scale rule as its street), a neon name over the ones with none painted */
+/* the town's shop fronts from Load Legacy (same scale rule as its street), names in their marquees */
 var SHOPS = ['fac_cafe', 'fac_arcade', 'fac_amy', 'fac_club', 'fac_beebs', 'fac_t', 'fac_tb', 'fac_greebo', 'fac_saba', 'fac_joff', 'fac_sanct', 'fac_pulsar', 'fac_bonjo'];
-var SHOPNEON = { fac_joff: ["JOFF'S", 'PIZZARIA', '#ffe36a'], fac_saba: ["SABA'S", 'HEMPORIUM', '#7dff3a'], fac_sanct: ['SPERMAID', 'SANCTUM', '#7af0ff'], fac_pulsar: ['PULSAROCTOPUS', 'BEATS', '#d878ff'], fac_bonjo: ["BONJO'S", 'BJ BOUTIQUE', '#ff6ad0'] };
+var SHOPNEON = {}; // names are baked into every shop front's marquee (tools/load-legacy/facnames.py): never draw them on top
 function shopSc(f) { return Math.min(1.7, 150 / f[3], 112 / f[2]); }

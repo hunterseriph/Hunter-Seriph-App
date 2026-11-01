@@ -640,7 +640,7 @@ function drawHomMelee(s) {
 }
 
 /* neon name signs for the shops whose fronts have no name painted on */
-var SHOPSIGN = { hatch: ['Homunculus', 'Hatchery', '#7dff3a'], joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], sanct: ['Spermaid', 'Sanctum', '#7af0ff'], fate: ["Stacked Fate's", 'Table', '#d878ff'] };
+var SHOPSIGN = { hatch: ['Homunculus', 'Hatchery', '#7dff3a'], fate: ["Stacked Fate's", 'Table', '#d878ff'] }; // only buildings drawn here without a fac_ sprite: the fac_ shop fronts carry their names in their marquees (tools/load-legacy/facnames.py)
 function shopSign(x, by, s) {
   var w = 112, h = 34, y = Math.round(by - h);
   R(ctx, '#12040a', x - 2, y + h, 4, 8);

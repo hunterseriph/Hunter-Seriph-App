@@ -44,8 +44,9 @@ function boxModel(m, A, x, y, z, s, rot, tile, col) {
   for (var i = 0; i < 4; i++) { var a = p[i], b = p[(i + 1) % 4], k = 0.7 + 0.3 * ((i % 2) ? 1 : 0.6); m.quad(a, b, [b[0], y + s * 2, b[2]], [a[0], y + s * 2, a[2]], uv, t, mulc(col, k)); }
   m.quad([p[0][0], y + s * 2, p[0][2]], [p[1][0], y + s * 2, p[1][2]], [p[2][0], y + s * 2, p[2][2]], [p[3][0], y + s * 2, p[3][2]], uv, t, mulc(col, 1.1));
 }
-/* ---------- shop fronts stuck on buildings: always readable from the road, and a neon sign on the ones with no name painted on ---------- */
-var SIGNS = { fac_bonjo: ["Bonjo's", 'BJ Boutique', '#d878ff'], fac_joff: ["Joff's", 'Pineapple Pizzaria', '#ffe36a'], fac_pulsar: ['PulsarOctopus', 'Beats', '#7af0ff'], fac_saba: ["Saba's", 'Hitless Hemporium', '#7dff3a'], fac_sanct: ["Spermaid's", 'Sanctum', '#ff6ab4'] };
+/* ---------- shop fronts stuck on buildings, always readable from the road. Every shop front has its name baked into its
+   marquee (tools/load-legacy/facnames.py), so no signs are added here: keep SIGNS empty ---------- */
+var SIGNS = {};
 var SIGNTEX = null, SIGNT = {};
 function signTex() {
   if (SIGNTEX) return SIGNTEX; var c = document.createElement('canvas'); c.width = 256; c.height = 512; var g = c.getContext('2d'), n = 0;
