@@ -908,7 +908,7 @@ var SEC = {
     var at = 4; (hz || []).forEach(function (k) { if (k === 'spike') b.spikes(-n + at, 2); else if (k === 'drops') b.drops(-n + at, 4, 2, null, 1); else if (k.length === 1) b.foe(-n + at, k); else b.thing(-n + at, k, 0); at += Math.max(5, Math.floor((n - 6) / Math.max(1, hz.length))); });
     b.ground(2); return b;
   },
-  box: function (b, item) { b.ground(3); b.ledge(-2, 2, 1, '#'); b.thing(-2, 'box', 3, { item: item }); b.ground(3); return b; },
+  box: function (b, item) { b.ground(4); b.ledge(-3, 2, 2, '#'); b.thing(-2.5, 'box', 2, { item: item }); b.ground(3); return b; }, // a box on a pillar as wide as it is
   check: function (b) { b.ground(5); b.thing(-3, 'check'); return b; },
   dash: function (b) { b.ground(3); b.thing(-2, 'dash', 0, { dir: 1 }); b.ground(10); b.drops(-9, 6, 2, null, 1.2); return b; },
   spikeRun: function (b, k) { for (var i = 0; i < k; i++) { b.ground(5); b.spikes(-3, 2); b.ledge(-4, 3, 4, '='); b.drops(-4, 3, 5, null, 1); } b.ground(4); return b; },
@@ -972,7 +972,8 @@ var SEC = {
     Tp.ents.forEach(function (e) { if (e.c >= s0 + 3 && e.c < E - 5) b.ents.push(e); });
     // the ways between: a hole down after the spring, a spring back up halfway and at the end of the low road
     function hole(c) { for (var hx = -1; hx < 3; hx++) for (var hy = (b.top[c + hx] || H); hy < (b.top[c + hx] || H) + 3; hy++) b.set(c + hx, hy, '.'); b.ent('drop', c + 1, H - 2); b.ent('drop', c + 1, H + 2); }
-    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined) continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); } hole(E - 9); b.ent('spring', E - 8, LF, { pow: 2 }); hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
+    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
+    var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#')) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
     b.h = H; return b;
   },
@@ -1550,6 +1551,7 @@ function T(cx, cy) { if (!LV || cx < 0 || cx >= LV.w) return 'W'; if (cy < 0) re
 function isSolid(ch, cx, cy) { if (ch === 'D') return !TRAPOPEN[cx + ',' + cy]; return ch === '#' || ch === 'W' || ch === '_' || ch === '-' || ch === 'Q'; }
 function wallAt(px, py) { var cx = Math.floor(px / TS), cy = Math.floor(py / TS), ch = T(cx, cy); if (isSolid(ch, cx, cy)) return true; if (surf(ch, 0) >= 0) return py - cy * TS >= Math.max(surf(ch, 0), surf(ch, 15)) + 1; return false; }
 /* the highest floor between y0 and y1 at x (tiles, slopes, platforms you can stand on); oneway: whether thin platforms count */
+var STANDS = { box: 1, spring: 1, check: 1, dash: 1, vent: 1, jet: 1, goal: 1, zap: 1, ramp: 1, trap: 0 };
 function floorAt(px, y0, y1, oneway) {
   var cx = Math.floor(px / TS), lx = Math.floor(px - cx * TS), best = null;
   for (var cy = Math.floor(y0 / TS); cy <= Math.floor(y1 / TS); cy++) {
@@ -1579,6 +1581,9 @@ function loadAct(ai) {
     if (e.k === 'arena') LV.arena = o;
     if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
       var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
+    // things that stand on the ground really stand on it: boxes, springs, checkpoints, pads, vents, jets, the sign
+    if (STANDS[e.k]) { var sy = floorAt(o.x, o.y - TS * 1.5, o.y + TS * 4, true); if (sy !== null) o.y = o.y0 = sy; }
+    if (e.k === 'awning') { var gy = null; for (var sh = 0; sh < 6 && gy === null; sh++) { gy = floorAt(o.x + sh * TS, o.y + 6, o.y + TS * 12, true); if (gy !== null) o.x = o.x0 = o.x + sh * TS; } o.gy = gy === null ? o.y + 48 : gy; } // its poles go all the way down
     ENTS.push(o);
   });
   LV.props = LV.dists && LV.dists.length ? distProps() : LV.zone.id === 'city' ? cityProps() : [];
@@ -1750,10 +1755,12 @@ function distProps() {
   for (var c = 4; c < LV.w - 4; c++) { var id = distAt(c); if (!id) continue;
     for (var r = 1; r < LV.h; r++) { if (!surfAt(c, r) || !surfAt(c + 1, r) || !surfAt(c - 1, r) || busy[c]) continue;
       var band = bandAt(c, r), S = styleOf(id, band), list = S.props || [], h = hash2(c, r, 61), lampy = band === 'mid' && (id === 'row' || id === 'cafe' || id === 'plaza' || id === 'downtown');
-      if (lampy && c - lastLamp >= 15) { out.push({ k: id === 'downtown' || id === 'plaza' ? 'hog_lamp2' : 'hog_lamp', x: c * TS + 8, y: r * TS, lamp: 1 }); lastLamp = c; busy[c] = busy[c + 1] = 1; continue; }
+      if (lampy && c - lastLamp >= 15 && surfAt(c - 2, r) && surfAt(c + 2, r)) { out.push({ k: id === 'downtown' || id === 'plaza' ? 'hog_lamp2' : 'hog_lamp', x: c * TS + 8, y: r * TS, lamp: 1 }); lastLamp = c; busy[c] = busy[c + 1] = 1; continue; }
       if (c - last < 5 || h > 0.32 || !list.length) continue;
-      var k2 = list[Math.floor(hash2(c, 7, 3) * list.length)]; if (k2 === lastK) k2 = list[(list.indexOf(k2) + 1) % list.length]; lastK = k2; last = c;
-      out.push({ k: 'hog_' + k2, x: c * TS + 8, y: r * TS + (k2 === 'puddle' || k2 === 'grate' ? 3 : 0), flip: hash2(c, 5, 2) < 0.5 && k2 !== 'subsign' && k2 !== 'roadsign' && k2 !== 'neonarrow' }); busy[c] = busy[c + 1] = 1;
+      var k2 = list[Math.floor(hash2(c, 7, 3) * list.length)]; if (k2 === lastK) k2 = list[(list.indexOf(k2) + 1) % list.length];
+      var fp = KIT.SPR['hog_' + k2], half = fp ? Math.ceil(fp[2] / 2 / TS) : 1, flat = true; for (var fx = -half; fx <= half; fx++) if (!surfAt(c + fx, r) || busy[c + fx]) { flat = false; break; } if (!flat) continue; // its whole width stands on flat ground
+      lastK = k2; last = c;
+      out.push({ k: 'hog_' + k2, x: c * TS + 8, y: r * TS + (k2 === 'puddle' || k2 === 'grate' ? 3 : 0), flip: hash2(c, 5, 2) < 0.5 && k2 !== 'subsign' && k2 !== 'roadsign' && k2 !== 'neonarrow' }); for (var bk = -half - 1; bk <= half + 1; bk++) busy[c + bk] = 1;
     } }
   return out.sort(function (a, b) { return (b.shop ? 1 : 0) - (a.shop ? 1 : 0); });
 }
@@ -1893,7 +1900,7 @@ function drawSetpiece(g, e, cx, cy) {
     if (e.tx !== null && e.tx !== undefined) { if (SK.wave) { var wx0 = e.tx - cx; R('rgba(241,224,176,0.85)', wx0 + 30, y - 40, SK.len, 42); spr('hog_creamwave', wx0 + 30, y + 2, { sc: 0.8 }); for (var f = 0; f < 3; f++) FX.push({ k: 'bit', x: e.tx + 20 + Math.random() * 30, y: e.y - 40 - Math.random() * 20, vx: -60, vy: -60, t: 0.4, c: '#fffbe8' }); }
       else for (var i = 0; i < SK.n; i++) spr(SK.spr, e.tx - cx + SK.len / 2 + i * SK.len, y + 2, { flip: (e.kind || 'train') === 'missile' }); }
     return; }
-  if (e.k === 'awning') { var ak = e.kind || 'awning'; spr('hog_' + ak, x, y - (e.t > 0 ? 3 : 0) + (ak === 'awning' ? 0 : 4), { anchor: 'b' }); var pc = ak === 'mushroom' ? '#f1e0b0' : '#12040a'; R(pc, x - 2, y + 4, 4, 44); if (ak === 'awning') { R('#12040a', x - 22, y, 2, 40); R('#12040a', x + 20, y, 2, 40); } return; }
+  if (e.k === 'awning') { var ak = e.kind || 'awning'; spr('hog_' + ak, x, y - (e.t > 0 ? 3 : 0) + (ak === 'awning' ? 0 : 4), { anchor: 'b' }); var pl = Math.max(4, Math.round((e.gy || e.y + 48) - e.y)); if (ak === 'awning') { [-21, 19].forEach(function (px) { R('#12040a', x + px - 1, y - 2, 4, pl + 2); R('#6a5a58', x + px, y - 2, 2, pl + 1); }); R('#12040a', x - 24, y + pl - 2, 9, 3); R('#12040a', x + 16, y + pl - 2, 9, 3); } else { var pc = ak === 'mushroom' ? '#f1e0b0' : '#6a5a58'; R('#12040a', x - 3, y + 2, 6, pl - 1); R(pc, x - 2, y + 3, 4, pl - 2); } return; } // poles reach the ground under it
   if (e.k === 'ramp') { var gq = KIT.ctx; gq.fillStyle = '#12040a'; gq.beginPath(); gq.moveTo(x - 30, y); gq.lineTo(x + 10, y - 22); gq.lineTo(x + 10, y); gq.fill(); gq.fillStyle = '#c4121c'; gq.beginPath(); gq.moveTo(x - 27, y - 1); gq.lineTo(x + 8, y - 20); gq.lineTo(x + 8, y - 1); gq.fill(); for (var s = 0; s < 4; s++) { gq.fillStyle = '#12040a'; gq.fillRect(x - 18 + s * 7, y - 6 - s * 4, 4, 3); } return; }
 }
 

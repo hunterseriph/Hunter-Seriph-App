@@ -7,6 +7,7 @@ function T(cx, cy) { if (!LV || cx < 0 || cx >= LV.w) return 'W'; if (cy < 0) re
 function isSolid(ch, cx, cy) { if (ch === 'D') return !TRAPOPEN[cx + ',' + cy]; return ch === '#' || ch === 'W' || ch === '_' || ch === '-' || ch === 'Q'; }
 function wallAt(px, py) { var cx = Math.floor(px / TS), cy = Math.floor(py / TS), ch = T(cx, cy); if (isSolid(ch, cx, cy)) return true; if (surf(ch, 0) >= 0) return py - cy * TS >= Math.max(surf(ch, 0), surf(ch, 15)) + 1; return false; }
 /* the highest floor between y0 and y1 at x (tiles, slopes, platforms you can stand on); oneway: whether thin platforms count */
+var STANDS = { box: 1, spring: 1, check: 1, dash: 1, vent: 1, jet: 1, goal: 1, zap: 1, ramp: 1, trap: 0 };
 function floorAt(px, y0, y1, oneway) {
   var cx = Math.floor(px / TS), lx = Math.floor(px - cx * TS), best = null;
   for (var cy = Math.floor(y0 / TS); cy <= Math.floor(y1 / TS); cy++) {
@@ -36,6 +37,9 @@ function loadAct(ai) {
     if (e.k === 'arena') LV.arena = o;
     if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
       var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
+    // things that stand on the ground really stand on it: boxes, springs, checkpoints, pads, vents, jets, the sign
+    if (STANDS[e.k]) { var sy = floorAt(o.x, o.y - TS * 1.5, o.y + TS * 4, true); if (sy !== null) o.y = o.y0 = sy; }
+    if (e.k === 'awning') { var gy = null; for (var sh = 0; sh < 6 && gy === null; sh++) { gy = floorAt(o.x + sh * TS, o.y + 6, o.y + TS * 12, true); if (gy !== null) o.x = o.x0 = o.x + sh * TS; } o.gy = gy === null ? o.y + 48 : gy; } // its poles go all the way down
     ENTS.push(o);
   });
   LV.props = LV.dists && LV.dists.length ? distProps() : LV.zone.id === 'city' ? cityProps() : [];
@@ -207,10 +211,12 @@ function distProps() {
   for (var c = 4; c < LV.w - 4; c++) { var id = distAt(c); if (!id) continue;
     for (var r = 1; r < LV.h; r++) { if (!surfAt(c, r) || !surfAt(c + 1, r) || !surfAt(c - 1, r) || busy[c]) continue;
       var band = bandAt(c, r), S = styleOf(id, band), list = S.props || [], h = hash2(c, r, 61), lampy = band === 'mid' && (id === 'row' || id === 'cafe' || id === 'plaza' || id === 'downtown');
-      if (lampy && c - lastLamp >= 15) { out.push({ k: id === 'downtown' || id === 'plaza' ? 'hog_lamp2' : 'hog_lamp', x: c * TS + 8, y: r * TS, lamp: 1 }); lastLamp = c; busy[c] = busy[c + 1] = 1; continue; }
+      if (lampy && c - lastLamp >= 15 && surfAt(c - 2, r) && surfAt(c + 2, r)) { out.push({ k: id === 'downtown' || id === 'plaza' ? 'hog_lamp2' : 'hog_lamp', x: c * TS + 8, y: r * TS, lamp: 1 }); lastLamp = c; busy[c] = busy[c + 1] = 1; continue; }
       if (c - last < 5 || h > 0.32 || !list.length) continue;
-      var k2 = list[Math.floor(hash2(c, 7, 3) * list.length)]; if (k2 === lastK) k2 = list[(list.indexOf(k2) + 1) % list.length]; lastK = k2; last = c;
-      out.push({ k: 'hog_' + k2, x: c * TS + 8, y: r * TS + (k2 === 'puddle' || k2 === 'grate' ? 3 : 0), flip: hash2(c, 5, 2) < 0.5 && k2 !== 'subsign' && k2 !== 'roadsign' && k2 !== 'neonarrow' }); busy[c] = busy[c + 1] = 1;
+      var k2 = list[Math.floor(hash2(c, 7, 3) * list.length)]; if (k2 === lastK) k2 = list[(list.indexOf(k2) + 1) % list.length];
+      var fp = KIT.SPR['hog_' + k2], half = fp ? Math.ceil(fp[2] / 2 / TS) : 1, flat = true; for (var fx = -half; fx <= half; fx++) if (!surfAt(c + fx, r) || busy[c + fx]) { flat = false; break; } if (!flat) continue; // its whole width stands on flat ground
+      lastK = k2; last = c;
+      out.push({ k: 'hog_' + k2, x: c * TS + 8, y: r * TS + (k2 === 'puddle' || k2 === 'grate' ? 3 : 0), flip: hash2(c, 5, 2) < 0.5 && k2 !== 'subsign' && k2 !== 'roadsign' && k2 !== 'neonarrow' }); for (var bk = -half - 1; bk <= half + 1; bk++) busy[c + bk] = 1;
     } }
   return out.sort(function (a, b) { return (b.shop ? 1 : 0) - (a.shop ? 1 : 0); });
 }

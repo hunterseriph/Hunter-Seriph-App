@@ -92,7 +92,7 @@ var SEC = {
     var at = 4; (hz || []).forEach(function (k) { if (k === 'spike') b.spikes(-n + at, 2); else if (k === 'drops') b.drops(-n + at, 4, 2, null, 1); else if (k.length === 1) b.foe(-n + at, k); else b.thing(-n + at, k, 0); at += Math.max(5, Math.floor((n - 6) / Math.max(1, hz.length))); });
     b.ground(2); return b;
   },
-  box: function (b, item) { b.ground(3); b.ledge(-2, 2, 1, '#'); b.thing(-2, 'box', 3, { item: item }); b.ground(3); return b; },
+  box: function (b, item) { b.ground(4); b.ledge(-3, 2, 2, '#'); b.thing(-2.5, 'box', 2, { item: item }); b.ground(3); return b; }, // a box on a pillar as wide as it is
   check: function (b) { b.ground(5); b.thing(-3, 'check'); return b; },
   dash: function (b) { b.ground(3); b.thing(-2, 'dash', 0, { dir: 1 }); b.ground(10); b.drops(-9, 6, 2, null, 1.2); return b; },
   spikeRun: function (b, k) { for (var i = 0; i < k; i++) { b.ground(5); b.spikes(-3, 2); b.ledge(-4, 3, 4, '='); b.drops(-4, 3, 5, null, 1); } b.ground(4); return b; },
@@ -156,7 +156,8 @@ var SEC = {
     Tp.ents.forEach(function (e) { if (e.c >= s0 + 3 && e.c < E - 5) b.ents.push(e); });
     // the ways between: a hole down after the spring, a spring back up halfway and at the end of the low road
     function hole(c) { for (var hx = -1; hx < 3; hx++) for (var hy = (b.top[c + hx] || H); hy < (b.top[c + hx] || H) + 3; hy++) b.set(c + hx, hy, '.'); b.ent('drop', c + 1, H - 2); b.ent('drop', c + 1, H + 2); }
-    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined) continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); } hole(E - 9); b.ent('spring', E - 8, LF, { pow: 2 }); hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
+    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
+    var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#')) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
     b.h = H; return b;
   },
