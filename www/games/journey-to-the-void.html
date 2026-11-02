@@ -90,6 +90,10 @@ var KIT = (function () {
   /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
   function fit() {
     var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (cfg.flex && r.width > 0 && r.height > 0) { // o.flex: N - the short side stays cfg.h and the long side follows the screen up to N px, so a phone held upright gets a tall picture
+      var ar = r.width / r.height, fw, fh; if (ar >= 1) { fh = cfg.h; fw = Math.max(cfg.w, Math.min(cfg.flex, Math.round(fh * ar))); } else { fw = cfg.h; fh = Math.max(cfg.h, Math.min(cfg.flex, Math.round(fw / ar))); }
+      if (fw !== W || fh !== H) { W = fw; H = fh; S = 0; }
+    }
     if (cfg.wide && r.width > 0 && r.height > 0) { var nw = Math.max(cfg.w || 480, Math.min(cfg.wide, Math.round(H * r.width / r.height))); if (nw !== W) { W = nw; S = 0; } } // o.wide: the picture widens to fill wide screens (up to that many pixels) instead of leaving black bars
     var k = Math.min(r.width / W, r.height / H) * dpr;
     var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
