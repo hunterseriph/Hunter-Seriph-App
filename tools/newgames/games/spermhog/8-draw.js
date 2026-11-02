@@ -65,8 +65,9 @@ function drawBack(g, Z, cx, cy, W, H) {
     [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(vy * (1 + L[0])) + H - 300 + L[2]; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); g.globalAlpha = 1; if (L[3] === 1 && my + 300 < H) { g.fillStyle = '#0d0507'; g.fillRect(0, my + 299, W, H - my - 299); } });
     return;
   }
-  // moon and stars, then three painted layers
+  // moon and stars, then three painted layers (or this part of the zone's own scenery)
   g.fillStyle = 'rgba(241,231,208,0.5)'; for (var i = 0; i < 40; i++) { var sx = ((i * 97 - cx * 0.03) % W + W) % W, sy = (i * 53) % (H * 0.6); g.fillRect(sx, sy, 1, 1); }
+  if (LV.dists && LV.dists.length) { if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); } drawDistrictBack(g, cx, vy, W, H); return; }
   if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); }
   [0, 1, 2].forEach(function (n) { var Lc = bgLayer(Z, n, 640, 270); var par = [0.15, 0.3, 0.5][n], x = -(((cx * par) % 640) + 640) % 640, ly = vy * (1 + n * 0.5) + (H - 270); for (; x < W; x += 640) KIT.blit(Lc, x, ly); if (n === 2 && ly + 270 < H) { g.fillStyle = 'rgba(0,0,0,0.9)'; g.fillRect(0, ly + 269, W, H - ly - 269); } });
 }
@@ -83,7 +84,7 @@ function drawEnt(g, e, cx, cy, W, H) {
   if (TRAPKINDS[k]) { drawTrap(g, e, cx, cy); return; }
   if (SETKINDS[k]) { drawSetpiece(g, e, cx, cy); return; }
   if (k === 'loop') { drawLoop(g, e, cx, cy); return; }
-  if (k === 'dsign') { var D = DIST[e.id]; if (!D) return; R('#12040a', x - 2, y - 46, 4, 46); R('#5a545c', x - 1, y - 46, 2, 46); var tw = D.name.length * 6 + 10; R('#12040a', x - tw / 2 - 1, y - 62, tw + 2, 16); R('#2a0a10', x - tw / 2, y - 61, tw, 14); R('#c4121c', x - tw / 2, y - 61, tw, 1); R('#c4121c', x - tw / 2, y - 48, tw, 1); text(D.name, x, y - 58, { size: 6, align: 'center', col: '#f1e7d0' }); return; }
+  if (k === 'dsign') return; // he said the level already has a name: districts are never named on screen
   if (k === 'drop') { if (e.alive) spr('hog_drop', x, y - 2 + Math.sin(G.t * 4 + e.x * 0.1) * 1.5, {}); return; }
   if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0; if (rs <= 0.02) return; spr(fr, x, y + (1 - rs) * 26, { flip: e.dir < 0 }); return; }
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
@@ -206,11 +207,3 @@ function goldFrame(n) {
   g.putImageData(im, 0, 0); return (GOLD[n] = c);
 }
 
-/* the name of the part of town you just walked into, slid in along the bottom like a title */
-function drawDistBanner() {
-  if (!LV.dists || !LV.dists.length || !PL) return; var id = distAt(Math.floor(PL.x / TS));
-  if (id !== G.curDist) { if (G.curDist !== undefined && G.mode === 'play') { G.distT = 3; G.distName = DIST[id].name; } G.curDist = id; }
-  if (!(G.distT > 0)) return; var W = KIT.W, H = KIT.H, t = 3 - G.distT, k = t < 0.35 ? t / 0.35 : G.distT < 0.4 ? G.distT / 0.4 : 1, x = -W * (1 - k), y = H - 62;
-  R('#12040a', x, y, W * 0.62 + 4, 34); R('#c4121c', x, y + 2, W * 0.62, 30); R('#2a0a10', x, y + 6, W * 0.62 - 6, 22);
-  text(G.distName, x + 16, y + 9, { size: 16, col: '#f1e7d0', font: 'title', outline: true }); text(LV.zone.name + '  ·  ACT ' + ACTS[G.ai].act, x + W * 0.62 - 12, y + 12, { size: 6, align: 'right', col: '#ffe36a' });
-}

@@ -1,24 +1,24 @@
 /* =====================================================================================================
-   DISTRICTS: Night City is a trip across town, west to east, and no two stretches look alike. Each district
+   DISTRICTS: every zone is a trip from one side to the other, west to east, and no two stretches look alike. Each district
    has its own ground (fill + edge), its own backdrop, its own street furniture, its own shops (every shop
    appears once in the whole zone) and its own trap, which you meet nowhere else. Three-lane districts give
    the high road, the street and the low road a look each (top / mid / low).
    ===================================================================================================== */
 var DIST = {
   row:     { name: 'CLUBHOUSE ROW',      fill: 'brick',   top: 'curb',    pal: ['#7a2a2e', '#4e1418', '#24080a'], edge: ['#b8a8a0', '#6a5a58', '#2a1e1e'], back: 'terraces', props: ['bench', 'phone', 'hydrant', 'bin', 'mailbox'], shops: ['fac_club', 'fac_greebo', 'fac_amy'] },
-  cafe:    { name: 'THE CAFE QUARTER',   fill: 'cobble',  top: 'curb',    pal: ['#7a6458', '#54423a', '#2a201c'], edge: ['#e8dcc8', '#a89880', '#3a2e24'], back: 'cafe', props: ['table', 'planter', 'stall', 'table', 'planter'], shops: ['fac_cafe', 'fac_saba'] },
-  site:    { name: 'THE BUILDING SITE',  fill: 'concrete', top: 'hazard', pal: ['#6a6460', '#4a4440', '#221e1c'], edge: ['#ffe36a', '#c89a20', '#3a2a04'], back: 'cranes', props: ['cone', 'barrier', 'loo', 'girders', 'warn'], shops: [] },
-  downtown:{ name: 'DOWNTOWN',           fill: 'paving',  top: 'curb',    pal: ['#6a6670', '#46424c', '#201e24'], edge: ['#d8d0d8', '#8a8290', '#2a262c'], back: 'towers', props: ['lamp2', 'hydrant', 'bin', 'busstop', 'paper'], shops: ['fac_beebs'],
-             topS: { fill: 'tar', top: 'parapet', pal: ['#3e3a40', '#2a2630', '#141218'], edge: ['#c8c0c8', '#7a7280', '#2a262c'], props: ['watertower', 'ac', 'antenna', 'chimney', 'dish'] },
-             lowS: { fill: 'tile', top: 'platform', pal: ['#c8c0a8', '#9a9480', '#4a463c'], edge: ['#ffe36a', '#c8a020', '#3a2a04'], props: ['subsign', 'subbench', 'poster', 'pillar'] } },
+  cafe:    { name: 'THE CAFE QUARTER',   fill: 'cobble',  top: 'curb',    pal: ['#6a2a2c', '#44161a', '#200a0c'], edge: ['#b8a8a0', '#6a5a58', '#2a1e1e'], back: 'cafe', props: ['table', 'planter', 'stall', 'table', 'planter'], shops: ['fac_cafe', 'fac_saba'] },
+  site:    { name: 'THE BUILDING SITE',  fill: 'concrete', top: 'hazard', pal: ['#4a3236', '#2e1e22', '#140a0c'], edge: ['#ff2630', '#8a0a10', '#1a0408'], back: 'cranes', props: ['cone', 'barrier', 'loo', 'girders', 'warn'], shops: [] },
+  downtown:{ name: 'DOWNTOWN',           fill: 'paving',  top: 'curb',    pal: ['#5a2e34', '#3a1c20', '#1a0c0e'], edge: ['#b8a8a0', '#6a5a58', '#2a1e1e'], back: 'towers', props: ['lamp2', 'hydrant', 'bin', 'busstop', 'paper'], shops: ['fac_beebs'],
+             topS: { fill: 'tar', top: 'parapet', pal: ['#3a1a1e', '#24100e', '#100606'], edge: ['#b8a8a0', '#6a5a58', '#2a1e1e'], props: ['watertower', 'ac', 'antenna', 'chimney', 'dish'] },
+             lowS: { fill: 'tile', top: 'platform', pal: ['#7a2026', '#4a1016', '#220608'], edge: ['#f1e7d0', '#c4121c', '#2a0408'], props: ['subsign', 'subbench', 'poster', 'pillar'] } },
   plaza:   { name: 'POTBELLY PLAZA',     fill: 'checker', top: 'curb',    pal: ['#5a1418', '#2a0a0c', '#12040a'], edge: ['#ffe36a', '#c4121c', '#3a0408'], back: 'neon', props: ['lamp2', 'planter', 'bench'], shops: ['fac_arcade'] },
   alley:   { name: 'RED LIGHT ALLEY',    fill: 'wetbrick', top: 'curb',   pal: ['#4a1a22', '#2e0e14', '#140608'], edge: ['#a08890', '#5a4048', '#1e1014'], back: 'alley', props: ['neonarrow', 'bin', 'puddle', 'crate', 'neonarrow'], shops: ['fac_t', 'fac_tb', 'fac_bonjo'] },
-  docks:   { name: 'THE CREAM DOCKS',    fill: 'plank',   top: 'plankedge', pal: ['#7a5232', '#543620', '#2a1a0e'], edge: ['#c8a070', '#8a6a44', '#2e2010'], back: 'docks', props: ['bollard', 'rope', 'crates', 'buoy'], shops: ['fac_joff', 'fac_pulsar'],
+  docks:   { name: 'THE CREAM DOCKS',    fill: 'plank',   top: 'plankedge', pal: ['#5a2420', '#3a1412', '#1a0806'], edge: ['#8a3a30', '#5a2018', '#200806'], back: 'docks', props: ['bollard', 'rope', 'crates', 'buoy'], shops: ['fac_joff', 'fac_pulsar'],
              topS: { fill: 'container', top: 'rim', pal: ['#8a2a22', '#5a1814', '#2a0a08'], edge: ['#d86a50', '#8a3a2a', '#2a0a08'], props: ['vent2', 'crates'] },
-             lowS: { fill: 'stone', top: 'slime', pal: ['#4a5246', '#2e342c', '#141812'], edge: ['#fffbe8', '#f1e0b0', '#8a7a50'], props: ['pipe', 'grate'] } },
-  highway: { name: 'THE OVERPASS',       fill: 'asphalt', top: 'road',    pal: ['#3a3a40', '#26262c', '#121216'], edge: ['#f1e7d0', '#8a8a90', '#1a1a1e'], back: 'highway', props: ['crashbar', 'roadsign', 'lamp2', 'crashbar'], shops: [] },
-  oldtown: { name: 'OLD TOWN',           fill: 'stone',   top: 'moss',    pal: ['#5a5650', '#3a3632', '#1a1816'], edge: ['#7a8a4a', '#4a5a2a', '#1a2010'], back: 'church', props: ['grave', 'fence', 'candle', 'grave', 'cross'], shops: ['fac_sanct'] },
-  drain:   { name: 'THE STORM DRAIN',    fill: 'stone',   top: 'slime',   pal: ['#3a4440', '#262e2a', '#101412'], edge: ['#fffbe8', '#f1e0b0', '#8a7a50'], back: 'drain', props: ['pipe', 'grate'], shops: [] }
+             lowS: { fill: 'stone', top: 'slime', pal: ['#4a2a2c', '#2e1a1c', '#140a0c'], edge: ['#fffbe8', '#f1e0b0', '#8a7a50'], props: ['pipe', 'grate'] } },
+  highway: { name: 'THE OVERPASS',       fill: 'asphalt', top: 'road',    pal: ['#3a2428', '#24161a', '#100a0c'], edge: ['#f1e7d0', '#6a3a3e', '#1a0a0c'], back: 'highway', props: ['crashbar', 'roadsign', 'lamp2', 'crashbar'], shops: [] },
+  oldtown: { name: 'OLD TOWN',           fill: 'stone',   top: 'curb',    pal: ['#4a3034', '#2e1c20', '#140a0c'], edge: ['#8a2a30', '#5a1418', '#1a0608'], back: 'church', props: ['grave', 'fence', 'candle', 'grave', 'cross'], shops: ['fac_sanct'] },
+  drain:   { name: 'THE STORM DRAIN',    fill: 'stone',   top: 'slime',   pal: ['#3a2426', '#261618', '#10080a'], edge: ['#fffbe8', '#f1e0b0', '#8a7a50'], back: 'drain', props: ['pipe', 'grate'], shops: [] }
 };
 /* which district a column is in, and which look a cell uses (the high road, street or low road of a three-lane stretch) */
 function distAt(c) { var d = LV.distCol; if (!d) return null; return d[Math.max(0, Math.min(d.length - 1, c))]; }

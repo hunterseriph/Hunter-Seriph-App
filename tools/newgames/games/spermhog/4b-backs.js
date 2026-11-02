@@ -18,7 +18,7 @@ var BACKS = {
       g.fillStyle = 'rgba(255,190,110,0.35)'; g.fillRect(x + 8, top + 58, w - 16, 26); x += w + 6; }
     for (var t = 30; t < 960; t += 150) { g.fillStyle = '#0a0606'; g.fillRect(t, 170, 4, 130); g.beginPath(); g.arc(t + 2, 160, 26 + r() * 8, 0, 6.3); g.fill(); }
     for (var p = 0; p < 960; p += 120) { g.fillStyle = '#0a0606'; g.fillRect(p, 110, 3, 190); g.strokeStyle = '#0a0606'; g.lineWidth = 1; g.beginPath(); g.moveTo(p, 112); g.quadraticCurveTo(p + 60, 140, p + 120, 112); g.stroke();
-      for (var b = 1; b < 10; b++) { var tt = b / 10, bx = p + 120 * tt, by = 112 + 4 * 28 * tt * (1 - tt); g.fillStyle = b % 3 === 0 ? '#ff6a6a' : '#ffe36a'; g.fillRect(bx - 1, by + 1, 3, 3); g.fillStyle = 'rgba(255,220,120,0.18)'; g.fillRect(bx - 4, by - 2, 9, 9); } } },
+      for (var b = 1; b < 10; b++) { var tt = b / 10, bx = p + 120 * tt, by = 112 + 4 * 28 * tt * (1 - tt); g.fillStyle = b % 3 === 0 ? '#f1e7d0' : '#ff2630'; g.fillRect(bx - 1, by + 1, 3, 3); g.fillStyle = 'rgba(255,60,60,0.18)'; g.fillRect(bx - 4, by - 2, 9, 9); } } },
   cranes: function (g, r) { // tower cranes, a half-built tower of beams, scaffolding
     g.strokeStyle = '#140a08'; g.fillStyle = '#140a08';
     for (var k = 0; k < 2; k++) { var cx = 160 + k * 480 + r() * 60, top = 30 + r() * 30; g.lineWidth = 2; for (var y = top; y < 300; y += 14) { g.strokeRect(cx, y, 12, 14); g.beginPath(); g.moveTo(cx, y); g.lineTo(cx + 12, y + 14); g.stroke(); }
@@ -30,7 +30,7 @@ var BACKS = {
   towers: function (g, r) { cityTowers(g, r, 77); },
   neon: function (g, r) { // the plaza: tall facades hung with neon
     for (var x = 0; x < 960; ) { var w = 90 + Math.floor(r() * 60), h = 160 + Math.floor(r() * 100), top = 300 - h; g.fillStyle = '#100608'; g.fillRect(x, top, w, h);
-      var nc = ['#ff2630', '#ff6ad0', '#ffe36a', '#7af0ff'][Math.floor(r() * 4)]; g.save(); g.shadowColor = nc; g.shadowBlur = 6; g.strokeStyle = nc; g.lineWidth = 2;
+      var nc = ['#ff2630', '#ff2a6a', '#c4121c', '#ff5a5a'][Math.floor(r() * 4)]; g.save(); g.shadowColor = nc; g.shadowBlur = 6; g.strokeStyle = nc; g.lineWidth = 2;
       var sy = top + 20 + r() * 40; if (r() < 0.5) { g.beginPath(); g.arc(x + w / 2, sy + 14, 14, 0, 6.3); g.stroke(); } else g.strokeRect(x + 12, sy, w - 24, 24); g.beginPath(); g.moveTo(x + 14, sy + 40); g.lineTo(x + w - 14, sy + 40); g.stroke(); g.restore();
       for (var wy = sy + 56; wy < 280; wy += 22) for (var wx = x + 10; wx < x + w - 12; wx += 16) if (r() < 0.3) { g.fillStyle = 'rgba(255,90,120,0.3)'; g.fillRect(wx, wy, 7, 10); }
       x += w + 4; } },
@@ -49,8 +49,8 @@ var BACKS = {
   highway: function (g, r) { // the overpass: concrete pillars, a far road with tail lights, billboards
     g.fillStyle = '#0e0a0c'; g.fillRect(0, 120, 960, 14); for (var x = 0; x < 960; x += 80) { g.fillStyle = 'rgba(255,40,48,0.6)'; g.fillRect(x + r() * 60, 124, 4, 2); g.fillStyle = 'rgba(255,240,200,0.6)'; g.fillRect(x + r() * 60, 128, 4, 2); }
     for (var p = 40; p < 960; p += 160) { g.fillStyle = '#120c0e'; g.fillRect(p, 134, 26, 166); g.fillRect(p - 8, 134, 42, 10); }
-    for (var b = 100; b < 960; b += 320) { g.fillStyle = '#0a0606'; g.fillRect(b + 40, 70, 4, 50); g.fillRect(b + 100, 70, 4, 50); g.fillStyle = '#1a0a0c'; g.fillRect(b, 20, 150, 56); g.strokeStyle = '#c4121c'; g.lineWidth = 2; g.strokeRect(b + 4, 24, 142, 48); g.fillStyle = 'rgba(255,227,106,0.25)'; g.fillRect(b + 14, 34, 60, 8); g.fillRect(b + 14, 48, 90, 6); }
-    g.fillStyle = '#0a0608'; g.fillRect(0, 230, 960, 70); for (var s = 0; s < 960; s += 40) { g.fillStyle = 'rgba(255,227,106,0.3)'; g.fillRect(s, 262, 20, 2); } },
+    for (var b = 100; b < 960; b += 320) { g.fillStyle = '#0a0606'; g.fillRect(b + 40, 70, 4, 50); g.fillRect(b + 100, 70, 4, 50); g.fillStyle = '#1a0a0c'; g.fillRect(b, 20, 150, 56); g.strokeStyle = '#c4121c'; g.lineWidth = 2; g.strokeRect(b + 4, 24, 142, 48); g.fillStyle = 'rgba(241,231,208,0.2)'; g.fillRect(b + 14, 34, 60, 8); g.fillRect(b + 14, 48, 90, 6); }
+    g.fillStyle = '#0a0608'; g.fillRect(0, 230, 960, 70); for (var s = 0; s < 960; s += 40) { g.fillStyle = 'rgba(241,231,208,0.25)'; g.fillRect(s, 262, 20, 2); } },
   church: function (g, r) { // old town: the cathedral, its rose window, gravestones, dead trees, the red moon
     g.fillStyle = 'rgba(196,18,28,0.55)'; g.beginPath(); g.arc(780, 70, 40, 0, 6.3); g.fill(); g.fillStyle = '#0a0406';
     var cx = 360; g.fillRect(cx, 110, 200, 190); g.beginPath(); g.moveTo(cx + 70, 110); g.lineTo(cx + 100, 0); g.lineTo(cx + 130, 110); g.fill(); g.fillRect(cx + 80, 40, 40, 70);
@@ -67,7 +67,7 @@ function cityTowers(g, r, seed) { // the black towers (two depths were drawn by 
   for (var x = -20; x < 960; ) {
     var w = 50 + Math.floor(r() * 70), h = 120 + Math.floor(r() * 170), top = 300 - h;
     g.fillStyle = r() < 0.5 ? '#12060a' : '#180a0e'; g.fillRect(x, top, w, h); g.fillStyle = '#060203'; g.fillRect(x + w - 4, top, 4, h); g.fillRect(x, top, w, 3);
-    for (var wy = top + 10; wy < 290; wy += 12) for (var wx = x + 6; wx < x + w - 8; wx += 9) { var q = r(); if (q < 0.18) { g.fillStyle = q < 0.04 ? 'rgba(255,60,60,0.55)' : 'rgba(255,214,120,0.45)'; g.fillRect(wx, wy, 4, 6); } else if (q < 0.5) { g.fillStyle = 'rgba(60,20,26,0.8)'; g.fillRect(wx, wy, 4, 6); } }
+    for (var wy = top + 10; wy < 290; wy += 12) for (var wx = x + 6; wx < x + w - 8; wx += 9) { var q = r(); if (q < 0.18) { g.fillStyle = q < 0.1 ? 'rgba(255,40,48,0.55)' : 'rgba(241,200,170,0.35)'; g.fillRect(wx, wy, 4, 6); } else if (q < 0.5) { g.fillStyle = 'rgba(60,20,26,0.8)'; g.fillRect(wx, wy, 4, 6); } }
     if (r() < 0.35) { g.fillStyle = '#0a0406'; g.fillRect(x + 10, top - 18, 22, 14); g.beginPath(); g.moveTo(x + 8, top - 18); g.lineTo(x + 21, top - 26); g.lineTo(x + 34, top - 18); g.fill(); }
     else if (r() < 0.5) { g.fillStyle = '#0a0406'; g.fillRect(x + w / 2, top - 30, 2, 30); g.fillStyle = '#ff2630'; g.fillRect(x + w / 2 - 1, top - 32, 4, 3); }
     x += w + Math.floor(r() * 6);
@@ -80,6 +80,6 @@ function drawDistrictBack(g, cx, vy, W, H) {
   for (var i = 0; i < ds.length; i++) { var d = ds[i].c - mid; if (Math.abs(d) < 30) { var prev = i ? ds[i - 1].id : ds[i].id; a = prev; b = ds[i].id; t = Math.max(0, Math.min(1, (30 - d) / 60)); break; } }
   function one(id, alpha) { if (!id || alpha <= 0) return; var L = distLayer(id), mw = 960, mx = -(((cx * 0.4) % mw) + mw) % mw, my = Math.round(vy * 1.4) + H - 300; g.globalAlpha = alpha; for (; mx < W; mx += mw) KIT.blit(L, mx, my); g.globalAlpha = 1; if (my + 300 < H) { g.globalAlpha = alpha; g.fillStyle = '#0a0406'; g.fillRect(0, my + 299, W, H - my - 299); g.globalAlpha = 1; } }
   // a dim far band of towers behind every district so the city never ends
-  var far = cityMid('citymid0'), fx = -(((cx * 0.22) % 960) + 960) % 960; g.globalAlpha = 0.45; for (; fx < W; fx += 960) KIT.blit(far, fx, Math.round(vy * 1.22) + H - 270); g.globalAlpha = 1;
+  if (LV.zone.id === 'city') { var far = cityMid('citymid0'), fx = -(((cx * 0.22) % 960) + 960) % 960; g.globalAlpha = 0.45; for (; fx < W; fx += 960) KIT.blit(far, fx, Math.round(vy * 1.22) + H - 270); g.globalAlpha = 1; }
   one(a, 1); if (b && b !== a) one(b, t);
 }

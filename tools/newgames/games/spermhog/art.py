@@ -3,7 +3,7 @@ the foes and bosses come from tools/foes (Load Legacy's), the saws and logs are 
 from pixelkit import Grid
 FOES = ['crawler', 'clown', 'rat', 'bat', 'balloon', 'cultrat', 'creamblob', 'crow', 'slime', 'toymouse', 'pieling', 'skeleton', 'bonehound', 'gravehand', 'wraith', 'mummy',
         'magmaslug', 'golem', 'corkbot', 'emberbat', 'imp', 'blumguard', 'blumling', 'blumeye', 'blumspore', 'knight', 'beast', 'kraken', 'pig', 'boner', 'hotload', 'blum', 'blum2']
-USE = ['ch_*', 'cumface'] + ['f_%s_*' % f for f in FOES] + ['p_saw0', 'p_saw1', 'p_logboat', 'h_gloop_baby_idle*', 'fac_*']
+USE = ['ch_*', 'cumface'] + ['f_%s_*' % f for f in FOES] + ['p_saw0', 'p_saw1', 'p_logboat', 'h_gloop_baby_idle*', 'fac_*', 'steve0', 'steve1', 'p_ribs', 'p_skulls', 'p_crucible', 'p_chandelier']
 CREAM = ('#fffbe8', '#f1e0b0', '#b8a070'); RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLUE = ('#9adfff', '#3a8ac8', '#14406a')
 
 def drop():
@@ -65,8 +65,8 @@ def chalice(i):
 
 
 # ---------- district street furniture (each district has its own set) ----------
-GREY = ('#c8c0c8', '#8a8290', '#3a343c'); DARK = ('#4a4450', '#2a2630', '#141218'); WOOD = ('#a0703a', '#704a24', '#3a240e'); YEL = ('#ffe36a', '#d0a020', '#6a4a0a')
-CR = ('#fffbe8', '#f1e0b0', '#b8a070'); GRN = ('#7aa04a', '#4a6a2a', '#1e2e10'); STONE = ('#a09a90', '#6a6660', '#2e2c28'); BLU = ('#9adfff', '#3a8ac8', '#14406a')
+GREY = ('#c8c0c8', '#8a8290', '#3a343c'); DARK = ('#4a4450', '#2a2630', '#141218'); WOOD = ('#7a3a2a', '#4a1e16', '#200a06'); YEL = ('#ffe36a', '#d0a020', '#6a4a0a')
+CR = ('#fffbe8', '#f1e0b0', '#b8a070'); GRN = ('#5a1a20', '#3a0e14', '#1a0408'); STONE = ('#a09a90', '#6a6660', '#2e2c28'); BLU = ('#ff6a70', '#c4121c', '#5a0a10')
 def phone():
     g = Grid(18, 44); g.rect(1, 4, 16, 40, 'r'); g.rect(0, 2, 18, 4, 'r'); g.rect(4, 0, 10, 3, 'r'); g.rect(3, 10, 12, 26, 'gl'); g.rect(8, 10, 2, 26, 'r'); g.rect(3, 22, 12, 1, 'r'); g.rect(4, 6, 10, 2, 'sign')
     return g, {'r': RED, 'gl': ('#ffe9a0', '#d8b860', '#7a5a20'), 'sign': '#fffbe8'}
@@ -81,13 +81,13 @@ def planter():
 def stall():
     g = Grid(42, 40); g.rect(2, 12, 2, 28, 'wd'); g.rect(38, 12, 2, 28, 'wd'); g.rect(0, 22, 42, 6, 'wd'); g.rect(0, 0, 42, 12, 'aw'); g.rect(2, 18, 10, 4, 'f1'); g.rect(14, 18, 10, 4, 'f2'); g.rect(28, 18, 10, 4, 'f1')
     for x in range(0, 42, 8): g.rect(x, 0, 4, 12, 'aw2')
-    return g, {'wd': WOOD, 'aw': RED, 'aw2': CR, 'f1': YEL, 'f2': GRN}
+    return g, {'wd': WOOD, 'aw': RED, 'aw2': CR, 'f1': CR, 'f2': RED}
 def barrier():
     g = Grid(36, 18); g.rect(0, 2, 36, 6, 'w'); g.rect(3, 8, 3, 10, 'w'); g.rect(30, 8, 3, 10, 'w')
     for x in range(0, 36, 8): g.poly([(x, 8), (x + 4, 2), (x + 8, 2), (x + 4, 8)], 'r')
     return g, {'w': ('#ffffff', '#e8dcc8', '#a8987a'), 'r': RED}
 def loo():
-    g = Grid(20, 44); g.rect(0, 4, 20, 40, 'b'); g.rect(0, 0, 20, 5, 'b2'); g.rect(4, 10, 12, 30, 'd'); g.rect(13, 24, 2, 4, 'k'); g.rect(6, 12, 8, 3, 'v'); return g, {'b': BLU, 'b2': ('#ffffff', '#c8d8e8', '#6a7a8a'), 'd': ('#6ab0e8', '#2a6aa8', '#0a2a50'), 'k': '#12040a', 'v': '#12040a'}
+    g = Grid(20, 44); g.rect(0, 4, 20, 40, 'b'); g.rect(0, 0, 20, 5, 'b2'); g.rect(4, 10, 12, 30, 'd'); g.rect(13, 24, 2, 4, 'k'); g.rect(6, 12, 8, 3, 'v'); return g, {'b': RED, 'b2': ('#fffbe8', '#e8dcc8', '#a8987a'), 'd': ('#8a1a20', '#5a0a10', '#2a0408'), 'k': '#12040a', 'v': '#12040a'}
 def girders():
     g = Grid(44, 16)
     for i, y in enumerate((10, 5, 0)):
@@ -95,11 +95,11 @@ def girders():
         for x in range(4 + i * 3, 42 - i * 3, 6): g.line(x, y + 1, x + 3, y + 4, 'r')
     return g, {'r': ('#ff6a3a', '#c43a10', '#5a1808')}
 def warn():
-    g = Grid(22, 40); g.rect(10, 18, 2, 22, 'm'); g.poly([(11, 0), (22, 19), (0, 19)], 'y'); g.rect(10, 6, 2, 7, 'k'); g.rect(10, 15, 2, 2, 'k'); return g, {'m': DARK, 'y': YEL, 'k': '#12040a'}
+    g = Grid(22, 40); g.rect(10, 18, 2, 22, 'm'); g.poly([(11, 0), (22, 19), (0, 19)], 'y'); g.rect(10, 6, 2, 7, 'k'); g.rect(10, 15, 2, 2, 'k'); return g, {'m': DARK, 'y': RED, 'k': '#fffbe8'}
 def lamp2():
     g = Grid(26, 82); g.rect(11, 8, 3, 74, 'i'); g.rect(8, 78, 9, 4, 'i'); g.rect(11, 6, 14, 3, 'i'); g.rect(19, 9, 6, 4, 'lt'); return g, {'i': DARK, 'lt': ('#fff6c0', '#ffd860', '#c08a20')}
 def paper():
-    g = Grid(16, 26); g.rect(0, 2, 16, 20, 'r'); g.rect(2, 6, 12, 8, 'gl'); g.rect(3, 22, 2, 4, 'm'); g.rect(11, 22, 2, 4, 'm'); g.rect(0, 0, 16, 3, 'r'); return g, {'r': ('#ffd860', '#c89a20', '#5a4008'), 'gl': CR, 'm': DARK}
+    g = Grid(16, 26); g.rect(0, 2, 16, 20, 'r'); g.rect(2, 6, 12, 8, 'gl'); g.rect(3, 22, 2, 4, 'm'); g.rect(11, 22, 2, 4, 'm'); g.rect(0, 0, 16, 3, 'r'); return g, {'r': RED, 'gl': CR, 'm': DARK}
 def watertower():
     g = Grid(40, 70); g.rect(4, 30, 3, 40, 'i'); g.rect(33, 30, 3, 40, 'i'); g.line(6, 40, 34, 66, 'i'); g.line(34, 40, 6, 66, 'i'); g.rect(2, 8, 36, 24, 'wd'); g.poly([(0, 9), (20, 0), (40, 9)], 'rf')
     for x in range(4, 38, 5): g.rect(x, 9, 1, 22, 'band')
@@ -128,7 +128,7 @@ def poster():
 def pillar():
     g = Grid(20, 96); g.rect(2, 0, 16, 96, 't'); g.rect(0, 0, 20, 6, 'g'); g.rect(0, 90, 20, 6, 'g')
     for y in range(8, 90, 8): g.rect(2, y, 16, 1, 'k')
-    return g, {'t': ('#e8e0c8', '#b8b098', '#6a6450'), 'g': GREY, 'k': ('#8a846c', '#8a846c', '#8a846c')}
+    return g, {'t': ('#8a2a30', '#5a1418', '#2a0608'), 'g': GREY, 'k': ('#2a0608', '#2a0608', '#2a0608')}
 def neonarrow():
     g = Grid(34, 64); g.rect(5, 16, 3, 48, 'i'); g.poly([(0, 2), (26, 2), (34, 9), (26, 16), (0, 16)], 'bx'); g.poly([(4, 6), (24, 6), (28, 9), (24, 12), (4, 12)], 'neo'); return g, {'i': DARK, 'bx': ('#2a0a10', '#1a0608', '#0a0204'), 'neo': ('#ff9ad8', '#ff2a8a', '#8a0a4a')}
 def puddle():
@@ -149,7 +149,7 @@ def buoy():
 def vent2():
     g = Grid(20, 26); g.rect(6, 8, 8, 18, 'g'); g.poly([(2, 8), (10, 0), (18, 8)], 'g'); g.rect(2, 8, 16, 2, 'k'); return g, {'g': GREY, 'k': DARK}
 def pipe():
-    g = Grid(18, 40); g.rect(5, 0, 8, 40, 'p'); g.rect(3, 6, 12, 3, 'p'); g.rect(3, 30, 12, 3, 'p'); g.rect(6, 36, 6, 4, 'c'); return g, {'p': ('#7a8a6a', '#4a5a3a', '#1a2412'), 'c': CR}
+    g = Grid(18, 40); g.rect(5, 0, 8, 40, 'p'); g.rect(3, 6, 12, 3, 'p'); g.rect(3, 30, 12, 3, 'p'); g.rect(6, 36, 6, 4, 'c'); return g, {'p': ('#6a5a5e', '#3a2e32', '#141012'), 'c': CR}
 def grate():
     g = Grid(28, 6); g.rect(0, 0, 28, 6, 'k')
     for x in range(2, 28, 4): g.rect(x, 1, 2, 4, 'g')
@@ -159,9 +159,9 @@ def crashbar():
     for x in (4, 22, 40): g.rect(x, 8, 4, 8, 'k')
     return g, {'g': GREY, 'k': DARK}
 def roadsign():
-    g = Grid(30, 56); g.rect(14, 20, 3, 36, 'i'); g.rect(0, 0, 30, 20, 'gr'); g.rect(2, 2, 26, 16, 'gr2'); g.rect(6, 8, 18, 2, 'w'); g.poly([(20, 5), (25, 9), (20, 13)], 'w'); return g, {'i': DARK, 'gr': ('#ffffff', '#e8e8e8', '#8a8a8a'), 'gr2': ('#3a8a4a', '#1a6a2a', '#0a3a14'), 'w': '#ffffff'}
+    g = Grid(30, 56); g.rect(14, 20, 3, 36, 'i'); g.rect(0, 0, 30, 20, 'gr'); g.rect(2, 2, 26, 16, 'gr2'); g.rect(6, 8, 18, 2, 'w'); g.poly([(20, 5), (25, 9), (20, 13)], 'w'); return g, {'i': DARK, 'gr': ('#ffffff', '#e8e8e8', '#8a8a8a'), 'gr2': ('#c4121c', '#8a0a10', '#3a0408'), 'w': '#ffffff'}
 def grave():
-    g = Grid(18, 26); g.rect(1, 8, 16, 18, 's'); g.ellipse(9, 8, 8, 7, 's'); g.rect(8, 6, 2, 10, 'k'); g.rect(5, 9, 8, 2, 'k'); g.put(2, 22, 'm'); g.put(14, 23, 'm'); return g, {'s': STONE, 'k': '#2a2620', 'm': '#6a8a3a'}
+    g = Grid(18, 26); g.rect(1, 8, 16, 18, 's'); g.ellipse(9, 8, 8, 7, 's'); g.rect(8, 6, 2, 10, 'k'); g.rect(5, 9, 8, 2, 'k'); g.put(2, 22, 'm'); g.put(14, 23, 'm'); return g, {'s': STONE, 'k': '#2a2620', 'm': '#c4121c'}
 def fence():
     g = Grid(48, 34); g.rect(0, 10, 48, 2, 'i'); g.rect(0, 26, 48, 2, 'i')
     for x in range(1, 48, 6): g.rect(x, 4, 2, 30, 'i'); g.poly([(x - 1, 5), (x + 1, 0), (x + 3, 5)], 'i')
@@ -169,7 +169,7 @@ def fence():
 def candle():
     g = Grid(10, 18); g.rect(3, 6, 4, 12, 'c'); g.ellipse(5, 3, 2, 3, 'f'); g.rect(4, 4, 2, 2, 'f2'); return g, {'c': CR, 'f': ('#ffe36a', '#ff9a30', '#c4121c'), 'f2': '#ffffff'}
 def cross():
-    g = Grid(18, 34); g.rect(7, 0, 4, 34, 's'); g.rect(1, 8, 16, 4, 's'); g.put(3, 30, 'm'); return g, {'s': STONE, 'm': '#6a8a3a'}
+    g = Grid(18, 34); g.rect(7, 0, 4, 34, 's'); g.rect(1, 8, 16, 4, 's'); g.put(3, 30, 'm'); return g, {'s': STONE, 'm': '#c4121c'}
 def train():  # the subway train, its cab end: comes through the low road with its lights on
     g = Grid(140, 46); g.rect(0, 4, 140, 38, 'b'); g.rect(0, 0, 140, 5, 'rf'); g.rect(0, 22, 140, 4, 'st')
     for x in range(6, 120, 22): g.rect(x, 8, 16, 11, 'w')
@@ -179,7 +179,7 @@ def train():  # the subway train, its cab end: comes through the low road with i
 def car():  # a boxy black cab with red trim: traffic on the street
     g = Grid(64, 28); g.rect(0, 12, 64, 12, 'b'); g.poly([(12, 12), (18, 2), (44, 2), (52, 12)], 'b'); g.rect(20, 4, 10, 8, 'w'); g.rect(33, 4, 10, 8, 'w'); g.rect(0, 16, 64, 2, 'r'); g.rect(60, 14, 4, 4, 'lt'); g.rect(0, 14, 3, 4, 'tl')
     g.ellipse(14, 24, 6, 5, 'k'); g.ellipse(50, 24, 6, 5, 'k'); g.ellipse(14, 24, 2, 2, 'hub'); g.ellipse(50, 24, 2, 2, 'hub')
-    return g, {'b': ('#4a4450', '#24202a', '#0e0c12'), 'w': ('#bfe8ff', '#6aa8c8', '#2a4a6a'), 'r': RED, 'lt': '#fff6c0', 'tl': '#ff2630', 'k': '#12040a', 'hub': '#8a8290'}
+    return g, {'b': ('#4a4450', '#24202a', '#0e0c12'), 'w': ('#8a2a30', '#5a1418', '#2a0608'), 'r': RED, 'lt': '#fff6c0', 'tl': '#ff2630', 'k': '#12040a', 'hub': '#8a8290'}
 def awning():  # a shop awning you bounce on
     g = Grid(48, 14); g.poly([(0, 0), (48, 0), (44, 12), (4, 12)], 'a')
     for x in range(0, 48, 8): g.poly([(x, 0), (x + 4, 0), (x + 4 - (x - 24) * 0.08, 12), (x - (x - 24) * 0.08, 12)], 'a2')
@@ -189,11 +189,129 @@ def barge():  # a cream barge on the canal
 def line():  # a washing line with laundry: you can stand on it
     g = Grid(64, 20); g.line(0, 2, 32, 5, 'r'); g.line(32, 5, 64, 2, 'r')
     for x, c in ((8, 'a'), (22, 'b'), (40, 'a'), (52, 'c')): g.rect(x, 4, 8, 10, c); g.rect(x + 2, 14, 4, 4, c)
-    return g, {'r': CR, 'a': RED, 'b': CR, 'c': ('#9a7ac8', '#6a4a98', '#2a1a48')}
+    return g, {'r': CR, 'a': RED, 'b': CR, 'c': ('#4a4450', '#2a2630', '#141218')}
 FURN = {'phone': phone, 'mailbox': mailbox, 'table': table, 'planter': planter, 'stall': stall, 'barrier': barrier, 'loo': loo, 'girders': girders, 'warn': warn, 'lamp2': lamp2, 'paper': paper,
         'watertower': watertower, 'ac': ac, 'antenna': antenna, 'chimney': chimney, 'dish': dish, 'subsign': subsign, 'subbench': subbench, 'poster': poster, 'pillar': pillar, 'neonarrow': neonarrow,
         'puddle': puddle, 'crate': crate, 'crates': crates, 'bollard': bollard, 'rope': rope, 'buoy': buoy, 'vent2': vent2, 'pipe': pipe, 'grate': grate, 'crashbar': crashbar, 'roadsign': roadsign,
         'grave': grave, 'fence': fence, 'candle': candle, 'cross': cross, 'train': train, 'car': car, 'awning': awning, 'barge': barge, 'washline': line}
 
+# ---------- the other zones' furniture and set-piece machines ----------
+RUST = ('#c4643a', '#8a3a1a', '#3a1408'); SLIME = ('#fffbe8', '#f1e0b0', '#a89060'); BONE = ('#f1e7d0', '#c8b898', '#6a5a44'); STEEL = ('#9a96a0', '#5a5660', '#24222a'); GOLD = ('#fff09a', '#ffc840', '#a8741a')
+def valve():
+    g = Grid(24, 30); g.rect(10, 10, 4, 20, 'p'); g.ellipse(12, 8, 10, 7, 'w'); g.ellipse(12, 8, 6, 4, 'k'); g.line(12, 2, 12, 14, 'w'); g.line(4, 8, 20, 8, 'w'); return g, {'p': STEEL, 'w': RED, 'k': '#12040a'}
+def sludge():
+    g = Grid(20, 26); g.rect(2, 4, 16, 22, 'b'); g.rect(1, 3, 18, 3, 'b'); g.rect(2, 10, 16, 2, 'k'); g.rect(2, 19, 16, 2, 'k'); g.ellipse(10, 4, 7, 2, 'c'); g.rect(13, 5, 3, 7, 'c'); return g, {'b': ('#4a5a4a', '#2e3a2e', '#121a12'), 'k': '#12040a', 'c': SLIME}
+def ladder():
+    g = Grid(18, 64); g.rect(2, 0, 2, 64, 'i'); g.rect(14, 0, 2, 64, 'i')
+    for y in range(4, 64, 8): g.rect(2, y, 14, 2, 'i')
+    return g, {'i': STEEL}
+def fungus():
+    g = Grid(22, 22); g.rect(9, 10, 4, 12, 's'); g.ellipse(11, 9, 10, 6, 'c'); g.put(7, 7, 'd'); g.put(14, 6, 'd'); g.put(11, 9, 'd'); return g, {'s': SLIME, 'c': ('#8a2a30', '#5a1418', '#2a0608'), 'd': '#fffbe8'}
+def drip():
+    g = Grid(14, 40); g.rect(0, 0, 14, 8, 'p'); g.rect(4, 8, 6, 4, 'p'); g.rect(6, 12, 2, 10, 'c'); g.ellipse(7, 26, 2, 3, 'c'); return g, {'p': STEEL, 'c': SLIME}
+def booth():
+    g = Grid(34, 50); g.rect(2, 14, 30, 36, 'r'); g.poly([(0, 14), (17, 0), (34, 14)], 'k'); g.rect(6, 20, 22, 12, 'gl'); g.rect(4, 34, 26, 3, 'g'); g.rect(13, 3, 8, 6, 'g'); return g, {'r': RED, 'k': ('#2a0a10', '#1a0608', '#0a0204'), 'gl': ('#ffe9a0', '#d8b860', '#7a5a20'), 'g': GOLD}
+def popcorn():
+    g = Grid(24, 40); g.rect(2, 16, 20, 24, 'r'); g.rect(4, 6, 16, 12, 'gl'); g.ellipse(12, 10, 6, 4, 'c'); g.rect(0, 2, 24, 4, 'r'); g.rect(5, 38, 4, 2, 'k'); g.rect(15, 38, 4, 2, 'k'); g.rect(4, 22, 16, 2, 'g'); return g, {'r': RED, 'gl': ('#fff6d8', '#e8d8b0', '#a89870'), 'c': CR, 'g': GOLD, 'k': '#12040a'}
+def balloons():
+    g = Grid(26, 56); g.rect(8, 40, 10, 16, 'r'); g.line(13, 40, 6, 14, 'k'); g.line(13, 40, 13, 10, 'k'); g.line(13, 40, 20, 14, 'k')
+    for x, y, c in ((6, 10, 'r'), (13, 6, 'b'), (20, 10, 'g')): g.ellipse(x, y, 5, 6, c)
+    return g, {'r': RED, 'b': ('#4a4450', '#24202a', '#0e0c12'), 'g': GOLD, 'k': '#12040a'}
+def queue():
+    g = Grid(48, 22); g.rect(0, 6, 48, 2, 'g'); g.line(0, 7, 24, 12, 'r'); g.line(24, 12, 48, 7, 'r')
+    for x in (1, 23, 45): g.rect(x, 4, 3, 18, 'g'); g.rect(x - 1, 20, 5, 2, 'g')
+    return g, {'g': GOLD, 'r': RED}
+def bulbarch():
+    g = Grid(60, 50); g.rect(0, 10, 4, 40, 'i'); g.rect(56, 10, 4, 40, 'i'); g.rect(0, 8, 60, 4, 'i')
+    for x in range(2, 60, 6): g.ellipse(x, 10, 1.5, 1.5, 'b')
+    return g, {'i': ('#2a0a10', '#1a0608', '#0a0204'), 'b': ('#fff6c0', '#ffd860', '#c08a20')}
+def ridesign():
+    g = Grid(30, 56); g.rect(13, 20, 4, 36, 'i'); g.ellipse(15, 11, 14, 10, 'r'); g.ellipse(15, 11, 10, 7, 'k'); g.poly([(10, 11), (20, 5), (20, 17)], 'g'); return g, {'i': DARK, 'r': GOLD, 'k': ('#2a0a10', '#1a0608', '#0a0204'), 'g': RED}
+def skullpile():
+    g = Grid(30, 20)
+    for x, y in ((5, 14), (15, 14), (25, 14), (10, 7), (20, 7), (15, 1)): g.ellipse(x, y + 3, 4.5, 4, 'b'); g.put(x - 2, y + 3, 'k'); g.put(x + 1, y + 3, 'k')
+    return g, {'b': BONE, 'k': '#12040a'}
+def bonefence():
+    g = Grid(46, 30)
+    for x in range(2, 46, 8): g.rect(x, 4, 3, 26, 'b'); g.ellipse(x + 1, 3, 3, 2.5, 'b')
+    g.rect(0, 12, 46, 2, 'b'); g.rect(0, 22, 46, 2, 'b'); return g, {'b': BONE}
+def coffinup():
+    g = Grid(20, 44); g.poly([(6, 0), (14, 0), (20, 12), (16, 44), (4, 44), (0, 12)], 'w'); g.rect(9, 10, 2, 16, 'k'); g.rect(5, 15, 10, 2, 'k'); return g, {'w': ('#5a2a20', '#3a1610', '#1a0806'), 'k': '#c8b898'}
+def lantern():
+    g = Grid(14, 50); g.rect(6, 14, 2, 36, 'i'); g.rect(2, 2, 10, 12, 'i'); g.rect(4, 4, 6, 8, 'f'); g.rect(4, 0, 6, 2, 'i'); return g, {'i': DARK, 'f': ('#ff9a6a', '#ff2630', '#8a0a10')}
+def barrels():
+    g = Grid(40, 30)
+    for x, y in ((0, 12), (20, 12), (10, 0)): g.rect(x + 1, y, 18, 18, 'b'); g.rect(x, y + 3, 20, 2, 'k'); g.rect(x, y + 13, 20, 2, 'k')
+    return g, {'b': RUST, 'k': ('#2a0a06', '#2a0a06', '#2a0a06')}
+def gastank():
+    g = Grid(30, 50); g.rect(3, 8, 24, 38, 't'); g.ellipse(15, 8, 12, 6, 't'); g.rect(13, 0, 4, 4, 'k'); g.rect(3, 20, 24, 3, 'r'); g.rect(6, 46, 4, 4, 'k'); g.rect(20, 46, 4, 4, 'k'); return g, {'t': STEEL, 'r': RED, 'k': '#12040a'}
+def pallet():
+    g = Grid(32, 26); g.rect(0, 20, 32, 6, 'w'); g.rect(2, 2, 28, 18, 'box'); g.line(2, 2, 30, 19, 'k'); g.rect(2, 10, 28, 1, 'k'); return g, {'w': WOOD, 'box': ('#c8b898', '#8a7a64', '#3a2e24'), 'k': '#3a2e24'}
+def gauge():
+    g = Grid(26, 40); g.rect(11, 18, 4, 22, 'p'); g.ellipse(13, 10, 11, 10, 's'); g.ellipse(13, 10, 8, 7, 'w'); g.line(13, 10, 18, 5, 'r'); g.rect(4, 26, 18, 4, 's'); return g, {'p': STEEL, 's': STEEL, 'w': CR, 'r': RED}
+def hoist():
+    g = Grid(20, 80); g.rect(9, 0, 2, 60, 'c')
+    for y in range(0, 60, 4): g.rect(8, y, 4, 2, 'c')
+    g.poly([(4, 60), (16, 60), (14, 70), (6, 70)], 'h'); g.rect(8, 70, 4, 8, 'h'); return g, {'c': STEEL, 'h': RUST}
+def anvil():
+    g = Grid(30, 20); g.poly([(0, 2), (30, 2), (24, 8), (6, 8)], 's'); g.rect(10, 8, 10, 8, 's'); g.rect(6, 16, 18, 4, 's'); return g, {'s': DARK}
+def terminal():
+    g = Grid(28, 40); g.rect(2, 14, 24, 26, 's'); g.rect(0, 0, 28, 16, 's'); g.rect(3, 3, 22, 10, 'sc'); g.rect(5, 5, 10, 1, 'r'); g.rect(5, 8, 14, 1, 'r'); g.rect(6, 20, 4, 3, 'r'); g.rect(14, 20, 4, 3, 'g'); return g, {'s': STEEL, 'sc': ('#2a0a10', '#1a0608', '#0a0204'), 'r': '#ff2630', 'g': '#ffe36a'}
+def specimen():  # a jar with a sleeping homunculus in it
+    g = Grid(26, 50); g.rect(1, 44, 24, 6, 's'); g.rect(1, 0, 24, 6, 's'); g.rect(3, 6, 20, 38, 'gl'); g.ellipse(13, 26, 7, 9, 'h'); g.put(10, 23, 'k'); g.put(15, 23, 'k'); g.rect(6, 10, 2, 30, 'hi')
+    return g, {'s': STEEL, 'gl': ('#5a1a20', '#3a0e14', '#1a0408'), 'h': ('#c8f0a0', '#80c060', '#3a6a20'), 'k': '#12040a', 'hi': '#ff8a90'}
+def rack():
+    g = Grid(24, 60); g.rect(0, 0, 24, 60, 's')
+    for y in range(4, 56, 6): g.rect(3, y, 18, 4, 'k'); g.put(5, y + 1, 'r'); g.put(8, y + 1, 'g')
+    return g, {'s': STEEL, 'k': ('#1a161c', '#1a161c', '#0a080c'), 'r': '#ff2630', 'g': '#ffe36a'}
+def cables():
+    g = Grid(40, 14)
+    for i, c in enumerate(('a', 'b', 'a')): g.line(0, 4 + i * 3, 40, 8 + i * 2, c, 1)
+    return g, {'a': ('#2a2630', '#141218', '#0a080c'), 'b': RED}
+def blumbanner():
+    g = Grid(28, 60); g.rect(12, 0, 4, 60, 'i'); g.rect(2, 4, 24, 34, 'r'); g.poly([(2, 38), (14, 46), (26, 38)], 'r'); g.ellipse(14, 20, 7, 8, 'p'); g.put(11, 18, 'k'); g.put(17, 18, 'k'); return g, {'i': DARK, 'r': ('#8a1a20', '#5a0a10', '#2a0408'), 'p': ('#c080ff', '#8a40d0', '#3a1060'), 'k': '#12040a'}
+# set-piece machines
+def minecart():
+    g = Grid(44, 30); g.poly([(0, 2), (44, 2), (38, 22), (6, 22)], 'r'); g.rect(0, 0, 44, 4, 's'); g.ellipse(14, 4, 5, 3, 'ore'); g.ellipse(26, 3, 6, 3, 'ore'); g.ellipse(12, 25, 5, 5, 'k'); g.ellipse(32, 25, 5, 5, 'k'); return g, {'r': RUST, 's': STEEL, 'ore': BONE, 'k': '#12040a'}
+def bumpercar():
+    g = Grid(46, 30); g.rect(0, 14, 46, 12, 'r'); g.ellipse(23, 14, 18, 8, 'r'); g.rect(0, 22, 46, 4, 'bump'); g.rect(22, 0, 2, 12, 's'); g.rect(18, 0, 10, 2, 'g'); g.ellipse(23, 10, 5, 4, 'seat'); return g, {'r': RED, 'bump': ('#4a4450', '#2a2630', '#141218'), 's': STEEL, 'g': GOLD, 'seat': ('#2a0a10', '#1a0608', '#0a0204')}
+def forklift():
+    g = Grid(54, 40); g.rect(10, 14, 32, 18, 'y'); g.rect(14, 2, 2, 14, 'k'); g.rect(32, 2, 2, 14, 'k'); g.rect(14, 2, 20, 2, 'k'); g.rect(0, 4, 4, 30, 'k'); g.rect(0, 30, 12, 3, 'k'); g.ellipse(18, 34, 6, 6, 'k'); g.ellipse(38, 34, 5, 5, 'k'); g.rect(44, 18, 6, 12, 'y'); return g, {'y': RUST, 'k': ('#2a2630', '#141218', '#0a080c')}
+def coaster():
+    g = Grid(70, 34); g.poly([(0, 6), (60, 6), (70, 14), (70, 26), (0, 26)], 'r'); g.rect(0, 2, 60, 5, 'g'); g.rect(10, 0, 4, 8, 'k'); g.rect(30, 0, 4, 8, 'k'); g.rect(0, 16, 70, 3, 'g'); g.ellipse(14, 29, 5, 5, 'k'); g.ellipse(52, 29, 5, 5, 'k'); return g, {'r': RED, 'g': GOLD, 'k': '#12040a'}
+def ghosttrain():
+    g = Grid(110, 44); g.rect(0, 6, 110, 32, 'b'); g.rect(0, 2, 110, 6, 'k')
+    for x in range(8, 100, 24): g.ellipse(x + 6, 18, 6, 7, 'w'); g.put(x + 4, 17, 'k'); g.put(x + 8, 17, 'k')
+    for x in (14, 50, 90): g.ellipse(x, 40, 5, 4, 'k')
+    return g, {'b': ('#3a1a2a', '#24101a', '#10060a'), 'k': '#12040a', 'w': BONE}
+def oretrain():
+    g = Grid(110, 40); g.rect(0, 10, 110, 24, 'r'); g.ellipse(25, 10, 18, 6, 'o'); g.ellipse(80, 10, 20, 6, 'o'); g.rect(0, 26, 110, 3, 'k')
+    for x in (14, 44, 70, 100): g.ellipse(x, 36, 5, 4, 'k')
+    return g, {'r': RUST, 'o': ('#ff9a6a', '#ff5a10', '#a02a04'), 'k': '#12040a'}
+def missile():
+    g = Grid(70, 24); g.poly([(0, 12), (14, 4), (14, 20)], 'r'); g.rect(14, 4, 46, 16, 's'); g.poly([(60, 4), (70, 0), (70, 24), (60, 20)], 'r'); g.rect(26, 8, 20, 2, 'r'); g.ellipse(36, 14, 4, 3, 'p'); return g, {'r': RED, 's': STEEL, 'p': ('#c080ff', '#8a40d0', '#3a1060')}
+def creamwave():
+    g = Grid(60, 60); g.poly([(0, 60), (8, 10), (24, 0), (40, 8), (52, 4), (60, 20), (60, 60)], 'c'); g.ellipse(22, 8, 6, 3, 'hi'); g.ellipse(46, 10, 4, 2, 'hi'); return g, {'c': SLIME, 'hi': '#ffffff'}
+def mushroom():
+    g = Grid(44, 18); g.ellipse(22, 9, 22, 9, 'c'); g.rect(0, 9, 44, 9, None) if False else None
+    for x, y in ((10, 5), (22, 3), (32, 6)): g.ellipse(x, y, 3, 2, 'd')
+    return g, {'c': ('#8a2a30', '#5a1418', '#2a0608'), 'd': SLIME}
+def drum():
+    g = Grid(44, 18); g.rect(2, 4, 40, 14, 'r'); g.ellipse(22, 4, 20, 4, 'skin'); for_x = None
+    for x in range(4, 42, 6): g.line(x, 6, x + 3, 16, 'g')
+    return g, {'r': RED, 'skin': CR, 'g': GOLD}
+def coffinlid():
+    g = Grid(44, 14); g.poly([(0, 7), (8, 0), (36, 0), (44, 7), (36, 14), (8, 14)], 'w'); g.rect(14, 6, 16, 2, 'k'); g.rect(21, 2, 2, 10, 'k'); return g, {'w': ('#5a2a20', '#3a1610', '#1a0806'), 'k': BONE}
+def pad():
+    g = Grid(44, 14); g.rect(0, 6, 44, 8, 's'); g.rect(4, 0, 36, 6, 'r')
+    for x in range(4, 40, 8): g.rect(x, 0, 4, 6, 'k')
+    return g, {'s': STEEL, 'r': RED, 'k': ('#12040a', '#12040a', '#12040a')}
+FURN2 = {'valve': valve, 'sludge': sludge, 'ladder': ladder, 'fungus': fungus, 'drip': drip, 'booth': booth, 'popcorn': popcorn, 'balloons': balloons, 'queue': queue, 'bulbarch': bulbarch, 'ridesign': ridesign,
+         'skullpile': skullpile, 'bonefence': bonefence, 'coffinup': coffinup, 'lantern': lantern, 'barrels': barrels, 'gastank': gastank, 'pallet': pallet, 'gauge': gauge, 'hoist': hoist, 'anvil': anvil,
+         'terminal': terminal, 'specimen': specimen, 'rack': rack, 'cables': cables, 'blumbanner': blumbanner,
+         'minecart': minecart, 'bumpercar': bumpercar, 'forklift': forklift, 'coaster': coaster, 'ghosttrain': ghosttrain, 'oretrain': oretrain, 'missile': missile, 'creamwave': creamwave,
+         'mushroom': mushroom, 'drum': drum, 'coffinlid': coffinlid, 'pad': pad}
+
 ART = {'hog_chal0': chalice(0), 'hog_chal1': chalice(1), 'hog_chal2': chalice(2), 'hog_chal3': chalice(3), 'hog_chal4': chalice(4), 'hog_chal5': chalice(5), 'hog_chal6': chalice(6), 'hog_lamp': lamp, 'hog_hydrant': hydrant, 'hog_bin': binb, 'hog_bench': bench, 'hog_bus': busstop, 'hog_cone': cone, 'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}
 ART.update({'hog_' + k: f for k, f in FURN.items()})
+ART.update({'hog_' + k: f for k, f in FURN2.items()})

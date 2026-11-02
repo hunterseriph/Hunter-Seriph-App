@@ -111,7 +111,7 @@ function draw() {
   if (!LV || !TILESET) return;
   drawWorld();
   if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') return;
-  drawHud(); drawDistBanner();
+  drawHud();
   if (G.mode === 'card') drawCard(G.cardT);
   if (G.mode === 'clear' && G.clearT > 1) drawTally();
 }
