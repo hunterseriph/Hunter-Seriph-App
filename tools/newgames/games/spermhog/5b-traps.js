@@ -75,16 +75,18 @@ function drawTrap(g, e, cx, cy) {
     return; }
 }
 /* ---------- loops: run in fast enough and he goes all the way round ---------- */
-var LOOPR = 60;
+var LOOPR = 112; // big enough to feel like a Sonic loop (14 tiles tall)
 function loopStart(p) {
-  if (p.loop || p.air || p.loopCd > 0 || p.gsp < 250) return false;
-  for (var i = 0; i < ENTS.length; i++) { var e = ENTS[i]; if (e.k !== 'loop') continue; if (Math.abs(p.x - e.x) < 6 && Math.abs(p.y - e.y) < 6) { p.loop = { e: e, a: 0 }; return true; } }
+  var px0 = p.lastX === undefined ? p.x : p.lastX; p.lastX = p.x;
+  if (p.loop || p.air || p.loopCd > 0 || p.gsp < 230) return false;
+  // caught when he crosses the entry point this frame, however fast he is going (a fixed window let fast runs skip straight past)
+  for (var i = 0; i < ENTS.length; i++) { var e = ENTS[i]; if (e.k !== 'loop') continue; if (px0 <= e.x + 2 && p.x + p.gsp / 60 >= e.x - 2 && p.x < e.x + 40 && Math.abs(p.y - e.y) < 10) { p.loop = { e: e, a: 0 }; p.x = e.x; return true; } }
   return false;
 }
 function loopStep(p, dt) { // round the circle, feet on the track, then out the far side the way he came in
-  var L = p.loop, e = L.e, sp = Math.max(260, p.gsp - 120 * Math.sin(L.a) * dt * 10);
+  var L = p.loop, e = L.e, sp = Math.max(330, p.gsp - 60 * Math.sin(L.a) * dt * 10); // gravity slows the climb a little, the way down gives it back
   p.gsp = sp; L.a += sp / LOOPR * dt; var cx = e.x, cyy = e.y - LOOPR;
-  if (L.a >= Math.PI * 2) { p.loop = null; p.loopCd = 0.6; p.x = cx + 2; p.y = e.y; p.rot = 0; return; }
+  if (L.a >= Math.PI * 2) { p.loop = null; p.loopCd = 0.6; p.x = cx + 2; p.y = e.y; p.rot = 0; p.gsp = Math.max(p.gsp, 560); return; }
   p.x = cx + Math.sin(L.a) * LOOPR; p.y = cyy + Math.cos(L.a) * LOOPR; p.rot = -L.a; p.air = false; p.face = 1; p.dist = (p.dist || 0) + sp * dt;
 }
 function drawLoop(g, e, cx, cy, front) { // the ring: its far half behind Cumhead, a strip of near track in front at the bottom

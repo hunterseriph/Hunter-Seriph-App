@@ -126,7 +126,11 @@ function drawStrips(cx, cy) {
   }
 }
 /* the light falls off at the edges: a cached vignette */
-function drawVignette() {
-  var L = KIT.layer('vig' + KIT.W + 'x' + H, KIT.W, H, function () { var c = KIT.ctx, g = c.createRadialGradient(KIT.W / 2, H / 2, H * 0.3, KIT.W / 2, H / 2, KIT.W * 0.62); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.6)'); c.fillStyle = g; c.fillRect(0, 0, KIT.W, H); });
-  KIT.blit(L, 0, 0);
+function drawVignette() { // only the edges darken: four cached strips instead of a full-screen layer (a big saving on phones)
+  if (KIT.S < 3) return; // the darker edges are a luxury: only at the sharpest resolution
+  var WW = KIT.W, c = KIT.ctx, eh = 44, ew = 90;
+  var T = KIT.layer('vigT' + WW, WW, eh, function () { var gr = KIT.ctx.createLinearGradient(0, 0, 0, eh); gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); KIT.ctx.fillStyle = gr; KIT.ctx.fillRect(0, 0, WW, eh); });
+  var Lf = KIT.layer('vigL' + H, ew, H, function () { var gr = KIT.ctx.createLinearGradient(0, 0, ew, 0); gr.addColorStop(0, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); KIT.ctx.fillStyle = gr; KIT.ctx.fillRect(0, 0, ew, H); });
+  KIT.blit(T, 0, 0); c.save(); c.translate(0, H); c.scale(1, -1); c.drawImage(T, 0, 0, WW, eh); c.restore();
+  KIT.blit(Lf, 0, 0); c.save(); c.translate(WW, 0); c.scale(-1, 1); c.drawImage(Lf, 0, 0, ew, H); c.restore();
 }

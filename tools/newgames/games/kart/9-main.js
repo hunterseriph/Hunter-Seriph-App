@@ -61,6 +61,7 @@ function helpMenu(back) {
 function optionsMenu() {
   KIT.menu({ cls: 'ck plain', title: 'Options', items: [
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), sub: 'The kart drives itself forward; brake to slow down', fn: function () { SV.auto = !SV.auto; persist(); optionsMenu(); } },
+    R3.ok ? R3.resItem(optionsMenu) : null,
     { label: 'BACK', back: 1, fn: titleMenu }] });
 }
 function rivalsFor(ch) {
@@ -91,6 +92,7 @@ function pauseMenu() {
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu },
     R.net === 'client' ? null : { label: 'START AGAIN', fn: function () { if (R.ev) expGo(R.ev); else if (GP) gpRace(); else if (R.tt) beginTT(R.o.course); else if (R.chain) beginChain(R.o.course); else beginRace(R.o.course); } },
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), fn: function () { SV.auto = !SV.auto; persist(); KIT.closeMenu(); pauseMenu(); } },
+    R3.ok ? R3.resItem(function () { KIT.closeMenu(); pauseMenu(); }) : null,
     { label: 'HOW TO DRIVE', fn: function () { KIT.menu({ cls: 'ck plain', title: 'How to drive', html: 'Steer: d-pad or stick. A gas, B brake. Down + Z throws behind you. On the grid, rev with A and hold the needle in the green. Hold R while turning to drift, let go for a boost. Z uses your item.', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] }); } },
     R.net ? { label: R.net === 'host' ? 'END THE RACE FOR EVERYONE' : 'LEAVE THE ROOM', fn: function () { if (R.net === 'host') { RACE = null; GP = null; mpLobby(); } else { netLeave(); RACE = null; mpMenu(); } } } : { label: 'QUIT TO THE TITLE', fn: function () { RACE = null; GP = null; titleMenu(); } }] });
 }

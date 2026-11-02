@@ -7,8 +7,9 @@
    (right, left)  'Q' electric floor  'D' trapdoor  'W' wall you cannot jump through (same as '#', drawn darker)
    'k' open space underground (drawn as a dark back wall, not sky)
    ===================================================================================================== */
+var HMIN = 34, HMAX = 98; // the rows an act's ground can rise and fall between (it starts at 66)
 function Builder(zone, seed) {
-  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [] };
+  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 66, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [] };
   var r = seed || 1; b.rnd = function () { r = (r * 16807) % 2147483647; return (r - 1) / 2147483646; };
   function colAt(c) { while (b.cols.length <= c) { var a = []; for (var i = 0; i < ROWS; i++) a.push('.'); b.cols.push(a); b.top.push(null); } return b.cols[c]; }
   b.set = function (c, row, ch) { if (row < 0 || row >= ROWS || c < 0) return; colAt(c)[row] = ch; };
@@ -121,7 +122,7 @@ var SEC = {
   fallers: function (b, n, foe, up) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(5); b.thing(-3, 'faller', up || 8); } if (foe) b.foe(-6, foe); b.ground(4); return b; }, // pots, rocks, weights drop when you pass under
   rollers2: function (b, n) { b.ground(6); b.thing(0, 'roller', 0, { n: n || 2 }); b.ground(26); b.drops(-20, 6, 2, null, 2); return b; }, // bins, barrels, boulders roll at you
   wires: function (b, n) { b.ground(3); for (var i = 0; i < n; i++) { b.ground(6); b.thing(-5, 'arc', 0, { w: 4, ph: i * 0.8 }); } b.ground(4); return b; }, // live wires that spark across
-  loop: function (b) { b.ground(10); b.thing(-6, 'loop', 0); b.drops(-9, 4, 2, null, 1.2); b.ground(10); return b; },
+  loop: function (b) { b.ground(6); b.thing(-3, 'dash', 0, { dir: 1 }); b.ground(14); b.drops(-12, 5, 2, null, 1.2); b.thing(-1, 'loop', 0); for (var a = 0.4; a < 6.0; a += 0.55) b.ent('drop', b.col - 1 + Math.sin(a) * 6.2, b.h - 7 + Math.cos(a) * 6.2); b.ground(18); return b; }, // a dash pad, then a big loop with drops round it
   /* ---------- Night City set pieces (one district each) ---------- */
   awnings: function (b, n, kind) { b.ground(4); for (var i = 0; i < n; i++) { b.ground(7); b.thing(-4, 'awning', 3, { kind: kind }); b.drops(-4, 3, 9, 'arc', 1); } b.ledge(-12, 9, 6, '='); b.thing(-9, 'box', 9, { item: 'drops' }); b.ground(6); return b; }, // shop awnings to bounce up on, a ledge only they reach
   traffic: function (b, n, foe, kind) { b.ground(2); b.thing(0, 'traffic', 0, { w: n, kind: kind }); b.ground(n); if (foe) b.foe(-Math.floor(n / 2), foe); b.drops(-n + 4, Math.floor(n / 3), 2, null, 2); return b; }, // cabs come down the street at you
@@ -178,6 +179,38 @@ var SEC = {
     var at = h0 + 6, step = Math.max(5, Math.floor((h1 - h0 - 10) / Math.max(1, (hz || []).length)));
     (hz || []).forEach(function (k) { if (k === 'spike') { b.set(at, H - 1, '^'); b.set(at + 1, H - 1, '^'); } else if (k.length === 1) b.ent('foe', at, H, { f: k }); else b.ent(k, at, H, { ph: at * 0.3 }); at += step; });
     b.ground(4); return b;
+  },
+  /* ---------- height: Sonic levels go up and down. These climb or drop a long way, and swap round if the act is
+     already near the top or bottom of its space (rows HMIN to HMAX), so an act keeps rising and falling ---------- */
+  ascent: function (b, rise, foe) { // up a long hillside: gentle rises, steep banks and 3-tile ledges, drops on every shelf
+    var r = Math.min(rise || 12, b.h - HMIN); if (r < 6) return SEC.descent(b, rise, foe);
+    b.ground(4); var k = 0;
+    while (r > 0) { var s = Math.min(r, [2, 3, 3][k % 3]); if (k % 3 === 0) b.up(s); else if (k % 3 === 1) b.up(s, true); else { b.step(-s); b.ground(1); }
+      r -= s; b.ground(4 + (k % 2) * 2); b.drops(-4, 3, 2, 'arc', 1.2); if (foe && k === 2) b.foe(-2, foe); k++; }
+    b.ground(6); return b;
+  },
+  descent: function (b, drop, foe) { // down: steep banks you can build speed on and ledges you drop off
+    var r = Math.min(drop || 12, HMAX - b.h); if (r < 6) return SEC.ascent(b, drop, foe);
+    b.ground(4); var k = 0;
+    while (r > 0) { var s = Math.min(r, [4, 5, 3][k % 3]); if (k % 3 === 1) { b.drops(0, 3, 3, 'arc', 1.2); b.step(s); b.ground(1); } else b.down(s, true); r -= s; b.ground(3 + (k % 2) * 3); if (foe && k === 1) b.foe(-2, foe); k++; }
+    b.ground(5); return b;
+  },
+  bigHill: function (b, rise, foe) { // a big hill: up one side, over the top, and a steep run down the far side for speed
+    var r = Math.min(rise || 9, b.h - HMIN); if (r < 4) { SEC.descent(b, 10); r = Math.min(rise || 9, b.h - HMIN); }
+    b.ground(3); b.up(Math.ceil(r / 2)); b.up(Math.floor(r / 2), true); b.ground(10); b.drops(-9, 6, 2, 'arc', 1.3); if (foe) b.foe(-5, foe); b.down(r, true); b.ground(6); b.drops(-6, 4, 2, null, 1.3); return b;
+  },
+  ridge: function (b, foe) { // three hills of different heights in a row: a roller coaster
+    [4, 7, 3].forEach(function (hgt, i) { var r = Math.min(hgt, b.h - HMIN); b.ground(2); if (i === 1) b.up(r, true); else b.up(r); b.ground(3 + i); b.drops(-3, 3, 2, 'arc', 1); if (foe && i === 1) b.foe(-2, foe); b.down(r, true); }); b.ground(4); return b;
+  },
+  springShaft: function (b, rise) { // a sheer wall: a big spring shoots you up it, or climb the ledges stuck to its face
+    var r = Math.min(rise || 16, b.h - HMIN, 18); if (r < 8) return SEC.plunge(b, rise);
+    b.ground(7); b.thing(-2, 'spring', 0, { pow: 2 }); for (var d = 2; d < r; d += 3) b.ent('drop', b.col - 2, b.h - d - 1);
+    for (var i = 1; i * 3 < r; i++) b.ledge(i % 2 ? -6 : -4, i * 3, 3, '=');
+    b.step(-r); b.ground(8); b.drops(-6, 4, 2, null, 1.2); return b;
+  },
+  plunge: function (b, drop) { // off the edge and a long fall to the ground far below, drops all the way down
+    var r = Math.min(drop || 14, HMAX - b.h); if (r < 6) return SEC.springShaft(b, drop);
+    b.ground(5); b.drops(-3, 3, 3, 'arc', 1); var c = b.col; for (var d = 1; d < r; d += 2.5) b.ent('drop', c + 1.5, b.h + d - 1); b.step(r); b.ground(10); return b;
   },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(40); return b; }, // no wall after the sign: the camera stops and he runs off
   arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(3); b.ceil(-3, 3, 0, 18, 'W'); return b; }

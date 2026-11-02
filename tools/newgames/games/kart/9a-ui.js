@@ -123,7 +123,7 @@ function titleMenu(page) {
   MODE = 'title'; GP = null; if (!RACE || !RACE.demo) demo();
   var trophies = Object.keys(SV.cups).filter(function (k) { return SV.cups[k] <= 3; }).length, single = page === 'single', opts = page === 'opts';
   var rows = single ? [['exp', 'Expedition', 'hot'], ['gp', 'Grand Prix'], ['race', 'Single Race'], ['chain', 'Chain Race'], ['tt', 'Time Trial']]
-    : opts ? [['auto', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')], ['help', 'How to Drive']]
+    : opts ? [['auto', 'Auto accelerate: ' + (SV.auto ? 'on' : 'off')], ['res', '3D resolution: ' + (R3.ok ? R3.resName : '-')], ['help', 'How to Drive']]
     : [['single', 'Single Player', 'hot'], ['mp', 'Multiplayer'], ['opt', 'Options']];
   var redo = function () { titleMenu(page); }, back = function () { titleMenu(); };
   screen({ noHead: true, cls: 'title', foot: false, redo: redo, back: page ? back : null,
@@ -137,7 +137,8 @@ function titleMenu(page) {
       race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, function () { titleMenu('single'); }); },
       tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, function () { titleMenu('single'); }); },
       exp: function () { expedition(); }, chain: function () { chainMenu(); }, mp: function () { mpMenu(); },
-      help: function () { helpMenu(function () { titleMenu('opts'); }); }, auto: function () { SV.auto = !SV.auto; persist(); titleMenu('opts'); }
+      help: function () { helpMenu(function () { titleMenu('opts'); }); }, auto: function () { SV.auto = !SV.auto; persist(); titleMenu('opts'); },
+      res: function () { if (R3.ok) R3.resItem().fn(); titleMenu('opts'); }
     } });
 }
 /* ---------- class ---------- */

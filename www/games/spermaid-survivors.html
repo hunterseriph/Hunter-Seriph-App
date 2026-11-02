@@ -87,6 +87,14 @@ var KIT = (function () {
   'use strict';
   var cv = document.getElementById('c'), main = cv.getContext('2d'), ctx = main, W = 480, H = 270, cfg = {}, S = 1;
   ctx.imageSmoothingEnabled = false;
+  /* resolution (one setting for every game on this engine, 'hs-res'): auto = as sharp as the screen allows (up to 3x, or the game's
+     own autoS on phones), or a cap of 2x / 1x. 1x draws the game at its own pixel size and lets the screen scale it up: much less work for a phone. */
+  var RES = 'auto'; try { RES = localStorage.getItem('hs-res') || 'auto'; } catch (e) {}
+  var TOUCH = 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0;
+  function maxS() { return RES === 'auto' ? (TOUCH && cfg.autoS ? cfg.autoS : 3) : +RES || 3; }
+  var RESNAME = { auto: 'SHARPEST', '2': 'BALANCED', '1': 'FASTEST' };
+  function setRes(v) { RES = v; try { localStorage.setItem('hs-res', v); } catch (e) {} S = 0; fit(); }
+  function resItem(back) { return { label: 'RESOLUTION: ' + RESNAME[RES], fn: function () { setRes(RES === 'auto' ? '2' : RES === '2' ? '1' : 'auto'); if (back) back(); } }; }
   /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
   function fit() {
     var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
@@ -96,7 +104,7 @@ var KIT = (function () {
     }
     if (cfg.wide && r.width > 0 && r.height > 0) { var nw = Math.max(cfg.w || 480, Math.min(cfg.wide, Math.round(H * r.width / r.height))); if (nw !== W) { W = nw; S = 0; } } // o.wide: the picture widens to fill wide screens (up to that many pixels) instead of leaving black bars
     var k = Math.min(r.width / W, r.height / H) * dpr;
-    var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
+    var s = Math.max(1, Math.min(maxS(), Math.round(k))); if (!(s > 0)) s = 1;
     if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
   }
   window.addEventListener('resize', function () { setTimeout(fit, 50); });
@@ -109,10 +117,14 @@ var KIT = (function () {
   }
   /* cached layers: draw static things (floors, walls, backdrops) once into a canvas, then blit them each frame */
   var layers = {};
-  function layer(key, w, h, fn) {
-    var L = layers[key]; if (L) return L;
-    var c = document.createElement('canvas'); c.width = Math.ceil(w * S); c.height = Math.ceil(h * S); var g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.setTransform(S, 0, 0, S, 0, 0);
+  /* o.px: painted at the game's own pixel size (chunky, Mega Drive style) instead of the screen's; o.crisp: soft edges are cut to hard ones
+     (every pixel either solid or clear, no see-through fades); o.dim: darkened by that much (solid, not see-through) */
+  function layer(key, w, h, fn, o) {
+    var L = layers[key]; if (L) return L; o = o || {};
+    var sc = o.px ? 1 : S, c = document.createElement('canvas'); c.width = Math.ceil(w * sc); c.height = Math.ceil(h * sc); var g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.setTransform(sc, 0, 0, sc, 0, 0);
     var old = ctx; ctx = g; try { fn(); } finally { ctx = old; }
+    if (o.dim) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(7,4,5,' + o.dim + ')'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; }
+    if (o.crisp) { try { var id = g.getImageData(0, 0, c.width, c.height), d = id.data; for (var i = 3; i < d.length; i += 4) d[i] = d[i] >= 96 ? 255 : 0; g.putImageData(id, 0, 0); } catch (e) {} }
     c.lw = w; c.lh = h; return (layers[key] = c);
   }
   function blit(L, x, y) { ctx.drawImage(L, Math.round(x), Math.round(y), L.lw, L.lh); }
@@ -131,6 +143,7 @@ var KIT = (function () {
     var f = SPR[n]; if (!f || !ready) return; o = o || {};
     var sc = o.sc || 1, w = f[2] * sc, h = f[3] * sc, an = o.anchor || 'b';
     var dx = an === 'tl' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' ? -h / 2 : 0;
+    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.translate(Math.round(x), Math.round(y)); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1);
     if (o.flash) ctx.drawImage(white(n), Math.round(dx), Math.round(dy), w, h); else ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(dx), Math.round(dy), w, h);
@@ -352,7 +365,7 @@ var KIT = (function () {
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
     requestAnimationFrame(frame);
   }
-  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get t() { return T; },
+  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,
@@ -913,9 +926,13 @@ function drawStrips(cx, cy) {
   }
 }
 /* the light falls off at the edges: a cached vignette */
-function drawVignette() {
-  var L = KIT.layer('vig' + KIT.W + 'x' + H, KIT.W, H, function () { var c = KIT.ctx, g = c.createRadialGradient(KIT.W / 2, H / 2, H * 0.3, KIT.W / 2, H / 2, KIT.W * 0.62); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.6)'); c.fillStyle = g; c.fillRect(0, 0, KIT.W, H); });
-  KIT.blit(L, 0, 0);
+function drawVignette() { // only the edges darken: four cached strips instead of a full-screen layer (a big saving on phones)
+  if (KIT.S < 3) return; // the darker edges are a luxury: only at the sharpest resolution
+  var WW = KIT.W, c = KIT.ctx, eh = 44, ew = 90;
+  var T = KIT.layer('vigT' + WW, WW, eh, function () { var gr = KIT.ctx.createLinearGradient(0, 0, 0, eh); gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); KIT.ctx.fillStyle = gr; KIT.ctx.fillRect(0, 0, WW, eh); });
+  var Lf = KIT.layer('vigL' + H, ew, H, function () { var gr = KIT.ctx.createLinearGradient(0, 0, ew, 0); gr.addColorStop(0, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); KIT.ctx.fillStyle = gr; KIT.ctx.fillRect(0, 0, ew, H); });
+  KIT.blit(T, 0, 0); c.save(); c.translate(0, H); c.scale(1, -1); c.drawImage(T, 0, 0, WW, eh); c.restore();
+  KIT.blit(Lf, 0, 0); c.save(); c.translate(WW, 0); c.scale(-1, 1); c.drawImage(Lf, 0, 0, ew, H); c.restore();
 }
 
 /* ---------- weapons: each one fires by itself. w = { id, lv, t (timer), evo, ... } ---------- */
@@ -1177,11 +1194,17 @@ function cOf(id) { for (var i = 0; i < run.charms.length; i++) if (run.charms[i]
 function heal(n, quiet) { if (!P) return; var was = P.hp; P.hp = Math.min(P.max, P.hp + n); if (!quiet && P.hp > was) num(P.x, P.y - 40, '+' + Math.round(P.hp - was), '#7dff3a'); }
 
 /* ---------- the spatial grid: which foes are near a point ---------- */
-var GRID = {}, GC = 48;
-function rebuildGrid() { GRID = {}; for (var i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead || e.under) continue; var k = Math.floor(e.x / GC) + ',' + Math.floor(e.y / GC); (GRID[k] || (GRID[k] = [])).push(e); } }
+var GRID = new Map(), GUSED = [], GC = 48; // cells keyed by number, arrays reused frame to frame (no garbage for the phone to collect)
+function gkey(gx, gy) { return (gx + 30000) * 60000 + (gy + 30000); }
+function cellAt(x, y) { return GRID.get(gkey(Math.floor(x / GC), Math.floor(y / GC))); }
+function rebuildGrid() {
+  for (var u = 0; u < GUSED.length; u++) GUSED[u].length = 0; GUSED.length = 0;
+  if (GRID.size > 4000) GRID.clear();
+  for (var i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead || e.under) continue; var k = gkey(Math.floor(e.x / GC), Math.floor(e.y / GC)), c = GRID.get(k); if (!c) { c = []; GRID.set(k, c); } if (!c.length) GUSED.push(c); c.push(e); }
+}
 function near(x, y, r, cb) {
   var a = Math.floor((x - r) / GC), b = Math.floor((y - r) / GC), a2 = Math.floor((x + r) / GC), b2 = Math.floor((y + r) / GC);
-  for (var gy = b; gy <= b2; gy++) for (var gx = a; gx <= a2; gx++) { var c = GRID[gx + ',' + gy]; if (c) for (var i = 0; i < c.length; i++) if (!c[i].dead) cb(c[i]); }
+  for (var gy = b; gy <= b2; gy++) for (var gx = a; gx <= a2; gx++) { var c = GRID.get(gkey(gx, gy)); if (c) for (var i = 0; i < c.length; i++) if (!c[i].dead) cb(c[i]); }
 }
 
 /* ---------- foes ---------- */
@@ -1223,7 +1246,7 @@ function stepFoes(dt) {
     var e = foes[i]; if (e.dead) continue; e.t += dt; if (e.flash > 0) e.flash -= dt;
     if (e.under !== undefined && e.under > 0) { e.under -= dt; if (e.under <= 0) { e.under = undefined; delete e.under; puff(e.x, e.y, '#4a3e30', 8); } continue; }
     if (e.life !== undefined) { e.life -= dt; if (e.life <= 0) { e.dead = 1; continue; } }
-    ['slowT', 'confT', 'burnT', 'softT', 'stunT'].forEach(function (k) { if (e[k] > 0) e[k] -= dt; });
+    if (e.slowT > 0) e.slowT -= dt; if (e.confT > 0) e.confT -= dt; if (e.burnT > 0) e.burnT -= dt; if (e.softT > 0) e.softT -= dt; if (e.stunT > 0) e.stunT -= dt;
     if (e.burnT > 0) { e.bt = (e.bt || 0) - dt; if (e.bt <= 0) { e.bt = 0.5; hurtFoe(e, 3, 'pill', 0, 0); if (e.dead) continue; } }
     // knockback
     e.x += e.kx * dt; e.y += e.ky * dt; e.kx *= Math.pow(0.002, dt); e.ky *= Math.pow(0.002, dt);
@@ -1240,7 +1263,7 @@ function stepFoes(dt) {
     if (e.f.trail) { e.tr = (e.tr || 0) - dt; if (e.tr <= 0) { e.tr = 1.5; hazards.push({ k: 'burn', x: e.x, y: e.y, r: 8, t: 0, life: 2, dmg: e.dmg * 0.5 }); } }
     e.x += mx * sp * dt; e.y += my * sp * dt; if (Math.abs(mx) > 0.05) e.face = mx > 0 ? 1 : -1;
     // keep the crowd from stacking into one blob
-    if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = GRID[Math.floor(e.x / GC) + ',' + Math.floor(e.y / GC)]; if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
+    if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = cellAt(e.x, e.y); if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
     clampBand(e);
     // touching Spermaid
     if (d < e.r + 10 && !e.under) hurtPlayer(e.dmg, e);
@@ -1371,8 +1394,9 @@ function gainXP(v) { run.xp += v * S.growth; while (run.xp >= run.need) { run.xp
 
 /* breakable things on the floor (world keyed: same place every run) and the friend's cell */
 var BCELL = 230;
-function breakablesNear() { var out = [], a = Math.floor((CAM.x - 40) / BCELL), b = Math.floor((CAM.y - 40) / BCELL), a2 = Math.floor((CAM.x + KIT.W + 40) / BCELL), b2 = Math.floor((CAM.y + H + 40) / BCELL);
-  for (var y = b; y <= b2; y++) for (var x = a; x <= a2; x++) { if (hh(x, y, 201) > 0.24 || run.broken[x + ',' + y]) continue; var bx = x * BCELL + 30 + hh(x, y, 202) * (BCELL - 60), by = y * BCELL + 30 + hh(x, y, 203) * (BCELL - 60); if (!inBand(bx, by, 30)) continue; out.push({ key: x + ',' + y, x: bx, y: by }); } return out; }
+var BRK = { f: -1, list: null };
+function breakablesNear() { if (BRK.f === FRAME && BRK.cx === CAM.x) return BRK.list; var out = BRK.list = [],  a = Math.floor((CAM.x - 40) / BCELL), b = Math.floor((CAM.y - 40) / BCELL), a2 = Math.floor((CAM.x + KIT.W + 40) / BCELL), b2 = Math.floor((CAM.y + H + 40) / BCELL);
+  for (var y = b; y <= b2; y++) for (var x = a; x <= a2; x++) { if (hh(x, y, 201) > 0.24 || run.broken[x + ',' + y]) continue; var bx = x * BCELL + 30 + hh(x, y, 202) * (BCELL - 60), by = y * BCELL + 30 + hh(x, y, 203) * (BCELL - 60); if (!inBand(bx, by, 30)) continue; out.push({ key: x + ',' + y, x: bx, y: by }); } BRK.f = FRAME; BRK.cx = CAM.x; return out; }
 function stepBreakables() {
   breakablesNear().forEach(function (b) {
     var hit = Math.hypot(P.x - b.x, P.y - b.y) < 20;
@@ -1514,7 +1538,7 @@ function draw() {
   // things on the floor
   hazards.forEach(function (z) { drawHazardFloor(z, cx, cy); });
   pools.forEach(function (p) { var a = Math.min(1, (p.life - p.t) * 2) * (p.hold ? 0.35 : 0.6); ell(p.x - cx, p.y - cy, p.r, p.r * 0.55, 'rgba(184,160,112,' + a * 0.8 + ')'); ell(p.x - cx, p.y - cy, p.r - 3, p.r * 0.55 - 2, 'rgba(241,224,176,' + a + ')'); ell(p.x - cx - p.r * 0.3, p.y - cy - 2, p.r * 0.25, 1.5, 'rgba(255,255,255,' + a + ')'); });
-  marks.forEach(function (m) { var k = m.t / m.at; ell(m.x - cx, m.y - cy, m.r * k, m.r * k * 0.5, 'rgba(0,0,0,0.35)'); });
+  marks.forEach(function (m) { var k = m.t / m.at; shadow(m.x - cx, m.y - cy, m.r * k, m.r * k * 0.5); });
   marks2.forEach(function (m) { if (m.t < 0) return; var k = m.t / m.at; ell(m.x - cx, m.y - cy, m.r, m.r * 0.55, 'rgba(255,38,48,' + (0.12 + 0.18 * k) + ')'); circ(m.x - cx, m.y - cy, m.r * k, m.col, 2); });
   if (G.garlic !== undefined) {} var gw = wOf('garlic'); if (gw && gw.rad) { var pr = gw.rad * (1 + Math.sin(KIT.t * 6) * 0.04); ell(P.x - cx, P.y - 12 - cy, pr, pr, gw.evo ? 'rgba(255,240,200,0.16)' : 'rgba(241,231,208,0.10)'); circ(P.x - cx, P.y - 12 - cy, pr, 'rgba(241,231,208,0.35)', 1); }
   breakablesNear().forEach(function (b) { R('rgba(0,0,0,0.3)', b.x - cx - 8, b.y - cy - 2, 16, 4); spr(run.st.br, b.x - cx, b.y - cy); });
@@ -1524,12 +1548,13 @@ function draw() {
     else if (o.k === 'chest') { spr(o.big ? 'p_bigchest' : 'p_chest', x, y + 4); if (Math.floor(KIT.t * 3) % 2) R('#ffe36a', x - 1, y - 24, 2, 4); }
     else { R('rgba(0,0,0,0.3)', x - 6, y + 4, 12, 3); spr(PICKS[o.k].spr, x, y + 2 + Math.sin(KIT.t * 3 + o.x) * 2); } });
   // everything that stands, front to back
-  var list = [];
-  for (i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead) continue; var sx = e.x - cx, sy = e.y - cy; if (sx < -80 || sx > KIT.W + 80 || sy < -40 || sy > H + 120) continue; list.push({ y: e.y, f: drawFoe, o: e }); }
-  list.push({ y: P.y, f: drawPlayer });
-  run.weapons.forEach(function (w) { if (w.pets) w.pets.forEach(function (p) { list.push({ y: p.y, f: drawPet, o: p }); }); if (w.cat) list.push({ y: w.cat.y, f: drawCat, o: w.cat }); if (w.cats) w.cats.forEach(function (c) { list.push({ y: c.y, f: drawCat, o: c }); }); });
-  list.sort(function (a, b) { return a.y - b.y; });
-  list.forEach(function (it) { it.f(it.o, cx, cy); });
+  foes.sort(byY); // nearly sorted already, so this is cheap
+  var ex = EXTRA; ex.length = 0; ex.push(P);
+  for (i = 0; i < run.weapons.length; i++) { var w = run.weapons[i]; if (w.pets) for (var q = 0; q < w.pets.length; q++) ex.push(w.pets[q]); if (w.cat) ex.push(w.cat); if (w.cats) for (q = 0; q < w.cats.length; q++) ex.push(w.cats[q]); }
+  ex.sort(byY);
+  var xi = 0, W2 = KIT.W + 80, H2 = H + 120;
+  for (i = 0; i < foes.length; i++) { var e = foes[i]; while (xi < ex.length && ex[xi].y <= e.y) drawExtra(ex[xi++], cx, cy); if (e.dead) continue; var sx = e.x - cx, sy = e.y - cy; if (sx < -80 || sx > W2 || sy < -40 || sy > H2) continue; drawFoe(e, cx, cy); }
+  while (xi < ex.length) drawExtra(ex[xi++], cx, cy);
   // above them
   hazards.forEach(function (z) { drawHazardTop(z, cx, cy); });
   marks.forEach(function (m) { var k = m.t / m.at; spr('sv_pie', m.x - cx, m.y - cy - (1 - k) * 160, { anchor: 'c', sc: 1.6, rot: k * 6 }); });
@@ -1544,12 +1569,30 @@ function draw() {
   if (G.freeze > 0) R('rgba(154,223,255,0.10)', 0, 0, KIT.W, H);
   if (run.endless) R('rgba(196,18,28,0.07)', 0, 0, KIT.W, H);
   drawVignette();
-  nums.forEach(function (n) { text(n.s, n.x - cx, n.y - cy, { size: 8, col: n.col, align: 'center', alpha: 1 - n.t / 0.7 }); });
+  for (i = 0; i < nums.length; i++) { var nm = nums[i]; numDraw(nm.s, nm.x - cx, nm.y - cy, nm.col, 1 - nm.t / 0.7); }
   drawHud();
+}
+var EXTRA = [];
+function byY(a, b) { return a.y - b.y; }
+function drawExtra(o, cx, cy) { if (o === P) drawPlayer(o, cx, cy); else if (o.b) drawPet(o, cx, cy); else drawCat(o, cx, cy); }
+/* soft shadows, foe shots and damage numbers come from small cached pictures instead of being drawn shape by shape every frame */
+function shadow(x, y, rx, ry) { var L = KIT.layer('shadow', 32, 12, function () { ell(16, 6, 15.5, 5.5, 'rgba(0,0,0,0.38)'); }); KIT.ctx.drawImage(L, Math.round(x - rx), Math.round(y - ry), Math.round(rx * 2), Math.round(ry * 2)); }
+var ORBCOL = { fire: ['#ff9a30', '#ffe36a'], goo: ['#9a3ad8', '#d88aff'], bolt: ['#ffc840', '#ffffff'], orb: ['#c4121c', '#ff8a94'], shard: ['#c4121c', '#ff3a44'], cork: ['#6e3a1e', '#a8643a'] };
+function orb(k, x, y, r) { var col = ORBCOL[k] || ORBCOL.orb, L = KIT.layer('orb_' + k, 16, 16, function () { ell(8, 8, 7, 7, '#12040a'); ell(8, 8, 6, 6, col[0]); ell(7, 7, 2.7, 2.7, col[1]); }); var s = (r + 1) / 7; KIT.ctx.drawImage(L, Math.round(x - 8 * s), Math.round(y - 8 * s), Math.round(16 * s), Math.round(16 * s)); }
+var DIGITS = '0123456789+-', FONTOK = false, FONTOK_T = -9;
+function digits(col) {
+  if (!FONTOK) { if (KIT.t - (FONTOK_T || -9) < 1) return null; FONTOK_T = KIT.t; FONTOK = !!(document.fonts && document.fonts.check && document.fonts.check('8px "Press Start 2P"')); if (!FONTOK) return null; } // checked once a second until the font is in
+  return KIT.layer('dg_' + col, DIGITS.length * 8, 10, function () { for (var i = 0; i < DIGITS.length; i++) text(DIGITS[i], i * 8, 1, { size: 8, col: col }); });
+}
+function numDraw(s, x, y, col, a) {
+  var L = /[^0-9+\-]/.test(s) ? null : digits(col); if (!L) { text(s, x, y, { size: 8, col: col, align: 'center', alpha: a }); return; }
+  var c = KIT.ctx, S = KIT.S, x0 = Math.round(x - s.length * 4); c.globalAlpha = a;
+  for (var i = 0; i < s.length; i++) { var k = DIGITS.indexOf(s[i]); if (k >= 0) c.drawImage(L, k * 8 * S, 0, 8 * S, 10 * S, x0 + i * 8, Math.round(y), 8, 10); }
+  c.globalAlpha = 1;
 }
 function drawPlayer(o, cx, cy) {
   var x = P.x - cx, y = P.y - cy, bob = Math.sin(KIT.t * 4) * 2;
-  ell(x, y + 1, 14, 4, 'rgba(0,0,0,0.4)');
+  shadow(x, y + 1, 14, 4);
   if (G.frenzy > 0) ell(x, y - 22, 22, 26, 'rgba(255,38,48,' + (0.1 + Math.sin(KIT.t * 12) * 0.05) + ')');
   if (P.inv > 0 && P.dashT <= 0 && Math.floor(KIT.t * 20) % 2) return;
   var f = P.moving ? 'spermaid_s' + (Math.floor(P.walk) % 3) : 'spermaid_s' + (Math.floor(KIT.t * 3) % 3);
@@ -1566,7 +1609,7 @@ function drawFoe(e, cx, cy) {
   if (e.boss) { name = 'f_' + e.k + '_' + (Math.floor(e.t * 3) % 2); }
   else { fr = Math.floor(e.t * 8 * (e.f.ai === 'fly' ? 1.4 : 1)) % 4; name = 'f_' + e.k + '_' + fr; }
   var sc = e.sc * (e.boss ? 1 : 1), wb = e.f.ai === 'fly' || e.f.fly ? -8 + Math.sin(e.t * 5) * 2 : 0;
-  ell(x, y + 1, e.r * 1.1, Math.max(2, e.r * 0.35), 'rgba(0,0,0,0.35)');
+  shadow(x, y + 1, e.r * 1.1, Math.max(2, e.r * 0.35));
   if (e.elite) ell(x, y - e.r, e.r * 1.6, e.r * 1.6, 'rgba(255,38,48,' + (0.18 + Math.sin(KIT.t * 6) * 0.06) + ')');
   if (G.freeze > 0) ell(x, y, e.r * 1.2, e.r * 0.5, 'rgba(154,223,255,0.6)');
   var alpha = e.f.ghost ? 0.55 : 1;
@@ -1582,9 +1625,9 @@ function drawFoe(e, cx, cy) {
 function drawPet(p, cx, cy) {
   var st = ['baby', 'teen', 'adult'][p.st || 0], f = 'h_' + p.b + '_' + st + '_run' + (Math.floor(p.t * (p.mv ? 10 : 3)) % 4);
   if (!KIT.has(f)) f = 'h_' + p.b + '_' + st + '_idle0';
-  ell(p.x - cx, p.y - cy + 1, 8, 3, 'rgba(0,0,0,0.35)'); spr(f, p.x - cx, p.y - cy + 2, { flip: p.face < 0, sc: p.atk > 0 ? 1.1 : 1 });
+  shadow(p.x - cx, p.y - cy + 1, 8, 3); spr(f, p.x - cx, p.y - cy + 2, { flip: p.face < 0, sc: p.atk > 0 ? 1.1 : 1 });
 }
-function drawCat(c, cx, cy) { ell(c.x - cx, c.y - cy + 1, 9, 3, 'rgba(0,0,0,0.35)'); spr('cat', c.x - cx, c.y - cy - (c.z || 0) + 2, { flip: (c.face || 1) < 0, rot: c.j ? (c.face || 1) * -0.4 : 0 }); }
+function drawCat(c, cx, cy) { shadow(c.x - cx, c.y - cy + 1, 9, 3); spr('cat', c.x - cx, c.y - cy - (c.z || 0) + 2, { flip: (c.face || 1) < 0, rot: c.j ? (c.face || 1) * -0.4 : 0 }); }
 function drawWeaponsTop(cx, cy) {
   run.weapons.forEach(function (w) {
     if (w.id === 'bubble' && w.on && w.pts) w.pts.forEach(function (p) { var x = p[0] - cx, y = p[1] - cy; ell(x, y, p[2], p[2], 'rgba(154,223,255,0.22)'); circ(x, y, p[2], w.evo ? '#ffe36a' : '#9adfff', 1.5); R('#ffffff', x - p[2] * 0.45, y - p[2] * 0.5, 2, 2); });
@@ -1598,8 +1641,7 @@ function drawEShot(s, x, y) {
   if (k === 'bone') return spr('dc_bones', x, y, { anchor: 'c', sc: 0.8, rot: s.t * 10 });
   if (k === 'coin') return spr('coin', x, y, { anchor: 'c', sc: 0.6 });
   if (k === 'dagger') { var a = Math.atan2(s.vy, s.vx), c = KIT.ctx; c.strokeStyle = '#d8d0d8'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - Math.cos(a) * 5, y - Math.sin(a) * 5); c.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 5); c.stroke(); return; }
-  var col = { fire: ['#ff9a30', '#ffe36a'], goo: ['#9a3ad8', '#d88aff'], bolt: ['#ffc840', '#ffffff'], orb: ['#c4121c', '#ff8a94'], shard: ['#c4121c', '#ff3a44'], cork: ['#6e3a1e', '#a8643a'] }[k] || ['#c4121c', '#ff8a94'];
-  ell(x, y, s.r + 1, s.r + 1, '#12040a'); ell(x, y, s.r, s.r, col[0]); ell(x - 1, y - 1, s.r * 0.45, s.r * 0.45, col[1]);
+  orb(k, x, y, s.r);
 }
 function drawFx(f, cx, cy) {
   var x = f.x - cx, y = f.y - cy, k = f.t / f.life, c = KIT.ctx;
@@ -1683,7 +1725,7 @@ function drawTitle() {
   var L = KIT.layer('gr_castle', TILE, TILE, PAINT.castle), off = (KIT.t * 6) % TILE;
   for (var y = -TILE; y < H + TILE; y += TILE) for (var x = -TILE; x < KIT.W + TILE; x += TILE) KIT.blit(L, x - off, y);
   var cx = KIT.W * 0.28, cy = H * 0.62;
-  TT.foes.slice().sort(function (a, b) { return Math.sin(a.a) - Math.sin(b.a); }).forEach(function (f) { var x = cx + Math.cos(f.a) * f.d, y = cy + Math.sin(f.a) * f.d * 0.6; ell(x, y, 8, 3, 'rgba(0,0,0,0.4)'); spr('f_' + f.k + '_' + (Math.floor(f.t * 8) % 4), x, y, { flip: Math.cos(f.a) > 0, alpha: Math.min(1, (f.d - 60) / 40) }); });
+  TT.foes.slice().sort(function (a, b) { return Math.sin(a.a) - Math.sin(b.a); }).forEach(function (f) { var x = cx + Math.cos(f.a) * f.d, y = cy + Math.sin(f.a) * f.d * 0.6; shadow(x, y, 8, 3); spr('f_' + f.k + '_' + (Math.floor(f.t * 8) % 4), x, y, { flip: Math.cos(f.a) > 0, alpha: Math.min(1, (f.d - 60) / 40) }); });
   var t = KIT.t; ell(cx, cy + 1, 22, 6, 'rgba(0,0,0,0.5)');
   for (var i = 0; i < 4; i++) { var a = t * 2.6 + i * 1.57; ell(cx + Math.cos(a) * 60, cy - 30 + Math.sin(a) * 36, 9, 9, 'rgba(154,223,255,0.22)'); circ(cx + Math.cos(a) * 60, cy - 30 + Math.sin(a) * 36, 9, '#9adfff', 1.5); }
   spr('spermaid_s' + (Math.floor(t * 4) % 3), cx, cy + Math.sin(t * 3) * 3, { sc: 2 });
@@ -1821,10 +1863,11 @@ function optionsMenu(from) {
     { label: 'DAMAGE NUMBERS: ' + (SV.opt.nums ? 'ON' : 'OFF'), fn: function () { SV.opt.nums = SV.opt.nums ? 0 : 1; persist(); optionsMenu(from); } },
     { label: 'SCREEN SHAKE: ' + (SV.opt.shake ? 'ON' : 'OFF'), fn: function () { SV.opt.shake = SV.opt.shake ? 0 : 1; persist(); optionsMenu(from); } },
     { label: 'MUSIC: ' + Math.round(OPT.mus * 100) + '%', fn: function () { OPT.mus = OPT.mus >= 1 ? 0 : Math.round((OPT.mus + 0.25) * 100) / 100; SV.opt.mus = OPT.mus; persist(); music.setVol(); optionsMenu(from); } },
+    KIT.resItem(function () { optionsMenu(from); }),
     { label: 'BACK', back: true, fn: back }] });
 }
 function helpMenu(from) {
-  KIT.menu({ title: 'How to Play', html: '<p><b>Swim</b>: left stick, d-pad or WASD. Her weapons fire by themselves. <b>Aim</b> (optional): right stick, or your right thumb on a phone. <b>A</b> (Z / Space): Tidal Wave when the bar is full, it fills with kills. <b>B</b> (X): a quick dash you cannot be hit in.</p>' +
+  KIT.menu({ title: 'How to Play', html: '<p><b>Swim</b>: left stick, d-pad or WASD. Her weapons fire by themselves. <b>Aim</b> (optional): right stick. On a phone: the d-pad on the left, A and B on the right. <b>A</b> (Z / Space): Tidal Wave when the bar is full, it fills with kills. <b>B</b> (X): a quick dash you cannot be hit in.</p>' +
     '<p>Pick up pearls to level up and choose upgrades. Up to six weapons and six charms. A weapon at level 8 evolves in a chest if you hold its charm. Nasty ones carry chests, and every big foe does.</p>' +
     '<p>Hold out until dawn: two big foes come at 3:30 and 7:00, the place\'s own boss at 10:00. Smash the things on the floor for crackers and drops. Somewhere out there a friend is locked in a cell: stand by it to set them free.</p><p>Drops are kept. Spend them at Spermaid\'s Sanctum.</p>',
     items: [{ label: 'BACK', back: true, fn: from === 'pause' ? pauseMenu : titleMenu }] });
@@ -1861,9 +1904,8 @@ function botMove() {
   var l = Math.hypot(vx, vy); if (l < 0.05) return { x: 0, y: 0, on: false }; return { x: vx / l, y: vy / l, on: true };
 }
 
-(function () { var st = document.createElement('style'); st.textContent = '#pad.sticks{justify-content:flex-end}'; document.head.appendChild(st); })(); // her buttons sit on the right, out of the way of the wave bar
-KIT.start({ w: W, h: H, flex: 800, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title') titleStep(dt); },
-  pad: { sticks: true, btns: [{ k: 'b', label: 'B', sub: 'DASH' }, { k: 'a', label: 'A', sub: 'WAVE', cls: 'gold' }] } });
+KIT.start({ w: W, h: H, flex: 800, autoS: 2, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title') titleStep(dt); },
+  pad: { btns: [{ k: 'b', label: 'B', sub: 'DASH' }, { k: 'a', label: 'A', sub: 'WAVE', cls: 'gold' }] } }); // a fixed d-pad on the left (he asked: not a stick that appears wherever you touch)
 titleMenu();
 window.__ss = { G: G, get P() { return P; }, get S() { return S; }, get run() { return run; }, get foes() { return foes; }, get loot() { return loot; }, SV: SV, STAGES: STAGES, WEAPONS: WEAPONS,
   start: function (sid, w) { KIT.closeMenu(); newRun(sid || 'sewers', w); }, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } },

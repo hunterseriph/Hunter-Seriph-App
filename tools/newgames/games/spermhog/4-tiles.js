@@ -97,7 +97,7 @@ var HOGIM = {}; Object.keys(HOGIMG).forEach(function (k) { var i = new Image(); 
 function imgOk(i) { return i && i.complete && i.naturalWidth > 0; }
 /* a painted silhouette strip for the zones without photos: cached as a layer, tiled with parallax */
 function bgLayer(Z, n, w, h) {
-  return KIT.layer('bg_' + Z.id + '_' + n, w, h, function () {
+  return KIT.layer('bg_' + Z.id + '_' + n, w, h, function () { // (crisp, see the end)
     var g = KIT.ctx, r = (function () { var s = n * 977 + 13; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
     var dark = n === 0 ? 'rgba(0,0,0,0.55)' : n === 1 ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.9)', id = Z.id;
     g.fillStyle = dark;
@@ -122,5 +122,5 @@ function bgLayer(Z, n, w, h) {
       for (var gd = 0; gd < w; gd += 64) { g.fillRect(gd, 30 + n * 40, 64, 6); g.beginPath(); g.moveTo(gd, 36 + n * 40); g.lineTo(gd + 32, 66 + n * 40); g.lineTo(gd + 64, 36 + n * 40); g.lineWidth = 3; g.strokeStyle = dark; g.stroke(); }
       if (n === 1) for (var wl = 30; wl < w; wl += 160) { g.fillStyle = 'rgba(255,38,48,0.55)'; g.beginPath(); g.arc(wl, 20, 5, 0, 6.3); g.fill(); g.fillStyle = dark; }
     }
-  });
+  }, { px: 1, crisp: 1 });
 }

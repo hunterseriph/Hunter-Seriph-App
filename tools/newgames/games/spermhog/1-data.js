@@ -5,7 +5,7 @@
    ===================================================================================================== */
 var TS = 16, PH = 36, PHW = 6;
 // physics (pixels and seconds)
-var PHYS = { acc: 430, dec: 520, brake: 1150, top: 235, maxg: 560, airacc: 380, grav: 990, jumpv: 362, jump2: 300, jcut: 150, term: 600, slope: 540, friction: 0.6 };
+var PHYS = { acc: 520, dec: 520, brake: 1150, top: 290, maxg: 760, airacc: 420, grav: 990, jumpv: 362, jump2: 300, jcut: 150, term: 600, slope: 680, friction: 0.6 };
 
 /* the zones: look, music, foes, gimmicks. pal: ground fill colours (light, mid, dark), top: edge colours */
 var ZONES = [

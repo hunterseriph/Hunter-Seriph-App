@@ -33,7 +33,8 @@ function stepPlayer(dt) {
     if (dir) { var sg = Math.sign(p.gsp); if (sg && sg !== dir) p.gsp += dir * K.brake * dt; else if (Math.abs(p.gsp) < top) p.gsp = Math.min(top, Math.max(-top, p.gsp + dir * K.acc * dt)); }
     else { var dcc = Math.min(Math.abs(p.gsp), K.dec * dt * (inp.down ? 0.25 : 1)); p.gsp -= Math.sign(p.gsp) * dcc; }
     p.gsp += K.slope * sn * dt * (Math.abs(sn) > 0.15 ? 1 : 0.4); // downhill pulls you on, uphill drags you back
-    if (Math.abs(p.gsp) > top) p.gsp -= Math.sign(p.gsp) * Math.min(Math.abs(p.gsp) - top, (Math.abs(sn) > 0.2 ? 60 : 260) * dt);
+    // momentum: speed above his top speed (from a dash pad, a slope, a loop) is kept while you hold the way you are going and only bleeds off slowly
+    if (Math.abs(p.gsp) > top) { var hold = dir && dir === Math.sign(p.gsp); p.gsp -= Math.sign(p.gsp) * Math.min(Math.abs(p.gsp) - top, (Math.abs(sn) > 0.2 ? 20 : hold ? 28 : 150) * dt); }
     p.gsp = Math.max(-K.maxg, Math.min(K.maxg, p.gsp));
     var ch = T(Math.floor(p.x / TS), Math.floor((p.y + 2) / TS)); if (ch === '_') p.x += 70 * dt; else if (ch === '-') p.x -= 70 * dt;
     var pu = platUnder(p.x, p.y); if (pu) { p.x += pu.dx; p.y += pu.dy; if (pu.k === 'crumble' && !pu.touch && !pu.fall) pu.touch = 0.001; }

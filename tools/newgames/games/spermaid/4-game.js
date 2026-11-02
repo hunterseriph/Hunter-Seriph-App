@@ -34,11 +34,17 @@ function cOf(id) { for (var i = 0; i < run.charms.length; i++) if (run.charms[i]
 function heal(n, quiet) { if (!P) return; var was = P.hp; P.hp = Math.min(P.max, P.hp + n); if (!quiet && P.hp > was) num(P.x, P.y - 40, '+' + Math.round(P.hp - was), '#7dff3a'); }
 
 /* ---------- the spatial grid: which foes are near a point ---------- */
-var GRID = {}, GC = 48;
-function rebuildGrid() { GRID = {}; for (var i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead || e.under) continue; var k = Math.floor(e.x / GC) + ',' + Math.floor(e.y / GC); (GRID[k] || (GRID[k] = [])).push(e); } }
+var GRID = new Map(), GUSED = [], GC = 48; // cells keyed by number, arrays reused frame to frame (no garbage for the phone to collect)
+function gkey(gx, gy) { return (gx + 30000) * 60000 + (gy + 30000); }
+function cellAt(x, y) { return GRID.get(gkey(Math.floor(x / GC), Math.floor(y / GC))); }
+function rebuildGrid() {
+  for (var u = 0; u < GUSED.length; u++) GUSED[u].length = 0; GUSED.length = 0;
+  if (GRID.size > 4000) GRID.clear();
+  for (var i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead || e.under) continue; var k = gkey(Math.floor(e.x / GC), Math.floor(e.y / GC)), c = GRID.get(k); if (!c) { c = []; GRID.set(k, c); } if (!c.length) GUSED.push(c); c.push(e); }
+}
 function near(x, y, r, cb) {
   var a = Math.floor((x - r) / GC), b = Math.floor((y - r) / GC), a2 = Math.floor((x + r) / GC), b2 = Math.floor((y + r) / GC);
-  for (var gy = b; gy <= b2; gy++) for (var gx = a; gx <= a2; gx++) { var c = GRID[gx + ',' + gy]; if (c) for (var i = 0; i < c.length; i++) if (!c[i].dead) cb(c[i]); }
+  for (var gy = b; gy <= b2; gy++) for (var gx = a; gx <= a2; gx++) { var c = GRID.get(gkey(gx, gy)); if (c) for (var i = 0; i < c.length; i++) if (!c[i].dead) cb(c[i]); }
 }
 
 /* ---------- foes ---------- */
@@ -80,7 +86,7 @@ function stepFoes(dt) {
     var e = foes[i]; if (e.dead) continue; e.t += dt; if (e.flash > 0) e.flash -= dt;
     if (e.under !== undefined && e.under > 0) { e.under -= dt; if (e.under <= 0) { e.under = undefined; delete e.under; puff(e.x, e.y, '#4a3e30', 8); } continue; }
     if (e.life !== undefined) { e.life -= dt; if (e.life <= 0) { e.dead = 1; continue; } }
-    ['slowT', 'confT', 'burnT', 'softT', 'stunT'].forEach(function (k) { if (e[k] > 0) e[k] -= dt; });
+    if (e.slowT > 0) e.slowT -= dt; if (e.confT > 0) e.confT -= dt; if (e.burnT > 0) e.burnT -= dt; if (e.softT > 0) e.softT -= dt; if (e.stunT > 0) e.stunT -= dt;
     if (e.burnT > 0) { e.bt = (e.bt || 0) - dt; if (e.bt <= 0) { e.bt = 0.5; hurtFoe(e, 3, 'pill', 0, 0); if (e.dead) continue; } }
     // knockback
     e.x += e.kx * dt; e.y += e.ky * dt; e.kx *= Math.pow(0.002, dt); e.ky *= Math.pow(0.002, dt);
@@ -97,7 +103,7 @@ function stepFoes(dt) {
     if (e.f.trail) { e.tr = (e.tr || 0) - dt; if (e.tr <= 0) { e.tr = 1.5; hazards.push({ k: 'burn', x: e.x, y: e.y, r: 8, t: 0, life: 2, dmg: e.dmg * 0.5 }); } }
     e.x += mx * sp * dt; e.y += my * sp * dt; if (Math.abs(mx) > 0.05) e.face = mx > 0 ? 1 : -1;
     // keep the crowd from stacking into one blob
-    if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = GRID[Math.floor(e.x / GC) + ',' + Math.floor(e.y / GC)]; if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
+    if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = cellAt(e.x, e.y); if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
     clampBand(e);
     // touching Spermaid
     if (d < e.r + 10 && !e.under) hurtPlayer(e.dmg, e);
@@ -228,8 +234,9 @@ function gainXP(v) { run.xp += v * S.growth; while (run.xp >= run.need) { run.xp
 
 /* breakable things on the floor (world keyed: same place every run) and the friend's cell */
 var BCELL = 230;
-function breakablesNear() { var out = [], a = Math.floor((CAM.x - 40) / BCELL), b = Math.floor((CAM.y - 40) / BCELL), a2 = Math.floor((CAM.x + KIT.W + 40) / BCELL), b2 = Math.floor((CAM.y + H + 40) / BCELL);
-  for (var y = b; y <= b2; y++) for (var x = a; x <= a2; x++) { if (hh(x, y, 201) > 0.24 || run.broken[x + ',' + y]) continue; var bx = x * BCELL + 30 + hh(x, y, 202) * (BCELL - 60), by = y * BCELL + 30 + hh(x, y, 203) * (BCELL - 60); if (!inBand(bx, by, 30)) continue; out.push({ key: x + ',' + y, x: bx, y: by }); } return out; }
+var BRK = { f: -1, list: null };
+function breakablesNear() { if (BRK.f === FRAME && BRK.cx === CAM.x) return BRK.list; var out = BRK.list = [],  a = Math.floor((CAM.x - 40) / BCELL), b = Math.floor((CAM.y - 40) / BCELL), a2 = Math.floor((CAM.x + KIT.W + 40) / BCELL), b2 = Math.floor((CAM.y + H + 40) / BCELL);
+  for (var y = b; y <= b2; y++) for (var x = a; x <= a2; x++) { if (hh(x, y, 201) > 0.24 || run.broken[x + ',' + y]) continue; var bx = x * BCELL + 30 + hh(x, y, 202) * (BCELL - 60), by = y * BCELL + 30 + hh(x, y, 203) * (BCELL - 60); if (!inBand(bx, by, 30)) continue; out.push({ key: x + ',' + y, x: bx, y: by }); } BRK.f = FRAME; BRK.cx = CAM.x; return out; }
 function stepBreakables() {
   breakablesNear().forEach(function (b) {
     var hit = Math.hypot(P.x - b.x, P.y - b.y) < 20;

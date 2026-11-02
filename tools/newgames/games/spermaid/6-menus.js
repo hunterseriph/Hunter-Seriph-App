@@ -129,10 +129,11 @@ function optionsMenu(from) {
     { label: 'DAMAGE NUMBERS: ' + (SV.opt.nums ? 'ON' : 'OFF'), fn: function () { SV.opt.nums = SV.opt.nums ? 0 : 1; persist(); optionsMenu(from); } },
     { label: 'SCREEN SHAKE: ' + (SV.opt.shake ? 'ON' : 'OFF'), fn: function () { SV.opt.shake = SV.opt.shake ? 0 : 1; persist(); optionsMenu(from); } },
     { label: 'MUSIC: ' + Math.round(OPT.mus * 100) + '%', fn: function () { OPT.mus = OPT.mus >= 1 ? 0 : Math.round((OPT.mus + 0.25) * 100) / 100; SV.opt.mus = OPT.mus; persist(); music.setVol(); optionsMenu(from); } },
+    KIT.resItem(function () { optionsMenu(from); }),
     { label: 'BACK', back: true, fn: back }] });
 }
 function helpMenu(from) {
-  KIT.menu({ title: 'How to Play', html: '<p><b>Swim</b>: left stick, d-pad or WASD. Her weapons fire by themselves. <b>Aim</b> (optional): right stick, or your right thumb on a phone. <b>A</b> (Z / Space): Tidal Wave when the bar is full, it fills with kills. <b>B</b> (X): a quick dash you cannot be hit in.</p>' +
+  KIT.menu({ title: 'How to Play', html: '<p><b>Swim</b>: left stick, d-pad or WASD. Her weapons fire by themselves. <b>Aim</b> (optional): right stick. On a phone: the d-pad on the left, A and B on the right. <b>A</b> (Z / Space): Tidal Wave when the bar is full, it fills with kills. <b>B</b> (X): a quick dash you cannot be hit in.</p>' +
     '<p>Pick up pearls to level up and choose upgrades. Up to six weapons and six charms. A weapon at level 8 evolves in a chest if you hold its charm. Nasty ones carry chests, and every big foe does.</p>' +
     '<p>Hold out until dawn: two big foes come at 3:30 and 7:00, the place\'s own boss at 10:00. Smash the things on the floor for crackers and drops. Somewhere out there a friend is locked in a cell: stand by it to set them free.</p><p>Drops are kept. Spend them at Spermaid\'s Sanctum.</p>',
     items: [{ label: 'BACK', back: true, fn: from === 'pause' ? pauseMenu : titleMenu }] });
@@ -169,9 +170,8 @@ function botMove() {
   var l = Math.hypot(vx, vy); if (l < 0.05) return { x: 0, y: 0, on: false }; return { x: vx / l, y: vy / l, on: true };
 }
 
-(function () { var st = document.createElement('style'); st.textContent = '#pad.sticks{justify-content:flex-end}'; document.head.appendChild(st); })(); // her buttons sit on the right, out of the way of the wave bar
-KIT.start({ w: W, h: H, flex: 800, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title') titleStep(dt); },
-  pad: { sticks: true, btns: [{ k: 'b', label: 'B', sub: 'DASH' }, { k: 'a', label: 'A', sub: 'WAVE', cls: 'gold' }] } });
+KIT.start({ w: W, h: H, flex: 800, autoS: 2, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title') titleStep(dt); },
+  pad: { btns: [{ k: 'b', label: 'B', sub: 'DASH' }, { k: 'a', label: 'A', sub: 'WAVE', cls: 'gold' }] } }); // a fixed d-pad on the left (he asked: not a stick that appears wherever you touch)
 titleMenu();
 window.__ss = { G: G, get P() { return P; }, get S() { return S; }, get run() { return run; }, get foes() { return foes; }, get loot() { return loot; }, SV: SV, STAGES: STAGES, WEAPONS: WEAPONS,
   start: function (sid, w) { KIT.closeMenu(); newRun(sid || 'sewers', w); }, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } },

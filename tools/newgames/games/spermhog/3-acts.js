@@ -179,6 +179,20 @@ var ACTS = [
     seg = body; flush(); out.push.apply(out, end.length && end[0][0] === 'arena' ? [['run', 12]].concat(end) : end);
     a.plan = out; });
 })();
+/* HEIGHT (his ask: Sonic levels are vertical, not flat left to right): every district gets its own way up or down
+   straight after it starts, and another before its checkpoint, each district a different shape */
+(function () {
+  var VERT = [[['ascent', 14, 'm']], [['bigHill', 10]], [['springShaft', 16]], [['descent', 14, 'n']], [['ridge', 'm']], [['plunge', 14]], [['bigHill', 8], ['loop']], [['ascent', 9], ['plunge', 12]],
+              [['descent', 10], ['loop']], [['springShaft', 13], ['ridge']], [['ridge'], ['descent', 12]], [['ascent', 12], ['bigHill', 6]]];
+  ACTS.forEach(function (a, ai) { var out = [], k = ai * 5, p = a.plan, arenaDist = false;
+    for (var i = 0; i < p.length; i++) { var q = p[i];
+      if (q[0] === 'district') { arenaDist = p.slice(i + 1, i + 4).some(function (x) { return x[0] === 'arena'; }); }
+      if (q[0] === 'check' && !arenaDist && p[i - 1] && p[i - 1][0] !== 'lanes') out.push.apply(out, VERT[(k++) % VERT.length]);
+      out.push(q);
+      if ((q[0] === 'district' && !(p[i + 1] && p[i + 1][0] === 'start')) || q[0] === 'start') { if (!arenaDist) out.push.apply(out, VERT[(k++) % VERT.length]); }
+    }
+    a.plan = out; });
+})();
 /* lay an act's tiles: returns the finished level (tile grid, things, size) */
 function buildAct(a) {
   var Z = ZONES[a.z], b = Builder(Z, a.seed);

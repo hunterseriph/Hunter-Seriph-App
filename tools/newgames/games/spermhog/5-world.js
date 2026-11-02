@@ -131,7 +131,7 @@ function touch(e, dt) {
     return;
   }
   if (k === 'spring') { if (Math.abs(px - e.x) < 12 && py >= e.y - 10 && py <= e.y + 2 && (p.vy >= 0 || !p.air)) { p.vy = -(e.pow === 2 ? 820 : 640); p.air = true; p.jumps = 1; p.spring = 0.5; e.t = 0.25; sfx.play('spring'); } if (e.t > 0) e.t -= dt; return; }
-  if (k === 'dash') { if (!p.air && Math.abs(px - e.x) < 14 && Math.abs(py - e.y) < 6) { p.gsp = 560 * (e.dir || 1); p.face = e.dir || 1; p.lock = 0.35; if (!e.snd || G.t - e.snd > 0.5) { sfx.play('dash'); e.snd = G.t; } } return; }
+  if (k === 'dash') { if (!p.air && Math.abs(px - e.x) < 14 && Math.abs(py - e.y) < 6) { p.gsp = Math.max(Math.abs(p.gsp), 700) * (e.dir || 1); p.face = e.dir || 1; p.lock = 0.3; if (!e.snd || G.t - e.snd > 0.5) { sfx.play('dash'); e.snd = G.t; } } return; }
   if (k === 'bumper') { var dx = px - e.x, dy = (py - 18) - (e.y - 10), d = Math.hypot(dx, dy); if (d < 24) { var dir = Math.abs(p.vx) > 40 ? Math.sign(p.vx) : (dx >= 0 ? 1 : -1); p.vx = dir * Math.max(230, Math.min(330, Math.abs(p.vx))); p.vy = dy > 4 ? 260 : -500; p.gsp = p.vx; p.air = true; p.jumps = 1; e.t = 0.2; G.score += 10; sfx.play('bump'); } if (e.t > 0) e.t -= dt; return; }
   if (k === 'box') { if (e.alive && Math.abs(px - e.x) < 14 && py > e.y - 26 && py - PH < e.y) { if (p.air || Math.abs(p.gsp) > 200) { openBox(e); if (p.vy > 0) p.vy = -280; } else if (px < e.x) { p.x = e.x - 14 - PHW; p.gsp = 0; } else { p.x = e.x + 14 + PHW; p.gsp = 0; } } return; }
   if (k === 'check') { if (!e.on && Math.abs(px - e.x) < 14 && py > e.y - 40) { e.on = true; G.check = { x: e.x, y: e.y }; sfx.play('check'); FX.push({ k: 'ring', x: e.x, y: e.y - 40, t: 0.5 }); } return; }

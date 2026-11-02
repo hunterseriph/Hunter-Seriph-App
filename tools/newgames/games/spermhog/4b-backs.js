@@ -30,7 +30,7 @@ var BACKS = {
   towers: function (g, r) { cityTowers(g, r, 77); },
   neon: function (g, r) { // the plaza: tall facades hung with neon
     for (var x = 0; x < 960; ) { var w = 90 + Math.floor(r() * 60), h = 160 + Math.floor(r() * 100), top = 300 - h; g.fillStyle = '#100608'; g.fillRect(x, top, w, h);
-      var nc = ['#ff2630', '#ff2a6a', '#c4121c', '#ff5a5a'][Math.floor(r() * 4)]; g.save(); g.shadowColor = nc; g.shadowBlur = 6; g.strokeStyle = nc; g.lineWidth = 2;
+      var nc = ['#ff2630', '#ff2a6a', '#c4121c', '#ff5a5a'][Math.floor(r() * 4)]; g.save(); g.strokeStyle = nc; g.lineWidth = 2;
       var sy = top + 20 + r() * 40; if (r() < 0.5) { g.beginPath(); g.arc(x + w / 2, sy + 14, 14, 0, 6.3); g.stroke(); } else g.strokeRect(x + 12, sy, w - 24, 24); g.beginPath(); g.moveTo(x + 14, sy + 40); g.lineTo(x + w - 14, sy + 40); g.stroke(); g.restore();
       for (var wy = sy + 56; wy < 280; wy += 22) for (var wx = x + 10; wx < x + w - 12; wx += 16) if (r() < 0.3) { g.fillStyle = 'rgba(255,90,120,0.3)'; g.fillRect(wx, wy, 7, 10); }
       x += w + 4; } },
@@ -38,7 +38,7 @@ var BACKS = {
     g.fillStyle = '#16080a'; g.fillRect(0, 20, 960, 280); for (var y = 20; y < 300; y += 8) for (var x = ((y / 8) % 2) * 12; x < 960; x += 24) { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x, y, 23, 1); g.fillRect(x, y, 1, 8); }
     for (var f = 40; f < 960; f += 220) { g.strokeStyle = '#06020a'; g.lineWidth = 2; for (var lv = 60; lv < 260; lv += 50) { g.strokeRect(f, lv, 90, 4); g.beginPath(); g.moveTo(f + (lv % 100 ? 10 : 80), lv + 4); g.lineTo(f + (lv % 100 ? 80 : 10), lv + 50); g.stroke(); for (var rl = f; rl < f + 90; rl += 10) { g.beginPath(); g.moveTo(rl, lv); g.lineTo(rl, lv - 12); g.stroke(); } g.beginPath(); g.moveTo(f, lv - 12); g.lineTo(f + 90, lv - 12); g.stroke(); }
       g.fillStyle = 'rgba(255,200,120,0.3)'; g.fillRect(f + 20, 150, 16, 22); }
-    for (var n = 150; n < 960; n += 260) { g.save(); g.shadowColor = '#ff2a8a'; g.shadowBlur = 8; g.strokeStyle = '#ff2a8a'; g.lineWidth = 2; g.beginPath(); g.moveTo(n, 110); g.bezierCurveTo(n - 20, 90, n - 20, 70, n, 80); g.bezierCurveTo(n + 20, 70, n + 20, 90, n, 110); g.stroke();
+    for (var n = 150; n < 960; n += 260) { g.save(); g.strokeStyle = '#ff2a8a'; g.lineWidth = 2; g.beginPath(); g.moveTo(n, 110); g.bezierCurveTo(n - 20, 90, n - 20, 70, n, 80); g.bezierCurveTo(n + 20, 70, n + 20, 90, n, 110); g.stroke();
       g.strokeStyle = '#ff2630'; g.beginPath(); g.moveTo(n + 50, 140); g.lineTo(n + 90, 140); g.lineTo(n + 82, 132); g.moveTo(n + 90, 140); g.lineTo(n + 82, 148); g.stroke(); g.restore(); }
     for (var pp = 100; pp < 960; pp += 170) { g.fillStyle = '#0a0406'; g.fillRect(pp, 20, 6, 280); g.fillRect(pp - 4, 200, 14, 6); } },
   docks: function (g, r) { // the cream harbour: warehouse roofs, a big ship, harbour cranes, the water
@@ -73,13 +73,19 @@ function cityTowers(g, r, seed) { // the black towers (two depths were drawn by 
     x += w + Math.floor(r() * 6);
   }
 }
-function distLayer(id) { return KIT.layer('dback_' + id, 960, 300, function () { var g = KIT.ctx, r = rngOf(id.length * 131 + id.charCodeAt(0)); (BACKS[DIST[id].back] || BACKS.towers)(g, r); }); }
-/* draw the district backdrop at the camera, blending into the next one across 30 tiles */
+function distLayer(id) { return KIT.layer('dback_' + id, 960, 300, function () { var g = KIT.ctx, r = rngOf(id.length * 131 + id.charCodeAt(0)); (BACKS[DIST[id].back] || BACKS.towers)(g, r); }, { px: 1, crisp: 1 }); } // painted at game pixel size with hard edges: crisp Mega Drive scenery, nothing see-through
+/* draw the district backdrop at the camera. Where one district meets the next, the new scenery starts at a gateway
+   column that moves with the ground (a hard cut, hidden behind a tall pillar), never a see-through blend */
 function drawDistrictBack(g, cx, vy, W, H) {
-  var mid = Math.floor((cx + W / 2) / TS), ds = LV.dists, a = distAt(mid), b = null, t = 0;
-  for (var i = 0; i < ds.length; i++) { var d = ds[i].c - mid; if (Math.abs(d) < 30) { var prev = i ? ds[i - 1].id : ds[i].id; a = prev; b = ds[i].id; t = Math.max(0, Math.min(1, (30 - d) / 60)); break; } }
-  function one(id, alpha) { if (!id || alpha <= 0) return; var L = distLayer(id), mw = 960, mx = -(((cx * 0.4) % mw) + mw) % mw, my = Math.round(vy * 1.4) + H - 300; g.globalAlpha = alpha; for (; mx < W; mx += mw) KIT.blit(L, mx, my); g.globalAlpha = 1; if (my + 300 < H) { g.globalAlpha = alpha; g.fillStyle = '#0a0406'; g.fillRect(0, my + 299, W, H - my - 299); g.globalAlpha = 1; } }
-  // a dim far band of towers behind every district so the city never ends
-  if (LV.zone.id === 'city') { var far = cityMid('citymid0'), fx = -(((cx * 0.22) % 960) + 960) % 960; g.globalAlpha = 0.45; for (; fx < W; fx += 960) KIT.blit(far, fx, Math.round(vy * 1.22) + H - 270); g.globalAlpha = 1; }
-  one(a, 1); if (b && b !== a) one(b, t);
+  var ds = LV.dists, my = Math.round(vy * 1.4) + H - 300;
+  if (LV.zone.id === 'city') { var far = cityMid('citymid0', 0.55), fx = -(((cx * 0.22) % 960) + 960) % 960; for (; fx < W; fx += 960) KIT.blit(far, fx, Math.round(vy * 1.22) + H - 270); }
+  function one(id, x0, x1) { if (!id || x1 <= x0) return; var L = distLayer(id), mx = -(((cx * 0.4) % 960) + 960) % 960; g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); for (; mx < W; mx += 960) KIT.blit(L, mx, my); if (my + 300 < H) { g.fillStyle = '#0a0406'; g.fillRect(x0, my + 299, x1 - x0, H - my - 299); } g.restore(); }
+  var left = distAt(Math.floor(cx / TS)), x = 0, gates = [];
+  for (var i = 0; i < ds.length; i++) { var bx = Math.round(ds[i].c * TS - cx); if (bx <= 0 || bx >= W) continue; one(left, x, bx); gates.push(bx); left = ds[i].id; x = bx; }
+  one(left, x, W);
+  gates.forEach(function (bx) { drawGate(g, bx, H); });
+}
+function drawGate(g, x, H) { // a tall dark pillar where two districts meet, so the scenery changes behind something solid
+  var c = LV.zone.edge || ['#ff2630', '#c4121c']; R('#060203', x - 10, 0, 20, H); R('#140608', x - 8, 0, 16, H); R('#1e0a0e', x - 8, 0, 3, H);
+  for (var y = 8; y < H; y += 40) { R('#060203', x - 10, y, 20, 3); R(c[1], x - 2, y + 12, 4, 10); }
 }

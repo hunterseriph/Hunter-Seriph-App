@@ -10,7 +10,7 @@ function draw() {
   // things on the floor
   hazards.forEach(function (z) { drawHazardFloor(z, cx, cy); });
   pools.forEach(function (p) { var a = Math.min(1, (p.life - p.t) * 2) * (p.hold ? 0.35 : 0.6); ell(p.x - cx, p.y - cy, p.r, p.r * 0.55, 'rgba(184,160,112,' + a * 0.8 + ')'); ell(p.x - cx, p.y - cy, p.r - 3, p.r * 0.55 - 2, 'rgba(241,224,176,' + a + ')'); ell(p.x - cx - p.r * 0.3, p.y - cy - 2, p.r * 0.25, 1.5, 'rgba(255,255,255,' + a + ')'); });
-  marks.forEach(function (m) { var k = m.t / m.at; ell(m.x - cx, m.y - cy, m.r * k, m.r * k * 0.5, 'rgba(0,0,0,0.35)'); });
+  marks.forEach(function (m) { var k = m.t / m.at; shadow(m.x - cx, m.y - cy, m.r * k, m.r * k * 0.5); });
   marks2.forEach(function (m) { if (m.t < 0) return; var k = m.t / m.at; ell(m.x - cx, m.y - cy, m.r, m.r * 0.55, 'rgba(255,38,48,' + (0.12 + 0.18 * k) + ')'); circ(m.x - cx, m.y - cy, m.r * k, m.col, 2); });
   if (G.garlic !== undefined) {} var gw = wOf('garlic'); if (gw && gw.rad) { var pr = gw.rad * (1 + Math.sin(KIT.t * 6) * 0.04); ell(P.x - cx, P.y - 12 - cy, pr, pr, gw.evo ? 'rgba(255,240,200,0.16)' : 'rgba(241,231,208,0.10)'); circ(P.x - cx, P.y - 12 - cy, pr, 'rgba(241,231,208,0.35)', 1); }
   breakablesNear().forEach(function (b) { R('rgba(0,0,0,0.3)', b.x - cx - 8, b.y - cy - 2, 16, 4); spr(run.st.br, b.x - cx, b.y - cy); });
@@ -20,12 +20,13 @@ function draw() {
     else if (o.k === 'chest') { spr(o.big ? 'p_bigchest' : 'p_chest', x, y + 4); if (Math.floor(KIT.t * 3) % 2) R('#ffe36a', x - 1, y - 24, 2, 4); }
     else { R('rgba(0,0,0,0.3)', x - 6, y + 4, 12, 3); spr(PICKS[o.k].spr, x, y + 2 + Math.sin(KIT.t * 3 + o.x) * 2); } });
   // everything that stands, front to back
-  var list = [];
-  for (i = 0; i < foes.length; i++) { var e = foes[i]; if (e.dead) continue; var sx = e.x - cx, sy = e.y - cy; if (sx < -80 || sx > KIT.W + 80 || sy < -40 || sy > H + 120) continue; list.push({ y: e.y, f: drawFoe, o: e }); }
-  list.push({ y: P.y, f: drawPlayer });
-  run.weapons.forEach(function (w) { if (w.pets) w.pets.forEach(function (p) { list.push({ y: p.y, f: drawPet, o: p }); }); if (w.cat) list.push({ y: w.cat.y, f: drawCat, o: w.cat }); if (w.cats) w.cats.forEach(function (c) { list.push({ y: c.y, f: drawCat, o: c }); }); });
-  list.sort(function (a, b) { return a.y - b.y; });
-  list.forEach(function (it) { it.f(it.o, cx, cy); });
+  foes.sort(byY); // nearly sorted already, so this is cheap
+  var ex = EXTRA; ex.length = 0; ex.push(P);
+  for (i = 0; i < run.weapons.length; i++) { var w = run.weapons[i]; if (w.pets) for (var q = 0; q < w.pets.length; q++) ex.push(w.pets[q]); if (w.cat) ex.push(w.cat); if (w.cats) for (q = 0; q < w.cats.length; q++) ex.push(w.cats[q]); }
+  ex.sort(byY);
+  var xi = 0, W2 = KIT.W + 80, H2 = H + 120;
+  for (i = 0; i < foes.length; i++) { var e = foes[i]; while (xi < ex.length && ex[xi].y <= e.y) drawExtra(ex[xi++], cx, cy); if (e.dead) continue; var sx = e.x - cx, sy = e.y - cy; if (sx < -80 || sx > W2 || sy < -40 || sy > H2) continue; drawFoe(e, cx, cy); }
+  while (xi < ex.length) drawExtra(ex[xi++], cx, cy);
   // above them
   hazards.forEach(function (z) { drawHazardTop(z, cx, cy); });
   marks.forEach(function (m) { var k = m.t / m.at; spr('sv_pie', m.x - cx, m.y - cy - (1 - k) * 160, { anchor: 'c', sc: 1.6, rot: k * 6 }); });
@@ -40,12 +41,30 @@ function draw() {
   if (G.freeze > 0) R('rgba(154,223,255,0.10)', 0, 0, KIT.W, H);
   if (run.endless) R('rgba(196,18,28,0.07)', 0, 0, KIT.W, H);
   drawVignette();
-  nums.forEach(function (n) { text(n.s, n.x - cx, n.y - cy, { size: 8, col: n.col, align: 'center', alpha: 1 - n.t / 0.7 }); });
+  for (i = 0; i < nums.length; i++) { var nm = nums[i]; numDraw(nm.s, nm.x - cx, nm.y - cy, nm.col, 1 - nm.t / 0.7); }
   drawHud();
+}
+var EXTRA = [];
+function byY(a, b) { return a.y - b.y; }
+function drawExtra(o, cx, cy) { if (o === P) drawPlayer(o, cx, cy); else if (o.b) drawPet(o, cx, cy); else drawCat(o, cx, cy); }
+/* soft shadows, foe shots and damage numbers come from small cached pictures instead of being drawn shape by shape every frame */
+function shadow(x, y, rx, ry) { var L = KIT.layer('shadow', 32, 12, function () { ell(16, 6, 15.5, 5.5, 'rgba(0,0,0,0.38)'); }); KIT.ctx.drawImage(L, Math.round(x - rx), Math.round(y - ry), Math.round(rx * 2), Math.round(ry * 2)); }
+var ORBCOL = { fire: ['#ff9a30', '#ffe36a'], goo: ['#9a3ad8', '#d88aff'], bolt: ['#ffc840', '#ffffff'], orb: ['#c4121c', '#ff8a94'], shard: ['#c4121c', '#ff3a44'], cork: ['#6e3a1e', '#a8643a'] };
+function orb(k, x, y, r) { var col = ORBCOL[k] || ORBCOL.orb, L = KIT.layer('orb_' + k, 16, 16, function () { ell(8, 8, 7, 7, '#12040a'); ell(8, 8, 6, 6, col[0]); ell(7, 7, 2.7, 2.7, col[1]); }); var s = (r + 1) / 7; KIT.ctx.drawImage(L, Math.round(x - 8 * s), Math.round(y - 8 * s), Math.round(16 * s), Math.round(16 * s)); }
+var DIGITS = '0123456789+-', FONTOK = false, FONTOK_T = -9;
+function digits(col) {
+  if (!FONTOK) { if (KIT.t - (FONTOK_T || -9) < 1) return null; FONTOK_T = KIT.t; FONTOK = !!(document.fonts && document.fonts.check && document.fonts.check('8px "Press Start 2P"')); if (!FONTOK) return null; } // checked once a second until the font is in
+  return KIT.layer('dg_' + col, DIGITS.length * 8, 10, function () { for (var i = 0; i < DIGITS.length; i++) text(DIGITS[i], i * 8, 1, { size: 8, col: col }); });
+}
+function numDraw(s, x, y, col, a) {
+  var L = /[^0-9+\-]/.test(s) ? null : digits(col); if (!L) { text(s, x, y, { size: 8, col: col, align: 'center', alpha: a }); return; }
+  var c = KIT.ctx, S = KIT.S, x0 = Math.round(x - s.length * 4); c.globalAlpha = a;
+  for (var i = 0; i < s.length; i++) { var k = DIGITS.indexOf(s[i]); if (k >= 0) c.drawImage(L, k * 8 * S, 0, 8 * S, 10 * S, x0 + i * 8, Math.round(y), 8, 10); }
+  c.globalAlpha = 1;
 }
 function drawPlayer(o, cx, cy) {
   var x = P.x - cx, y = P.y - cy, bob = Math.sin(KIT.t * 4) * 2;
-  ell(x, y + 1, 14, 4, 'rgba(0,0,0,0.4)');
+  shadow(x, y + 1, 14, 4);
   if (G.frenzy > 0) ell(x, y - 22, 22, 26, 'rgba(255,38,48,' + (0.1 + Math.sin(KIT.t * 12) * 0.05) + ')');
   if (P.inv > 0 && P.dashT <= 0 && Math.floor(KIT.t * 20) % 2) return;
   var f = P.moving ? 'spermaid_s' + (Math.floor(P.walk) % 3) : 'spermaid_s' + (Math.floor(KIT.t * 3) % 3);
@@ -62,7 +81,7 @@ function drawFoe(e, cx, cy) {
   if (e.boss) { name = 'f_' + e.k + '_' + (Math.floor(e.t * 3) % 2); }
   else { fr = Math.floor(e.t * 8 * (e.f.ai === 'fly' ? 1.4 : 1)) % 4; name = 'f_' + e.k + '_' + fr; }
   var sc = e.sc * (e.boss ? 1 : 1), wb = e.f.ai === 'fly' || e.f.fly ? -8 + Math.sin(e.t * 5) * 2 : 0;
-  ell(x, y + 1, e.r * 1.1, Math.max(2, e.r * 0.35), 'rgba(0,0,0,0.35)');
+  shadow(x, y + 1, e.r * 1.1, Math.max(2, e.r * 0.35));
   if (e.elite) ell(x, y - e.r, e.r * 1.6, e.r * 1.6, 'rgba(255,38,48,' + (0.18 + Math.sin(KIT.t * 6) * 0.06) + ')');
   if (G.freeze > 0) ell(x, y, e.r * 1.2, e.r * 0.5, 'rgba(154,223,255,0.6)');
   var alpha = e.f.ghost ? 0.55 : 1;
@@ -78,9 +97,9 @@ function drawFoe(e, cx, cy) {
 function drawPet(p, cx, cy) {
   var st = ['baby', 'teen', 'adult'][p.st || 0], f = 'h_' + p.b + '_' + st + '_run' + (Math.floor(p.t * (p.mv ? 10 : 3)) % 4);
   if (!KIT.has(f)) f = 'h_' + p.b + '_' + st + '_idle0';
-  ell(p.x - cx, p.y - cy + 1, 8, 3, 'rgba(0,0,0,0.35)'); spr(f, p.x - cx, p.y - cy + 2, { flip: p.face < 0, sc: p.atk > 0 ? 1.1 : 1 });
+  shadow(p.x - cx, p.y - cy + 1, 8, 3); spr(f, p.x - cx, p.y - cy + 2, { flip: p.face < 0, sc: p.atk > 0 ? 1.1 : 1 });
 }
-function drawCat(c, cx, cy) { ell(c.x - cx, c.y - cy + 1, 9, 3, 'rgba(0,0,0,0.35)'); spr('cat', c.x - cx, c.y - cy - (c.z || 0) + 2, { flip: (c.face || 1) < 0, rot: c.j ? (c.face || 1) * -0.4 : 0 }); }
+function drawCat(c, cx, cy) { shadow(c.x - cx, c.y - cy + 1, 9, 3); spr('cat', c.x - cx, c.y - cy - (c.z || 0) + 2, { flip: (c.face || 1) < 0, rot: c.j ? (c.face || 1) * -0.4 : 0 }); }
 function drawWeaponsTop(cx, cy) {
   run.weapons.forEach(function (w) {
     if (w.id === 'bubble' && w.on && w.pts) w.pts.forEach(function (p) { var x = p[0] - cx, y = p[1] - cy; ell(x, y, p[2], p[2], 'rgba(154,223,255,0.22)'); circ(x, y, p[2], w.evo ? '#ffe36a' : '#9adfff', 1.5); R('#ffffff', x - p[2] * 0.45, y - p[2] * 0.5, 2, 2); });
@@ -94,8 +113,7 @@ function drawEShot(s, x, y) {
   if (k === 'bone') return spr('dc_bones', x, y, { anchor: 'c', sc: 0.8, rot: s.t * 10 });
   if (k === 'coin') return spr('coin', x, y, { anchor: 'c', sc: 0.6 });
   if (k === 'dagger') { var a = Math.atan2(s.vy, s.vx), c = KIT.ctx; c.strokeStyle = '#d8d0d8'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - Math.cos(a) * 5, y - Math.sin(a) * 5); c.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 5); c.stroke(); return; }
-  var col = { fire: ['#ff9a30', '#ffe36a'], goo: ['#9a3ad8', '#d88aff'], bolt: ['#ffc840', '#ffffff'], orb: ['#c4121c', '#ff8a94'], shard: ['#c4121c', '#ff3a44'], cork: ['#6e3a1e', '#a8643a'] }[k] || ['#c4121c', '#ff8a94'];
-  ell(x, y, s.r + 1, s.r + 1, '#12040a'); ell(x, y, s.r, s.r, col[0]); ell(x - 1, y - 1, s.r * 0.45, s.r * 0.45, col[1]);
+  orb(k, x, y, s.r);
 }
 function drawFx(f, cx, cy) {
   var x = f.x - cx, y = f.y - cy, k = f.t / f.life, c = KIT.ctx;
@@ -179,7 +197,7 @@ function drawTitle() {
   var L = KIT.layer('gr_castle', TILE, TILE, PAINT.castle), off = (KIT.t * 6) % TILE;
   for (var y = -TILE; y < H + TILE; y += TILE) for (var x = -TILE; x < KIT.W + TILE; x += TILE) KIT.blit(L, x - off, y);
   var cx = KIT.W * 0.28, cy = H * 0.62;
-  TT.foes.slice().sort(function (a, b) { return Math.sin(a.a) - Math.sin(b.a); }).forEach(function (f) { var x = cx + Math.cos(f.a) * f.d, y = cy + Math.sin(f.a) * f.d * 0.6; ell(x, y, 8, 3, 'rgba(0,0,0,0.4)'); spr('f_' + f.k + '_' + (Math.floor(f.t * 8) % 4), x, y, { flip: Math.cos(f.a) > 0, alpha: Math.min(1, (f.d - 60) / 40) }); });
+  TT.foes.slice().sort(function (a, b) { return Math.sin(a.a) - Math.sin(b.a); }).forEach(function (f) { var x = cx + Math.cos(f.a) * f.d, y = cy + Math.sin(f.a) * f.d * 0.6; shadow(x, y, 8, 3); spr('f_' + f.k + '_' + (Math.floor(f.t * 8) % 4), x, y, { flip: Math.cos(f.a) > 0, alpha: Math.min(1, (f.d - 60) / 40) }); });
   var t = KIT.t; ell(cx, cy + 1, 22, 6, 'rgba(0,0,0,0.5)');
   for (var i = 0; i < 4; i++) { var a = t * 2.6 + i * 1.57; ell(cx + Math.cos(a) * 60, cy - 30 + Math.sin(a) * 36, 9, 9, 'rgba(154,223,255,0.22)'); circ(cx + Math.cos(a) * 60, cy - 30 + Math.sin(a) * 36, 9, '#9adfff', 1.5); }
   spr('spermaid_s' + (Math.floor(t * 4) % 3), cx, cy + Math.sin(t * 3) * 3, { sc: 2 });

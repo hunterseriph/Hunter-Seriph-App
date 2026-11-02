@@ -87,6 +87,14 @@ var KIT = (function () {
   'use strict';
   var cv = document.getElementById('c'), main = cv.getContext('2d'), ctx = main, W = 480, H = 270, cfg = {}, S = 1;
   ctx.imageSmoothingEnabled = false;
+  /* resolution (one setting for every game on this engine, 'hs-res'): auto = as sharp as the screen allows (up to 3x, or the game's
+     own autoS on phones), or a cap of 2x / 1x. 1x draws the game at its own pixel size and lets the screen scale it up: much less work for a phone. */
+  var RES = 'auto'; try { RES = localStorage.getItem('hs-res') || 'auto'; } catch (e) {}
+  var TOUCH = 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0;
+  function maxS() { return RES === 'auto' ? (TOUCH && cfg.autoS ? cfg.autoS : 3) : +RES || 3; }
+  var RESNAME = { auto: 'SHARPEST', '2': 'BALANCED', '1': 'FASTEST' };
+  function setRes(v) { RES = v; try { localStorage.setItem('hs-res', v); } catch (e) {} S = 0; fit(); }
+  function resItem(back) { return { label: 'RESOLUTION: ' + RESNAME[RES], fn: function () { setRes(RES === 'auto' ? '2' : RES === '2' ? '1' : 'auto'); if (back) back(); } }; }
   /* the canvas is drawn at a whole multiple of its size (up to 3x) so text stays sharp and pixel art stays square */
   function fit() {
     var r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
@@ -96,7 +104,7 @@ var KIT = (function () {
     }
     if (cfg.wide && r.width > 0 && r.height > 0) { var nw = Math.max(cfg.w || 480, Math.min(cfg.wide, Math.round(H * r.width / r.height))); if (nw !== W) { W = nw; S = 0; } } // o.wide: the picture widens to fill wide screens (up to that many pixels) instead of leaving black bars
     var k = Math.min(r.width / W, r.height / H) * dpr;
-    var s = Math.max(1, Math.min(3, Math.round(k))); if (!(s > 0)) s = 1;
+    var s = Math.max(1, Math.min(maxS(), Math.round(k))); if (!(s > 0)) s = 1;
     if (s !== S || cv.width !== W * s) { S = s; cv.width = W * S; cv.height = H * S; main.imageSmoothingEnabled = false; layers = {}; }
   }
   window.addEventListener('resize', function () { setTimeout(fit, 50); });
@@ -109,10 +117,14 @@ var KIT = (function () {
   }
   /* cached layers: draw static things (floors, walls, backdrops) once into a canvas, then blit them each frame */
   var layers = {};
-  function layer(key, w, h, fn) {
-    var L = layers[key]; if (L) return L;
-    var c = document.createElement('canvas'); c.width = Math.ceil(w * S); c.height = Math.ceil(h * S); var g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.setTransform(S, 0, 0, S, 0, 0);
+  /* o.px: painted at the game's own pixel size (chunky, Mega Drive style) instead of the screen's; o.crisp: soft edges are cut to hard ones
+     (every pixel either solid or clear, no see-through fades); o.dim: darkened by that much (solid, not see-through) */
+  function layer(key, w, h, fn, o) {
+    var L = layers[key]; if (L) return L; o = o || {};
+    var sc = o.px ? 1 : S, c = document.createElement('canvas'); c.width = Math.ceil(w * sc); c.height = Math.ceil(h * sc); var g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.setTransform(sc, 0, 0, sc, 0, 0);
     var old = ctx; ctx = g; try { fn(); } finally { ctx = old; }
+    if (o.dim) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(7,4,5,' + o.dim + ')'; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; }
+    if (o.crisp) { try { var id = g.getImageData(0, 0, c.width, c.height), d = id.data; for (var i = 3; i < d.length; i += 4) d[i] = d[i] >= 96 ? 255 : 0; g.putImageData(id, 0, 0); } catch (e) {} }
     c.lw = w; c.lh = h; return (layers[key] = c);
   }
   function blit(L, x, y) { ctx.drawImage(L, Math.round(x), Math.round(y), L.lw, L.lh); }
@@ -131,6 +143,7 @@ var KIT = (function () {
     var f = SPR[n]; if (!f || !ready) return; o = o || {};
     var sc = o.sc || 1, w = f[2] * sc, h = f[3] * sc, an = o.anchor || 'b';
     var dx = an === 'tl' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' ? -h / 2 : 0;
+    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.translate(Math.round(x), Math.round(y)); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1);
     if (o.flash) ctx.drawImage(white(n), Math.round(dx), Math.round(dy), w, h); else ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(dx), Math.round(dy), w, h);
@@ -352,7 +365,7 @@ var KIT = (function () {
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
     requestAnimationFrame(frame);
   }
-  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get t() { return T; },
+  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,

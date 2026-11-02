@@ -7,6 +7,10 @@
    Everything else (HUD, menus, sound, input) is the shared kit, drawn over it on the 480x270 canvas.
    ===================================================================================================== */
 var GLW = 400, GLH = 225;
+/* 3D resolution (setting 'hs-gl', shared by anything built on this renderer): 1 = the PS1 picture (225 lines), 2 and 3 = two and three times sharper,
+   'native' = as many lines as the screen has (up to 1440). Higher costs more for the graphics chip. */
+var GLRES = '1'; try { GLRES = localStorage.getItem('hs-gl') || '1'; } catch (e) {}
+var GLRESNAME = { '1': 'PS1 (225p)', '2': 'SHARP (450p)', '3': 'SHARPER (675p)', native: 'FULL (SCREEN)' }, GLRESORDER = ['1', '2', '3', 'native'];
 var R3 = (function () {
   var view = document.getElementById('view'), hud = document.getElementById('c');
   var cv = document.createElement('canvas'); cv.id = 'gl'; cv.width = GLW; cv.height = GLH;
@@ -126,7 +130,10 @@ var R3 = (function () {
     gl.uniformMatrix4fv(U.uM, false, cam.m); gl.uniform3f(U.uFog, fog[0], fog[1], fog[2]); gl.uniform2f(U.uFogR, fogR[0], fogR[1]);
   }
   function setMatrix(m) { gl.uniformMatrix4fv(U.uM, false, m); }
-  function begin(clear) { var ww = Math.round(GLH * KIT.W / KIT.H); if (ww !== GLW) { GLW = ww; cv.width = GLW; gl.useProgram(pr); gl.uniform2f(U.uRes, GLW, GLH); } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
+  function lines() { if (GLRES === 'native') { var r = cv.getBoundingClientRect(); return Math.max(225, Math.min(1440, Math.round((r.height || 225) * (window.devicePixelRatio || 1)))); } return 225 * (+GLRES || 1); }
+  function setRes(v) { GLRES = v; try { localStorage.setItem('hs-gl', v); } catch (e) {} }
+  function resItem(back) { return { label: '3D RESOLUTION: ' + GLRESNAME[GLRES], fn: function () { setRes(GLRESORDER[(GLRESORDER.indexOf(GLRES) + 1) % GLRESORDER.length]); if (back) back(); } }; }
+  function begin(clear) { var hh = lines(), ww = Math.round(hh * KIT.W / KIT.H); if (ww !== GLW || hh !== GLH) { GLW = ww; GLH = hh; cv.width = GLW; cv.height = GLH; gl.useProgram(pr); gl.uniform2f(U.uRes, GLW, GLH); } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
   function setTime(t) { gl.uniform1f(U.uTime, t); }
   function snap(on) { gl.uniform1f(U.uSnap, 0); } // no vertex snapping: the PS1 jitter looked bad, so polygons stay put
   function bright(b) { gl.uniform1f(U.uBright, b); }
@@ -137,6 +144,6 @@ var R3 = (function () {
     var m = cam.m; if (!m) return null; var cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
     if (cw < 0.3) return null; return { x: (cx / cw * 0.5 + 0.5) * KIT.W, y: (1 - (cy / cw * 0.5 + 0.5)) * 270, w: cw };
   }
-  return { ok: true, gl: gl, canvas: cv, Mesh: Mesh, texture: texture, update: update, draw: draw, setCam: setCam, setMatrix: setMatrix, persp: persp, look: look, mul: mul, cam: cam, begin: begin, setTime: setTime, snap: snap, bright: bright, clearDepth: clearDepth, project: project };
+  return { ok: true, gl: gl, canvas: cv, setRes: setRes, resItem: resItem, get resName() { return GLRESNAME[GLRES]; }, Mesh: Mesh, texture: texture, update: update, draw: draw, setCam: setCam, setMatrix: setMatrix, persp: persp, look: look, mul: mul, cam: cam, begin: begin, setTime: setTime, snap: snap, bright: bright, clearDepth: clearDepth, project: project };
   }
 })();

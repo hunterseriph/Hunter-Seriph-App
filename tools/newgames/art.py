@@ -47,6 +47,11 @@ def sheet(game):
         for k in sorted(b):
             if fnmatch.fnmatch(k, pat): frames[k] = b[k]
     frames.update(ex)
+    # shop fronts stand on the ground: cut away any clear rows under them so they never float
+    for k in list(frames):
+        if k.startswith('fac_'):
+            im = frames[k]; bb = im.getbbox()
+            if bb and bb[3] < im.height: frames[k] = im.crop((0, 0, im.width, bb[3]))
     # tallest first packs tighter
     order = sorted(frames, key=lambda k: -frames[k].height)
     sh, pos = pack({k: frames[k] for k in order}, 1024)
