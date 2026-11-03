@@ -6,7 +6,7 @@
    Runs are recorded on a leaderboard with a proof code, like Cumheads Quest.
    ===================================================================================================== */
 var ENDLESS_BOSSES = ['ratking', 'boner', 'hotload', 'beast', 'demon', 'sperm', 'pig', 'moon', 'blum'];
-var ENDLESS_TYPES = ['shrine', 'gamble', 'merchant', 'powerup', 'saws', 'crumble', 'cell', 'feast', 'trap', 'ambush', 'challenge', 'illusion', 'flume'];
+var ENDLESS_TYPES = ['shrine', 'gamble', 'merchant', 'powerup', 'saws', 'crumble', 'cell', 'feast', 'trap', 'ambush', 'challenge', 'illusion', 'flume', 'gauntlet', 'climb', 'crypt', 'briar', 'rods', 'factory', 'padpit', 'turrets', 'chandhall', 'stash', 'darkhall'];
 var EROW = 60;
 function genEndless(seed) { var W = { seed: seed, rooms: {}, list: [], endless: 1, next: 0, count: 0 }; WORLD = W; ensureEndless(4); W.start = key2(0, EROW); return W; }
 function ensureEndless(n) {

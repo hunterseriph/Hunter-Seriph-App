@@ -31,6 +31,11 @@ function drawWorld() {
     var ti = TILEKEYS[key]; if (ti === undefined) continue;
     g.drawImage(TSET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
+  // torches and chains along the walls of caves and tunnels
+  (LV.caves || []).forEach(function (q) { if (q.c1 * TS < cx || q.c0 * TS > cx + W) return; for (var c = q.c0 + 4; c < q.c1 - 2; c += 9) { var r0 = null; for (var y = r0 = Math.floor(cy / TS); y < r1 + 2; y++) if (T(c, y) === 'k' && isSolid(T(c, y + 1), c, y + 1)) { r0 = y; break; } if (r0 === null || T(c, r0) !== 'k') continue;
+      var x = c * TS + 8 - cx, y0 = r0 * TS - cy - 30, fl = Math.floor(G.t * 10 + c) % 3; R('#12040a', x - 3, y0, 6, 10); R('#5a545c', x - 2, y0 + 1, 4, 8); R('#12040a', x - 4, y0 - 6, 8, 6); R(fl ? '#ff9a30' : '#ffe36a', x - 2, y0 - 9 - fl, 4, 6); R('#ffe36a', x - 1, y0 - 6, 2, 3);
+      for (var k = 0; k < 40; k += 2) for (var j = -k; j <= k; j += 4) if (((j + k) / 2) % 2 === 0) R('#3a1a0a', x + j, y0 - 6 + k * 0.9, 1, 1);
+      var ch = q.c0 * 7 + c; if (ch % 2) { for (var cl = 0; cl < 5 + ch % 4; cl++) R(cl % 2 ? '#3a343c' : '#22202a', x + 36, y0 - 60 + cl * 6, 3, 5); } } });
   // platforms
   PLATS.forEach(function (q) { if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
     if (q.log) { if (distAt(Math.floor(q.x / TS))) spr('hog_barge', x + q.w / 2, y + 16, { sc: q.w / 64 }); else spr('p_logboat', x + q.w / 2, y + 14, { sc: q.w / 60 }); return; }
@@ -61,13 +66,14 @@ function drawBack(g, Z, cx, cy, W, H) {
     if (imgOk(HOGIM.sky)) tile(g, HOGIM.sky, cx * 0.05, vy - 30, H + 40, 1);
     if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 1);
     if (imgOk(HOGIM.skyline)) { var SL = imgLayer('skyl', HOGIM.skyline, 130, 0.5), sw = SL.lw, sx = -(((cx * 0.12) % sw) + sw) % sw; for (; sx < W; sx += sw) KIT.blit(SL, sx, vy + H - 200); }
-    if (LV.dists && LV.dists.length) drawDistrictBack(g, cx, vy, W, H); else
+    drawPar(g, 'far', 'city', cx, vy, W, H);
+    if (LV.dists && LV.dists.length) { drawDistrictBack(g, cx, vy, W, H); drawPar(g, 'near', 'city', cx, vy, W, H); drawAir(g, 'city', cx, cy, W, H); return; } else
     [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(vy * (1 + L[0])) + H - 300 + L[2]; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); g.globalAlpha = 1; if (L[3] === 1 && my + 300 < H) { g.fillStyle = '#0d0507'; g.fillRect(0, my + 299, W, H - my - 299); } });
     return;
   }
   // moon and stars, then three painted layers (or this part of the zone's own scenery)
   g.fillStyle = 'rgba(241,231,208,0.5)'; for (var i = 0; i < 40; i++) { var sx = ((i * 97 - cx * 0.03) % W + W) % W, sy = (i * 53) % (H * 0.6); g.fillRect(sx, sy, 1, 1); }
-  if (LV.dists && LV.dists.length) { if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); } drawDistrictBack(g, cx, vy, W, H); return; }
+  if (LV.dists && LV.dists.length) { if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); } drawPar(g, 'far', Z.id, cx, vy, W, H); drawPar(g, 'mid', Z.id, cx, vy, W, H); drawDistrictBack(g, cx, vy, W, H); drawPar(g, 'near', Z.id, cx, vy, W, H); drawAir(g, Z.id, cx, cy, W, H); return; }
   if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); }
   [0, 1, 2].forEach(function (n) { var Lc = bgLayer(Z, n, 640, 270); var par = [0.15, 0.3, 0.5][n], x = -(((cx * par) % 640) + 640) % 640, ly = vy * (1 + n * 0.5) + (H - 270); for (; x < W; x += 640) KIT.blit(Lc, x, ly); if (n === 2 && ly + 270 < H) { g.fillStyle = 'rgba(0,0,0,0.9)'; g.fillRect(0, ly + 269, W, H - ly - 269); } });
 }

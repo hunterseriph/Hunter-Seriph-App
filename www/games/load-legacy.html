@@ -855,7 +855,7 @@ function genWorld(seed, castle) {
     var boss = free.shift(); if (boss) boss.type = 'bossdoor';
     shuffle(free, r);
     if (moonA) { ['merchant', 'shrine', 'powerup', 'challenge', 'ambush'].forEach(function (t) { var q = free.shift(); if (q) q.type = t; }); return; }
-    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'].concat(AREAS[a].special || []), extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell']; shuffle(extra, r); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); if (r() < 0.75) want.push(extra[1]); if (r() < 0.45) want.push(extra[2]);
+    var want = ['merchant', 'powerup', 'challenge', 'trap', 'illusion', 'shrine'].concat(AREAS[a].special || []), extra = ['powerup', 'challenge', 'trap', 'ambush', 'saws', 'crumble', 'cell', 'feast', 'saws', 'cell'].concat(moreTypes(a)); shuffle(extra, r); extra = extra.filter(function (t, i) { return extra.indexOf(t) === i; }); if (r() < 0.7) want.push('gamble'); want.push(extra[0]); want.push(extra[1]); if (r() < 0.8) want.push(extra[2]); if (r() < 0.6) want.push(extra[3]); if (r() < 0.4) want.push(extra[4]);
     want.forEach(function (t) { var q = free.shift(); if (q) q.type = t; });
     if (a === 'city') { // the Load Flume: four screens long, laid along one row of the park. Empty cells are filled in; cells already in use must be plain and have no way down
       var CA = AREAS.city, best = null, okC = function (x, y) { var q = rooms[key2(x, y)]; return !q || (q.area === 'city' && free.indexOf(q) >= 0 && !q.ex.d); };
@@ -954,7 +954,7 @@ function buildRoom(rm) {
     }
   }
   if (ex.u) { plat(9, 13, 12); plat(18, 22, 8); plat(12, 16, 4); }
-  var t = rm.type, nE = 0, cx0 = ex.d ? 23 : 16, cxp = cx0 * T;
+  var forceDark = 0, t = rm.type, nE = 0, cx0 = ex.d ? 23 : 16, cxp = cx0 * T;
   if (rm.big) { t = 'big'; nE = 3 + Math.floor(A.tier / 2) + (rm.big === 'wide' ? 2 : 1); }
   if (t === 'start') {
     ents.push({ k: 'door', x: cxp, y: 15 * T, w: 48, h: 64, boss: CASTLES[(WORLD && WORLD.castle) || curCastle()].final }); RS(cx0 - 5, 9, cx0 + 4, 14);
@@ -1060,8 +1060,78 @@ function buildRoom(rm) {
     for (x = ax0; x <= ax1; x++) ents.push({ k: 'drop', x: x * T + 8, y: 7 * T - 2 });
     for (var fv = 0; fv < 3; fv++) { var fx = rn(4, 24), fy = rn(9, 11); if (free(fx, fy, fx + 3, fy)) { for (x = fx; x <= fx + 3; x++) S(x, fy, TV); RS(fx, fy - 2, fx + 3, fy); } }
     nE = 1 + Math.floor(A.tier / 2);
+  } else if (moreRoom(t)) { /* the newer rooms, below */
   } else if (castleRoom(t)) { /* the castles' own rooms, below */
   } else if (t !== 'big') nE = 2 + Math.floor(A.tier / 2) + (r() < 0.5 ? 1 : 0);
+  function moreRoom(t) {
+    var far = ex.r && !ex.l ? 3 : 28, i, walkers = A.pool.filter(function (p) { return ENEMIES[p[0]] && !isFlyer(ENEMIES[p[0]]); });
+    function walker() { return walkers.length ? walkers[Math.floor(r() * walkers.length)][0] : 'crawler'; }
+    function chestOn(x, y, big) { ents.push({ k: 'chest', x: x * T + 8, y: y * T, big: big ? 1 : 0 }); }
+    if (t === 'gauntlet') { // two axes swing over the floor while a saw runs along it: run the gauntlet to the chest
+      ents.push({ k: 'pend', x: 11 * T + 8, y: T + 4, len: 11 * T, ph: r() * 3 }); ents.push({ k: 'pend', x: 21 * T + 8, y: T + 4, len: 11 * T, ph: 1.6 + r() });
+      ents.push({ k: 'saw', x: 6 * T, x0: 6 * T, x1: 26 * T, y: 14 * T + 6, sp: 55 + 10 * A.tier, ph: r() });
+      RS(3, 1, W - 4, 13); plat(3, 5, 12); plat(26, 28, 12); plat(14, 18, 8);
+      chestOn(far, 15, 1); nE = 1; return true;
+    }
+    if (t === 'climb') { // the chest is right up under the ceiling: ledges zig-zag up to it, with things flying round
+      var cl = [[4, 9, 12], [12, 16, 9], [5, 10, 6], [13, 18, 4]], ok = 0;
+      if (ex.u) cl = [[4, 9, 12], [22, 27, 9], [21, 25, 6], [25, 28, 4]];
+      cl.forEach(function (p) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); ok++; } });
+      var top = cl[3]; if (ok === 4) chestOn(top[0] + 2, top[2], 1); else chestOn(far, 15, 1);
+      ents.push({ k: 'drip', x: 22 * T + 8, y: T, cd: 2 }); nE = 2 + Math.floor(A.tier / 2); return true;
+    }
+    if (t === 'crypt') { // coffins along the floor and on the ledges, each one hiding one of this place's own
+      [5, 11, 21, 27].forEach(function (cfx) { if (G(cfx, 15) === TW) ents.push({ k: 'coffin', x: cfx * T + 8, y: 15 * T, who: walker() }); });
+      RS(3, 11, 29, 14); plat(7, 10, 11); plat(22, 25, 11); plat(14, 18, 8);
+      ents.push({ k: 'coffin', x: 8 * T + 8, y: 11 * T, who: walker() }); ents.push({ k: 'coffin', x: 23 * T + 8, y: 11 * T, who: walker() });
+      chestOn(16, 8, 1); nE = 0; return true;
+    }
+    if (t === 'briar') { // thorns burst up in a wave along the floor, both ways; the ledges are the safe spots
+      for (i = 0; i < 8; i++) ents.push({ k: 'vine', x: (6 + i * 3) * T + 8, y: 15 * T, t: (i < 4 ? i : 7 - i) * 0.45 });
+      RS(5, 10, 28, 14); plat(4, 6, 12); plat(10, 12, 11); plat(15, 17, 12); plat(20, 22, 11); plat(26, 28, 12); plat(13, 19, 8);
+      chestOn(16, 8, 1); nE = 1; return true;
+    }
+    if (t === 'rods') { // lightning rods in a row: the sky hits them one after another
+      [6, 11, 16, 21, 26].forEach(function (rx, k) { ents.push({ k: 'rod', x: rx * T + 8, y: 15 * T, t: k * 0.7 }); });
+      RS(5, 10, 27, 14); plat(8, 9, 12); plat(13, 14, 12); plat(18, 19, 12); plat(23, 24, 12); plat(12, 20, 9);
+      chestOn(16, 9, 1); nE = 2; return true;
+    }
+    if (t === 'factory') { // belts everywhere, all fighting you, over a hot hob in the middle
+      ents.push({ k: 'belt', x: 3 * T, x0: 3 * T, x1: 13 * T, y: 15 * T, dir: -1 }); ents.push({ k: 'belt', x: 19 * T, x0: 19 * T, x1: 29 * T, y: 15 * T, dir: 1 });
+      for (x = 13; x <= 18; x++) if (G(x, 15) === TW && !res[14 * W + x]) S(x, 14, TS);
+      RS(3, 13, 29, 14); plat(5, 10, 12); plat(21, 26, 12); plat(11, 20, 9);
+      ents.push({ k: 'belt', x: 11 * T, x0: 11 * T, x1: 20 * T, y: 9 * T, dir: r() < 0.5 ? 1 : -1 });
+      chestOn(16, 9, 1); nE = 2; return true;
+    }
+    if (t === 'padpit') { // a floor of spikes. Bounce pads are the only way across, and the prize hangs high
+      [9, 16, 23].forEach(function (px) { if (G(px, 15) === TW) ents.push({ k: 'pad', x: px * T + 8, y: 15 * T, jelly: rm.area === 'gfair' ? 1 : 0 }); });
+      for (x = 5; x <= W - 6; x++) if (G(x, 15) === TW && !res[14 * W + x] && [8, 9, 10, 15, 16, 17, 22, 23, 24].indexOf(x) < 0) S(x, 14, TS);
+      RS(5, 3, W - 6, 14); plat(4, 7, 11); plat(24, 27, 11); plat(9, 12, 8); plat(19, 22, 8); plat(14, 17, 5);
+      chestOn(16, 5, 1); nE = 1; return true;
+    }
+    if (t === 'turrets') { // turrets in both walls at two heights; climb the middle to the chest
+      ents.push({ k: 'turret', x: 1 * T + 6, y: 5 * T + 8, dir: 1, cd: r() * 2 }); ents.push({ k: 'turret', x: (W - 1) * T - 6, y: 5 * T + 8, dir: -1, cd: 1 + r() });
+      ents.push({ k: 'turret', x: 1 * T + 6, y: 9 * T + 8, dir: 1, cd: 1.5 + r() }); ents.push({ k: 'turret', x: (W - 1) * T - 6, y: 9 * T + 8, dir: -1, cd: r() * 2 });
+      RS(8, 3, 24, 14); plat(9, 12, 12); plat(20, 23, 12); plat(13, 19, 9); plat(14, 18, 6);
+      for (x = 11; x <= 13; x++) if (G(x, 15) === TW) { S(x, 14, TW); } for (x = 19; x <= 21; x++) if (G(x, 15) === TW) S(x, 14, TW);
+      chestOn(16, 6, 1); nE = 1; return true;
+    }
+    if (t === 'chandhall') { // a long hall of chandeliers: every one comes down as you pass under it
+      var nc2 = 0; for (x = 5; x <= W - 6; x += 4) if (G(x, 0) === TW && free(x - 1, 1, x + 1, 5)) { ents.push({ k: 'chand', x: x * T + 8, y: T, st: 'hang' }); RS(x - 2, 1, x + 2, 5); nc2++; }
+      plat(9, 12, 11); plat(20, 23, 11); chestOn(far, 15, 1); nE = 2 + Math.floor(A.tier / 2); return nc2 > 2;
+    }
+    if (t === 'stash') { // somebody's hoard: drops everywhere and three chests, and plenty of guards
+      plat(4, 9, 11); plat(22, 27, 11); plat(12, 19, 8);
+      chestOn(6, 11); chestOn(25, 11); chestOn(16, 8, 1);
+      for (x = 6; x <= 26; x += 2) if (Math.abs(x - 16) > 3) ents.push({ k: 'drop', x: x * T + 8, y: 14 * T - 2 });
+      nE = 4 + Math.floor(A.tier / 2); return true;
+    }
+    if (t === 'darkhall') { // pitch black. Something glitters in the middle of it
+      forceDark = 1; plat(5, 9, 12); plat(22, 26, 12); plat(12, 19, 9);
+      for (x = 13; x <= 18; x++) ents.push({ k: 'drop', x: x * T + 8, y: 9 * T - 10 }); chestOn(16, 9, 1); nE = 3 + Math.floor(A.tier / 2); return true;
+    }
+    return false;
+  }
   function castleRoom(t) {
     var far = ex.r && !ex.l ? 3 : 28, i;
     if (t === 'pendulum') { // three great axes swing from the ceiling across the hall: time your run under them
@@ -1111,7 +1181,7 @@ function buildRoom(rm) {
   }
   // plain rooms come in several shapes, so the castle does not feel samey
   var style = 'classic';
-  if (t === 'normal') { var sr = r(); style = sr < 0.34 ? 'classic' : sr < 0.47 ? 'pit' : sr < 0.6 ? 'stairs' : sr < 0.73 ? 'pillars' : sr < 0.86 ? 'tower' : 'bridge'; }
+  if (t === 'normal') { var sr = r(), STY = ['pit', 'stairs', 'pillars', 'tower', 'bridge', 'twin', 'mound', 'mezz', 'arch', 'islands', 'arches', 'steps2']; style = sr < 0.22 ? 'classic' : STY[Math.floor((sr - 0.22) / 0.78 * STY.length)] || 'classic'; }
   if (style !== 'classic' && !roomStyle(style)) style = 'classic';
   rm.style = style;
   function roomStyle(st) {
@@ -1136,6 +1206,39 @@ function buildRoom(rm) {
       if (!free(9, 7, 22, 14)) return false;
       for (y = 9; y <= 14; y++) for (x = 15; x <= 16; x++) S(x, y, TW); RS(13, 8, 18, 14);
       plat(10, 13, 12); plat(18, 21, 12); if (free(9, 4, 14, 6)) plat(10, 14, 6); return true;
+    }
+    if (st === 'twin') { // two squat towers with a ledge strung between their tops
+      var tw = [[6, 8], [23, 25]]; for (i = 0; i < 2; i++) { if (!free(tw[i][0], 10, tw[i][1], 14)) return false; }
+      tw.forEach(function (c) { for (y = 12; y <= 14; y++) for (x = c[0]; x <= c[1]; x++) S(x, y, TW); RS(c[0] - 1, 9, c[1] + 1, 14); });
+      if (free(11, 8, 20, 10)) plat(11, 20, 9); return true;
+    }
+    if (st === 'mound') { // the floor heaps up into a hill in the middle
+      if (!free(9, 11, 22, 14)) return false;
+      for (x = 9; x <= 22; x++) S(x, 14, TW); for (x = 12; x <= 19; x++) S(x, 13, TW); for (x = 14; x <= 17; x++) S(x, 12, TW); RS(8, 9, 23, 14);
+      if (free(3, 9, 7, 11)) plat(3, 7, 10); if (free(24, 9, 28, 11)) plat(24, 28, 10); return true;
+    }
+    if (st === 'mezz') { // a long gallery across the room at head height, with gaps to drop through
+      var nm = 0; for (x = 4; x <= W - 5; x++) if ((x < 10 || x > 12) && (x < 19 || x > 21) && G(x, 11) === TA && !res[11 * W + x]) { S(x, 11, TL); nm++; }
+      if (nm < 14) return false; RS(4, 8, W - 5, 11); if (free(13, 6, 18, 8)) plat(13, 18, 7); return true;
+    }
+    if (st === 'arch') { // ledges climbing up to a peak in the middle and down again
+      var ar = [[3, 6, 12], [8, 11, 10], [13, 18, 8], [20, 23, 10], [25, 28, 12]], na = 0;
+      ar.forEach(function (p) { if (free(p[0], p[2] - 2, p[1], p[2])) { plat(p[0], p[1], p[2]); na++; } }); return na >= 4;
+    }
+    if (st === 'islands') { // spikes all along the floor, with little stone islands to hop between
+      var isl = [8, 13, 18, 23], nsi = 0;
+      for (x = 5; x <= W - 6; x++) { var onI = isl.some(function (ix) { return x >= ix && x <= ix + 1; }); if (G(x, 15) !== TW || res[14 * W + x] || G(x, 14) !== TA) continue; S(x, 14, onI ? TW : TS); if (!onI) nsi++; }
+      if (nsi < 10) return false; RS(5, 11, W - 6, 14); if (free(10, 8, 21, 10)) plat(11, 20, 10); return true;
+    }
+    if (st === 'arches') { // the ceiling hangs down in heavy arches; fight under them
+      var ac = ex.u ? [[4, 8], [23, 27]] : [[4, 8], [13, 18], [23, 27]], nar = 0;
+      ac.forEach(function (c) { if (free(c[0], 1, c[1], 6)) { for (y = 1; y <= 4; y++) for (x = c[0] + (y === 4 ? 1 : 0); x <= c[1] - (y === 4 ? 1 : 0); x++) S(x, y, TW); RS(c[0], 1, c[1], 6); nar++; } });
+      if (nar < 2) return false; if (free(9, 8, 12, 10)) plat(9, 12, 9); if (free(19, 8, 22, 10)) plat(19, 22, 9); return true;
+    }
+    if (st === 'steps2') { // the floor steps down to a sunken middle and back up
+      if (!free(3, 11, 9, 14) || !free(22, 11, 28, 14)) return false;
+      for (x = 3; x <= 9; x++) { S(x, 14, TW); if (x <= 6) S(x, 13, TW); } for (x = 22; x <= 28; x++) { S(x, 14, TW); if (x >= 25) S(x, 13, TW); }
+      RS(2, 10, 9, 14); RS(22, 10, 29, 14); if (free(13, 9, 18, 11)) plat(13, 18, 10); return true;
     }
     if (st === 'bridge') { // a long high walkway across the room, broken in the middle
       var nb2 = 0; for (x = 4; x <= W - 5; x++) if ((x < 14 || x > 17) && G(x, 9) === TA && !res[9 * W + x]) { S(x, 9, TL); nb2++; }
@@ -1172,6 +1275,7 @@ function buildRoom(rm) {
     for (var dq = 0; dq < ndr; dq++) { var drx = rn(3, W - 4); if (G(drx, 0) === TW && G(drx, 1) === TA) ents.push({ k: 'drip', x: drx * T + 8, y: T, cd: 1 + r() * 3 }); }
     dark = (rm.area === 'dungeon' || rm.area === 'bcrypt') && fights && r() < 0.5; /* the sewers stay lit so you can see the cream */
   }
+  if (forceDark) dark = true;
   var DECO = { sewer: [['creampool', 3, 3]], bone: [['skulls', 2, 3], ['ribs', 1, 4]], furnace: [['crucible', 2, 2]] }[rm.area];
   if (DECO && t !== 'flume') DECO.forEach(function (dd) { // each endless area dresses its floors: cream puddles, skull piles and ribcages, crucibles of lava
     var n = rn(1, dd[1]), tr = 0, half = Math.ceil(dd[2] / 2);
@@ -1235,6 +1339,16 @@ function buildArena(boss, lair) {
   for (y = 12; y <= 14; y++) S(0, y, TB);
   [[8, 13, 10], [50, 55, 10], [27, 36, 7], [17, 21, 4], [42, 46, 4]].forEach(function (p) { for (var x = p[0]; x <= p[1]; x++) S(x, p[2], TL); });
   return { w: W, h: H, tiles: tl, ents: [], arena: boss, lair: !!lair || boss === 'mega' };
+}
+
+/* the newer room types, and which places get which (each place still gets its own feel) */
+function moreTypes(a) {
+  var all = ['gauntlet', 'climb', 'stash', 'darkhall', 'turrets', 'padpit'];
+  var by = { castle: ['crypt', 'chandhall', 'gauntlet'], roof: ['rods', 'climb', 'briar'], city: ['factory', 'padpit', 'padpit'], dungeon: ['crypt', 'briar', 'factory', 'darkhall'],
+    bkeep: ['crypt', 'chandhall', 'gauntlet'], bspire: ['rods', 'climb'], bcrypt: ['crypt', 'darkhall'], bgarden: ['briar', 'crypt'],
+    gkitchen: ['factory', 'stash'], gtower: ['climb', 'padpit'], gcellar: ['factory', 'darkhall'], gfair: ['padpit', 'briar'],
+    sewer: ['factory', 'darkhall'], bone: ['crypt', 'chandhall'], furnace: ['factory', 'turrets'] }[a] || [];
+  return all.concat(by);
 }
 
 /* =====================================================================================================
@@ -3485,7 +3599,7 @@ function moonDown(b) { // the reward: a pile of drops and two powerups. Not a se
    Runs are recorded on a leaderboard with a proof code, like Cumheads Quest.
    ===================================================================================================== */
 var ENDLESS_BOSSES = ['ratking', 'boner', 'hotload', 'beast', 'demon', 'sperm', 'pig', 'moon', 'blum'];
-var ENDLESS_TYPES = ['shrine', 'gamble', 'merchant', 'powerup', 'saws', 'crumble', 'cell', 'feast', 'trap', 'ambush', 'challenge', 'illusion', 'flume'];
+var ENDLESS_TYPES = ['shrine', 'gamble', 'merchant', 'powerup', 'saws', 'crumble', 'cell', 'feast', 'trap', 'ambush', 'challenge', 'illusion', 'flume', 'gauntlet', 'climb', 'crypt', 'briar', 'rods', 'factory', 'padpit', 'turrets', 'chandhall', 'stash', 'darkhall'];
 var EROW = 60;
 function genEndless(seed) { var W = { seed: seed, rooms: {}, list: [], endless: 1, next: 0, count: 0 }; WORLD = W; ensureEndless(4); W.start = key2(0, EROW); return W; }
 function ensureEndless(n) {

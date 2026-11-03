@@ -5,7 +5,7 @@ from pixelkit import Grid
 USE = ['ch_icon0', 'cumface', 'f_bat_*', 'f_batP_*', 'f_crawler_*', 'f_slime_*', 'f_slimeR_*', 'f_imp_*', 'f_ghoul_*', 'f_rat_*', 'f_wraith_*', 'f_skeleton_*', 'f_blumling_*',
        'f_blumeye_*', 'f_blumspore_*', 'f_magmaslug_*', 'f_emberbat_*', 'f_creamblob_*', 'f_cultrat_*', 'f_vampire_*', 'f_balloon_*', 'f_crow_*', 'f_bonehound_*', 'f_golem_*',
        'f_beast_*', 'f_demon_*', 'f_sperm_*', 'f_pig_*', 'f_ratking_*', 'f_boner_*', 'f_hotload_*', 'f_moon_*', 'f_blum_*', 'f_blum2_*', 'h_*_baby_idle0', 'h_blood_adult_idle0',
-       'npc_saba', 'npc_tb', 'npc_jessiah']
+       'npc_saba', 'npc_tb', 'npc_jessiah', 'npc_potbelly', 'npc_spermaid', 'p_slot', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); STONE = ('#8a6a6e', '#5a4044', '#2e1c20'); CREAM = ('#fffbe8', '#f1e0b0', '#b8a070')
 IRON = ('#9a929a', '#5a545c', '#2a262c'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c'); WHITE = ('#ffffff', '#e8dcc8', '#a8987a'); PURP = ('#c08aff', '#7a2ad8', '#34106a')
 GREEN = ('#9aff5a', '#4aa82a', '#1a5a10')

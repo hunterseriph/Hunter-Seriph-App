@@ -95,8 +95,8 @@ function kart3D(m, A, k, fr) {
 /* ---------- the drivers ---------- */
 /* face: [sprite, first row, last row] cut from the front sprite; kind: drop / human / pig / cat / blob */
 var DRV3D = {
-  cumhead: { kind: 'drop', face: ['ch_idle0', 0, 25], col: '#f0c070', body: '#241418', arm: '#241418', hand: '#f1e7d0', trim: '#c4121c', tip: 0.45, curl: 1 },
-  spermaid: { kind: 'drop', face: ['npc_spermaid', 0, 27], col: '#f1e7d0', body: '#3ab4c8', arm: '#f1e7d0', hand: '#f1e7d0', tip: 0.42 },
+  cumhead: { kind: 'drop', face: ['ch_idle0', 9, 23], strip: 1, col: '#f0c070', body: '#241418', arm: '#241418', hand: '#f1e7d0', trim: '#c4121c', tip: 0.45, curl: 1 },
+  spermaid: { kind: 'drop', face: ['npc_spermaid', 8, 27], col: '#f1e7d0', body: '#3ab4c8', arm: '#f1e7d0', hand: '#f1e7d0', tip: 0.42 },
   greebo: { kind: 'human', face: ['npc_greebo', 10, 24], skin: '#f0c8a0', hair: '#c8862a', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0', beard: '#c8862a' },
   amy: { kind: 'human', face: ['npc_amy', 1, 18], skin: '#f0c8a0', hair: '#ff8ac0', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
   tb: { kind: 'human', face: ['npc_tb', 9, 18], skin: '#e8c0a0', hair: '#4a2e18', hat: 'cowboy', hatc: '#5a3a20', body: '#5a3a20', arm: '#5a3a20', hand: '#e8c0a0' },
@@ -126,10 +126,17 @@ function driverTex() {
     for (var yy = d.face[1]; yy <= d.face[2]; yy++) for (var xx = 0; xx < f[2]; xx++) if (dd[(yy * f[2] + xx) * 4 + 3] > 0) { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); }
     var cw = x1 - x0 + 1, ch = d.face[2] - d.face[1] + 1, sz = Math.max(cw, ch);
     DRVT[id] = slot(function (g, x, y) {
-      g.fillStyle = d.hair || d.col || '#000'; g.fillRect(x, y, 64, 64);
-      var k = 64 / sz; g.drawImage(tmp, x0 - (sz - cw) / 2, d.face[1] - (sz - ch) / 2, sz, sz, x, y, 64, 64);
+      var c64 = document.createElement('canvas'); c64.width = c64.height = 64; var g64 = c64.getContext('2d'); g64.imageSmoothingEnabled = false;
+      g64.drawImage(tmp, x0 - (sz - cw) / 2, d.face[1] - (sz - ch) / 2, sz, sz, 0, 0, 64, 64);
       // see-through pixels at the edges become the hair colour too
-      var im = g.getImageData(x, y, 64, 64), q = im.data, hc = hexrgb(d.hair || d.col); for (var i = 0; i < q.length; i += 4) if (q[i + 3] < 200) { q[i] = hc[0]; q[i + 1] = hc[1]; q[i + 2] = hc[2]; q[i + 3] = 255; } g.putImageData(im, x, y);
+      var im = g64.getImageData(0, 0, 64, 64), q = im.data, hc = hexrgb(d.hair || d.col);
+      // the sprite's outline round its edge (dark, or Cumhead's red) would wrap round the head as stitched lines: eat it back to the fill
+      var gone = new Uint8Array(4096), i, j; for (i = 0; i < 4096; i++) gone[i] = q[i * 4 + 3] < 200 ? 1 : 0;
+      for (var pass = 0; pass < (d.strip ? 6 : 4); pass++) { var nx2 = gone.slice(); for (i = 0; i < 4096; i++) { if (gone[i]) continue; var px = i % 64, py = (i / 64) | 0, edge = (px > 0 && gone[i - 1]) || (px < 63 && gone[i + 1]) || (py > 0 && gone[i - 64]) || (py < 63 && gone[i + 64]); if (!edge) continue;
+        var r0 = q[i * 4], g0 = q[i * 4 + 1], b0 = q[i * 4 + 2], lum = r0 * 0.3 + g0 * 0.59 + b0 * 0.11; if (lum < (d.strip ? 175 : 80) || (r0 > 120 && g0 < 70 && b0 < 70 && d.kind === 'drop')) nx2[i] = 1; } gone = nx2; }
+      if (d.strip) for (i = 0; i < 4096; i++) { j = i * 4; if (q[j] > 140 && q[j + 1] < 90 && q[j + 2] < 90) gone[i] = 1; } // Cumhead's red curl line crosses his face in the sprite
+      for (i = 0; i < 4096; i++) if (gone[i]) { j = i * 4; q[j] = hc[0]; q[j + 1] = hc[1]; q[j + 2] = hc[2]; q[j + 3] = 255; }
+      g.putImageData(im, x, y);
     });
   });
   DRVT.cat = slot(function (g, x, y) { // Sir Johnathan's face: black, a white muzzle, green eyes, pink nose

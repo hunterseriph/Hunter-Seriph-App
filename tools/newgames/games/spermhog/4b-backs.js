@@ -77,7 +77,7 @@ function distLayer(id) { return KIT.layer('dback_' + id, 960, 300, function () {
 /* draw the district backdrop at the camera. Where one district meets the next, the new scenery starts at a gateway
    column that moves with the ground (a hard cut, hidden behind a tall pillar), never a see-through blend */
 function drawDistrictBack(g, cx, vy, W, H) {
-  var ds = LV.dists, my = Math.round(vy * 1.4) + H - 300;
+  var ds = LV.dists, my = Math.round(vy * 1.4) + H - 300 + 46; // sat low enough that the far and middle layers show above it
   if (LV.zone.id === 'city') { var far = cityMid('citymid0', 0.55), fx = -(((cx * 0.22) % 960) + 960) % 960; for (; fx < W; fx += 960) KIT.blit(far, fx, Math.round(vy * 1.22) + H - 270); }
   function one(id, x0, x1) { if (!id || x1 <= x0) return; var L = distLayer(id), mx = -(((cx * 0.4) % 960) + 960) % 960; g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); for (; mx < W; mx += 960) KIT.blit(L, mx, my); if (my + 300 < H) { g.fillStyle = '#0a0406'; g.fillRect(x0, my + 299, x1 - x0, H - my - 299); } g.restore(); }
   var left = distAt(Math.floor(cx / TS)), x = 0, gates = [];

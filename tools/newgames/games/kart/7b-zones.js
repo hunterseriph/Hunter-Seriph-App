@@ -64,7 +64,7 @@ Object.assign(THEMES, {
     lights: [{ every: 24, h: 4.2, sides: 1, dist: 1, col: [0.85, 0.6, 0.25], halo: '#ffd080' }],
     props: [{ k: 'bldg', every: 9, dist: 1.5, w: [6, 7], d: [2.2, 2.6], h: [2.4, 3.2], tile: 'hedge', roof: 'hedge', r: 1 }, { k: 'pillar', every: 40, dist: 5, rad: 0.5, h: [9, 11], tile: 'trim', cap: 'trim' }, { k: 'fn', every: 40, dist: 5.2, fn: function (B, p) { B.panel(p.x, p.y + 4, p.z, 3, 5, p.face + Math.PI / 2, 'banner'); } }],
     scen: function (B) {
-      landmark(B, 0.5, 18, 8, function (p) { B.cyl(p.x, p.y - 0.5, p.z, 3, 2, 8, 'statue', null, 2.6, 'statue'); B.bill(p.x, p.y + 1.5, p.z, 'ch_idle0', 0.22); }); // a statue of Cumhead in the middle of the courtyard
+      landmark(B, 0.5, 18, 8, function (p) { B.cyl(p.x, p.y - 0.5, p.z, 3, 2, 8, 'statue', null, 2.6, 'statue'); var y0 = p.y + 1.5; [[1.4, 0.9, 2.3], [2.3, 1.5, 2.2], [2.2, 1.4, 1.3], [1.3, 1.6, 0.5], [0.5, 1, 0.05]].forEach(function (c) { B.cyl(p.x, y0, p.z, c[0], c[1], 10, 'statue', null, c[2], 'statue'); y0 += c[1]; }); }); // a stone statue of Cumhead (a carved droplet) in the middle of the courtyard
       landmark(B, 0.82, 14, 6, function (p) { B.bill(p.x, p.y, p.z, 'npc_saba', 0.07); B.bill(p.x + 2, p.y, p.z + 1, 'npc_judgement', 0.07); });
       B.along(30, function (q, sd, i) { var p = inPlace(B, q, sd, 26, 6); if (p) B.box(p.x, p.y - 0.5, p.z, 10, 10, 18 + B.rnd() * 6, p.face, 'wall', 'trim'); }); // the castle's inner walls all round
     } }),
@@ -290,7 +290,7 @@ Object.assign(THEMES, {
     ceil: { every: 12, h: 9, tile: 'beam', w: 1.6 },
     lights: [{ every: 14, h: 6, sides: 1, dist: -1.5, col: [0.9, 0.3, 0.2], halo: '#ff5030' }],
     props: [{ k: 'pillar', every: 12, dist: -1.6, rad: 1, h: 9, seg: 8, tile: 'pillar' }, { k: 'bill', every: 20, spr: ['f_blumguard_0', 'f_blumguard_1', 'f_blumeye_0'], sc: 0.075, dist: -3.2 }],
-    scen: function (B) { landmark(B, 0.85, -2.6, 0, function (p) { B.bill(p.x, p.y, p.z, 'throne', 0.1); }); } }),
+    scen: function (B) { landmark(B, 0.85, -1.2, 0, function (p, q) { throne3d(B, p, q, 'pillar', 'trim'); }); } }),
 
   /* ================= BLUMHEAD'S LAIR ================= */
   heart: ZT({ dust: '#c4121c',
@@ -447,3 +447,19 @@ Object.assign(THEMES, {
     props: [{ k: 'bill', every: 14, spr: ['f_blumling_0', 'f_blumeye_0', 'f_blumspore_0', 'f_blumguard_0'], sc: 0.07, dist: -1.6, anim: function (s) { return s === 'f_blumling_0' ? animOf('f_blumling_', 4, 6) : null; } }],
     scen: function (B) { var T = B.T, q = T.at(0.6); B.bill(q.x + q.nx * 60, q.y - 10, q.z + q.nz * 60, 'f_mega_0', 0.7); gooPuddles(B, [0.25, 0.65], 2.3); }, kartStep: hazardStep })
 });
+
+/* a real throne, built from blocks and stood against the wall (it used to be a flat picture that floated over the road) */
+function throne3d(B, p, q, back, gold) {
+  var sd = 1, ix = -q.nx * sd, iz = -q.nz * sd, ry = Math.atan2(-ix, iz), c = Math.cos(ry), s = Math.sin(ry), RED = [1.15, 0.22, 0.2];
+  function at(dx, dz) { return [p.x + c * dx + ix * dz, p.z + s * dx + iz * dz]; }
+  function blk(dx, dy, dz, w, d, h, t, tt, col) { var a = at(dx, dz); B.box(a[0], p.y + dy, a[1], w, d, h, ry, t, tt, col); }
+  blk(0, -0.4, 0.4, 6, 4.4, 0.6, gold, gold);                 // the dais
+  blk(0, 0.2, 0.9, 4.4, 2.8, 0.5, gold, gold, RED);           // a step of red carpet
+  blk(0, 0.2, -0.9, 3.4, 0.7, 7.2, back, gold);              // the tall back
+  blk(0, 7.4, -0.9, 3.8, 0.9, 0.5, gold, gold);               // gold crest along the top
+  [-1.3, 0, 1.3].forEach(function (dx, k) { blk(dx, 7.9, -0.9, 0.5, 0.5, k === 1 ? 1.4 : 0.8, gold, gold); }); // its spikes
+  blk(0, 0.2, 0.1, 3, 2, 1.7, back, gold, RED);               // the seat, red cushion on top
+  blk(0, 1.9, -0.45, 2.6, 0.3, 4.6, gold, gold, RED);         // the back cushion
+  [-1.55, 1.55].forEach(function (dx) { blk(dx, 0.2, 0.15, 0.45, 2.3, 2.9, gold, gold); }); // arms
+  var l = at(0, 1.6); B.light(l[0], p.y + 5, l[1], 14, [0.9, 0.45, 0.25], '#ffc060');
+}

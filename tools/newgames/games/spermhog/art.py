@@ -315,3 +315,5 @@ FURN2 = {'valve': valve, 'sludge': sludge, 'ladder': ladder, 'fungus': fungus, '
 ART = {'hog_chal0': chalice(0), 'hog_chal1': chalice(1), 'hog_chal2': chalice(2), 'hog_chal3': chalice(3), 'hog_chal4': chalice(4), 'hog_chal5': chalice(5), 'hog_chal6': chalice(6), 'hog_lamp': lamp, 'hog_hydrant': hydrant, 'hog_bin': binb, 'hog_bench': bench, 'hog_bus': busstop, 'hog_cone': cone, 'hog_drop': drop, 'hog_shot': shot, 'hog_ishield': ishield, 'hog_ishoes': ishoes, 'hog_istar': istar}
 ART.update({'hog_' + k: f for k, f in FURN.items()})
 ART.update({'hog_' + k: f for k, f in FURN2.items()})
+import chibi
+ART.update({k: v for k, v in chibi.frames().items() if k.startswith('chb_u')})  # Cumhead from behind, for the special stage

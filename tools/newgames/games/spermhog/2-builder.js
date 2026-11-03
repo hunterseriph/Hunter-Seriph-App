@@ -9,7 +9,7 @@
    ===================================================================================================== */
 var HMIN = 34, HMAX = 98; // the rows an act's ground can rise and fall between (it starts at 66)
 function Builder(zone, seed) {
-  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 66, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [] };
+  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 66, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [], caves: [] };
   var r = seed || 1; b.rnd = function () { r = (r * 16807) % 2147483647; return (r - 1) / 2147483646; };
   function colAt(c) { while (b.cols.length <= c) { var a = []; for (var i = 0; i < ROWS; i++) a.push('.'); b.cols.push(a); b.top.push(null); } return b.cols[c]; }
   b.set = function (c, row, ch) { if (row < 0 || row >= ROWS || c < 0) return; colAt(c)[row] = ch; };
@@ -87,8 +87,13 @@ var SEC = {
     b.ground(9); if (foe) b.foe(-2, foe, 3 * steps); b.step(-steps * 3); b.ground(6); b.drops(-5, 4, 2); return b;
   },
   drop: function (b, rows) { b.ground(4); b.drops(1, 4, 2, 'arc'); b.step(rows); b.ground(2); b.drops(-2, 2, 2); b.ground(6); return b; },
-  tunnel: function (b, n, hz) { // a low ceiling with hazards inside
-    b.ground(2); b.ceil(0, n, 5, 4); b.ground(n);
+  tunnel: function (b, n, hz) { // a passage through a mound of the ground itself: dark inside, its own hazards, and a spring up to the route over the top
+    b.ground(5); b.thing(-3, 'spring', 0, { pow: 1 }); var c0 = b.col, H0 = b.h;
+    for (var i = 0; i < n; i++) { for (var y = H0 - 9; y <= H0 - 5; y++) b.set(c0 + i, y, '#'); for (var y2 = H0 - 4; y2 < H0; y2++) b.set(c0 + i, y2, 'k'); }
+    for (var dx = 2; dx < n - 2; dx += 3) b.ent('drop', c0 + dx, H0 - 11);
+    if (n > 14) b.ent('foe', c0 + Math.floor(n / 2), H0 - 9, { f: 'n' });
+    b.caves.push({ c0: c0, c1: c0 + n });
+    b.ground(n);
     var at = 4; (hz || []).forEach(function (k) { if (k === 'spike') b.spikes(-n + at, 2); else if (k === 'drops') b.drops(-n + at, 4, 2, null, 1); else if (k.length === 1) b.foe(-n + at, k); else b.thing(-n + at, k, 0); at += Math.max(5, Math.floor((n - 6) / Math.max(1, hz.length))); });
     b.ground(2); return b;
   },
@@ -103,7 +108,7 @@ var SEC = {
   },
   conveyor: function (b, n, dir, foe) { b.ground(n); b.surface(-n, n, dir < 0 ? '-' : '_'); if (foe) b.foe(-Math.floor(n / 2), foe); b.drops(-n + 2, Math.floor(n / 3), 2, null, 2); return b; },
   bumpers: function (b) { // Ejaculand: a pit full of bumpers to bounce across
-    b.ground(4); var c0 = b.col; b.gap(18);
+    b.ground(4); var c0 = b.col; for (var g = 0; g < 18; g++) { b.h += 5; b.ground(1); b.h -= 5; if (g % 9 === 4) b.ent('spring', b.col - 1, b.h + 5, { pow: 1 }); else b.set(b.col - 1, b.h + 4, '^'); } // a spiked floor with springs under the bumpers, not a drop to your death
     [[3, 4], [7, 2], [11, 5], [15, 3]].forEach(function (p) { b.ent('bumper', c0 + p[0], b.h - p[1]); b.ent('drop', c0 + p[0], b.h - p[1] - 2); });
     b.ledge(-18 + 8, 0, 3, '=');
     b.ground(5); return b;
@@ -212,6 +217,15 @@ var SEC = {
   plunge: function (b, drop) { // off the edge and a long fall to the ground far below, drops all the way down
     var r = Math.min(drop || 14, HMAX - b.h); if (r < 6) return SEC.springShaft(b, drop);
     b.ground(5); b.drops(-3, 3, 3, 'arc', 1); var c = b.col; for (var d = 1; d < r; d += 2.5) b.ent('drop', c + 1.5, b.h + d - 1); b.step(r); b.ground(10); return b;
+  },
+  /* ---------- a cave between districts: the hill closes over you, it goes dark, and you come out somewhere new.
+     The scenery behind changes while you are inside, so the next part of the level is revealed as you leave ---------- */
+  cave: function (b, id) {
+    b.ground(4); b.drops(-3, 3, 2); var c0 = b.col, H0 = b.h, n = 44;
+    for (var i = 0; i < n; i++) { var c = c0 + i, lip = i < 3 || i >= n - 3 ? 2 : 0; for (var y = H0 - 22; y <= H0 - 7 + lip; y++) b.set(c, y, '#'); for (var y2 = H0 - 6 + lip; y2 < H0; y2++) b.set(c, y2, 'k'); }
+    for (var dx = 4; dx < n - 4; dx += 2.2) b.ent('drop', c0 + dx, H0 - 2 - Math.sin(dx / n * Math.PI) * 2);
+    b.caves.push({ c0: c0, c1: c0 + n });
+    b.ground(Math.floor(n / 2)); SEC.district(b, id); b.ground(n - Math.floor(n / 2)); b.ground(4); return b;
   },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(40); return b; }, // no wall after the sign: the camera stops and he runs off
   arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(3); b.ceil(-3, 3, 0, 18, 'W'); return b; }

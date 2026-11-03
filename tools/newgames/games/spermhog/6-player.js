@@ -42,6 +42,8 @@ function stepPlayer(dt) {
     if (blocked(nx, p.y, p.gsp)) { p.gsp = 0; nx = p.x; }
     p.x = nx;
     var s2 = sensors(p.x, p.y, p.y - 15, p.y + 16, true);
+    if (s2.f === null && wallAt(p.x, p.y - 2)) s2 = sensors(p.x, p.y, p.y - 32, p.y + 16, true); // ran into a steep rise faster than the sensors reach: climb onto it
+    if (s2.f !== null && wallAt(p.x, s2.f - 8)) { p.x -= p.gsp * dt; p.gsp = 0; s2 = sensors(p.x, p.y, p.y - 15, p.y + 16, true); } // that "floor" is inside a wall: stop instead of going in
     if (s2.f !== null) p.y = s2.f;
     else { p.air = true; p.vx = p.gsp; p.vy = Math.min(0, slope * p.gsp * 0.9); p.jumps = 0; p.coyote = 0.08; }
     if (jp && p.state === 'normal') { p.air = true; p.vx = p.gsp; p.vy = -K.jumpv * (wet ? 0.8 : 1) + Math.min(0, slope * p.gsp * 0.5); p.jumps = 1; p.jumpHold = true; sfx.play('jump'); }
@@ -54,7 +56,7 @@ function stepPlayer(dt) {
     if (jp && p.jumps <= 1 && p.state === 'normal' && p.spring <= 0.2) { p.vy = -K.jump2 * (wet ? 0.85 : 1); p.jumps = 2; sfx.play('jump2'); FX.push({ k: 'ring', x: p.x, y: p.y, t: 0.3 }); }
     if (!inp.j && p.vy < -K.jcut && p.jumps >= 1 && p.spring <= 0) p.vy = -K.jcut;
     p.vy = Math.min(K.term * (wet ? 0.35 : 1), p.vy + K.grav * dt * (wet ? 0.4 : 1));
-    var ax = p.x + p.vx * dt;
+    var ax = p.x + p.vx * dt, pxA = p.x;
     if (blocked(ax, p.y, p.vx)) { p.vx = 0; ax = p.x; }
     p.x = ax;
     var py0 = p.y; p.y += p.vy * dt;
@@ -64,6 +66,11 @@ function stepPlayer(dt) {
       var s3 = sensors(p.x, p.y, py0 - 1, p.y + 1, true);
       if (s3.f !== null && s3.f >= py0 - 1) { p.y = s3.f; p.air = false; p.gsp = p.vx; p.jumps = 0; p.vy = 0; if (p.state === 'hurt') p.state = 'normal'; sfx.play('land', 0.5); }
     }
+    // never inside the ground: flying fast into a slope or a ledge's edge used to leave his feet in it, and he fell through.
+    // If his feet are in something solid, lift him onto its top (up to two tiles), or put him back where he was
+    if (p.air && (wallAt(p.x, p.y - 2) || wallAt(p.x - 5, p.y - 2) && wallAt(p.x + 5, p.y - 2))) { var su = sensors(p.x, p.y, p.y - 32, p.y + 1, true);
+      if (su.f !== null && su.f <= p.y + 1 && !wallAt(p.x, su.f - 8)) { p.y = su.f; if (p.vy >= 0) { p.air = false; p.gsp = p.vx; p.jumps = 0; p.vy = 0; if (p.state === 'hurt') p.state = 'normal'; } }
+      else { p.x = pxA; p.vx = 0; if (wallAt(p.x, p.y - 2)) { p.y = py0; p.vy = Math.min(0, p.vy); } } }
   }
   // spikes and falling out of the world
   var spk = T(Math.floor(p.x / TS), Math.floor((p.y - 4) / TS)); if (spk === '^') hurt(p.x, true);

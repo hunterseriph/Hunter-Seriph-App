@@ -195,7 +195,8 @@ function shopSc(f) { return Math.min(1.7, 150 / f[3], 112 / f[2]); }
 function distProps() {
   var out = [], busy = {}, lastK = null, last = -99, lastLamp = -99;
   var hard = {}; ENTS.forEach(function (e) { if (e.k !== 'drop') { var c = Math.floor(e.x / TS); busy[c] = busy[c - 1] = busy[c + 1] = 1; if (e.k !== 'foe' && e.k !== 'box') hard[c] = hard[c - 1] = hard[c + 1] = 1; } }); // shops may stand behind foes and boxes
-  function surfAt(c, r) { var ch = T(c, r); return (ch === '#' || ch === '_' || ch === '-') && (T(c, r - 1) === '.' || T(c, r - 1) === 'k') && isSolid(T(c, r + 1), c, r + 1); }
+  function inCave(c) { return (LV.caves || []).some(function (q) { return c >= q.c0 - 2 && c <= q.c1 + 2; }); }
+  function surfAt(c, r) { if (inCave(c)) return false; var ch = T(c, r); return (ch === '#' || ch === '_' || ch === '-') && (T(c, r - 1) === '.' || T(c, r - 1) === 'k') && isSolid(T(c, r + 1), c, r + 1); }
   function deep(c, r) { for (var y = r; y < Math.min(LV.h, r + 3); y++) if (T(c, y) !== '#') return false; return true; } // the street over the low road counts
   // shops first: in each district, the flat solid stretches long enough, spread out
   LV.dists.forEach(function (d, i) { var D = DIST[d.id], c1 = i + 1 < LV.dists.length ? LV.dists[i + 1].c : LV.w; if (!D || !D.shops.length) return;

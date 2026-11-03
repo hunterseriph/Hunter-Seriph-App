@@ -179,6 +179,8 @@ var ACTS = [
     seg = body; flush(); out.push.apply(out, end.length && end[0][0] === 'arena' ? [['run', 12]].concat(end) : end);
     a.plan = out; });
 })();
+/* every district after the first is reached through a cave (his ask: going through a cave to reveal the next area) */
+ACTS.forEach(function (a) { var first = true; a.plan = a.plan.map(function (p) { if (p[0] !== 'district') return p; if (first) { first = false; return p; } return ['cave', p[1]]; }); });
 /* HEIGHT (his ask: Sonic levels are vertical, not flat left to right): every district gets its own way up or down
    straight after it starts, and another before its checkpoint, each district a different shape */
 (function () {
@@ -186,10 +188,10 @@ var ACTS = [
               [['descent', 10], ['loop']], [['springShaft', 13], ['ridge']], [['ridge'], ['descent', 12]], [['ascent', 12], ['bigHill', 6]]];
   ACTS.forEach(function (a, ai) { var out = [], k = ai * 5, p = a.plan, arenaDist = false;
     for (var i = 0; i < p.length; i++) { var q = p[i];
-      if (q[0] === 'district') { arenaDist = p.slice(i + 1, i + 4).some(function (x) { return x[0] === 'arena'; }); }
+      if (q[0] === 'district' || q[0] === 'cave') { arenaDist = p.slice(i + 1, i + 4).some(function (x) { return x[0] === 'arena'; }); }
       if (q[0] === 'check' && !arenaDist && p[i - 1] && p[i - 1][0] !== 'lanes') out.push.apply(out, VERT[(k++) % VERT.length]);
       out.push(q);
-      if ((q[0] === 'district' && !(p[i + 1] && p[i + 1][0] === 'start')) || q[0] === 'start') { if (!arenaDist) out.push.apply(out, VERT[(k++) % VERT.length]); }
+      if (((q[0] === 'district' || q[0] === 'cave') && !(p[i + 1] && p[i + 1][0] === 'start')) || q[0] === 'start') { if (!arenaDist) out.push.apply(out, VERT[(k++) % VERT.length]); }
     }
     a.plan = out; });
 })();
@@ -207,5 +209,5 @@ function buildAct(a) {
   for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) t[y * W + x] = b.cols[x][y + y0];
   b.ents.forEach(function (e) { e.x = e.c * TS + TS / 2; e.y = (e.row - y0) * TS; }); // y: the top of that tile row (where a thing standing there has its feet)
   var dc = null; if (b.dists.length) { dc = new Array(W); var di = 0, cur = b.dists[0].id; for (var cx = 0; cx < W; cx++) { while (di < b.dists.length && b.dists[di].c <= cx) { cur = b.dists[di].id; di++; } dc[cx] = cur; } }
-  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
+  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, caves: b.caves, bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
 }

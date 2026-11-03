@@ -147,7 +147,7 @@ var THEMES = {
       var T = B.T; for (var i = 0; i < T.N; i += 9) B.beam(i, 8.4, 'beam', 1.2);
       for (var j = 4; j < T.N; j += 27) { var q = T.S[j]; B.light(q.x, q.y + 6, q.z, 18, [0.9, 0.6, 0.25], '#ffc060'); B.cyl(q.x, q.y + 6, q.z, 1.6, 0.4, 8, 'gold'); B.box(q.x, q.y + 6.4, q.z, 0.15, 0.15, 2, 0, 'black'); B.bill(q.x + 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8) % 2); } }); B.bill(q.x - 1.3, q.y + 6.4, q.z, 'ck_flame', 0.05, { anim: function (t) { return 'ck_flame' + (Math.floor(t * 8 + 1) % 2); } }); }
       B.along(32, function (q, sd, i) { var p = B.side(q, sd, -1.6); B.bill(p.x, p.y, p.z, i % 3 ? 'f_knight_0' : 'f_gargoyle_0', 0.07); });
-      var th = T.S[Math.round(T.N * 0.97)], tp = B.side(th, 1, -1.4); B.bill(tp.x, tp.y, tp.z, 'throne', 0.08);
+      var th = T.S[Math.round(T.N * 0.97)], tp = B.side(th, 1, -1.2); throne3d(B, tp, th, 'wall', 'trim');
     }
   }
 };
