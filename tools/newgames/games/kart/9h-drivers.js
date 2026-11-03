@@ -17,7 +17,7 @@ var HAIR = {
 };
 /* an ellipsoid that can keep only its front (o.front: keep where facing forward more than this) or back (o.back) */
 function ball2(m, fr, T, cf, cs, cu, rf, rs, ru, col, seg, o) {
-  o = o || {}; seg = seg || 8; var rings = o.rings || 6, c = rgb01(col), b0 = o.b0 || 0, b1 = o.b1 || Math.PI;
+  o = o || {}; var LD = typeof DLOD === 'number' ? DLOD : 1; seg = Math.max(5, Math.round(Math.min(10, seg || 8) * LD)); var rings = Math.max(2, Math.round(Math.min(5, o.rings || 6) * (LD < 1 ? 0.6 : 1))), c = rgb01(col), b0 = o.b0 || 0, b1 = o.b1 || Math.PI;
   function V(a, b) { var nf = Math.cos(a) * Math.sin(b), ns = Math.sin(a) * Math.sin(b), nu = Math.cos(b); return { p: fr.P(cf + nf * rf, cs + ns * rs, cu + nu * ru), n: fr.N(nf, ns, nu), nf: nf }; }
   for (var r = 0; r < rings; r++) for (var i = 0; i < seg; i++) {
     var ba = b0 + (b1 - b0) * r / rings, bb = b0 + (b1 - b0) * (r + 1) / rings, aa = i / seg * Math.PI * 2, ab = (i + 1) / seg * Math.PI * 2;
