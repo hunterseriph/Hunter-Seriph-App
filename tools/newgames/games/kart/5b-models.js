@@ -96,17 +96,17 @@ function kart3D(m, A, k, fr) {
 /* face: [sprite, first row, last row] cut from the front sprite; kind: drop / human / pig / cat / blob */
 var DRV3D = {
   cumhead: { kind: 'drop', face: ['ch_idle0', 9, 23], strip: 1, col: '#f0c070', body: '#241418', arm: '#241418', hand: '#f1e7d0', trim: '#c4121c', tip: 0.45, curl: 1 },
-  spermaid: { kind: 'drop', face: ['npc_spermaid', 8, 27], col: '#f1e7d0', body: '#3ab4c8', arm: '#f1e7d0', hand: '#f1e7d0', tip: 0.42 },
-  greebo: { kind: 'human', face: ['npc_greebo', 10, 24], skin: '#f0c8a0', hair: '#c8862a', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0', beard: '#c8862a' },
-  amy: { kind: 'human', face: ['npc_amy', 1, 18], skin: '#f0c8a0', hair: '#ff8ac0', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
-  tb: { kind: 'human', face: ['npc_tb', 9, 18], skin: '#e8c0a0', hair: '#4a2e18', hat: 'cowboy', hatc: '#5a3a20', body: '#5a3a20', arm: '#5a3a20', hand: '#e8c0a0' },
+  spermaid: { kind: 'drop', face: ['npc_spermaid', 6, 25], col: '#f1e7d0', body: '#3ab4c8', arm: '#f1e7d0', hand: '#f1e7d0', tip: 0.42 },
+  greebo: { kind: 'human', rect: [10, 13, 25, 25], face: ['npc_greebo', 6, 26], skin: '#f6f2e6', hair: '#c8862a', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0', beard: '#c8862a' },
+  amy: { kind: 'human', rect: [13, 8, 21, 17], face: ['npc_amy', 0, 20], skin: '#f0c8a0', hair: '#ff8ac0', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
+  tb: { kind: 'human', rect: [11, 8, 20, 18], face: ['npc_tb', 6, 20], skin: '#e8c0a0', hair: '#4a2e18', hat: 'cowboy', hatc: '#5a3a20', body: '#5a3a20', arm: '#5a3a20', hand: '#e8c0a0' },
   hom: { kind: 'blob', col: '#3fb43a', eye: '#f1e7d0', body: '#3fb43a', arm: '#3fb43a', hand: '#3fb43a' },
-  saba: { kind: 'human', face: ['npc_saba', 7, 19], skin: '#e0b090', hair: '#e8e0d8', hat: 'beanie', hatcols: ['#c4121c', '#ffe36a', '#3a9a2a'], body: '#3a8a2a', arm: '#3a8a2a', hand: '#e0b090', beard: '#e8e0d8' },
-  joff: { kind: 'human', face: ['npc_joff', 8, 18], skin: '#f0c8a0', hair: '#3a2418', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0' },
-  kaya: { kind: 'human', face: ['npc_kaya', 1, 18], skin: '#f0c8a0', hair: '#8a3a20', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
-  beebs: { kind: 'human', face: ['npc_beebs', 7, 18], skin: '#f0c8a0', hair: '#c8702a', hat: 'viking', hatc: '#a8a0a8', body: '#7a4a20', arm: '#7a4a20', hand: '#f0c8a0', beard: '#c8702a' },
-  ali: { kind: 'human', face: ['npc_ali', 1, 18], skin: '#d8a880', hair: '#2a1a10', body: '#f1e7d0', arm: '#f1e7d0', hand: '#d8a880' },
-  potbelly: { kind: 'pig', face: ['npc_potbelly', 1, 18], col: '#ff9ab4', body: '#c4121c', arm: '#ff9ab4', hand: '#ff9ab4' },
+  saba: { kind: 'human', rect: [9, 8, 21, 20], face: ['npc_saba', 4, 22], skin: '#e0b090', hair: '#e8e0d8', hat: 'beanie', hatcols: ['#c4121c', '#ffe36a', '#3a9a2a'], body: '#3a8a2a', arm: '#3a8a2a', hand: '#e0b090', beard: '#e8e0d8' },
+  joff: { kind: 'human', rect: [9, 7, 19, 17], face: ['npc_joff', 4, 20], skin: '#f0c8a0', hair: '#3a2418', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0' },
+  kaya: { kind: 'human', rect: [11, 8, 19, 16], face: ['npc_kaya', 0, 20], skin: '#f0c8a0', hair: '#8a3a20', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
+  beebs: { kind: 'human', rect: [8, 8, 20, 19], face: ['npc_beebs', 4, 22], skin: '#f0c8a0', hair: '#c8702a', hat: 'viking', hatc: '#a8a0a8', body: '#7a4a20', arm: '#7a4a20', hand: '#f0c8a0', beard: '#c8702a' },
+  ali: { kind: 'human', rect: [11, 8, 19, 17], face: ['npc_ali', 0, 20], skin: '#d8a880', hair: '#2a1a10', body: '#f1e7d0', arm: '#f1e7d0', hand: '#d8a880' },
+  potbelly: { kind: 'pig', rect: [6, 6, 22, 17], face: ['npc_potbelly', 1, 18], col: '#ff9ab4', body: '#c4121c', arm: '#ff9ab4', hand: '#ff9ab4' },
   blum: { kind: 'drop', ownface: 'blumf', col: '#c4121c', body: '#c4121c', arm: '#c4121c', hand: '#c4121c', tip: 0.5 },
   kingblum: { kind: 'drop', face: ['f_kingblum_0', 24, 72], col: '#c4121c', body: '#c4121c', arm: '#c4121c', hand: '#c4121c', tip: 0, crown: 1, cape: '#12040a' },
   sirj: { kind: 'cat', col: '#1a1418' }
@@ -124,16 +124,23 @@ function driverTex() {
     var tmp = document.createElement('canvas'); tmp.width = f[2]; tmp.height = f[3]; var tg = tmp.getContext('2d'); tg.drawImage(KIT.sheet, f[0], f[1], f[2], f[3], 0, 0, f[2], f[3]);
     var dd = tg.getImageData(0, 0, f[2], f[3]).data, x0 = 1e9, x1 = -1;
     for (var yy = d.face[1]; yy <= d.face[2]; yy++) for (var xx = 0; xx < f[2]; xx++) if (dd[(yy * f[2] + xx) * 4 + 3] > 0) { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); }
-    var cw = x1 - x0 + 1, ch = d.face[2] - d.face[1] + 1, sz = Math.max(cw, ch);
+    var r0 = d.face[1], r1 = d.face[2];
+    if (d.rect) { x0 = d.rect[0]; x1 = d.rect[2]; r0 = d.rect[1]; r1 = d.rect[3]; } // people: just the face, picked by hand, so their 3D hair does the hair
+    else if (d.skin && 0) { // people: cut just the face (the skin), so their 3D hair does the hair and the sprite's hair is not pasted on the front
+      var sk = hexrgb(d.skin), sx0 = 1e9, sx1 = -1, sy0 = 1e9, sy1 = -1;
+      for (var y2 = d.face[1]; y2 <= d.face[2]; y2++) { var n2 = 0; for (var x2 = 0; x2 < f[2]; x2++) { var o2 = (y2 * f[2] + x2) * 4; if (dd[o2 + 3] > 0 && Math.abs(dd[o2] - sk[0]) + Math.abs(dd[o2 + 1] - sk[1]) + Math.abs(dd[o2 + 2] - sk[2]) < 110) { n2++; sx0 = Math.min(sx0, x2); sx1 = Math.max(sx1, x2); } } if (n2 >= 2) { sy0 = Math.min(sy0, y2); sy1 = Math.max(sy1, y2); } }
+      if (sx1 > sx0 && sy1 > sy0) { x0 = sx0; x1 = sx1; r0 = Math.max(d.face[1], sy0 - 1); r1 = Math.min(d.face[2], sy1); }
+    }
+    var cw = x1 - x0 + 1, ch = r1 - r0 + 1, sz = Math.max(cw, ch);
     DRVT[id] = slot(function (g, x, y) {
       var c64 = document.createElement('canvas'); c64.width = c64.height = 64; var g64 = c64.getContext('2d'); g64.imageSmoothingEnabled = false;
-      g64.drawImage(tmp, x0 - (sz - cw) / 2, d.face[1] - (sz - ch) / 2, sz, sz, 0, 0, 64, 64);
+      g64.drawImage(tmp, x0 - (sz - cw) / 2, r0 - (sz - ch) / 2, sz, sz, 0, 0, 64, 64);
       // see-through pixels at the edges become the hair colour too
-      var im = g64.getImageData(0, 0, 64, 64), q = im.data, hc = hexrgb(d.hair || d.col);
+      var im = g64.getImageData(0, 0, 64, 64), q = im.data, hc = hexrgb(d.skin || d.hair || d.col);
       // the sprite's outline round its edge (dark, or Cumhead's red) would wrap round the head as stitched lines: eat it back to the fill
       var gone = new Uint8Array(4096), i, j; for (i = 0; i < 4096; i++) gone[i] = q[i * 4 + 3] < 200 ? 1 : 0;
       for (var pass = 0; pass < (d.strip ? 6 : 4); pass++) { var nx2 = gone.slice(); for (i = 0; i < 4096; i++) { if (gone[i]) continue; var px = i % 64, py = (i / 64) | 0, edge = (px > 0 && gone[i - 1]) || (px < 63 && gone[i + 1]) || (py > 0 && gone[i - 64]) || (py < 63 && gone[i + 64]); if (!edge) continue;
-        var r0 = q[i * 4], g0 = q[i * 4 + 1], b0 = q[i * 4 + 2], lum = r0 * 0.3 + g0 * 0.59 + b0 * 0.11; if (lum < (d.strip ? 175 : 80) || (r0 > 120 && g0 < 70 && b0 < 70 && d.kind === 'drop')) nx2[i] = 1; } gone = nx2; }
+        var rr0 = q[i * 4], g0 = q[i * 4 + 1], b0 = q[i * 4 + 2], lum = rr0 * 0.3 + g0 * 0.59 + b0 * 0.11; if (lum < (d.strip ? 175 : 80) || (rr0 > 120 && g0 < 70 && b0 < 70 && d.kind === 'drop')) nx2[i] = 1; } gone = nx2; }
       if (d.strip) for (i = 0; i < 4096; i++) { j = i * 4; if (q[j] > 140 && q[j + 1] < 90 && q[j + 2] < 90) gone[i] = 1; } // Cumhead's red curl line crosses his face in the sprite
       for (i = 0; i < 4096; i++) if (gone[i]) { j = i * 4; q[j] = hc[0]; q[j + 1] = hc[1]; q[j + 2] = hc[2]; q[j + 3] = 255; }
       g.putImageData(im, x, y);

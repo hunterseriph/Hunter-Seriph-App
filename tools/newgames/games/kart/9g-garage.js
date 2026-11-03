@@ -122,7 +122,7 @@ function drawShows() {
     R3.begin([0.035, 0.016, 0.02]);
     var vh = Math.min(want, R3.canvas.height), vw = Math.min(wantW, R3.canvas.width); if (cv.width !== vw || cv.height !== vh) { cv.width = vw; cv.height = vh; }
     gl.viewport(0, 0, vw, vh);
-    var t = (performance.now() - s.t0) / 1000, ang = t * 0.55 + 0.9, eye = [Math.cos(0.55) * 5.1, 2.1, Math.sin(0.55) * 5.1], at = [0, 0.7, 0];
+    var t = (performance.now() - s.t0) / 1000, ang = t * 0.55 + 0.9, eye = [Math.cos(0.55) * 5.2, 2.3, Math.sin(0.55) * 5.2], at = [0, 0.85, 0];
     R3.setCam(eye, at, 0.7, [0.035, 0.016, 0.02], [1e5, 2e5]); R3.setMatrix(R3.mul(R3.persp(0.72, vw / vh, 0.3, 100), R3.look(eye, at, [0, 1, 0])));
     var m = new R3.Mesh(), W = A.tile('white'), seg = 28;
     for (var i = 0; i < seg; i++) { // the turntable: a dark disc, a red ring, a brass rim
@@ -161,24 +161,30 @@ function garageCss() {
     '.ckgar .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;overflow:auto;min-height:0;align-content:start;touch-action:pan-y;padding:2px}',
     '.ckgar .opt{display:flex;align-items:center;gap:8px;padding:10px;text-align:left;min-height:46px}.ckgar .opt b{flex:1;font-size:15px}.ckgar .opt em{font-style:normal;font-family:var(--pixel);font-size:8px;color:var(--gold)}',
     '.ckgar .opt.eq{box-shadow:inset 0 0 0 2px #ffe36a}.ckgar .opt.eq em{color:var(--bone)}.ckgar .opt.poor em{color:#ff2630}',
+    '.ckgar .opt.drv{padding:6px 10px}.ckgar .opt .hsp-pic{flex:none;width:32px!important;height:32px!important}.ckgar .opt[aria-disabled] .hsp-pic{filter:brightness(0)}',
     '.ckgar .opt i{width:20px;height:20px;flex:none;box-shadow:0 0 0 1px #12040a,inset 0 0 0 1px rgba(255,255,255,.15)}',
     '@media (max-height:460px){.ckinfo .ckview{max-height:24vh}.ckinfo .top .hsp-pic{display:none!important}.ckinfo{gap:5px;padding:8px}}',
     '@media (max-width:640px),(orientation:portrait){.ckgar{grid-template-columns:1fr;grid-template-rows:minmax(150px,38%) minmax(0,1fr)}}'
   ].join('\n'); document.head.appendChild(st);
 }
 function garage(back, tab) {
-  garageCss(); tab = tab || 'body'; var g = GAR(), cu = custNow(), redo = function () { garage(back, tab); }, acts = {};
-  var tabs = Object.keys(PARTS).map(function (k) { return [k, PARTS[k].n]; }).concat([['c0', 'Main colour'], ['c1', 'Second'], ['c2', 'Trim']]);
+  garageCss(); tab = tab || 'drv'; var g = GAR(), cu = custNow(), redo = function () { garage(back, tab); }, acts = {};
+  var tabs = [['drv', 'Driver']].concat(Object.keys(PARTS).map(function (k) { return [k, PARTS[k].n]; })).concat([['c0', 'Main colour'], ['c1', 'Second'], ['c2', 'Trim']]);
   var rows = '';
-  if (PARTS[tab]) PARTS[tab].list.forEach(function (p, i) {
+  if (tab === 'drv') CHARS.forEach(function (c, i) { // who drives: every driver you have opened
+    var op = charOpen(c.id), eq = SV.ch === c.id;
+    rows += '<button type="button" class="ckbtn opt drv' + (eq ? ' eq' : '') + '" data-act="p' + i + '"' + (op ? '' : ' aria-disabled="true"') + (eq ? ' data-pad-default' : '') + '>' + (op ? pic(c.id, 32) : '<span class="hsp-pic" style="display:inline-block;width:32px;height:32px;background:#0a0506"></span>') + '<b>' + esc(op ? c.n : '???') + '</b><em>' + (eq ? 'ON' : op ? '' : 'LOCKED') + '</em></button>';
+    acts['p' + i] = function () { if (!op) { sfx.play('back'); return; } SV.ch = c.id; persist(); garageSync(); redo(); };
+  });
+  else if (PARTS[tab]) PARTS[tab].list.forEach(function (p, i) {
     var own = partOwned(tab, p[0], p[2]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < p[2];
     rows += '<button type="button" class="ckbtn opt' + (eq ? ' eq' : '') + (poor ? ' poor' : '') + '" data-act="p' + i + '"' + (eq ? ' data-pad-default' : '') + '><b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? 'OWNED' : p[2] + ' DROPS') + '</em></button>';
-    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < p[2]) { sfx.play('back'); return; } SV.drops -= p[2]; SV.spent = (SV.spent || 0) + p[2]; g.own[tab + ':' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); redo(); };
+    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < p[2]) { sfx.play('back'); return; } SV.drops -= p[2]; SV.spent = (SV.spent || 0) + p[2]; g.own[tab + ':' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); garageSync(); redo(); };
   });
   else PAINT_C.forEach(function (p, i) {
     var own = paintOwned(p[0]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < PAINTCOST;
     rows += '<button type="button" class="ckbtn opt' + (eq ? ' eq' : '') + (poor ? ' poor' : '') + '" data-act="p' + i + '"' + (eq ? ' data-pad-default' : '') + '>' + (p[0] ? '<i style="background:' + p[0] + '"></i>' : '<i style="background:linear-gradient(135deg,#c4121c 50%,#f1e7d0 50%)"></i>') + '<b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? '' : PAINTCOST) + '</em></button>';
-    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < PAINTCOST) { sfx.play('back'); return; } SV.drops -= PAINTCOST; SV.spent = (SV.spent || 0) + PAINTCOST; g.own['paint:' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); redo(); };
+    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < PAINTCOST) { sfx.play('back'); return; } SV.drops -= PAINTCOST; SV.spent = (SV.spent || 0) + PAINTCOST; g.own['paint:' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); garageSync(); redo(); };
   });
   tabs.forEach(function (t) { acts['t_' + t[0]] = function () { garage(back, t[0]); }; });
   screen({ title: 'Garage', sub: 'Looks only. Your kart wears them in every race.', back: back || titleMenu, redo: redo, foot: 'A / TAP BUY OR FIT  ·  B BACK',
@@ -192,3 +198,19 @@ titleMenu = (function (orig) { return function (page) {
   var b = document.createElement('button'); b.type = 'button'; b.className = 'ckbtn'; b.innerHTML = '<b>Garage</b>'; list.insertBefore(b, opt);
   b.addEventListener('click', function (e) { e.stopPropagation(); sfx.play('select'); garage(function () { titleMenu(); }); });
 }; })(titleMenu);
+
+/* ---------- online: your parts go with you, so everyone sees everyone's kart ---------- */
+function custClean(c) { // only real part ids and real colours get through
+  if (!c || typeof c !== 'object') return null; var o = {};
+  Object.keys(PARTS).forEach(function (k) { var v = c[k]; o[k] = PARTS[k].list.some(function (p) { return p[0] === v; }) ? v : PARTS[k].list[0][0]; });
+  ['c0', 'c1', 'c2'].forEach(function (k) { var v = c[k]; o[k] = PAINT_C.some(function (p) { return p[0] === v; }) ? v : ''; }); return o;
+}
+function garageSync() { if (typeof NET === 'undefined' || !NET.role) return; if (NET.role === 'client') { netSend({ t: 'ch', ch: SV.ch }); netSend({ t: 'cust', c: custNow() }); } else if (NET.players && NET.players[0]) { NET.players[0].ch = SV.ch; NET.players[0].cust = custNow(); if (typeof hostLobbyPush === 'function') hostLobbyPush(); } }
+netMe = (function (orig) { return function () { var p = orig.apply(this, arguments); p.cust = custNow(); return p; }; })(netMe);
+hostData = (function (orig) { return function (L, m) {
+  if (m && (m.t === 'join' || m.t === 'cust')) { var r = orig.apply(this, arguments); var pi = NET.players.findIndex(function (p) { return p.id === L.remote; }); if (pi >= 0) NET.players[pi].cust = custClean(m.t === 'join' ? m.p && m.p.cust : m.c); return r; }
+  return orig.apply(this, arguments); }; })(hostData);
+go = (function (orig) { return function (o) { if (typeof NET !== 'undefined' && NET.role === 'host' && NET.sig) o.custs = NET.players.map(function (p, i) { return i ? custClean(p.cust) : custNow(); }); return orig.apply(this, arguments); }; })(go);
+startRace = (function (orig) { return function (o) { var r = orig.apply(this, arguments);
+  if (RACE && o && o.custs && RACE.all) o.custs.forEach(function (c, i) { var k = RACE.all[i]; if (k && c) k.cust = custClean(c); });
+  if (RACE && RACE.me && !RACE.demo && o && o.mode !== 'demo') RACE.me.cust = custNow(); return r; }; })(startRace);
