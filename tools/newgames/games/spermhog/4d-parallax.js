@@ -44,7 +44,8 @@ function drawPar(g, kind, z, cx, vy, W, H) {
   var L = parLayer(kind, z); if (!L) return;
   var par = kind === 'far' ? 0.1 : kind === 'mid' ? 0.22 : 0.62, x = -(((cx * par) % 960) + 960) % 960, y = Math.round(vy * (1 + par)) + H - L.lh - (kind === 'far' ? 40 : kind === 'mid' ? 20 : -10);
   for (; x < W; x += 960) KIT.blit(L, x, y);
-  if (kind !== 'near' && y + L.lh < H) { g.fillStyle = kind === 'far' ? '#0a0406' : '#080304'; g.fillRect(0, y + L.lh - 1, W, H - y - L.lh + 1); }
+  // every layer carries on down to the bottom of the screen, so going up a hill never shows its bottom edge floating (he spotted the fence doing it)
+  if (y + L.lh < H) { g.fillStyle = kind === 'far' ? '#0a0406' : kind === 'mid' ? '#080304' : (NEARC[z] || ['#060203'])[0]; g.fillRect(0, y + L.lh - 1, W, H - y - L.lh + 1); }
 }
 /* the moving things in the air: each zone its own, keyed to the world so they never jump about */
 function drawAir(g, z, cx, cy, W, H) {
