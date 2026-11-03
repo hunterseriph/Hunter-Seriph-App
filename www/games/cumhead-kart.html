@@ -4616,7 +4616,6 @@ startRace = (function (orig) { return function (o) { var r = orig.apply(this, ar
    curled tip and little drop, a black shell bra, and her teal tail curling up behind the seat with the pink fin.
    ===================================================================================================== */
 var HAIR = {
-  greebo: { style: 'curly', beard: '#c8862a', apron: '#f6f0e4', collar: '#c4121c' },
   amy: { style: 'long', fringe: 1, bow: '#c4121c', collar: '#f1e7d0' },
   tb: { style: 'short', collar: '#3a2412' },
   saba: { style: 'short', beard: '#e8e0d8', collar: '#2a6a1a' },
@@ -4648,6 +4647,24 @@ function driver3D(m, k, fr) {
     ball(m, fr, W, -0.16, 0, 1.1, 0.32, 0.34, 0.29, '#1a1418', 9, { rings: 6, face: { T: DRVT.cat, fz: 0.3, w: 0.9, h: 0.9 } });
     [-1, 1].forEach(function (sd) { tube(m, fr, W, [-0.2, sd * 0.17, 1.3], [-0.24, sd * 0.24, 1.62], 0.11, 0.0, '#1a1418', 4); tube(m, fr, W, [-0.18, sd * 0.18, 1.33], [-0.21, sd * 0.23, 1.54], 0.05, 0.0, '#c86a8a', 4); });
     var sw = Math.sin(t * 3) * 0.2; tube(m, fr, W, [-0.66, 0, 0.62], [-0.9, sw, 0.9], 0.07, 0.06, '#1a1418', 5); tube(m, fr, W, [-0.9, sw, 0.9], [-0.96, sw * 1.6, 1.22], 0.06, 0.04, '#1a1418', 5); return;
+  }
+  if (id === 'greebo') { // Greebo is a cream pie: a round pie for a head (cream face, crimped golden crust round it), chef's hat, black apron with his red G, white gloves
+    var CR = '#d8943a', CR2 = '#b8742a', CM = '#f6ecd0';
+    torso(m, fr, W, '#1e1a1c', 0.27, 0.27, 0.42, 0.95, -0.44, -0.08);
+    [[-0.07, 0.03, 0.88, 0.9], [-0.07, -0.12, 0.12, 0.13], [-0.07, 0.03, 0.6, 0.62], [-0.07, 0.09, 0.62, 0.74], [-0.07, 0.0, 0.73, 0.75]].forEach(function (g, i) { // the G
+      if (i === 1) hull(m, fr, W, bx(g[0], g[0] + 0.02, -0.11, -0.08, 0.6, 0.9), '#c4121c'); else if (i === 3) hull(m, fr, W, bx(g[0], g[0] + 0.02, 0.07, 0.1, 0.6, 0.75), '#c4121c'); else hull(m, fr, W, bx(g[0], g[0] + 0.02, -0.11, i === 4 ? 0.1 : 0.1, g[2], g[3]), '#c4121c'); });
+    [-1, 1].forEach(function (sd) {
+      ball2(m, fr, W, -0.24, sd * 0.3, 0.88, 0.11, 0.11, 0.1, '#f6f0e4', 7, { rings: 4 });
+      tube(m, fr, W, [-0.24, sd * 0.3, 0.86], [0.06, sd * 0.27, 0.68], 0.085, 0.075, '#f6f0e4', 6); tube(m, fr, W, [0.06, sd * 0.27, 0.68], [0.38, sd * 0.15 + sd * wob, 0.63 + sd * wob], 0.075, 0.07, '#f6f0e4', 6);
+      ball2(m, fr, W, 0.42, sd * 0.15 + sd * wob, 0.63 + sd * wob, 0.09, 0.09, 0.09, '#ffffff', 6, { rings: 3 }); // big white gloves
+    });
+    var pf = -0.16, pu = 1.38, PR = 0.44;
+    tube(m, fr, W, [pf - 0.16, 0, pu], [pf + 0.02, 0, pu], PR * 0.92, PR, CR2, 14, { cap0: CR2 });          // the pie dish, round the back
+    ball(m, fr, W, pf + 0.04, 0, pu, 0.12, PR * 0.9, PR * 0.9, CM, 12, { rings: 8, face: face ? { T: face, fz: 0.0, w: 0.98, h: 0.98 } : null }); // the cream face
+    for (var cr = 0; cr < 16; cr++) { var ca = cr / 16 * Math.PI * 2; ball2(m, fr, W, pf + 0.02, Math.cos(ca) * PR * 0.98, pu + Math.sin(ca) * PR * 0.98, 0.08, 0.085, 0.085, cr % 2 ? CR : CR2, 6, { rings: 3 }); } // crimped crust
+    var hc = d.hatc || '#f6f0e4'; tube(m, fr, W, [pf - 0.06, 0, pu + 0.36], [pf - 0.06, 0, pu + 0.56], 0.3, 0.33, hc, 10);
+    [0, 1, 2, 3, 4].forEach(function (j) { var a = j / 5 * Math.PI * 2; ball2(m, fr, W, pf - 0.06 + Math.cos(a) * 0.2, Math.sin(a) * 0.2, pu + 0.72, 0.21, 0.21, 0.19, hc, 7, { rings: 4 }); }); ball2(m, fr, W, pf - 0.06, 0, pu + 0.84, 0.25, 0.25, 0.17, hc, 8, { rings: 4 });
+    return;
   }
   var mermaid = id === 'spermaid', drop = d.kind === 'drop' || d.kind === 'blob';
   // ---- body ----
