@@ -1587,10 +1587,11 @@ var MIDP = { // between the far distance and the district's own scenery
   brain: function (g, r) { for (var x = 40; x < 960; x += 150) BK.gear(g, '#16101e', x, 150 + r() * 60, 30 + r() * 20); for (var c = 0; c < 960; c += 60) { g.fillStyle = '#16101e'; g.fillRect(c, 0, 3, 90 + r() * 80); } }
 };
 var NEARC = { city: ['#060203', '#3a1014'], sewer: ['#040806', '#2a3a2c'], park: ['#06020a', '#5a1020'], bone: ['#080604', '#3a3226'], factory: ['#060302', '#4a2010'], brain: ['#050308', '#2a1a40'] };
+var NEARBAND = { city: 46, sewer: 40, park: 30, bone: 20, factory: 40, brain: 0 };
 var NEARP = { // close up, in front of the district's scenery and behind the level: dark shapes with a lit edge
   city: function (g, r, c) { for (var x = 0; x < 960; x += 4) { g.fillStyle = c[0]; g.fillRect(x, 92, 2, 48); } g.fillRect(0, 90, 960, 4); for (var p = 30; p < 960; p += 150) { g.fillRect(p, 40, 6, 100); g.fillRect(p - 6, 32, 18, 10); g.fillStyle = c[1]; g.fillRect(p, 40, 1, 100); g.fillStyle = c[0]; } g.fillStyle = c[1]; g.fillRect(0, 90, 960, 1); },
   sewer: function (g, r, c) { for (var i = 0; i < 960; i += 320) { g.fillStyle = c[0]; g.fillRect(i, 60, 160, 26); g.fillRect(i + 140, 60, 26, 80); g.fillStyle = c[1]; g.fillRect(i, 60, 160, 2); g.fillRect(i + 140, 60, 2, 80); g.fillStyle = c[0]; g.beginPath(); g.arc(i + 70, 73, 16, 0, 6.3); g.fill(); g.fillStyle = c[1]; g.fillRect(i + 62, 72, 16, 2); } },
-  park: function (g, r, c) { g.fillStyle = c[0]; g.fillRect(0, 100, 960, 40); for (var x = 0; x < 960; x += 24) { g.fillRect(x, 70, 4, 70); g.beginPath(); g.moveTo(x - 2, 72); g.lineTo(x + 2, 62); g.lineTo(x + 6, 72); g.fill(); } g.fillStyle = c[1]; g.fillRect(0, 100, 960, 1); for (var b = 0; b < 960; b += 16) { g.fillStyle = b % 32 ? '#ff2630' : '#ffe36a'; g.fillRect(b, 40 + Math.sin(b / 50) * 8, 2, 2); } },
+  park: function (g, r, c) { g.fillStyle = c[0]; g.fillRect(0, 100, 960, 4); for (var x = 0; x < 960; x += 24) { g.fillRect(x, 70, 4, 70); g.beginPath(); g.moveTo(x - 2, 72); g.lineTo(x + 2, 62); g.lineTo(x + 6, 72); g.fill(); } g.fillStyle = c[1]; g.fillRect(0, 100, 960, 1); for (var b = 0; b < 960; b += 16) { g.fillStyle = b % 32 ? '#ff2630' : '#ffe36a'; g.fillRect(b, 40 + Math.sin(b / 50) * 8, 2, 2); } },
   bone: function (g, r, c) { for (var x = 0; x < 960; x += 200) { g.strokeStyle = c[0]; g.lineWidth = 12; g.beginPath(); g.arc(x + 100, 150, 90, Math.PI, 0); g.stroke(); g.strokeStyle = c[1]; g.lineWidth = 1; g.beginPath(); g.arc(x + 100, 150, 96, Math.PI * 1.1, Math.PI * 1.6); g.stroke(); } },
   factory: function (g, r, c) { g.fillStyle = c[0]; g.fillRect(0, 40, 960, 10); for (var x = 0; x < 960; x += 40) { g.beginPath(); g.moveTo(x, 50); g.lineTo(x + 20, 80); g.lineTo(x + 40, 50); g.lineTo(x + 36, 50); g.lineTo(x + 20, 72); g.lineTo(x + 4, 50); g.fill(); } for (var p = 80; p < 960; p += 240) g.fillRect(p, 50, 12, 90); g.fillStyle = c[1]; g.fillRect(0, 40, 960, 1); },
   brain: function (g, r, c) { for (var k = 0; k < 6; k++) { g.strokeStyle = k % 2 ? c[1] : c[0]; g.lineWidth = k % 2 ? 1 : 4; g.beginPath(); var y0 = 20 + k * 8; g.moveTo(0, y0); for (var x = 0; x <= 960; x += 40) g.quadraticCurveTo(x + 20, y0 + 40 + r() * 20, x + 40, y0); g.stroke(); } }
@@ -1605,7 +1606,11 @@ function drawPar(g, kind, z, cx, vy, W, H) {
   var par = kind === 'far' ? 0.1 : kind === 'mid' ? 0.22 : 0.62, x = -(((cx * par) % 960) + 960) % 960, y = Math.round(vy * (1 + par)) + H - L.lh - (kind === 'far' ? 40 : kind === 'mid' ? 20 : -10);
   for (; x < W; x += 960) KIT.blit(L, x, y);
   // every layer carries on down to the bottom of the screen, so going up a hill never shows its bottom edge floating (he spotted the fence doing it)
-  if (y + L.lh < H) { g.fillStyle = kind === 'far' ? '#0a0406' : kind === 'mid' ? '#080304' : (NEARC[z] || ['#060203'])[0]; g.fillRect(0, y + L.lh - 1, W, H - y - L.lh + 1); }
+  if (y + L.lh >= H) return;
+  if (kind !== 'near') { g.fillStyle = kind === 'far' ? '#0a0406' : '#080304'; g.fillRect(0, y + L.lh - 1, W, H - y - L.lh + 1); return; }
+  // the near layer (railings, pipes, posts) carries on downwards as itself: its bottom band repeats to the bottom of the screen, never a solid block
+  var band = NEARBAND[z] === undefined ? 24 : NEARBAND[z], sc = L.height / L.lh, x2; if (!band) return;
+  for (var yy = y + L.lh; yy < H; yy += band) for (x2 = -(((cx * par) % 960) + 960) % 960; x2 < W; x2 += 960) g.drawImage(L, 0, (L.lh - band) * sc, L.width, band * sc, Math.round(x2), Math.round(yy), 960, band);
 }
 /* the moving things in the air: each zone its own, keyed to the world so they never jump about */
 function drawAir(g, z, cx, cy, W, H) {
