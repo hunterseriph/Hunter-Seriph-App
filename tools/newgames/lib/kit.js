@@ -138,10 +138,12 @@ var KIT = (function () {
       CTL.push({ el: dp, kind: 'dpad', map: { l: 'left', r: 'right', u: 'up', d: 'down' }, four: o.four });
     }
     if (o.sticks) { var sp = document.createElement('div'); sp.className = 'stickzone'; sp.innerHTML = '<span>MOVE</span><span>AIM</span>'; pad.appendChild(sp); }
-    var acts = document.createElement('div'); acts.id = 'acts'; if ((o.btns || []).length === 1) acts.className = 'one'; pad.appendChild(acts);
+    // a button with side: 'l' sits on its own at the left edge (Meatnado: fire on the left thumb, jump on the right)
+    var lacts = null; if ((o.btns || []).some(function (b) { return b.side === 'l'; })) { lacts = document.createElement('div'); lacts.className = 'lacts'; pad.appendChild(lacts); }
+    var acts = document.createElement('div'); acts.id = 'acts'; if ((o.btns || []).filter(function (b) { return b.side !== 'l'; }).length === 1) acts.className = 'one'; pad.appendChild(acts);
     (o.btns || []).forEach(function (b) {
       var el = document.createElement('button'); el.className = 'pbtn ' + (b.cls || ''); el.innerHTML = '<span>' + b.label + '</span>' + (b.sub ? '<small>' + b.sub + '</small>' : ''); el.setAttribute('data-pad-skip', ''); el.tabIndex = -1;
-      el.addEventListener('contextmenu', function (e) { e.preventDefault(); }); acts.appendChild(el); CTL.push({ el: el, kind: 'btn', k: b.k });
+      el.addEventListener('contextmenu', function (e) { e.preventDefault(); }); (b.side === 'l' && lacts ? lacts : acts).appendChild(el); CTL.push({ el: el, kind: 'btn', k: b.k });
     });
   }
   function ctlAt(x, y) { for (var i = 0; i < CTL.length; i++) { var r = CTL[i].el.getBoundingClientRect(), m = CTL[i].kind === 'btn' ? 8 : 4; if (!r.width) continue; if (x >= r.left - m && x <= r.right + m && y >= r.top - m && y <= r.bottom + m) return CTL[i]; } return null; }
