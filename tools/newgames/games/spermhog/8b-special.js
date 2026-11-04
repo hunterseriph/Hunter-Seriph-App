@@ -1,78 +1,104 @@
 /* =====================================================================================================
-   SPECIAL STAGES and the seven CUM CHALICES (his ask: like Blue Sphere in Sonic 3 & Knuckles, and easier than the
-   old turning maze). A giant gold ring hides on a side route in every act; jump in with 50 drops. Cumhead runs on
-   his own across a round checkered world: LEFT and RIGHT turn at the next square, A jumps. Run over every cream
-   sphere and the chalice is yours; touch a red one and you are out (spheres you have taken stay safe, easier than Blue Sphere).
-   Bumpers knock you back the way you came, gold springs throw you over a few squares, drops are just drops.
-   It speeds up a little every 30 seconds. All seven and Cumhead can go Super (50 drops, in the air, hold up + B).
+   SPECIAL STAGES and the seven CUM CHALICES: Sonic 3 & Knuckles' Blue Sphere, done properly (his ask). A gothic
+   gateway hides on a side route in every act (not a ring: he said it looked too much like Sonic); walk in with 50
+   drops. Cumhead runs on his own across a gently curved checkered world. LEFT / RIGHT = one turn per press, made at
+   the next square; A jumps two squares. Every cream sphere you run over turns RED behind you, so you cannot cross
+   your own path; run round the edge of a group of cream spheres and the whole group and its loop turn into drops.
+   Clear every cream sphere for the chalice; touch red and you are out. Bumpers knock you backwards (UP to run
+   forwards again), gold springs throw you over four squares. It speeds up every 30 seconds.
    ===================================================================================================== */
 var SS = null, SSN = 32;
 var CHALNAME = ['THE BLOOD CHALICE', 'THE GOLD CHALICE', 'THE CREAM CHALICE', 'THE VOID CHALICE', 'THE TEAR CHALICE', 'THE ROT CHALICE', 'THE BLACK CHALICE'];
 var CHALCOL = ['#ff2630', '#ffc840', '#f1e0b0', '#a040e0', '#3a8ac8', '#30c060', '#6a6070'];
 var SSDIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-/* a world: rings of cream spheres to clear, a few red ones in the way, drops between. Gets busier stage by stage, gently */
-function ssWorld(lv, seed) {
-  var s = seed * 7919 + 17; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
-  var m = []; for (var y = 0; y < SSN; y++) { m.push([]); for (var x = 0; x < SSN; x++) m[y].push('.'); }
-  function at(x, y) { return m[((y % SSN) + SSN) % SSN][((x % SSN) + SSN) % SSN]; }
-  function put(x, y, ch) { m[((y % SSN) + SSN) % SSN][((x % SSN) + SSN) % SSN] = ch; }
-  var shapes = 3 + Math.floor(lv * 0.7), spots = [];
-  for (var k = 0; k < shapes; k++) {
-    var cx = 4 + Math.floor(r() * (SSN - 8)), cy = 4 + Math.floor(r() * (SSN - 8)), sz = 2 + Math.floor(r() * 2) + (lv > 3 ? 1 : 0), kind = Math.floor(r() * 3);
-    if (Math.abs(cx - 16) < 4 && cy > 20) continue; // keep the start clear
-    if (kind === 0) for (var i = -sz; i <= sz; i++) { put(cx + i, cy - sz, 'b'); put(cx + i, cy + sz, 'b'); put(cx - sz, cy + i, 'b'); put(cx + sz, cy + i, 'b'); } // a square ring
-    else if (kind === 1) for (var j = -sz - 1; j <= sz + 1; j++) put(cx + j, cy, 'b'); // a row
-    else for (var q = -sz; q <= sz; q++) put(cx, cy + q, 'b'); // a column
-    if (lv > 0 && r() < 0.35 + lv * 0.08) put(cx, cy, 'r'); // a red one in the middle of some shapes
-    spots.push([cx, cy]);
-  }
-  for (var n = 0; n < 2 + lv; n++) { var rx = Math.floor(r() * SSN), ry = Math.floor(r() * SSN); if (at(rx, ry) === '.' && !(Math.abs(rx - 16) < 3 && ry > 22)) put(rx, ry, 'r'); }
-  for (var u = 0; u < 3; u++) { var ux = Math.floor(r() * SSN), uy = Math.floor(r() * SSN); if (at(ux, uy) === '.') put(ux, uy, u === 2 ? 'y' : 'u'); }
-  for (var d = 0; d < 26; d++) { var dx = Math.floor(r() * SSN), dy = Math.floor(r() * SSN); if (at(dx, dy) === '.') put(dx, dy, 'o'); }
-  var nb = 0; m.forEach(function (row) { row.forEach(function (ch) { if (ch === 'b') nb++; }); });
+/* SEVEN WORLDS, drawn by hand like Sonic 3's (his ask: lots more red spheres that lead you on a path, not things all
+   over the place). Each is one quarter, 16 x 16, mirrored left-right and top-bottom into the 32 x 32 world, so it is
+   symmetric like the real ones. Cumhead starts in the middle facing up.
+   b cream sphere, r red sphere, y gold spring, u bumper, o drop, . floor */
+var SSQ = [
+  [ // THE BLOOD CHALICE: four red rooms with a door, a block of spheres in each, a long row across the middle
+    '................', '.rrrrrrrr.......', '.r......r.......', '.r.bbbb.r.......', '.r.bbbb.r...o...', '.r.bbbb.r..ooo..', '.r.bbbb.r...o...', '.r......r.......',
+    '.rrr..rrr.......', '................', '................', '....bbbbbbbbb...', '...............b', '...............b', '...............b', '................'],
+  [ // THE GOLD CHALICE: corridors walled with red, run them end to end
+    '................', 'rrrrrrrrrrrr....', 'bbbbbbbbbbbb....', 'rrrrrrrrrrrr....', '................', '...rrrrrrrrr....', '...bbbbbbbbb.o..', '...rrrrrrrrr.o..',
+    '................', '..r..r..r..r....', '..b..b..b..b....', '..b..b..b..b....', '..r..r..r..r...b', '...............b', '...............b', '................'],
+  [ // THE CREAM CHALICE: ladders: up and down the columns, the red rungs stop you cutting across
+    '................', '..b.b.b.b.b.....', '..b.b.b.b.b.....', '..brbrbrbrb.....', '..b.b.b.b.b.....', '..b.b.b.b.b.....', '..brbrbrbrb.....', '..b.b.b.b.b..o..',
+    '..b.b.b.b.b.ooo.', '..............o.', '................', 'rrrr....rrrr....', 'bbbb....bbbb....', 'rrrr....rrrr...b', '...............b', '................'],
+  [ // THE VOID CHALICE: a ring round a red heart, rows between red teeth, a box with red corners
+    '................', '.bbbbbb.........', '.b....b.........', '.b.rr.b.........', '.b.rr.b...r.r.r.', '.b....b....b.b.b', '.bbbbbb...r.r.r.', '...........b.b.b',
+    '..........r.r.r.', '................', '..rbbbbbr.......', '..b.....b.......', '..b.....b.......', '..b.....b......b', '..rbbbbbr......b', '................'],
+  [ // THE TEAR CHALICE: a red keep: in through the gate, round the ring of spheres, a bumper in the middle
+    'rrrrrrrrrrrrr...', 'r...........r...', 'r.bbbbbbbbb.r...', 'r.b.......b.r...', 'r.b.rrrrr.b.r...', 'r.b.r...r.b.r...', 'r.b.r.u.r.b.r...', 'r.b.r...r.b.r...',
+    'r.b.rr.rr.b.r...', 'r.b.......b.r...', 'r.bbbbbbbbb.r..o', 'r...........r..o', 'rrrrrr.rrrrrr...', '...............b', '...............b', '................'],
+  [ // THE ROT CHALICE: red lanes, bumpers in the open, four solid blocks to run round
+    '................', '..u..........u..', '................', '...rrrrrrrrr....', '....bbbbbbb.....', '...rrrrrrrrr....', '................', '..bbbb...bbbb...',
+    '..bbbb...bbbb...', '..bbbb...bbbb...', '..bbbb...bbbb...', '................', '.r.r.r.r.r.r.r..', '...............b', '.y.............b', '................'],
+  [ // THE BLACK CHALICE: everything: a red fence, a ring, a red room with a block inside, springs over the walls
+    'r.r.r.r.r.r.r.r.', '................', 'r.bbbbbbbbbbb.r.', '..b.........b...', 'r.b.rrrrrrr.b.r.', '..b.r.....r.b...', 'r.b.r.bbb.r.b.r.', '..b.r.bbb.r.b...',
+    'r.b.r.bbb.r.b.r.', '..b.r.....r.b...', 'r.b.rrr.rrr.b.r.', '..bbbbb.bbbbb...', 'r.............r.', '..y............b', 'r..............b', '................']];
+function ssWorld(lv) {
+  var q = SSQ[Math.min(6, lv)], m = [], nb = 0;
+  for (var y = 0; y < SSN; y++) { m.push([]); var qy = y < 16 ? y : 31 - y; for (var x = 0; x < SSN; x++) { var qx = x < 16 ? x : 31 - x, ch = q[qy].charAt(qx) || '.'; m[y].push(ch); if (ch === 'b') nb++; } }
   return { m: m, nb: nb };
 }
 function ssAt(S, x, y) { return S.m[((y % SSN) + SSN) % SSN][((x % SSN) + SSN) % SSN]; }
 function ssPut(S, x, y, ch) { S.m[((y % SSN) + SSN) % SSN][((x % SSN) + SSN) % SSN] = ch; }
 function startSpecial(portal) {
   var lv = 0; while (SV.chal[lv] && lv < 6) lv++;
-  var w = ssWorld(lv, 31 + lv * 13 + (G.ai * 7));
-  SS = { lv: lv, m: w.m, left: w.nb, total: w.nb, x: 16, y: 28, d: 0, cam: 0, spd: 2.6 + lv * 0.15, t: 0, drops: 0, state: 'in', st: 0, want: 0, jump: 0, back: 0, portal: portal, anim: 0, tx: 16, ty: 27 };
+  var w = ssWorld(lv);
+  SS = { lv: lv, m: w.m, left: w.nb, total: w.nb, x: 16, y: 16, p: 0, d: 0, rev: false, cam: 0, spd: 3.0 + lv * 0.12, t: 0, drops: 0, state: 'in', st: 0, turn: 0, air: 0, airT: 0, portal: portal, anim: 0, flash: 0 };
   G.ssBack = { mode: G.mode }; G.mode = 'special'; G.super = 0; music.play('hogspecial'); sfx.play('warp'); KIT.closeMenu && KIT.menuOpen() && KIT.closeMenu();
 }
+/* a sphere just turned red behind him: if it closed a loop round a group of cream spheres, the group and its loop
+   become drops (Blue Sphere's rings). The loop has to be his own trail, all the way round, corners too */
+function ssLoop(S, px, py) {
+  var got = 0, seen = {};
+  for (var k = 0; k < 8; k++) {
+    var sx = px + [0, 1, 1, 1, 0, -1, -1, -1][k], sy = py + [-1, -1, 0, 1, 1, 1, 0, -1][k];
+    if (ssAt(S, sx, sy) !== 'b' || seen[((sy + SSN) % SSN) * SSN + ((sx + SSN) % SSN)]) continue;
+    var reg = [], st = [[sx, sy]], mark = {}, leak = false;
+    while (st.length && !leak) { var c = st.pop(), cx = ((c[0] % SSN) + SSN) % SSN, cy = ((c[1] % SSN) + SSN) % SSN, key = cy * SSN + cx; if (mark[key]) continue; mark[key] = 1; seen[key] = 1; reg.push([cx, cy]); if (reg.length > 120) { leak = true; break; }
+      for (var j = 0; j < 8; j++) { var nx = cx + [0, 1, 1, 1, 0, -1, -1, -1][j], ny = cy + [-1, -1, 0, 1, 1, 1, 0, -1][j], ch = ssAt(S, nx, ny); if (ch === 'b') { if (j % 2 === 0) st.push([nx, ny]); else if (!mark[(((ny % SSN) + SSN) % SSN) * SSN + (((nx % SSN) + SSN) % SSN)]) st.push([nx, ny]); } else if (ch !== 'R') leak = true; } }
+    if (leak) continue;
+    reg.forEach(function (c) { for (var j = 0; j < 8; j++) { var nx = c[0] + [0, 1, 1, 1, 0, -1, -1, -1][j], ny = c[1] + [-1, -1, 0, 1, 1, 1, 0, -1][j]; if (ssAt(S, nx, ny) === 'R') ssPut(S, nx, ny, 'o'); } ssPut(S, c[0], c[1], 'o'); });
+    S.left -= reg.length; got += reg.length;
+  }
+  if (got) { S.flash = 0.5; sfx.play('chalice'); G.score += got * 50; }
+}
+function ssArrive(S) {
+  var ch = ssAt(S, S.x, S.y);
+  if (ch === 'r' || ch === 'R') { S.state = 'fail'; S.st = 0; sfx.play('die'); music.play('hogclear'); return; }
+  if (ch === 'b') { ssPut(S, S.x, S.y, 'R'); S.left--; sfx.play('drop'); G.score += 10; ssLoop(S, S.x, S.y); if (S.left <= 0) { S.state = 'win'; S.st = 0; SV.chal[S.lv] = 1; persist(); sfx.play('chalice'); music.stop(0.2); } return; }
+  if (ch === 'o') { ssPut(S, S.x, S.y, '.'); S.drops++; G.drops++; sfx.play('drop'); if (S.drops === 50) { G.lives++; sfx.play('life'); } return; }
+  if (ch === 'u') { S.rev = !S.rev; sfx.play('bump'); return; } // knocked back: he runs backwards until you press up
+  if (ch === 'y') { S.air = S.airT = 4.2 / S.spd; sfx.play('spring'); }
+}
 function stepSpecial(dt) {
-  var S = SS; S.t += dt; S.st += dt;
+  var S = SS; S.t += dt; S.st += dt; if (S.flash > 0) S.flash -= dt;
   if (S.state === 'in') { if (S.st > 1.4) { S.state = 'play'; S.st = 0; } return; }
   if (S.state === 'win' || S.state === 'fail') { if (S.st > 4 || (S.st > 1.2 && (KIT.pressed('a') || KIT.pressed('start')))) endSpecial(); return; }
-  var inp = pIn(); if (inp.dir) S.want = inp.dir; // remembered until the next square
-  if (KIT.pressed('a') && S.jump <= 0) { S.jump = 0.62; sfx.play('jump'); }
-  if (S.jump > 0) S.jump -= dt;
-  S.cam += (S.d * Math.PI / 2 - S.cam) * Math.min(1, dt * 14); // the world turns smoothly round him
-  var spd = Math.min(4.4, S.spd + Math.floor(S.t / 30) * 0.3); S.anim += Math.abs(spd) * dt;
-  var D = SSDIR[S.d], before = S.d === 0 || S.d === 2 ? S.y : S.x;
-  S.x += D[0] * spd * dt; S.y += D[1] * spd * dt;
-  var after = S.d === 0 || S.d === 2 ? S.y : S.x;
-  if (Math.floor(before) !== Math.floor(after) || Math.floor(before + 0.5) !== Math.floor(after + 0.5)) { // crossed the middle of a square
-    var cx = Math.round(S.x), cy = Math.round(S.y);
-    if (Math.abs((S.d === 0 || S.d === 2 ? S.y : S.x) - (S.d === 0 || S.d === 2 ? cy : cx)) < 0.25 && S.last !== cx + ',' + cy) { S.last = cx + ',' + cy;
-      if (S.jump <= 0) {
-        var ch = ssAt(S, cx, cy);
-        if (ch === 'b') { ssPut(S, cx, cy, 'c'); S.left--; sfx.play('drop'); G.score += 10; if (S.left <= 0) { S.state = 'win'; S.st = 0; SV.chal[S.lv] = 1; persist(); sfx.play('chalice'); music.stop(0.2); return; } }
-        else if (ch === 'r') { S.state = 'fail'; S.st = 0; sfx.play('die'); music.play('hogclear'); return; }
-        else if (ch === 'o') { ssPut(S, cx, cy, '.'); S.drops++; G.drops++; sfx.play('drop'); if (S.drops === 50) { G.lives++; sfx.play('life'); } }
-        else if (ch === 'u') { S.d = (S.d + 2) % 4; S.want = 0; sfx.play('bump'); }
-        else if (ch === 'y') { S.jump = 1.25; sfx.play('spring'); }
-      }
-      if (S.want) { S.x = cx; S.y = cy; S.d = (S.d + (S.want > 0 ? 1 : 3)) % 4; if (S.want > 0 && S.cam < S.d * Math.PI / 2 - Math.PI) S.cam += Math.PI * 2; if (S.want < 0 && S.cam > S.d * Math.PI / 2 + Math.PI) S.cam -= Math.PI * 2; S.want = 0; }
-    }
+  // ONE turn per press, made at the next square (holding a direction no longer turns him again and again)
+  if (KIT.pressed('left')) S.turn = -1; else if (KIT.pressed('right')) S.turn = 1;
+  if (S.rev && KIT.pressed('up')) { var D0 = SSDIR[S.d]; S.x -= D0[0]; S.y -= D0[1]; S.p = 1 - S.p; S.rev = false; }
+  if (KIT.pressed('a') && S.air <= 0) { S.air = S.airT = 1.9 / S.spd; sfx.play('jump'); }
+  var spd = S.spd = Math.min(4.8, 3.0 + S.lv * 0.12 + Math.floor(S.t / 30) * 0.3); S.anim += spd * dt;
+  S.p += spd * dt;
+  if (S.air > 0) { S.air -= dt; if (S.air <= 0) S.air = 0; }
+  while (S.p >= 1 && S.state === 'play') {
+    S.p -= 1; var D = SSDIR[S.d], m = S.rev ? -1 : 1; S.x = (S.x + D[0] * m + SSN) % SSN; S.y = (S.y + D[1] * m + SSN) % SSN;
+    if (S.air <= 0) ssArrive(S);
+    if (S.turn && S.air <= 0 && S.state === 'play') { S.d = (S.d + (S.turn > 0 ? 1 : 3)) % 4; S.turn = 0; }
   }
-  if (S.cam > Math.PI * 4) S.cam -= Math.PI * 2; if (S.cam < -Math.PI * 2) S.cam += Math.PI * 2;
-  if (Math.abs(S.cam - S.d * Math.PI / 2) > Math.PI) S.cam += S.cam < S.d * Math.PI / 2 ? Math.PI * 2 : -Math.PI * 2;
+  // the view turns smoothly to his new way
+  var want = S.d * Math.PI / 2; while (want - S.cam > Math.PI) want -= Math.PI * 2; while (S.cam - want > Math.PI) want += Math.PI * 2;
+  S.cam += (want - S.cam) * Math.min(1, dt * 12);
 }
 /* drawing: a real little planet, like Blue Sphere. Every square, sphere and drop goes through ONE projection (ssP), so
    nothing slides about: the squares are laid on a ball of radius SSR, the camera sits behind and above Cumhead, and the
    far side and the sides both curve away over the horizon */
-var SSR = 7, SSCH = 6, SSCD = 3, SSPITCH = 0.65; // a small planet, the camera up high behind him looking down, like Blue Sphere
+var SSR = 20, SSCH = 4.8, SSCD = 3.6, SSPITCH = 0.55; // a gentle planet (he said the first was far too curved), camera up behind him, horizon a third of the way down like Blue Sphere
+var SSK0 = (function () { var vy0 = -SSCH, vz0 = SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH); return { k: (vy0 * cp + vz0 * sp) / (vz0 * cp - vy0 * sp), s: 1 / (vz0 * cp - vy0 * sp) }; })(); // where his feet land on screen
 function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up: height above the ground (squares)
   var al = l / SSR, af = f / SSR, ca = Math.cos(al), r = SSR + (up || 0);
   var nx = Math.sin(al), ny = ca * Math.cos(af), nz = ca * Math.sin(af); // the ground's normal there (also its direction from the centre)
@@ -80,7 +106,8 @@ function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up:
   var vx = x, vy0 = y - SSCH, vz0 = z + SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH), vz = vz0 * cp - vy0 * sp, vy = vy0 * cp + vz0 * sp; // from the camera, tipped down
   if (vz < 0.25) return null;
   var bx = nx * SSR, by = ny * SSR - SSR, bz = nz * SSR; if (nx * (-bx) + ny * (SSCH - by) + nz * (-SSCD - bz) < 0) return null; // round the back of the ball: hidden
-  var F = Math.min(H * 1.2, W * 0.75); return { x: W / 2 + vx * F / vz, y: H * 0.72 - 0.59 * F - vy * F / vz, s: F / vz, d: vz };
+  var F = Math.min(W * 0.1, H * 0.17) / SSK0.s; // a square under his feet is a tenth of the screen wide
+  return { x: W / 2 + vx * F / vz, y: H * 0.8 - (vy / vz - SSK0.k) * F, s: F / vz, d: vz };
 }
 function drawSpecial() {
   var g = KIT.ctx, W = KIT.W, H = KIT.H, S = SS, cam = S.cam, ca = Math.cos(cam), sa = Math.sin(cam);
@@ -90,14 +117,14 @@ function drawSpecial() {
   R('#360c12', 0, H * 0.56, W, H * 0.44);
   for (var i = 0; i < 46; i++) { var sx = ((i * 97 - cam * 160) % W + W) % W; R(i % 5 ? '#6a3a40' : '#f1e7d0', sx, (i * 37) % (H * 0.42), 1, 1); }
   var mx = ((W * 0.75 - cam * 160) % (W + 120) + W + 120) % (W + 120) - 60; g.fillStyle = '#c4121c'; g.beginPath(); g.arc(mx, H * 0.16, 16, 0, 6.3); g.fill(); g.fillStyle = '#ff2630'; g.beginPath(); g.arc(mx - 3, H * 0.16 - 3, 11, 0, 6.3); g.fill();
-  var px = S.x, py = S.y, tiles = [], things = [];
+  var DD = SSDIR[S.d], mv = S.rev ? -1 : 1, px = S.x + DD[0] * mv * S.p, py = S.y + DD[1] * mv * S.p, tiles = [], things = [];
   function local(wx, wy) { var dx = wx - px, dy = wy - py; return { l: dx * ca + dy * sa, f: dx * sa - dy * ca }; } // f: ahead along the way he faces
-  var N = 11;
+  var N = 16;
   for (var ty = Math.floor(py) - N; ty <= Math.floor(py) + N + 1; ty++) for (var tx = Math.floor(px) - N; tx <= Math.floor(px) + N + 1; tx++) {
-    var cc = local(tx, ty); if (cc.f < -3.2 || Math.abs(cc.l) > SSR * 1.45 || cc.f > SSR * 1.5) continue;
+    var cc = local(tx, ty); if (cc.f < -3.2 || Math.abs(cc.l) > 13 || cc.f > 17) continue;
     var cs = [local(tx - 0.5, ty - 0.5), local(tx + 0.5, ty - 0.5), local(tx + 0.5, ty + 0.5), local(tx - 0.5, ty + 0.5)].map(function (c) { return ssP(c.l, c.f, 0, W, H); });
     if (cs.some(function (p) { return !p; })) continue;
-    var d = cs[0].d + cs[1].d + cs[2].d + cs[3].d, far = Math.min(1, Math.max(0, (Math.hypot(cc.l, cc.f) - 2) / (SSR * 1.4)));
+    var d = cs[0].d + cs[1].d + cs[2].d + cs[3].d, far = Math.min(1, Math.max(0, (Math.hypot(cc.l, cc.f) - 3) / 13));
     tiles.push({ d: d, q: cs, dark: ((tx + ty) % 2 + 2) % 2, far: far });
     var ch = ssAt(S, tx, ty); if (ch !== '.') things.push({ ch: ch, l: cc.l, f: cc.f, far: far });
   }
@@ -108,7 +135,6 @@ function drawSpecial() {
   things.forEach(function (o) { o.p = ssP(o.l, o.f, 0, W, H); }); things = things.filter(function (o) { return o.p; }).sort(function (a, b) { return b.p.d - a.p.d; });
   function drawThing(o) {
     var ch = o.ch, base = o.p;
-    if (ch === 'c') { g.fillStyle = '#12040a'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.28, base.s * 0.1, 0, 0, 6.3); g.fill(); return; } // where a sphere was
     var rr = ch === 'o' ? 0.17 : 0.34, P = ssP(o.l, o.f, rr, W, H); if (!P) return; var r = Math.max(1.5, rr * P.s);
     g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, r * 0.95, r * 0.32, 0, 0, 6.3); g.fill(); // its shadow on the square
     if (ch === 'o') { // a cream drop, point up
@@ -116,7 +142,7 @@ function drawSpecial() {
       g.fillStyle = '#f1e7d0'; g.beginPath(); g.arc(P.x, P.y, r, 0, 6.3); g.fill(); g.beginPath(); g.moveTo(P.x - r * 0.6, P.y - r * 0.5); g.lineTo(P.x, P.y - r * 1.85); g.lineTo(P.x + r * 0.6, P.y - r * 0.5); g.fill();
       g.fillStyle = '#ffffff'; g.beginPath(); g.arc(P.x - r * 0.35, P.y - r * 0.3, r * 0.28, 0, 6.3); g.fill(); return;
     }
-    var col = ch === 'b' ? ['#fffbe8', '#f1e0b0', '#c8a868', '#7a5a30'] : ch === 'r' ? ['#ffb0b8', '#ff2630', '#c4121c', '#5a0810'] : ch === 'u' ? ['#ffffff', '#d8d0e0', '#a098b0', '#4a4058'] : ['#fff6b0', '#ffe36a', '#d8a030', '#7a5010'];
+    var col = ch === 'R' ? ['#ffb0b8', '#ff2630', '#c4121c', '#5a0810'] : ch === 'b' ? ['#fffbe8', '#f1e0b0', '#c8a868', '#7a5a30'] : ch === 'r' ? ['#ffb0b8', '#ff2630', '#c4121c', '#5a0810'] : ch === 'u' ? ['#ffffff', '#d8d0e0', '#a098b0', '#4a4058'] : ['#fff6b0', '#ffe36a', '#d8a030', '#7a5010'];
     g.fillStyle = '#12040a'; g.beginPath(); g.arc(P.x, P.y, r + Math.max(1, r * 0.08), 0, 6.3); g.fill();
     // hard Mega Drive shading: dark rim, body, lit side, highlight
     g.fillStyle = col[3]; g.beginPath(); g.arc(P.x, P.y, r, 0, 6.3); g.fill();
@@ -126,12 +152,11 @@ function drawSpecial() {
     if (ch === 'u') { g.fillStyle = '#c4121c'; g.beginPath(); g.arc(P.x, P.y, r * 0.42, 0, 6.3); g.fill(); g.fillStyle = '#ffffff'; g.fillRect(P.x - r * 0.24, P.y - r * 0.06, r * 0.48, r * 0.12); } // a bumper
     if (ch === 'y') { g.strokeStyle = '#7a5010'; g.lineWidth = Math.max(1, r * 0.12); for (var sp = -1; sp <= 1; sp++) { g.beginPath(); g.moveTo(P.x - r * 0.6, P.y + sp * r * 0.3); g.lineTo(P.x + r * 0.6, P.y + sp * r * 0.3); g.stroke(); } } // a spring
   }
-  var me = ssP(0, 0, 0, W, H); things.forEach(function (o) { if (o.p.d >= me.d) drawThing(o); }); // behind him first
+  things.forEach(drawThing); // every sphere, far ones first; Cumhead goes on top of them all, like Sonic does
   // Cumhead from behind, hopping when he jumps
-  var jy = S.jump > 0 ? Math.sin(Math.min(1, (0.62 - Math.min(0.62, S.jump)) / 0.62) * Math.PI) * 26 : 0; if (S.jump > 0.62) jy = 30 + Math.sin(S.t * 10) * 2;
-  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (0.95 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3, base.s * 0.1, 0, 0, 6.3); g.fill();
+  var jy = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 46 : 26) : 0;
+  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (1.35 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3, base.s * 0.1, 0, 0, 6.3); g.fill();
   if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jy * base.s / 60, { sc: csc });
-  things.forEach(function (o) { if (o.p.d < me.d) drawThing(o); }); // then whatever is between him and the camera
   // the count, Blue Sphere style: spheres left and drops
   KIT.panel(8, 6, 150, 26); g.fillStyle = '#e8d8a8'; g.beginPath(); g.arc(24, 19, 6, 0, 6.3); g.fill(); text(String(S.left), 36, 13, { size: 8 }); spr('hog_drop', 92, 28, {}); text(String(S.drops), 104, 13, { size: 8, col: '#ffe36a' });
   for (var c7 = 0; c7 < 7; c7++) spr('hog_chal' + c7, 20 + c7 * 20, 56, { alpha: SV.chal[c7] ? 1 : 0.22 });

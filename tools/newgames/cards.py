@@ -26,3 +26,6 @@ _ch = B['ch_idle0'].crop((0, 0, 30, 34))
 _chk = Image.new('RGBA', (59, 4)); [_chk.putpixel((x, y), (241, 231, 208, 255) if (x // 2 + y // 2) % 2 else (18, 4, 10, 255)) for x in range(59) for y in range(4)]
 _moon = Image.new('RGBA', (16, 16)); ImageDraw.Draw(_moon).ellipse((1, 1, 14, 14), fill=(196, 18, 28, 255))
 card(((10, 4, 8, 255), [(0, 44, (30, 8, 14)), (45, 68, (42, 38, 48))]), [(_moon, 44, 20, 1, False), (_chk, 29, 52, 1, False), (_ch, 26, 54, 0.62, False), (ck['ck_kart'], 28, 66, 1.0, False), (ck['ck_flame0'], 4, 63, 0.9, False)], 'ck')
+sk = ex('skeet')
+_moon2 = Image.new('RGBA', (20, 20)); ImageDraw.Draw(_moon2).ellipse((1, 1, 18, 18), fill=(196, 18, 28, 255)); ImageDraw.Draw(_moon2).ellipse((3, 3, 14, 14), fill=(255, 38, 48, 255))
+card(((8, 3, 6, 255), [(0, 40, (22, 6, 12)), (41, 46, (58, 20, 26)), (47, 68, (46, 16, 20))]), [(_moon2, 44, 22, 1, False), (sk['wb_gloop_teen_hurt'], 46, 62, 1.0, True), (sk['sk_cu_jab'], 22, 64, 0.62, False), (sk['fx_spark2'], 39, 56, 1, False)], 'sk')

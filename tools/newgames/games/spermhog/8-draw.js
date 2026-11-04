@@ -107,11 +107,7 @@ function drawEnt(g, e, cx, cy, W, H) {
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
   if (k === 'spring') { var sq = e.t > 0 ? 0.5 : 1; R('#12040a', x - 11, y - 6, 22, 6); R('#8a828a', x - 10, y - 5, 20, 4); R(e.pow === 2 ? '#ff2630' : '#ffe36a', x - 11, y - 6 - 10 * sq, 22, 5); R('#12040a', x - 11, y - 6 - 10 * sq, 22, 1); for (var i = 0; i < 3; i++) R('#d0c8d0', x - 6 + i * 5, y - 6 - 10 * sq + 5, 2, 10 * sq - 5); return; }
   if (k === 'dash') { for (var j = 0; j < 3; j++) { var a = (Math.floor(G.t * 8) + j) % 3 === 0; R(a ? '#ffe36a' : '#c4121c', x - 12 + j * 8, y - 3, 6, 3); } return; }
-  if (k === 'portal') { if (e.used || chalCount() >= 7) return; var op = G.drops >= 50, rr = 18 + Math.sin(G.t * 3) * 1.5, cyp = y - 26; g.save(); g.globalAlpha = op ? 1 : 0.45;
-    g.lineWidth = 7; g.strokeStyle = '#12040a'; g.beginPath(); g.ellipse(x, cyp, rr * Math.abs(Math.cos(G.t * 1.6)) + 3, rr + 3, 0, 0, 6.3); g.stroke();
-    g.lineWidth = 5; g.strokeStyle = '#ffc840'; g.beginPath(); g.ellipse(x, cyp, rr * Math.abs(Math.cos(G.t * 1.6)) + 3, rr + 3, 0, 0, 6.3); g.stroke();
-    g.lineWidth = 1.5; g.strokeStyle = '#fff09a'; g.beginPath(); g.ellipse(x - 1, cyp - 1, rr * Math.abs(Math.cos(G.t * 1.6)) + 2, rr + 2, 0, 3.4, 5.6); g.stroke(); g.restore();
-    if (op && Math.random() < 0.3) FX.push({ k: 'spark', x: e.x + (Math.random() - 0.5) * 40, y: e.y - 26 + (Math.random() - 0.5) * 40, t: 0.25 }); else if (!op) text('50', x, cyp - 4, { size: 8, align: 'center', col: '#ffe36a', outline: true }); return; }
+  if (k === 'portal') { if (e.used || chalCount() >= 7) return; drawGateway(g, x, y, G.drops >= 50); return; }
   if (k === 'bumper') { var r = e.t > 0 ? 13 : 11; g.fillStyle = '#12040a'; g.beginPath(); g.arc(x, y - 10, r + 1, 0, 6.3); g.fill(); g.fillStyle = '#c4121c'; g.beginPath(); g.arc(x, y - 10, r, 0, 6.3); g.fill(); g.fillStyle = '#ffe36a'; g.beginPath(); g.arc(x, y - 10, r * 0.55, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(x - 4, y - 16, 3, 3); return; }
   if (k === 'box') { if (!e.alive) { R('#3a343c', x - 10, y - 4, 20, 4); return; } R('#12040a', x - 12, y - 24, 24, 24); R('#8a828a', x - 11, y - 23, 22, 22); R('#3a343c', x - 8, y - 20, 16, 14); spr(ITEMICON[e.item || 'drops'], x, y - 13, { anchor: 'c' }); R('#fffbe8', x - 11, y - 23, 22, 1); return; }
   if (k === 'check') { R('#12040a', x - 2, y - 44, 4, 44); R('#a6968f', x - 1, y - 43, 2, 43); g.fillStyle = e.on ? (Math.floor(G.t * 4) % 2 ? '#ff2630' : '#ffe36a') : '#4a1a1c'; g.beginPath(); g.arc(x, y - 46, 5, 0, 6.3); g.fill(); return; }
@@ -224,3 +220,26 @@ function goldFrame(n) {
   g.putImageData(im, 0, 0); return (GOLD[n] = c);
 }
 
+
+/* the way into a special stage: a gothic gateway (two stone pillars, a pointed arch) with a red moon swirl inside and
+   the next Cum Chalice hanging in it (he said the gold ring looked too much like Sonic). Grey and still under 50 drops */
+function drawGateway(g, x, y, open) {
+  var t = G.t, top = y - 78, w = 30;
+  function arch(ex, path) { g.beginPath(); g.moveTo(x - w - ex, y); g.lineTo(x - w - ex, top + 34); g.quadraticCurveTo(x - w - ex, top - ex, x, top - 10 - ex * 1.4); g.quadraticCurveTo(x + w + ex, top - ex, x + w + ex, top + 34); g.lineTo(x + w + ex, y); g.closePath(); }
+  // the stone frame: outline, stone, then the opening
+  g.fillStyle = '#12040a'; arch(9); g.fill(); g.fillStyle = '#3a2a30'; arch(7); g.fill(); g.fillStyle = '#5a464c'; arch(5); g.fill();
+  for (var b = 0; b < 7; b++) { g.fillStyle = '#2a1c22'; g.fillRect(x - w - 7, y - 12 - b * 13, 7, 1); g.fillRect(x + w, y - 6 - b * 13, 7, 1); } // stone joints
+  g.save(); arch(0); g.clip();
+  if (open) { // a red moon swirl: hard rings turning inwards
+    var cols = ['#12040a', '#3a0810', '#7a0a14', '#c4121c', '#ff2630', '#7a0a14'], cyv = top + 40;
+    for (var r = 70; r > 0; r -= 7) { var k = Math.floor(r / 7 + t * 6) % cols.length; g.fillStyle = cols[k]; g.beginPath(); g.ellipse(x + Math.sin(t * 2 + r * 0.08) * 3, cyv, r * 0.7, r, 0, 0, 6.3); g.fill(); }
+  } else { g.fillStyle = '#1a1016'; g.fillRect(x - w, top - 20, w * 2, y - top + 20); g.fillStyle = '#2a2026'; for (var s2 = 0; s2 < 5; s2++) g.fillRect(x - w, top + 6 + s2 * 14, w * 2, 2); }
+  g.restore();
+  // pillar caps and a little skull keystone
+  g.fillStyle = '#12040a'; g.fillRect(x - w - 11, y - 4, 15, 4); g.fillRect(x + w - 4, y - 4, 15, 4); g.fillStyle = '#7a6870'; g.fillRect(x - w - 10, y - 3, 13, 2); g.fillRect(x + w - 3, y - 3, 13, 2);
+  g.fillStyle = '#12040a'; g.fillRect(x - 5, top - 16, 10, 9); g.fillStyle = '#f1e7d0'; g.fillRect(x - 4, top - 15, 8, 6); g.fillStyle = '#12040a'; g.fillRect(x - 3, top - 13, 2, 2); g.fillRect(x + 1, top - 13, 2, 2);
+  var nx = 0; while (SV.chal[nx] && nx < 6) nx++;
+  spr('hog_chal' + nx, x, top + 46 + Math.sin(t * 3) * 3, { sc: 1.6, alpha: open ? 1 : 0.35 });
+  if (open && Math.random() < 0.3) FX.push({ k: 'spark', x: x + (Math.random() - 0.5) * 50, y: top + 40 + (Math.random() - 0.5) * 60, t: 0.25 });
+  if (!open) text('50', x, top + 66, { size: 8, align: 'center', col: '#ffe36a', outline: true });
+}

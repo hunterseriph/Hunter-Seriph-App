@@ -19,18 +19,18 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 #mute .wv{stroke:var(--bone)}#mute .xx{stroke:var(--hot);display:none}#mute.off .wv{display:none}#mute.off .xx{display:block}
 #pad{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
 #pad>*{pointer-events:auto}
-.dpad{position:relative;width:132px;height:132px;border-radius:50%;background:rgba(14,7,8,0.55);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);touch-action:none}
+.dpad{position:relative;width:150px;height:150px;border-radius:50%;background:rgba(14,7,8,0.55);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.5);touch-action:none}
 .dpad i{position:absolute;width:0;height:0;border:11px solid transparent}
-.dpad .u{left:55px;top:10px;border-bottom:15px solid var(--ash);border-top:0}.dpad .d{left:55px;bottom:10px;border-top:15px solid var(--ash);border-bottom:0}
-.dpad .l{top:55px;left:10px;border-right:15px solid var(--ash);border-left:0}.dpad .r{top:55px;right:10px;border-left:15px solid var(--ash);border-right:0}
+.dpad .u{left:calc(50% - 11px);top:10px;border-bottom:15px solid var(--ash);border-top:0}.dpad .d{left:calc(50% - 11px);bottom:10px;border-top:15px solid var(--ash);border-bottom:0}
+.dpad .l{top:calc(50% - 11px);left:10px;border-right:15px solid var(--ash);border-left:0}.dpad .r{top:calc(50% - 11px);right:10px;border-left:15px solid var(--ash);border-right:0}
 .dpad[data-dir*="u"] .u{border-bottom-color:var(--bone)}.dpad[data-dir*="d"] .d{border-top-color:var(--bone)}.dpad[data-dir*="l"] .l{border-right-color:var(--bone)}.dpad[data-dir*="r"] .r{border-left-color:var(--bone)}
 .dpad b{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;background:rgba(196,18,28,0.35)}
-#acts{margin-left:auto;display:grid;grid-template-columns:repeat(2,64px);gap:10px;align-items:end;direction:rtl}
-#acts.one{grid-template-columns:auto}.lacts{display:flex;align-items:flex-end}.pbtn.huge{width:92px;height:92px}.pbtn.huge span{font-size:22px}
-.pbtn{appearance:none;border:0;margin:0;width:64px;height:64px;border-radius:50%;color:var(--bone);font-family:var(--pixel);font-size:12px;background:rgba(14,7,8,0.66);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;direction:ltr;gap:3px}
-.pbtn small{font-size:7px;color:var(--ash);letter-spacing:0.04em}
-.pbtn.on{background:rgba(196,18,28,0.85)}.pbtn.big{width:76px;height:76px}.pbtn.gold{box-shadow:inset 0 0 0 2px rgba(255,227,106,0.7)}
-@media (orientation:portrait){#pad{position:relative;flex:none;padding-top:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));background:#0a0506;box-shadow:inset 0 2px 0 #2a0c0e}.dpad{width:150px;height:150px}.dpad .u{left:64px}.dpad .d{left:64px}.dpad .l{top:64px}.dpad .r{top:64px}.pbtn{width:72px;height:72px}#acts{grid-template-columns:repeat(2,72px)}.pbtn.huge{width:100px;height:100px}}
+#acts{margin-left:auto;display:grid;grid-template-columns:repeat(2,auto);gap:12px;align-items:end;direction:rtl}
+#acts.one{grid-template-columns:auto}.lacts{display:flex;align-items:flex-end}.pbtn.huge{width:104px;height:104px}.pbtn.huge span{font-size:22px}
+.pbtn{appearance:none;border:0;margin:0;width:78px;height:78px;border-radius:50%;color:var(--bone);font-family:var(--pixel);font-size:12px;background:rgba(14,7,8,0.66);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;direction:ltr;gap:3px}
+.pbtn small{font-size:8px;color:var(--ash);letter-spacing:0.04em}
+.pbtn.on{background:rgba(196,18,28,0.85)}.pbtn.big{width:90px;height:90px}.pbtn.gold{box-shadow:inset 0 0 0 2px rgba(255,227,106,0.7)}
+@media (orientation:portrait){#pad{position:relative;flex:none;padding-top:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));background:#0a0506;box-shadow:inset 0 2px 0 #2a0c0e}.dpad{width:168px;height:168px}.pbtn{width:86px;height:86px}.pbtn.big{width:98px;height:98px}#acts{grid-template-columns:repeat(2,auto)}.pbtn.huge{width:112px;height:112px}}
 .hs-notouch #pad{display:none!important}
 /* twin sticks: the whole bottom area is for thumbs */
 #pad.sticks{justify-content:center;pointer-events:none}

@@ -7,7 +7,7 @@ function T(cx, cy) { if (!LV || cx < 0 || cx >= LV.w) return 'W'; if (cy < 0) re
 function isSolid(ch, cx, cy) { if (ch === 'D') return !TRAPOPEN[cx + ',' + cy]; return ch === '#' || ch === 'W' || ch === '_' || ch === '-' || ch === 'Q'; }
 function wallAt(px, py) { var cx = Math.floor(px / TS), cy = Math.floor(py / TS), ch = T(cx, cy); if (isSolid(ch, cx, cy)) return true; if (surf(ch, 0) >= 0) return py - cy * TS >= Math.max(surf(ch, 0), surf(ch, 15)) + 1; return false; }
 /* the highest floor between y0 and y1 at x (tiles, slopes, platforms you can stand on); oneway: whether thin platforms count */
-var STANDS = { box: 1, spring: 1, check: 1, dash: 1, vent: 1, jet: 1, goal: 1, zap: 1, ramp: 1, trap: 0 };
+var STANDS = { box: 1, spring: 1, check: 1, dash: 1, vent: 1, jet: 1, goal: 1, zap: 1, ramp: 1, portal: 1, trap: 0 };
 function floorAt(px, y0, y1, oneway) {
   var cx = Math.floor(px / TS), lx = Math.floor(px - cx * TS), best = null;
   for (var cy = Math.floor(y0 / TS); cy <= Math.floor(y1 / TS); cy++) {
@@ -38,7 +38,7 @@ function loadAct(ai) {
     if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
       var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
     // things that stand on the ground really stand on it: boxes, springs, checkpoints, pads, vents, jets, the sign
-    if (STANDS[e.k]) { var sy = floorAt(o.x, o.y - TS * 1.5, o.y + TS * 4, true); if (sy !== null) o.y = o.y0 = sy; }
+    if (STANDS[e.k]) { var sy = floorAt(o.x, o.y - TS * 1.5, o.y + TS * (e.k === 'portal' ? 40 : 4), true); if (sy !== null) o.y = o.y0 = sy; } // the gateway is stone: it always finds the ground
     if (e.k === 'awning') { var gy = null; for (var sh = 0; sh < 6 && gy === null; sh++) { gy = floorAt(o.x + sh * TS, o.y + 6, o.y + TS * 12, true); if (gy !== null) o.x = o.x0 = o.x + sh * TS; } o.gy = gy === null ? o.y + 48 : gy; } // its poles go all the way down
     ENTS.push(o);
   });

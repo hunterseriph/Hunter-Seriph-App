@@ -338,7 +338,23 @@ def make_ck():
     return compose([('CUMHEAD', 112, dict(arc=10, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine']))), ('KART', 176, dict(stripes=True))], st, mascot=head, mascot_y=0.7, extras=ex)
 
 
-LOGOS = {'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
+def make_sk():
+    """SKEET FIGHTER: Street Fighter's sharp gold over blood red, an impact burst behind Cumhead mid punch"""
+    st = dict(face=[(0, '#fff6c0'), (0.45, '#ffc840'), (1, '#b8600a')], side=['#7a0a12', '#2a0408'], shine='#ffffff', outline=12, rim=3, depth=16, shear=-0.18)
+    cu = pixel_sprite('ch_attack', 5)
+    W, H = cu.width + 220, cu.height + 60
+    m = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(m); cx, cy = W // 2 + 70, H // 2 - 10
+    for r, col in ((150, INK), (138, hexc('#ff2630')), (112, hexc('#ffe36a')), (78, hexc('#ffffff'))):
+        pts = []
+        for i in range(24):
+            a = i * math.pi / 12; rr = r if i % 2 == 0 else r * 0.48
+            pts.append((cx + math.cos(a) * rr * 1.15, cy + math.sin(a) * rr * 0.8))
+        d.polygon(pts, fill=col)
+    m.alpha_composite(cu, ((W - cu.width) // 2 - 50, H - cu.height))
+    return compose([('SKEET', 150, dict(arc=6, stretch=1.25)), ('FIGHTER', 118, dict(stripes=True, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=m, mascot_y=0.72, extras=drips('#f1e0b0', n=6, seed=9))
+
+
+LOGOS = {'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
 
 if __name__ == '__main__':
     want = sys.argv[1:] or list(LOGOS)

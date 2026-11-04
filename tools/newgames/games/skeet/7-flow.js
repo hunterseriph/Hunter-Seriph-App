@@ -1,0 +1,87 @@
+/* =====================================================================================================
+   THE FLOW: title, fighter select, stage card, sections (the camera stops, waves come in from both sides, GO),
+   the boss arena with a Street Fighter VS screen and FIGHT!, the stage clear tally, continues, the ending.
+   ===================================================================================================== */
+var SV = KIT.load('sk-save', null) || {}; if (!SV.v) SV = { v: 1, clear: {}, best: {}, hard: false, rush: 0, wins: 0, seen: {} };
+function persist() { KIT.save('sk-save', SV); }
+var STORY = [
+  'Blumhead has been pumping his goo into the homunculi of Clubhouse Row.',
+  'One by one they go purple, go quiet, and go to work for his cult.',
+  'Nobody is coming to save them. So four idiots from the Clubhouse are.',
+  'Beat the goo out of every one of them. Then go and beat it out of Blumhead.'
+];
+function newGame(hero, o) {
+  o = o || {}; G.hero = hero; G.rush = !!o.rush; G.hard = !!SV.hard; G.hardK = G.hard ? 1.35 : 1; G.si = o.stage || 0; G.lives = 3; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; G.conts = 0;
+  P = makePlayer(hero); startStage(G.si);
+}
+function startStage(i) {
+  G.si = i; G.S = STAGES[i]; G.ents = []; G.shots = []; G.fx = []; G.items = []; G.props = []; G.puddles = []; G.waves = []; G.cam = 0; G.lock = null; G.secI = -1; G.bossOn = false; G.koT = 0; G.go = 0; G.stageT = 0; G.hurtThisStage = false; G.beam = null; G.sup = null; G.superT = 0; G.cutin = null; G.splat = 0; G.combo = 0;
+  G.foeK = { hp: 1 + i * 0.12 + (G.hard ? 0.25 : 0), dmg: 1 + i * 0.07 };
+  // lay the stage out: sections one after another, then the arena
+  var x = 0; G.secs = (G.rush ? [] : G.S.secs).map(function (s, k) { var o = { x0: x, x1: x + s.len, def: s, k: k }; x += s.len; return o; });
+  G.arena = x; G.end = x + KIT.W;
+  G.secs.forEach(function (s) { (s.def.props || []).forEach(function (p, j) { var px = s.x0 + 150 + j * ((s.def.len - 200) / Math.max(1, s.def.props.length)); G.props.push(ent({ team: 'o', prop: true, spr: p[0], drop: p[1], x: px, z: 10 + (j * 23) % (DEPTH - 20), hp: p[0] === 'b_coffin' ? 3 : 2, w: 22, ht: 28 })); }); });
+  P.x = 50; P.z = 36; P.h = 0; P.st = 'idle'; P.mv = null; P.vx = P.vz = 0; P.inv = 1; P.held = null; P.heldBy = null;
+  if (!G.rush && i > 0) P.hp = Math.min(P.mhp, P.hp + P.mhp * 0.5); if (G.rush) P.hp = P.mhp;
+  G.mode = 'card'; G.cardT = 0; music.play(G.S.song); KIT.dropLayer();
+}
+function inPlay() { return G.mode === 'play'; }
+/* the camera follows; a lock holds it while a wave is on */
+function stepCamera(dt) {
+  var want = P.x - KIT.W * 0.42, max = G.end - KIT.W;
+  if (locked()) want = G.lock; else want = clamp(want, G.cam - 0, max); // the camera never goes back
+  if (!locked()) want = Math.max(G.cam, want);
+  G.cam += (want - G.cam) * Math.min(1, dt * 6); if (Math.abs(want - G.cam) < 0.3) G.cam = want;
+}
+function stepSections(dt) {
+  if (G.bossOn || G.koT) return;
+  // reach the next section's middle: lock and send the waves
+  var nx = G.secI + 1, s = G.secs[nx];
+  if (!locked() && s && P.x > s.x0 + s.def.len * 0.45) { G.secI = nx; G.lock = clamp(P.x - KIT.W * 0.45, G.cam, G.end - KIT.W); G.wave = -1; G.waveT = 0.4; G.go = 0; }
+  if (locked() && G.secI >= 0) {
+    var cur = G.secs[G.secI], alive = G.ents.filter(function (e) { return e.team === 'f' && e.hp > 0 && e.st !== 'gone'; }).length;
+    if (G.spawnQ && G.spawnQ.length) { G.spawnT -= dt; if (G.spawnT <= 0) { var q = G.spawnQ.shift(); spawnFoe(q[0], q[1]); G.spawnT = 0.45; } return; }
+    if (alive === 0) { G.waveT -= dt; if (G.waveT > 0) return; G.wave++;
+      if (G.wave >= cur.def.waves.length) { G.lock = null; G.go = 3; sfx.play('go'); G.ents = G.ents.filter(function (e) { return e.st !== 'gone'; }); return; }
+      var w = cur.def.waves[G.wave], side = Math.random() < 0.5 ? -1 : 1; G.spawnQ = w.map(function (id, j) { return [id, j % 2 ? side : -side]; }); G.spawnT = 0; G.waveT = 0.8;
+      if (G.hard && G.wave === cur.def.waves.length - 1) G.spawnQ.push([pick(cur.def.waves[0]), side]);
+    }
+  }
+  // the arena
+  if (!locked() && G.secI >= G.secs.length - 1 && P.x > G.arena + 60) { G.lock = G.arena; G.cam = Math.min(G.cam, G.arena); bossIntro(); }
+}
+function bossIntro() {
+  G.ents = G.ents.filter(function (e) { return e.team !== 'f' || e.hp > 0; });
+  var id = G.S.boss, bx = G.arena + KIT.W * 0.7;
+  if (id === 'brothers') { spawnBoss('pig', bx, 22); spawnBoss('cowpig', bx + 20, 52); } else spawnBoss(id, bx, 36);
+  G.bossOn = true; G.mode = 'vs'; G.vsT = 0; music.play(BOSSES[id].song); sfx.play('vs');
+}
+function bossFight() { G.mode = 'play'; G.fightT = 1.4; G.ents.forEach(function (e) { if (e.boss) { e.intro = false; e.wait = 0.8; } }); sfx.play('fight'); }
+function stageClear() {
+  G.mode = 'clear'; G.clearT = 0; music.play('skclear'); var tb = Math.max(0, Math.round((240 - G.stageT) * 20)), nb = G.hurtThisStage ? 0 : 10000, cb = (G.best || 0) * 100;
+  G.tally = { time: tb, nodmg: nb, combo: cb, freed: (G.freed || 0) * 300, total: tb + nb + cb };
+  G.score += G.tally.total; var k = G.hero; SV.clear[k] = Math.max(SV.clear[k] || 0, G.si + 1); SV.best[k] = Math.max(SV.best[k] || 0, G.score); persist();
+}
+function nextStage() { if (G.si >= STAGES.length - 1) return theEnd(); startStage(G.si + 1); }
+function gameOver() { G.mode = 'over'; G.overT = 0; music.stop(0.6); sfx.play('lose'); }
+function continueGame() { G.conts++; G.lives = 2; G.score = Math.floor(G.score / 2); P.hp = P.mhp; P.st = 'air'; P.h = 160; P.vh = 0; P.inv = 2.6; P.meter = 100; G.mode = 'play'; music.play(G.bossOn ? BOSSES[G.S.boss].song : G.S.song); sfx.play('power'); hitArea(P.x, P.z, 90, 40, { dmg: 0, kd: true, kb: 220, lift: 200, from: P, team: 'p' }); }
+function theEnd() {
+  G.mode = 'end'; G.endT = 0; music.play('skend'); SV.wins = (SV.wins || 0) + 1; if (G.rush) SV.rush = Math.max(SV.rush || 0, G.score); SV.cleared = 1; SV.rushOpen = 1; SV.hardOpen = 1; persist();
+}
+/* a step of the game proper */
+function stepPlay(dt) {
+  G.t += dt; G.stageT += dt; G.runT += dt;
+  if (G.koT) { G.koT += dt; if (G.koT > 3.2) { G.koT = 0; stageClear(); return; } }
+  if (G.fightT > 0) G.fightT -= dt; if (G.go > 0) G.go -= dt; if (G.splat > 0) G.splat -= dt; if (G.tagT > 0) G.tagT -= dt; if (G.callout) { G.callout.t -= dt; if (G.callout.t <= 0) G.callout = null; }
+  if (G.cutin) { G.cutin.t += dt; if (G.cutin.t > 1.2) G.cutin = null; }
+  if (G.superT > 0 && !G.sup) { G.superT -= dt; stepFx(dt); return; } // a boss transforming: everything holds still
+  if (G.sup) { stepSuper(dt); stepFx(dt); if (G.sup && G.sup.t < 0.7) return; }
+  if (G.hs > 0) { G.hs -= dt; stepFx(dt); return; } // hit stop: the world freezes on a big hit
+  if (G.slow > 0) { G.slow -= dt; dt *= 0.35; }
+  stepPlayer(dt); physics(P, dt);
+  G.ents.forEach(function (e) { stepFoe(e, dt); physics(e, dt); });
+  G.ents = G.ents.filter(function (e) { return e.st !== 'gone'; });
+  G.props = G.props.filter(function (p) { return !p.gone; });
+  stepShots(dt); stepItems(dt); stepPuddles(dt); stepWaves(dt); stepFx(dt); stepCamera(dt); stepSections(dt);
+  if (G.bossOn && !G.koT && bossesLeft().length === 0 && G.ents.filter(function (e) { return e.boss && e.st !== 'dead'; }).length === 0) G.koT = 0.01;
+}
