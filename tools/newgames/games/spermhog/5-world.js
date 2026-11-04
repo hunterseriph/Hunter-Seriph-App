@@ -75,7 +75,7 @@ function stepWorld(dt) {
     if (s.delay > 0) { s.delay -= dt; return; }
     s.life -= dt; s.vy += (s.g || 0) * dt; s.x += s.vx * dt; s.y += s.vy * dt;
     if (s.mine) { ENTS.forEach(function (e) { if (e.k === 'foe' && e.alive && Math.abs(e.x - s.x) < (e.w || 12) && s.y > e.y - (e.h || 24) - 4 && s.y < e.y + 4) { if (e.F.shield && Math.sign(s.vx) === -e.dir) { s.vx = -s.vx * 0.6; s.vy = -120; s.mine = false; s.life = 0.4; sfx.play('clink'); } else { hitFoe(e, 1); s.life = 0; } } if (e.k === 'box' && e.alive && Math.abs(e.x - s.x) < 12 && Math.abs(e.y - 12 - s.y) < 14) { openBox(e); s.life = 0; } }); if (G.boss && G.boss.alive && bossHitBy(s.x, s.y)) { hitBoss(1); s.life = 0; } }
-    else if (p && p.state === 'normal' && Math.abs(p.x - s.x) < 9 && s.y > p.y - PH && s.y < p.y) { hurt(s.x); s.life = 0; }
+    else if (p && p.state === 'normal' && Math.abs(p.x - s.x) < 7 && s.y > p.y - PH + 6 && s.y < p.y - 1) { hurt(s.x); s.life = 0; } // a hurt box a little inside Cumhead
     if (wallAt(s.x, s.y) && !s.ghost) s.life = 0;
   });
   SHOTS = SHOTS.filter(function (s) { return s.life > 0; });
@@ -116,7 +116,7 @@ function hitFoe(e, n, stomp) {
   e.hp -= n; e.hitT = 0.15;
   if (e.hp <= 0) { e.alive = false; G.score += e.F.pts; G.kills++; poof(e.x, e.y - 12, 12, ['#ff2630', '#f1e7d0', '#ffe36a']); sfx.play('pop');
     if (e.F.split && !e.small) for (var i = -1; i <= 1; i += 2) ENTS.push({ k: 'foe', F: e.F, key: e.key, x: e.x + i * 10, y: e.y, x0: e.x, y0: e.y, t: 0, alive: true, hp: 1, dir: i, cd: 3, small: true });
-    if (e.F.burst) for (var j = 0; j < 6; j++) { var a = j / 6 * 6.283; SHOTS.push({ x: e.x, y: e.y - 14, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, life: 0.8, k: 'shard', ghost: 1 }); }
+    if (e.F.burst) poof(e.x, e.y - 14, 14, ['#ff2630', '#12040a', '#f1e7d0']); // balloons pop into confetti, no shrapnel (he said it killed runs)
     FX.push({ k: 'score', x: e.x, y: e.y - 30, t: 0.8, s: '' + e.F.pts, vx: 0, vy: -30, g: 0 });
   } else sfx.play('hit');
 }
@@ -130,7 +130,8 @@ function touch(e, dt) {
     if (Math.abs(px - e.x) < w + PHW && py > e.y - h - 4 && py - PH < e.y) {
       if (G.star > 0) { hitFoe(e, 99); return; }
       if (p.vy > 40 && py - p.vy / 60 <= e.y - h + 6) { hitFoe(e, F.shield ? 2 : 1, true); p.vy = KIT.held('a') ? -440 : -330; p.air = true; return; }
-      hurt(e.x);
+      // hurt only on a real overlap: a box a little inside both of you (the stomp above still uses the full box)
+      if (Math.abs(px - e.x) < w * 0.8 + PHW - 2 && py > e.y - h + 4 && py - PH + 6 < e.y) hurt(e.x);
     }
     return;
   }

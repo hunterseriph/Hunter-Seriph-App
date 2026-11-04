@@ -187,6 +187,10 @@ function updatePlayer(dt) {
   roomEdges();
 }
 function healP(n, quiet) { if (ST.noHeal && !quiet) return; var b = P.hp; P.hp = Math.min(ST.mhp, P.hp + n); if (P.hp > b && !quiet) pop(P.x, P.y - P.h - 6, '+' + Math.round(P.hp - b), '#7dff9a'); }
+/* the heir's hurt box: a little inside the sprite (2px off the sides, 6 off the top), so a graze on a foe's edge
+   or the air round a shot no longer counts; stomps and pickups still use the full box */
+function hitP(x0, y0, x1, y1) { return ov(P.x - P.w / 2 + 2, P.y - P.h + 6, P.x + P.w / 2 - 2, P.y - 1, x0, y0, x1, y1); }
+function hitFoe(e) { var mx = e.w * 0.18, my = e.h * 0.15; return hitP(e.x - e.w / 2 + mx, e.y - e.h + my, e.x + e.w / 2 - mx, e.y - 1); }
 function hurtP(dmg, srcx, by) {
   if (P.inv > 0 || P.state === 'dead' || P.ooze > 0) return;
   if (P.bubbleOn) { P.bubbleOn = 0; P.bubbleT = 12; P.inv = 0.6; pop(P.x, P.y - 40, 'POP', '#9adfff'); sfx.splat(); poof(P.x, P.y - P.h / 2, 12, ['#9adfff', '#ffffff']); return; }
@@ -371,6 +375,7 @@ function updateEnemies(dt) {
       if (P.state === 'normal' && ((P.vy > 0 && feet0 <= top + 10) || (recent && P.y <= e.y - e.h * 0.4))) { stompBounce(); hurtE(e, ST.dmg * (RUN.cls === 'cumhead' ? 2 : 1.5) * (ST.stompMul || 1), 'stomp'); }
       else if (P.ooze > 0) { if (!e.oozeHit || G.t - e.oozeHit > 0.5) { e.oozeHit = G.t; hurtE(e, ST.dmg * 0.6, 'ooze'); } }
       else if (recent) continue; // no hurting the heir in the moment after a stomp
+      else if (!hitFoe(e)) continue;
       else { if (ST.thorns && P.inv <= 0 && G.t - (e.thornT || -9) > 1) { e.thornT = G.t; hurtE(e, ST.dmg * 0.8 * ST.thorns, 'thorns'); } hurtP(e.dmg, e.x, 'a ' + e.d.name.toLowerCase()); }
     }
   }
@@ -455,13 +460,13 @@ function updateShots(dt) {
     if (b.end && (b.life <= 0 || solidT(tileAt(b.x, b.y)) || tileAt(b.x, b.y) === TL)) { b.life = 0; shotEnd(b); continue; }
     if (b.k !== 'ghost' && solidT(tileAt(b.x, b.y))) { b.life = 0; if (b.k === 'pie') splat(b.x, b.y); else poof(b.x, b.y, 4, b.k === 'drip' ? dripC() : b.k === 'dagger' || b.k === 'bone' ? ['#f1e7d0', '#a6968f'] : ['#ff9a40', '#ff2630']); continue; }
     if (b.safe > 0) { b.safe -= dt; continue; }
-    if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
+    var br = b.r * 0.75; if (P.state !== 'dead' && hitP(b.x - br, b.y - br, b.x + br, b.y + br)) { hurtP(b.dmg, b.x, b.by || 'a fireball'); b.life = 0; }
   }
   eshots = eshots.filter(function (q) { return q.life > 0 && q.x > -40 && q.x < L.w * T + 40 && q.y > -60 && q.y < L.h * T + 40; });
   for (i = 0; i < waves.length; i++) {
     var w = waves[i]; w.x += w.dir * 150 * dt; w.life -= dt;
     if (solidT(tileAt(w.x + w.dir * 6, w.y - 6))) w.life = 0;
-    if (P.state !== 'dead' && ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, w.x - 8, w.y - 14, w.x + 8, w.y)) hurtP(w.dmg, w.x, w.by || 'a shockwave');
+    if (P.state !== 'dead' && hitP(w.x - 7, w.y - 12, w.x + 7, w.y)) hurtP(w.dmg, w.x, w.by || 'a shockwave');
   }
   waves = waves.filter(function (q) { return q.life > 0; });
 }

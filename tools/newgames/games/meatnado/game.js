@@ -262,7 +262,7 @@ function updatePlayer(dt) {
 function killFoe(o, how) {
   o.alive = false; G.kills++; homGain(10); if (G.hom && G.hom.b === 'leech') G.gap = Math.min(maxGap(), G.gap + 6); G.score += o.F.pts; G.gap = Math.min(maxGap(), G.gap + 8 * (how === 'stomp' && G.char.stompK ? G.char.stompK : 1));
   sfx.play(how === 'stomp' ? 'stomp' : 'kill'); poof(o.x, o.y - o.F.h / 2, 9, o.F.s === 'f_creamblob_' ? ['#f1e7d0', '#fffbe8'] : BLOOD);
-  if (o.F.pops) { sfx.play('pop'); for (var i = 0; i < 6; i++) { var a = -Math.PI * (i / 5); eshots.push({ k: 'shard', x: o.x, y: o.y - 10, vx: Math.cos(a) * 140 - 40, vy: Math.sin(a) * 140, grav: 300, life: 1.2, hurts: how !== 'stomp' }); } }
+  if (o.F.pops) { sfx.play('pop'); for (var i = 0; i < 6; i++) { var a = -Math.PI * (i / 5); eshots.push({ k: 'shard', x: o.x, y: o.y - 10, vx: Math.cos(a) * 140 - 40, vy: Math.sin(a) * 140, grav: 300, life: 0.8, hurts: 0 }); } } // confetti only: balloon shrapnel no longer hurts (he said it killed runs)
   if (o.F.splits && o.sc > 0.7) for (var j = 0; j < 2; j++) { foe(o.x + (j ? 18 : -6), 'creamblob'); var b = obs[obs.length - 1]; b.sc = 0.6; b.vy = -160; b.y = o.y - 4; }
 }
 function updateWorld(dt) {
@@ -280,10 +280,10 @@ function updateWorld(dt) {
     if (!alive) continue;
     if (ov(px0, py0, px1, py1, o.bx0, o.by0, o.bx1, o.by1)) {
       if (G.pw.rocket > 0) { killFoe(o, 'rocket'); continue; }
-      if (P.vy > 30 && P.y - 6 < o.by0 + 8 && P.state === 'normal') {
+      if (P.vy > 0 && P.y - P.vy / 60 <= o.by0 + 10 && P.state === 'normal') {
         killFoe(o, 'stomp'); var big = G.char.stompK ? 1.35 : 1; if (F.pops) big *= 1.3;
         P.vy = (input().j ? -310 : -225) * big; P.onGround = false; P.jumpHeld = input().j; P.jumps = 1;
-      } else hurtPlayer(o.x);
+      } else { var mx = (o.bx1 - o.bx0) * 0.18, my = (o.by1 - o.by0) * 0.15; if (ov(px0 + 1, py0 + 6, px1 - 1, py1 - 1, o.bx0 + mx, o.by0 + my, o.bx1 - mx, o.by1 - my)) hurtPlayer(o.x); } // hurt only on a real overlap
     }
   }
   for (i = 0; i < shots.length; i++) {
@@ -308,7 +308,7 @@ function updateWorld(dt) {
   for (i = 0; i < eshots.length; i++) {
     s = eshots[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += (s.grav || 0) * dt; s.life -= dt; s.spin = (s.spin || 0) + dt * 10;
     if (s.y > GY - 4 && s.k !== 'shard') { s.life = 0; poof(s.x, GY - 4, 4, s.k === 'pie' ? ['#f1e7d0', '#fffbe8'] : ['#f1e7d0']); continue; }
-    if (alive && s.hurts && ov(px0, py0, px1, py1, s.x - 5, s.y - 4, s.x + 5, s.y + 4)) { s.life = 0; hurtPlayer(s.x); }
+    if (alive && s.hurts && ov(px0 + 1, py0 + 6, px1 - 1, py1 - 1, s.x - 4, s.y - 3, s.x + 4, s.y + 3)) { s.life = 0; hurtPlayer(s.x); }
   }
   // drops (the magnet pulls them in)
   var keep = [], mag = G.pw.magnet > 0;

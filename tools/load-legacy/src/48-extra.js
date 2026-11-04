@@ -81,7 +81,8 @@ function throwPie(e) {
 }
 function burstShards(e) {
   var cy = e.y - e.h + 8; sfx.stomp(); poof(e.x, cy, 12, ['#ff2630', '#1e1418', '#f1e7d0']);
-  for (var i = 0; i < 8; i++) { var a = i * Math.PI / 4 + 0.2; eshots.push({ x: e.x, y: cy, vx: Math.cos(a) * 170, vy: Math.sin(a) * 170, life: 0.5, r: 3, dmg: e.dmg, k: 'shard', by: 'balloon shrapnel', safe: 0.06 }); }
+  /* the shards are only confetti now: he said balloon shrapnel flying everywhere killed runs */
+  for (var i = 0; i < 10; i++) { var a = i * Math.PI / 5 + 0.2; parts.push({ x: e.x, y: cy, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120 - 40, life: 0.45, c: i % 2 ? '#ff2630' : '#f1e7d0' }); }
 }
 function splat(x, y) { sfx.splat(); poof(x, y, 10, ['#f1e7d0', '#fff6d8', '#c8903a']); }
 

@@ -106,7 +106,7 @@ function stepFoes(dt) {
     if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = cellAt(e.x, e.y); if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
     clampBand(e);
     // touching Spermaid
-    if (d < e.r + 10 && !e.under) hurtPlayer(e.dmg, e);
+    if (d < e.r * 0.85 + 7 && !e.under) hurtPlayer(e.dmg, e); // a touch inside the sprites, so a graze does not count
     // far behind: brought back round in front (Vampire Survivors style)
     if (d > KIT.W * 0.75 + 220 && !e.elite) { var p2 = spawnPos(); e.x = p2.x; e.y = p2.y; }
   }
@@ -351,7 +351,7 @@ function update(dt) {
 }
 function stepEShots(dt) {
   for (var i = eshots.length - 1; i >= 0; i--) { var s = eshots[i]; if (G.freeze > 0) continue; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
-    if (Math.hypot(P.x - s.x, P.y - 16 - s.y) < s.r + 8) { hurtPlayer(s.dmg, { k: s.k, B: { n: 'a stray shot' } }); eshots.splice(i, 1); continue; }
+    if (Math.hypot(P.x - s.x, P.y - 16 - s.y) < s.r * 0.8 + 6) { hurtPlayer(s.dmg, { k: s.k, B: { n: 'a stray shot' } }); eshots.splice(i, 1); continue; }
     if (s.t > s.life) eshots.splice(i, 1); }
 }
 function die() {

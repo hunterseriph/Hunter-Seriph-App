@@ -24,7 +24,7 @@ var FOES = {
   crawler: { n: 'Crawler', hp: 9, spd: 50, dmg: 6, xp: 1, r: 10 }, crawlerN: { n: 'Night Crawler', hp: 16, spd: 56, dmg: 8, xp: 2, r: 10 },
   bat: { n: 'Bat', hp: 5, spd: 72, dmg: 4, xp: 1, r: 8, ai: 'fly' }, batP: { n: 'Blood Bat', hp: 9, spd: 80, dmg: 6, xp: 1, r: 8, ai: 'fly' },
   crow: { n: 'Crow', hp: 6, spd: 78, dmg: 5, xp: 1, r: 7, ai: 'fly' }, clown: { n: 'Pie Clown', hp: 24, spd: 36, dmg: 8, xp: 3, r: 10, ai: 'shoot', shot: 'pie', cd: 3.8 },
-  balloon: { n: 'Steve Balloon', hp: 8, spd: 32, dmg: 5, xp: 1, r: 8, ai: 'fly', pop: 3 }, pieling: { n: 'Pieling', hp: 11, spd: 50, dmg: 6, xp: 1, r: 9 },
+  balloon: { n: 'Steve Balloon', hp: 8, spd: 32, dmg: 5, xp: 1, r: 8, ai: 'fly' }, pieling: { n: 'Pieling', hp: 11, spd: 50, dmg: 6, xp: 1, r: 9 },
   skeleton: { n: 'Skeleton', hp: 14, spd: 36, dmg: 8, xp: 2, r: 9, ai: 'shoot', shot: 'bone', cd: 3.6 }, bonehound: { n: 'Bone Hound', hp: 13, spd: 50, dmg: 8, xp: 2, r: 10, ai: 'dash' },
   mummy: { n: 'Mummy', hp: 34, spd: 28, dmg: 10, xp: 3, r: 9 }, gravehand: { n: 'Grave Hand', hp: 14, spd: 0, dmg: 9, xp: 1, r: 9, ai: 'rise' },
   wraith: { n: 'Wraith', hp: 16, spd: 48, dmg: 7, xp: 2, r: 10, ai: 'fly', ghost: 1 }, magmaslug: { n: 'Magma Slug', hp: 28, spd: 26, dmg: 9, xp: 2, r: 11, trail: 1 },

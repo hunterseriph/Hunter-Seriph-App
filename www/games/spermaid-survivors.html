@@ -25,7 +25,7 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 .dpad .l{top:55px;left:10px;border-right:15px solid var(--ash);border-left:0}.dpad .r{top:55px;right:10px;border-left:15px solid var(--ash);border-right:0}
 .dpad[data-dir*="u"] .u{border-bottom-color:var(--bone)}.dpad[data-dir*="d"] .d{border-top-color:var(--bone)}.dpad[data-dir*="l"] .l{border-right-color:var(--bone)}.dpad[data-dir*="r"] .r{border-left-color:var(--bone)}
 .dpad b{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;background:rgba(196,18,28,0.35)}
-#acts{display:grid;grid-template-columns:repeat(2,64px);gap:10px;align-items:end;direction:rtl}
+#acts{margin-left:auto;display:grid;grid-template-columns:repeat(2,64px);gap:10px;align-items:end;direction:rtl}
 #acts.one{grid-template-columns:72px}
 .pbtn{appearance:none;border:0;margin:0;width:64px;height:64px;border-radius:50%;color:var(--bone);font-family:var(--pixel);font-size:12px;background:rgba(14,7,8,0.66);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6);touch-action:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;direction:ltr;gap:3px}
 .pbtn small{font-size:7px;color:var(--ash);letter-spacing:0.04em}
@@ -629,7 +629,7 @@ var FOES = {
   crawler: { n: 'Crawler', hp: 9, spd: 50, dmg: 6, xp: 1, r: 10 }, crawlerN: { n: 'Night Crawler', hp: 16, spd: 56, dmg: 8, xp: 2, r: 10 },
   bat: { n: 'Bat', hp: 5, spd: 72, dmg: 4, xp: 1, r: 8, ai: 'fly' }, batP: { n: 'Blood Bat', hp: 9, spd: 80, dmg: 6, xp: 1, r: 8, ai: 'fly' },
   crow: { n: 'Crow', hp: 6, spd: 78, dmg: 5, xp: 1, r: 7, ai: 'fly' }, clown: { n: 'Pie Clown', hp: 24, spd: 36, dmg: 8, xp: 3, r: 10, ai: 'shoot', shot: 'pie', cd: 3.8 },
-  balloon: { n: 'Steve Balloon', hp: 8, spd: 32, dmg: 5, xp: 1, r: 8, ai: 'fly', pop: 3 }, pieling: { n: 'Pieling', hp: 11, spd: 50, dmg: 6, xp: 1, r: 9 },
+  balloon: { n: 'Steve Balloon', hp: 8, spd: 32, dmg: 5, xp: 1, r: 8, ai: 'fly' }, pieling: { n: 'Pieling', hp: 11, spd: 50, dmg: 6, xp: 1, r: 9 },
   skeleton: { n: 'Skeleton', hp: 14, spd: 36, dmg: 8, xp: 2, r: 9, ai: 'shoot', shot: 'bone', cd: 3.6 }, bonehound: { n: 'Bone Hound', hp: 13, spd: 50, dmg: 8, xp: 2, r: 10, ai: 'dash' },
   mummy: { n: 'Mummy', hp: 34, spd: 28, dmg: 10, xp: 3, r: 9 }, gravehand: { n: 'Grave Hand', hp: 14, spd: 0, dmg: 9, xp: 1, r: 9, ai: 'rise' },
   wraith: { n: 'Wraith', hp: 16, spd: 48, dmg: 7, xp: 2, r: 10, ai: 'fly', ghost: 1 }, magmaslug: { n: 'Magma Slug', hp: 28, spd: 26, dmg: 9, xp: 2, r: 11, trail: 1 },
@@ -1266,7 +1266,7 @@ function stepFoes(dt) {
     if (ai !== 'fly' && (i + FRAME) % 2 === 0) { var c = cellAt(e.x, e.y); if (c) for (var j = 0, n = 0; j < c.length && n < 6; j++) { var o = c[j]; if (o === e || o.f.ai === 'fly') continue; n++; var ex = e.x - o.x, ey = e.y - o.y, rr = (e.r + o.r) * 0.8, dd = ex * ex + ey * ey; if (dd < rr * rr && dd > 0.01) { var dl = Math.sqrt(dd), push = (rr - dl) * 0.5; e.x += ex / dl * push; e.y += ey / dl * push; } } }
     clampBand(e);
     // touching Spermaid
-    if (d < e.r + 10 && !e.under) hurtPlayer(e.dmg, e);
+    if (d < e.r * 0.85 + 7 && !e.under) hurtPlayer(e.dmg, e); // a touch inside the sprites, so a graze does not count
     // far behind: brought back round in front (Vampire Survivors style)
     if (d > KIT.W * 0.75 + 220 && !e.elite) { var p2 = spawnPos(); e.x = p2.x; e.y = p2.y; }
   }
@@ -1511,7 +1511,7 @@ function update(dt) {
 }
 function stepEShots(dt) {
   for (var i = eshots.length - 1; i >= 0; i--) { var s = eshots[i]; if (G.freeze > 0) continue; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
-    if (Math.hypot(P.x - s.x, P.y - 16 - s.y) < s.r + 8) { hurtPlayer(s.dmg, { k: s.k, B: { n: 'a stray shot' } }); eshots.splice(i, 1); continue; }
+    if (Math.hypot(P.x - s.x, P.y - 16 - s.y) < s.r * 0.8 + 6) { hurtPlayer(s.dmg, { k: s.k, B: { n: 'a stray shot' } }); eshots.splice(i, 1); continue; }
     if (s.t > s.life) eshots.splice(i, 1); }
 }
 function die() {

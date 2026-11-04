@@ -101,7 +101,7 @@ function updateBosses(dt) {
     if (ov(P.x - P.w / 2, P.y - P.h, P.x + P.w / 2, P.y, b.x - b.w / 2 + 4, b.y - b.h + 4, b.x + b.w / 2 - 4, b.y)) {
       if (P.vy > 30 && P.y - 8 < b.y - b.h + 12 && P.state === 'normal') { stompBounce(); if (!b.stompT || G.t - b.stompT > 0.5) { b.stompT = G.t; hurtE(b, ST.dmg * 1.3, 'stomp'); } }
       else if (P.ooze > 0) { if (!b.oozeHit || G.t - b.oozeHit > 0.5) { b.oozeHit = G.t; hurtE(b, ST.dmg * 0.6, 'ooze'); } }
-      else hurtP(b.dmg, b.x, b.d.name);
+      else if (hitP(b.x - b.w / 2 + b.w * 0.15, b.y - b.h + b.h * 0.12, b.x + b.w / 2 - b.w * 0.15, b.y)) hurtP(b.dmg, b.x, b.d.name);
     }
   }
 }
