@@ -23,7 +23,12 @@ console.log('fonts ready:', fs.readdirSync(out).length, 'files');
 
 // Stamp the build number into the app so it can tell when a newer build is out (see the update check in index.html).
 const build = parseInt(process.env.GITHUB_RUN_NUMBER || '0', 10) || 0;
-fs.writeFileSync(path.join('www', 'version.js'), 'window.HS_BUILD=' + build + ';\n');
+// The version people see follows the update number in tools/app-version.txt (one more each app-update zip):
+// 1.0.98, 1.0.99, then 1.1.1 ... 1.1.99, then 1.2.1 and so on.
+const appVer = require('./app-version.js');
+fs.writeFileSync(path.join('www', 'version.js'), 'window.HS_BUILD=' + build + ';window.HS_VERSION=' + JSON.stringify(appVer.name) + ';\n');
+try { const dp = path.join('desktop', 'package.json'), dj = JSON.parse(fs.readFileSync(dp, 'utf8')); dj.version = appVer.name; fs.writeFileSync(dp, JSON.stringify(dj, null, 2) + '\n'); } catch (e) { console.warn('could not stamp the PC version', e.message); }
+console.log('app version:', appVer.name);
 console.log('build number:', build);
 
 // List every upload on the channel (videos, streams, shorts) so the Videos tab can show all of them.
