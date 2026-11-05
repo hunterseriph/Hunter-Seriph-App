@@ -153,6 +153,12 @@ def render(C, pose):
             side = part[0]; key = side + 'h'
             if P.get(key) is None: continue
             s = sh[side]; tgt = (s[0] + P[key][0] * AL, s[1] + P[key][1] * AL)
+            # the back arm is drawn behind the head: a fist that would end up hidden behind the face drops to the chest instead
+            # (he saw Cumhead's left hand vanish behind his face)
+            if side == 'b' and C.get('head') is not None and order.index('ba') < order.index('head') if 'head' in order else False:
+                him, (hox, hoy) = C['head']; nx = hip[0] + up(torsoH); ny = hip[1] + torsoH
+                if nx - hox - 1 <= tgt[0] <= nx - hox + him.width + 1 and tgt[1] > ny - C['handR'] - 1:
+                    tgt = (tgt[0] + 1.5, ny - C['handR'] - 1.5)
             j, t = ik(s, tgt, C['arm'][0], C['arm'][1], P.get(side + 'eb', (-0.4, -1)))
             pt = Part(fr, C['armOut'], group='a' + side); pal = C['armPal'] if side == 'f' else C.get('armPalB', C['armPal'])
             pt.cap(s, j, C['armR'], pal); pt.cap(j, t, C['armR'], pal, C['armR'] * C.get('armTaper', 1))
