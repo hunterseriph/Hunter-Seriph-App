@@ -20,6 +20,10 @@ function floorAt(px, y0, y1, oneway) {
   if (oneway) for (var i = 0; i < PLATS.length; i++) { var p = PLATS[i]; if (p.gone) continue; if (px >= p.x - 2 && px <= p.x + p.w + 2 && p.y >= y0 && p.y <= y1 && (best === null || p.y < best)) best = p.y; }
   return best;
 }
+/* inside the ground? (he saw foes and drops phasing through the floor) */
+function inGround(x, y) { var c = Math.floor(x / TS), r = Math.floor(y / TS); return isSolid(T(c, r), c, r) || (surf(T(c, r), Math.floor(x - c * TS)) >= 0 && y > r * TS + surf(T(c, r), Math.floor(x - c * TS)) + 1); }
+function popUp(x, y) { // lift a point that has ended up inside the ground to the surface above it (or null if it is buried deep)
+  if (!inGround(x, y - 2)) return y; for (var k = 0; k < 96; k++) { y -= 2; if (!inGround(x, y - 2)) { var f = floorAt(x, y - 2, y + 18, true); return f === null ? y : f; } } return null; }
 function platUnder(px, py) { for (var i = 0; i < PLATS.length; i++) { var p = PLATS[i]; if (!p.gone && px >= p.x - 2 && px <= p.x + p.w + 2 && Math.abs(p.y - py) < 1.5) return p; } return null; }
 function liquidAt(px, py) { var ch = T(Math.floor(px / TS), Math.floor(py / TS)); return ch === '~' || ch === '%' ? 'cream' : ch === 'L' || ch === 'l' ? 'lava' : null; }
 
@@ -36,7 +40,8 @@ function loadAct(ai) {
     if (e.k === 'movh' || e.k === 'movv' || e.k === 'crumble' || e.k === 'circle') { var p = { x: e.x - TS / 2, y: e.y, w: (e.w || 3) * TS, x0: e.x - TS / 2, y0: e.y, k: e.k, range: (e.range || 3) * TS, log: e.log, ph: Math.random() * 6, t: 0, dx: 0, dy: 0 }; PLATS.push(p); o.plat = p; o.alive = false; }
     if (e.k === 'arena') LV.arena = o;
     if (e.k === 'foe' && !(o.F.beh === 'fly' || o.F.beh === 'dive' || o.F.beh === 'float')) { // ground foes stand on the ground: settle onto the floor below, or leave them out
-      var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
+      var up = popUp(o.x, o.y); if (up === null) return; o.y = up; var fy = floorAt(o.x, o.y - 6, o.y + TS * 12, true); if (fy === null) return; o.y = o.y0 = fy; }
+    if (e.k === 'drop') { var dy = popUp(o.x, o.y - 4); if (dy === null) return; if (dy !== o.y - 4) o.y = o.y0 = dy - 2; }
     // things that stand on the ground really stand on it: boxes, springs, checkpoints, pads, vents, jets, the sign
     if (STANDS[e.k]) { var sy = floorAt(o.x, o.y - TS * 1.5, o.y + TS * (e.k === 'portal' ? 40 : 4), true); if (sy !== null) o.y = o.y0 = sy; } // the gateway is stone: it always finds the ground
     if (e.k === 'awning') { var gy = null; for (var sh = 0; sh < 6 && gy === null; sh++) { gy = floorAt(o.x + sh * TS, o.y + 6, o.y + TS * 12, true); if (gy !== null) o.x = o.x0 = o.x + sh * TS; } o.gy = gy === null ? o.y + 48 : gy; } // its poles go all the way down
@@ -80,7 +85,7 @@ function stepWorld(dt) {
   });
   SHOTS = SHOTS.filter(function (s) { return s.life > 0; });
   // scattered drops you can grab back
-  SCAT.forEach(function (d) { d.t += dt; d.vy += 600 * dt; d.x += d.vx * dt; var ny = d.y + d.vy * dt; var f = floorAt(d.x, d.y - 2, ny + 1, true); if (f !== null && d.vy > 0) { d.y = f; d.vy = -d.vy * 0.6; } else d.y = ny; if (wallAt(d.x, d.y - 4)) d.vx = -d.vx;
+  SCAT.forEach(function (d) { d.t += dt; d.vy += 600 * dt; var ox = d.x; d.x += d.vx * dt; if (inGround(d.x, d.y - 4)) { d.x = ox; d.vx = -d.vx * 0.7; } var ny = d.y + d.vy * dt; if (d.vy < 0 && inGround(d.x, ny - 6)) { ny = d.y; d.vy = 40; } var f = floorAt(d.x, d.y - 12, ny + 1, true); if (f !== null && d.vy > 0 && f >= d.y - 12) { d.y = f; d.vy = -d.vy * 0.6; if (Math.abs(d.vy) < 40) d.vy = 0; } else d.y = ny; if (inGround(d.x, d.y - 2)) { var u = popUp(d.x, d.y); if (u !== null) { d.y = u; d.vy = 0; } } if (wallAt(d.x, d.y - 4)) d.vx = -d.vx;
     if (p && p.state === 'normal' && d.t > 0.6 && Math.abs(p.x - d.x) < 12 && d.y > p.y - PH - 4 && d.y < p.y + 6) { d.t = 99; gotDrop(); } });
   SCAT = SCAT.filter(function (d) { return d.t < 3.5; });
   FX.forEach(function (f) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += (f.g === undefined ? 300 : f.g) * dt; } });
@@ -94,12 +99,12 @@ function stepFoe(e, dt) {
   if (F.beh === 'walk') {
     var v = F.v * (F.charge && near && Math.sign(p.x - e.x) === e.dir ? 3 : 1), nx = e.x + e.dir * v * dt, f = floorAt(nx + e.dir * 8, e.y - 10, e.y + 18, true);
     if (floorAt(e.x, e.y - 6, e.y + 3, true) === null) { e.vy = (e.vy || 0) + 900 * dt; var fy = floorAt(e.x, e.y - 2, e.y + e.vy * dt + 2, true); if (fy !== null) { e.y = fy; e.vy = 0; } else e.y += e.vy * dt; if (e.y > LV.h * TS + 40) e.alive = false; } // nothing underfoot (its floor crumbled or moved): it falls
-    else if (f === null || wallAt(nx + e.dir * 10, e.y - 8)) e.dir = -e.dir; else { e.x = nx; e.y = f; }
+    else if (f === null || wallAt(nx + e.dir * 10, e.y - 8)) e.dir = -e.dir; else { var fo = floorAt(nx, e.y - 12, e.y + 18, true); e.x = nx; e.y = fo !== null ? fo : f; }
     if (F.trail && Math.random() < dt * 1.2) FX.push({ k: 'fire', x: e.x, y: e.y, t: 2.2, hurt: 1 });
   } else if (F.beh === 'hop') {
-    e.vy = (e.vy || 0) + 900 * dt; var ny = e.y + e.vy * dt, nx2 = e.x + e.dir * F.v * dt * (e.air ? 1 : 0), f2 = floorAt(nx2, e.y - 4, ny + 1, true);
+    e.vy = (e.vy || 0) + 900 * dt; var ny = e.y + e.vy * dt, nx2 = e.x + e.dir * F.v * dt * (e.air ? 1 : 0), f2 = floorAt(nx2, Math.min(e.y, ny) - 12, ny + 1, true);
     if (wallAt(nx2 + e.dir * 10, e.y - 8)) e.dir = -e.dir; else e.x = nx2;
-    if (f2 !== null && e.vy >= 0) { e.y = f2; e.vy = 0; e.air = false; e.cd -= dt; if (e.cd <= 0) { e.cd = 0.6 + Math.random() * 0.8; e.vy = -300; e.air = true; if (!floorAt(e.x + e.dir * 30, e.y - 10, e.y + 40, true)) e.dir = -e.dir; if (p && near && Math.random() < 0.6) e.dir = Math.sign(p.x - e.x) || 1; } } else { e.y = ny; e.air = true; }
+    if (f2 !== null && e.vy >= 0 && f2 >= e.y - 12) { e.y = f2; e.vy = 0; e.air = false; e.cd -= dt; if (e.cd <= 0) { e.cd = 0.6 + Math.random() * 0.8; e.vy = -300; e.air = true; if (!floorAt(e.x + e.dir * 30, e.y - 10, e.y + 40, true)) e.dir = -e.dir; if (p && near && Math.random() < 0.6) e.dir = Math.sign(p.x - e.x) || 1; } } else { e.y = ny; e.air = true; }
     if (e.y > LV.h * TS + 40) e.alive = false;
   } else if (F.beh === 'fly') { e.x = e.x0 + Math.sin(e.t * 0.9) * 50; e.y = e.y0 + Math.sin(e.t * 2.3) * 12; e.dir = Math.cos(e.t * 0.9) > 0 ? 1 : -1; if (F.drips && near && Math.random() < dt * 0.8) SHOTS.push({ x: e.x, y: e.y, vx: 0, vy: 40, g: 400, life: 2, k: 'ember' }); }
   else if (F.beh === 'dive') {
