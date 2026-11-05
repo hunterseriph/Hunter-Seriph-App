@@ -628,8 +628,9 @@ function catMenu(cid, focus) {
   KIT.menu({ title: c.n.charAt(0) + c.n.slice(1).toLowerCase(), sub: 'Tips in the jar: $' + SV.coins,
     items: UPGRADES.filter(function (u) { return u.cat === cid; }).map(function (u) {
       var l = U(u.id), full = l >= u.max, cost = upCost(u);
-      return { label: u.name.toUpperCase() + '  ·  ' + l + '/' + u.max + (full ? '' : '  ·  $' + cost), sub: full ? u.d(l) : (l ? 'Now: ' + u.d(l) + ' Next: ' + u.d(l + 1) : u.d(1)), cls: full ? 'done' : '', dis: full || SV.coins < cost, def: focus === u.id,
-        fn: function () { SV.coins -= cost; SV.ups[u.id] = l + 1; persist(); sfx.play('power'); keepScroll(function () { catMenu(cid, u.id); }); } };
+      return { label: u.name.toUpperCase() + '  ·  ' + l + '/' + u.max + (full ? '' : '  ·  $' + cost), sub: full ? u.d(l) : (l ? 'Now: ' + u.d(l) + ' Next: ' + u.d(l + 1) : u.d(1)), cls: full ? 'done' : '', dis: full, def: focus === u.id,
+        fn: function () { KIT.confirm({ title: u.name + ' ' + (l + 1) + '/' + u.max + '?', sub: (l ? 'Now: ' + u.d(l) + ' ' : '') + 'Next: ' + u.d(l + 1), price: cost, have: SV.coins, unit: 'TIPS', no: function () { catMenu(cid, u.id); },
+          yes: function () { SV.coins -= cost; SV.ups[u.id] = l + 1; persist(); sfx.play('power'); catMenu(cid, u.id); } }); } };
     }).concat([{ label: 'BACK', back: true, fn: function () { upgradesMenu(); } }]) });
 }
 function decorPlaces() {
@@ -641,15 +642,16 @@ function decorName(p, k) { return k === 2 ? SHOWPIECE[p.id] : DECOR[k].n; }
 function decorMenu(pid) {
   var p = PLACE[pid], n = SV.decor[pid] || 0;
   KIT.menu({ title: p.name, sub: 'Tips in the jar: $' + SV.coins, items: DECOR.map(function (dc, k) { var own = n > k, cost = decorCost(p, k), next = k === n;
-    return { label: decorName(p, k).toUpperCase() + (own ? '' : '  ·  $' + cost), sub: dc.d + (own || next ? '' : ' Buy the ' + decorName(p, k - 1) + ' first.'), cls: own ? 'done' : '', dis: own || !next || SV.coins < cost, def: next,
-      fn: function () { SV.coins -= cost; SV.decor[pid] = k + 1; persist(); sfx.play('power'); decorMenu(pid); } }; })
+    return { label: decorName(p, k).toUpperCase() + (own ? '' : '  ·  $' + cost), sub: dc.d + (own || next ? '' : ' Buy the ' + decorName(p, k - 1) + ' first.'), cls: own ? 'done' : '', dis: own || !next, def: next,
+      fn: function () { KIT.confirm({ title: decorName(p, k) + '?', sub: p.name + ': ' + dc.d, spr: k === 0 ? DISH[p.mains[p.mains.length - 1]].s : k === 1 ? 'wn_sconce1' : 'wn_sp_' + pid, price: cost, have: SV.coins, unit: 'TIPS', no: function () { decorMenu(pid); },
+        yes: function () { SV.coins -= cost; SV.decor[pid] = k + 1; persist(); sfx.play('power'); decorMenu(pid); } }); } }; })
     .concat([{ label: 'BACK', back: true, fn: decorPlaces }]) });
 }
 function suppliesMenu(focus) {
   KIT.menu({ title: 'Supplies', sub: 'Tips in the jar: $' + SV.coins + '  ·  boosts are used up on the next day you start',
     items: SUPPLIES.map(function (it) { var have = SV.items[it.id] || 0, show = it.give ? SV.items.popper || 0 : have;
-      return { label: it.n.toUpperCase() + '  ·  $' + it.cost, sub: it.d + (it.give || it.id === 'popper' ? ' You have ' + show + ' poppers.' : have ? ' You have ' + have + ' ready.' : ''), dis: SV.coins < it.cost, def: focus === it.id,
-        fn: function () { SV.coins -= it.cost; if (it.give) for (var k in it.give) SV.items[k] = (SV.items[k] || 0) + it.give[k]; else SV.items[it.id] = have + 1; persist(); sfx.play('coin'); keepScroll(function () { suppliesMenu(it.id); }); } }; })
+      return { label: it.n.toUpperCase() + '  ·  $' + it.cost, sub: it.d + (it.give || it.id === 'popper' ? ' You have ' + show + ' poppers.' : have ? ' You have ' + have + ' ready.' : ''), def: focus === it.id,
+        fn: function () { KIT.confirm({ title: it.n + '?', sub: it.d, price: it.cost, have: SV.coins, unit: 'TIPS', no: function () { suppliesMenu(it.id); }, yes: function () { SV.coins -= it.cost; if (it.give) for (var k in it.give) SV.items[k] = (SV.items[k] || 0) + it.give[k]; else SV.items[it.id] = have + 1; persist(); sfx.play('coin'); suppliesMenu(it.id); } }); } }; })
     .concat([{ label: 'BACK', back: true, fn: function () { upgradesMenu(); } }]) });
 }
 function helpMenu() {

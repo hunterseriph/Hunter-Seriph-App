@@ -162,35 +162,55 @@ function garageCss() {
     '.ckgar .opt{display:flex;align-items:center;gap:8px;padding:10px;text-align:left;min-height:46px}.ckgar .opt b{flex:1;font-size:15px}.ckgar .opt em{font-style:normal;font-family:var(--pixel);font-size:8px;color:var(--gold)}',
     '.ckgar .opt.eq{box-shadow:inset 0 0 0 2px #ffe36a}.ckgar .opt.eq em{color:var(--bone)}.ckgar .opt.poor em{color:#ff2630}',
     '.ckgar .opt.drv{padding:6px 10px}.ckgar .opt .hsp-pic{flex:none;width:32px!important;height:32px!important}.ckgar .opt[aria-disabled] .hsp-pic{filter:brightness(0)}',
+    '.ckgar .opt.pend{box-shadow:inset 0 0 0 2px #ff2630;background:#2a0a0e}',
+    '.ckgar .ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;background:#140809;box-shadow:inset 0 0 0 2px #c4121c}.ckgar .ask b{font-family:var(--display);font-size:20px;color:var(--bone);font-weight:400}.ckgar .ask span{font-family:var(--pixel);font-size:9px;color:var(--gold);flex:1}.ckgar .ask .ab{display:flex;gap:6px}.ckgar .ask .ckbtn{padding:8px 18px;font-size:15px;font-weight:700}',
     '.ckgar .opt i{width:20px;height:20px;flex:none;box-shadow:0 0 0 1px #12040a,inset 0 0 0 1px rgba(255,255,255,.15)}',
     '@media (max-height:460px){.ckinfo .ckview{max-height:24vh}.ckinfo .top .hsp-pic{display:none!important}.ckinfo{gap:5px;padding:8px}}',
     '@media (max-width:640px),(orientation:portrait){.ckgar{grid-template-columns:1fr;grid-template-rows:minmax(150px,38%) minmax(0,1fr)}}'
   ].join('\n'); document.head.appendChild(st);
 }
-function garage(back, tab) {
-  garageCss(); tab = tab || 'drv'; var g = GAR(), cu = custNow(), redo = function () { garage(back, tab); }, acts = {};
+/* trying things on (his ask: see a part on the kart before you buy it): focusing or hovering an option puts it on the
+   turntable (GPREV); tapping one you do not own holds it there (pend) and asks Buy / No under the picture */
+var GPREV = null;
+function garage(back, tab, pend) {
+  garageCss(); tab = tab || 'drv'; GPREV = null; var g = GAR(), cu = custNow(), redo = function () { garage(back, tab); }, acts = {};
   var tabs = [['drv', 'Driver']].concat(Object.keys(PARTS).map(function (k) { return [k, PARTS[k].n]; })).concat([['c0', 'Main colour'], ['c1', 'Second'], ['c2', 'Trim']]);
-  var rows = '';
+  var rows = '', ask = '';
+  var opt = function (i, cls, pv, inner) { return '<button type="button" class="ckbtn opt' + cls + '" data-act="p' + i + '" data-pv="' + pv + '"' + (cls.indexOf(' eq') >= 0 && !pend ? ' data-pad-default' : '') + '>' + inner + '</button>'; };
+  var hold = function (cat, id, name, price, i) { return function () { garage(back, tab, { cat: cat, id: id, name: name, price: price, i: i }); }; };
   if (tab === 'drv') CHARS.forEach(function (c, i) { // who drives: every driver you have opened
     var op = charOpen(c.id), eq = SV.ch === c.id;
-    rows += '<button type="button" class="ckbtn opt drv' + (eq ? ' eq' : '') + '" data-act="p' + i + '"' + (op ? '' : ' aria-disabled="true"') + (eq ? ' data-pad-default' : '') + '>' + (op ? pic(c.id, 32) : '<span class="hsp-pic" style="display:inline-block;width:32px;height:32px;background:#0a0506"></span>') + '<b>' + esc(op ? c.n : '???') + '</b><em>' + (eq ? 'ON' : op ? '' : 'LOCKED') + '</em></button>';
+    rows += opt(i, ' drv' + (eq ? ' eq' : ''), op ? 'drv|' + c.id : '', (op ? pic(c.id, 32) : '<span class="hsp-pic" style="display:inline-block;width:32px;height:32px;background:#0a0506"></span>') + '<b>' + esc(op ? c.n : '???') + '</b><em>' + (eq ? 'ON' : op ? '' : 'LOCKED') + '</em>').replace('data-act', op ? 'data-act' : 'aria-disabled="true" data-act');
     acts['p' + i] = function () { if (!op) { sfx.play('back'); return; } SV.ch = c.id; persist(); garageSync(); redo(); };
   });
   else if (PARTS[tab]) PARTS[tab].list.forEach(function (p, i) {
-    var own = partOwned(tab, p[0], p[2]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < p[2];
-    rows += '<button type="button" class="ckbtn opt' + (eq ? ' eq' : '') + (poor ? ' poor' : '') + '" data-act="p' + i + '"' + (eq ? ' data-pad-default' : '') + '><b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? 'OWNED' : p[2] + ' DROPS') + '</em></button>';
-    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < p[2]) { sfx.play('back'); return; } SV.drops -= p[2]; SV.spent = (SV.spent || 0) + p[2]; g.own[tab + ':' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); garageSync(); redo(); };
+    var own = partOwned(tab, p[0], p[2]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < p[2], pd = pend && pend.i === i;
+    rows += opt(i, (eq ? ' eq' : '') + (poor ? ' poor' : '') + (pd ? ' pend' : ''), tab + '|' + p[0], '<b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? 'OWNED' : p[2] + ' DROPS') + '</em>');
+    acts['p' + i] = own ? function () { g.eq[tab] = p[0]; persist(); garageSync(); redo(); } : hold(tab, p[0], p[1], p[2], i);
   });
   else PAINT_C.forEach(function (p, i) {
-    var own = paintOwned(p[0]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < PAINTCOST;
-    rows += '<button type="button" class="ckbtn opt' + (eq ? ' eq' : '') + (poor ? ' poor' : '') + '" data-act="p' + i + '"' + (eq ? ' data-pad-default' : '') + '>' + (p[0] ? '<i style="background:' + p[0] + '"></i>' : '<i style="background:linear-gradient(135deg,#c4121c 50%,#f1e7d0 50%)"></i>') + '<b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? '' : PAINTCOST) + '</em></button>';
-    acts['p' + i] = function () { if (!own) { if ((SV.drops || 0) < PAINTCOST) { sfx.play('back'); return; } SV.drops -= PAINTCOST; SV.spent = (SV.spent || 0) + PAINTCOST; g.own['paint:' + p[0]] = 1; sfx.play('coin'); } g.eq[tab] = p[0]; persist(); garageSync(); redo(); };
+    var own = paintOwned(p[0]), eq = cu[tab] === p[0], poor = !own && (SV.drops || 0) < PAINTCOST, pd = pend && pend.i === i;
+    rows += opt(i, (eq ? ' eq' : '') + (poor ? ' poor' : '') + (pd ? ' pend' : ''), tab + '|' + p[0], (p[0] ? '<i style="background:' + p[0] + '"></i>' : '<i style="background:linear-gradient(135deg,#c4121c 50%,#f1e7d0 50%)"></i>') + '<b>' + esc(p[1]) + '</b><em>' + (eq ? 'ON' : own ? '' : PAINTCOST) + '</em>');
+    acts['p' + i] = own ? function () { g.eq[tab] = p[0]; persist(); garageSync(); redo(); } : hold(tab, p[0], p[1] + ' paint', PAINTCOST, i);
   });
+  if (pend) { // Buy / No under the picture, the kart wearing it
+    var have = SV.drops || 0, can = have >= pend.price;
+    ask = '<div class="ask"><b>' + esc(pend.name) + '</b><span>' + pend.price + ' DROPS' + (can ? '' : ' · NEED ' + (pend.price - have) + ' MORE') + '</span><div class="ab">' +
+      (can ? '<button type="button" class="ckbtn" data-act="buy">Buy</button>' : '') + '<button type="button" class="ckbtn" data-act="nobuy" data-pad-default>' + (can ? 'No' : 'Back') + '</button></div></div>';
+    acts.buy = function () { if ((SV.drops || 0) < pend.price) return; SV.drops -= pend.price; SV.spent = (SV.spent || 0) + pend.price; g.own[(pend.cat.charAt(0) === 'c' && pend.cat.length === 2 ? 'paint' : pend.cat) + ':' + pend.id] = 1; g.eq[pend.cat] = pend.id; sfx.play('coin'); persist(); garageSync(); redo(); };
+    acts.nobuy = redo;
+  }
   tabs.forEach(function (t) { acts['t_' + t[0]] = function () { garage(back, t[0]); }; });
-  screen({ title: 'Garage', sub: 'Looks only. Your kart wears them in every race.', back: back || titleMenu, redo: redo, foot: 'A / TAP BUY OR FIT  ·  B BACK',
-    html: '<div class="ckgar"><div class="view"><canvas class="ckview"></canvas><div class="bank">DROPS ' + (SV.drops || 0) + '</div></div><div class="side"><div class="tabs">' +
+  screen({ title: 'Garage', sub: 'Looks only. Your kart wears them in every race.', back: pend ? redo : (back || titleMenu), redo: redo, foot: pend ? 'BUY IT, OR NO TO PUT IT BACK' : 'A / TAP TRY ON, BUY OR FIT  ·  B BACK',
+    html: '<div class="ckgar"><div class="view"><canvas class="ckview"></canvas><div class="bank">DROPS ' + (SV.drops || 0) + '</div>' + ask + '</div><div class="side"><div class="tabs">' +
       tabs.map(function (t) { return '<button type="button" class="ckbtn' + (t[0] === tab ? ' on' : '') + '" data-act="t_' + t[0] + '">' + esc(t[1]) + '</button>'; }).join('') + '</div><div class="opts">' + rows + '</div></div></div>',
-    acts: acts, after: function (m) { showroom(m.querySelector('.ckview'), function () { return { id: SV.ch, cust: custNow() }; }); var o = m.querySelector('.opt.eq'); if (o && o.scrollIntoView) o.scrollIntoView({ block: 'nearest' }); } });
+    acts: acts, after: function (m) {
+      showroom(m.querySelector('.ckview'), function () { var c = custNow(), id = SV.ch, pv = pend ? { cat: pend.cat, id: pend.id } : GPREV;
+        if (pv) { if (pv.cat === 'drv') { if (CH[pv.id]) id = pv.id; } else c[pv.cat] = pv.id; } return { id: id, cust: c }; });
+      m.querySelectorAll('.opt[data-pv]').forEach(function (b) { var v = b.getAttribute('data-pv'); if (!v) return; var k = v.split('|'), set = function () { GPREV = { cat: k[0], id: k[1] }; }, clr = function () { if (GPREV && GPREV.cat === k[0] && GPREV.id === k[1]) GPREV = null; };
+        b.addEventListener('focus', set); b.addEventListener('pointerenter', set); b.addEventListener('blur', clr); b.addEventListener('pointerleave', clr); });
+      var o = m.querySelector('.opt.pend') || m.querySelector('.opt.eq'); if (o && o.scrollIntoView) o.scrollIntoView({ block: 'nearest' });
+      if (pend) { var d = m.querySelector('[data-act="nobuy"]'); if (d) d.focus({ preventScroll: true }); } } });
 }
 /* the garage sits on the title, under Single Player and Multiplayer */
 titleMenu = (function (orig) { return function (page) {

@@ -538,18 +538,23 @@ function titleMenu() {
       { label: "SABA'S", sub: 'Spend your drops: ' + SV.bank, fn: function () { shopMenu(titleMenu); } },
       { label: 'HOW TO PLAY', fn: helpMenu }] });
 }
+var RUNSPR = { cumhead: 'ch_idle0', greebo: 'greebo_s0', amy: 'npc_amy', hom: 'h_gloop_adult_idle0', tb: 'npc_tb' };
 function charsMenu(back, focus) {
   KIT.menu({ title: 'Runners', sub: 'Drops in the bank: ' + SV.bank,
     items: CHARS.map(function (c) { var own = SV.chars[c.id], on = SV.ch === c.id;
-      return { label: c.n.toUpperCase() + (on || own ? '' : '  ·  ' + c.cost + ' DROPS'), sub: c.d, cls: on ? 'done' : '', dis: !own && SV.bank < c.cost, def: focus === c.id,
-        fn: function () { if (!own) { SV.bank -= c.cost; SV.chars[c.id] = 1; sfx.play('power'); } else sfx.play('select'); SV.ch = c.id; G.char = c; persist(); charsMenu(back, c.id); } }; })
+      return { label: c.n.toUpperCase() + (on || own ? '' : '  ·  ' + c.cost + ' DROPS'), sub: c.d, cls: on ? 'done' : '', def: focus === c.id,
+        fn: function () { var pick = function () { SV.ch = c.id; G.char = c; persist(); charsMenu(back, c.id); };
+          if (own) { sfx.play('select'); return pick(); }
+          KIT.confirm({ title: 'Unlock ' + c.n + '?', sub: c.d, spr: RUNSPR[c.id], price: c.cost, have: SV.bank, unit: 'DROPS', no: function () { charsMenu(back, c.id); },
+            yes: function () { SV.bank -= c.cost; SV.chars[c.id] = 1; sfx.play('power'); pick(); } }); } }; })
       .concat([{ label: 'BACK', back: true, fn: back }]) });
 }
 function shopMenu(back, focus) {
   KIT.menu({ title: "Saba's Hitless Hemporium", sub: '"Hitless runs only. Take a look, my friend."  Drops in the bank: ' + SV.bank,
     items: UPS.map(function (u) { var l = U(u.id), full = l >= u.max, cost = upCost(u);
-      return { label: u.n.toUpperCase() + '  ·  ' + l + '/' + u.max + (full ? '' : '  ·  ' + cost + ' DROPS'), sub: full ? u.d(l) : (l ? 'Now: ' + u.d(l) + ' Next: ' + u.d(l + 1) : u.d(1)), cls: full ? 'done' : '', dis: full || SV.bank < cost, def: focus === u.id,
-        fn: function () { SV.bank -= cost; SV.ups[u.id] = l + 1; persist(); sfx.play('power'); var box = document.querySelector('#menu .mbox'), y = box ? box.scrollTop : 0; shopMenu(back, u.id); box = document.querySelector('#menu .mbox'); if (box) box.scrollTop = y; } }; })
+      return { label: u.n.toUpperCase() + '  ·  ' + l + '/' + u.max + (full ? '' : '  ·  ' + cost + ' DROPS'), sub: full ? u.d(l) : (l ? 'Now: ' + u.d(l) + ' Next: ' + u.d(l + 1) : u.d(1)), cls: full ? 'done' : '', dis: full, def: focus === u.id,
+        fn: function () { KIT.confirm({ title: u.n + ' ' + (l + 1) + '/' + u.max + '?', sub: (l ? 'Now: ' + u.d(l) + ' ' : '') + 'Next: ' + u.d(l + 1), price: cost, have: SV.bank, unit: 'DROPS', no: function () { shopMenu(back, u.id); },
+          yes: function () { SV.bank -= cost; SV.ups[u.id] = l + 1; persist(); sfx.play('power'); shopMenu(back, u.id); } }); } }; })
       .concat([{ label: 'BACK', back: true, fn: back }]) });
 }
 function overMenu() {

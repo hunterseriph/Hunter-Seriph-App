@@ -26,7 +26,7 @@ function renderMenu(keepIdx) {
     var t = document.createElement('span'); t.className = 't'; var bb = document.createElement('b'); bb.textContent = r.name; t.appendChild(bb);
     if (r.sub) { var ii = document.createElement('i'); ii.textContent = r.sub; t.appendChild(ii); } b.appendChild(t);
     if (r.price !== undefined) { var p = document.createElement('span'); p.className = 'p'; p.textContent = r.price; b.appendChild(p); }
-    b.addEventListener('click', function () { if (r.fn) r.fn(); else sfx.no(); });
+    b.addEventListener('click', function () { if (!r.fn) return sfx.no(); if (askFirst(r)) return askBuy(r); r.fn(); });
     list.appendChild(b);
   });
   el('menuBack').textContent = o.backTxt || 'BACK'; el('menuBack').hidden = o.noBack;
@@ -53,6 +53,19 @@ function menuKey(e) {
   e.preventDefault(); return true;
 }
 el('menuBack').addEventListener('click', function () { sfx.click(); if (MENU && MENU.back) MENU.back(); else closeMenu(); });
+/* every shop asks before it spends (his ask): a row with a real price opens Buy / No first, the thing shown big.
+   Rows that cannot be afforded go straight through (they just say no); r.noAsk skips it (the slot machine) */
+function askFirst(r) { return !r.noAsk && typeof r.price === 'string' && /\d/.test(r.price) && !/^(off|own)$/.test(r.cls || '') && !/(^| )off( |$)/.test(r.cls || ''); }
+function askBuy(r) {
+  var prev = MENU, idx = menuIdx, back = function () { MENU = prev; renderMenu(true); menuIdx = idx; paintKb(); };
+  MENU = { title: r.name.replace(/^(BUILD|MAKE|BIND|BUY) /, '') + '?', note: r.sub || '', bank: prev.bank, pic: r.icon ? bigPic(r.icon) : null, backTxt: 'NO',
+    rows: [{ noAsk: 1, name: /^BUILD /.test(r.name) ? 'BUILD IT' : /^MAKE /.test(r.name) ? 'MAKE IT' : /^BIND /.test(r.name) ? 'BIND IT' : /^LEVEL UP/.test(r.name) ? 'LEVEL UP' : 'BUY', price: r.price, fn: function () { MENU = prev; menuIdx = idx; r.fn(); if (MENU === prev && menuOpen()) { renderMenu(true); menuIdx = idx; paintKb(); } } }],
+    back: back };
+  renderMenu(); menuIdx = 1; paintKb(); // the cursor starts on NO
+}
+function bigPic(id) {
+  if (!SPR[id]) { var u = iconURL(id); if (!u) return null; var o2 = document.createElement('canvas'); o2.width = o2.height = 64; var im = new Image(); im.onload = function () { var sc = Math.max(1, Math.floor(64 / Math.max(im.width, im.height))), pc = el('menuPic'), g = pc.getContext('2d'); pc.width = im.width * sc; pc.height = im.height * sc; g.imageSmoothingEnabled = false; g.drawImage(im, 0, 0, pc.width, pc.height); }; im.src = u; return o2; }
+  var c = sprCanvas(id, 1), sc = Math.max(1, Math.floor(64 / Math.max(c.width, c.height))), o = document.createElement('canvas'); o.width = c.width * sc; o.height = c.height * sc; var g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o; }
 function spend(n, fromRun) { if (fromRun) { if (RUN.drops < n) { sfx.no(); return false; } RUN.drops -= n; } else { if (META.bank < n) { sfx.no(); return false; } META.bank -= n; saveMeta(); } sfx.buy(); return true; }
 
 /* ---------- town buildings ---------- */

@@ -949,8 +949,8 @@ function renderShop(note) {
     if (G.shopRoom && sv.k === 'rest') return;
     if (sv.k === 'enchant') { enchantRows(list, sv); return; }
     var cost = pr(sv.f);
-    list.appendChild(mkBtn('use', sv.label + '  ·  ' + cost + ' drops', function () {
-      if (G.gold < cost) { sfx.click(); renderShop('Not enough drops.'); return; }
+    list.appendChild(mkBtn('use', sv.label + '  ·  ' + cost + ' drops', function cqb0() {
+      if (G.gold < cost) { sfx.click(); renderShop('Not enough drops.'); return; } if (!cqAsk('sv' + sv.k, sv.label, '', cost, 'drops', cqb0, function (n) { renderShop(n); })) return;
       G.gold -= cost;
       if (sv.k === 'rest') { repShop(G.shop, 3, G.shopWho); closeShop(); startRest(sv); return; }
       repShop(G.shop, 3, G.shopWho); P.belly = P.mbelly; if (sv.hp) P.hp = P.mhp; sfx.eat(); pop(P.x, P.y, sv.hp ? '+HP +BELLY' : '+BELLY', '#ffcf80'); say(sv.hp ? 'Belly and HP are full.' : 'Belly is full.', '#ffcf80');
@@ -1499,8 +1499,8 @@ function sanctGear(cat, note) {
   var l2 = setShop(GEARCATS.filter(function (c) { return c[0] === cat; })[0][1], tokNote(note), function () { sanctGear(null); }), ids = lockedIds(cat);
   ids.filter(function (i) { return !META.unl[i]; }).forEach(function (id) {
     var d = ITEMS[id], cost = unlockCost(id);
-    row(l2, d.name + '  ·  ' + cost + ' tokens', function () {
-      if (META.tokens < cost) { sfx.click(); sanctGear(cat, 'Not enough tokens.'); return; }
+    row(l2, d.name + '  ·  ' + cost + ' tokens', function cqb3() {
+      if (META.tokens < cost) { sfx.click(); sanctGear(cat, 'Not enough tokens.'); return; } if (!cqAsk('unl' + id, 'Unlock ' + d.name, d.info || '', cost, 'tokens', cqb3, function (m) { sanctGear(cat, m); })) return;
       META.tokens -= cost; META.unl[id] = 1; saveMeta(); sfx.pick(G.t); sanctGear(cat, 'Unlocked the ' + d.name + '.');
     }, d.info + (d.minF < 99 ? '  ·  from B' + d.minF + 'F' : ''), META.tokens < cost ? 'cat empty' : 'cat');
   });
@@ -1514,10 +1514,10 @@ function sanctChars(note) {
   var list = setShop('Characters', tokNote(note), function () { sanctTop(); });
   CHARORDER.filter(function (i) { return i !== 'cumhead'; }).sort(function (a, b) { return CHARS[a].cost - CHARS[b].cost; }).forEach(function (id) {
     var c = CHARS[id], rep = META.rep[id] || 0, own = !!META.owned[id];
-    var rb = row(list, c.name.toUpperCase() + '  ·  ' + (own ? 'HIRED' : c.cost + ' tokens') + '  ·  ' + (rep >= 100 ? 'TRUSTS YOU' : rep + '%'), function () {
+    var rb = row(list, c.name.toUpperCase() + '  ·  ' + (own ? 'HIRED' : c.cost + ' tokens') + '  ·  ' + (rep >= 100 ? 'TRUSTS YOU' : rep + '%'), function cqb4() {
       if (own) { sfx.click(); sanctChars('Already hired. Switch at the Clubhouse.'); return; }
       if (rep < 100) { sfx.click(); sanctChars(c.name + ' does not trust you yet (' + rep + '/100). Visit their shop.'); return; }
-      if (META.tokens < c.cost) { sfx.click(); sanctChars('Not enough tokens.'); return; }
+      if (META.tokens < c.cost) { sfx.click(); sanctChars('Not enough tokens.'); return; } if (!cqAsk('hire' + id, 'Hire ' + c.name, '', c.cost, 'tokens', cqb4, function (m) { sanctChars(m); })) return;
       META.tokens -= c.cost; META.owned[id] = 1; saveMeta(); sfx.oneup && sfx.oneup(); sanctChars(c.name + ' joins you! Pick them at the Clubhouse.');
     }, c.pas + ': ' + c.d + '  (HP ' + c.hp + ' · STR ' + c.str + ' · DEX ' + c.dex + ' · INT ' + c.int + ')', (own || rep < 100 || META.tokens < c.cost) ? 'cat empty' : 'cat');
     var bar = document.createElement('div'); bar.className = 'repbar'; bar.style.margin = '5px 0 3px'; var bi = document.createElement('i'); bi.style.width = Math.min(100, rep) + '%'; if (rep >= 100) bi.className = 'full'; bar.appendChild(bi); rb.insertBefore(bar, rb.lastChild);
@@ -1530,8 +1530,8 @@ function sanctHatch(note) {
     if (own) {
       var act = META.petSel === id;
       row(list, (act ? '> ' : '') + pd.name.toUpperCase() + '  ·  Lv' + (own.up + 1) + (act ? '  ·  ACTIVE' : ''), function () { META.petSel = id; saveMeta(); if (G.hub) initPet(); sfx.pick(G.t); sanctHatch(pd.name + ' will be your egg.'); }, pd.ab + ': ' + pd.d, 'use');
-      if (own.up < 5) { var uc = petUpCost(own.up); row(list, '   UPGRADE  ·  ' + uc + ' tokens', function () { if (META.tokens < uc) { sfx.click(); sanctHatch('Not enough tokens.'); return; } META.tokens -= uc; own.up++; saveMeta(); sfx.pick(G.t); sanctHatch(pd.name + ' upgraded to Lv' + (own.up + 1) + '.'); }, '+15% spit damage, +10% growth, stronger ability', 'cat'); }
-    } else if (petTaskDone(id)) row(list, pd.name.toUpperCase() + '  ·  ' + pd.cost + ' tokens', function () { if (META.tokens < pd.cost) { sfx.click(); sanctHatch('Not enough tokens.'); return; } META.tokens -= pd.cost; META.pets[id] = { up: 0 }; saveMeta(); sfx.oneup && sfx.oneup(); sanctHatch(pd.name + ' is yours!'); }, pd.ab + ': ' + pd.d, 'cat');
+      if (own.up < 5) { var uc = petUpCost(own.up); row(list, '   UPGRADE  ·  ' + uc + ' tokens', function cqb5() { if (META.tokens < uc) { sfx.click(); sanctHatch('Not enough tokens.'); return; } if (!cqAsk('petup' + id, pd.name + ' upgrade', '+15% spit damage, +10% growth, stronger ability', uc, 'tokens', cqb5, function (m) { sanctHatch(m); })) return; META.tokens -= uc; own.up++; saveMeta(); sfx.pick(G.t); sanctHatch(pd.name + ' upgraded to Lv' + (own.up + 1) + '.'); }, '+15% spit damage, +10% growth, stronger ability', 'cat'); }
+    } else if (petTaskDone(id)) row(list, pd.name.toUpperCase() + '  ·  ' + pd.cost + ' tokens', function cqb6() { if (META.tokens < pd.cost) { sfx.click(); sanctHatch('Not enough tokens.'); return; } if (!cqAsk('pet' + id, pd.name, pd.ab + ': ' + pd.d, pd.cost, 'tokens', cqb6, function (m) { sanctHatch(m); })) return; META.tokens -= pd.cost; META.pets[id] = { up: 0 }; saveMeta(); sfx.oneup && sfx.oneup(); sanctHatch(pd.name + ' is yours!'); }, pd.ab + ': ' + pd.d, 'cat');
     else row(list, 'LOCKED  ' + pd.name.toUpperCase(), function () { sfx.click(); }, petTaskText(id) + '  ·  ' + pd.ab, 'cat empty');
     // a picture of each breed next to its name (a dark silhouette until it is unlocked)
     var lastRow = list.lastElementChild, firstRow = null; for (var q = list.children.length - 1; q >= 0; q--) { var ch = list.children[q]; if (ch.textContent.toUpperCase().indexOf(pd.name.toUpperCase()) >= 0) { firstRow = ch; break; } }
@@ -2237,9 +2237,9 @@ function enchantRows(list, sv) {
   ENCH.forEach(function (en) {
     var have = w.en[en[3]] || 0, cost = pr(en[2] + (en[3] === 'burn' ? 0 : Math.round(have * (en[3] === 'leech' ? 60 : 3))));
     var done = en[3] === 'burn' ? have >= 1 : have >= en[4] * en[5];
-    list.appendChild(mkBtn('use', en[0] + '  ·  ' + (done ? 'MAXED' : cost + ' drops'), function () {
+    list.appendChild(mkBtn('use', en[0] + '  ·  ' + (done ? 'MAXED' : cost + ' drops'), function cqb1() {
       if (done) { sfx.click(); return; }
-      if (G.gold < cost) { sfx.click(); renderShop('Not enough drops.'); return; }
+      if (G.gold < cost) { sfx.click(); renderShop('Not enough drops.'); return; } if (!cqAsk('en' + en[3], en[0], '', cost, 'drops', cqb1, function (n) { renderShop(n); })) return;
       G.gold -= cost; w.en[en[3]] = Math.round((have + en[4]) * 100) / 100; sfx.pick(G.t); repShop(G.shop, 3, G.shopWho); say('Nattyboro enchants your ' + ITEMS[w.id].name + '.', '#e0407a');
       var n0 = P.inv.length; rollPrizes(sv); renderShop(P.inv.length > n0 ? 'Something fell out of the sleeve! Check your pack.' : 'Done. Pretty, isn\'t it?');
     }, en[1] + ' (' + ITEMS[w.id].name + ')'));
@@ -2365,8 +2365,8 @@ function packUpRows(list, back) {
   var info = document.createElement('p'); info.className = 'px dim'; info.textContent = blumRank(); list.appendChild(info);
   KINDS.forEach(function (k) {
     var u = META.slots[k] || 0, cap = capOf(k), cost = 40 + u * 45;
-    row(list, k.toUpperCase() + ' SLOTS  ·  ' + cap + '/10' + (u >= 5 ? '  ·  MAX' : '  ·  ' + cost + ' tokens'), function () {
-      if (u >= 5) { sfx.click(); return; } if (META.tokens < cost) { sfx.click(); back('Not enough tokens.'); return; }
+    row(list, k.toUpperCase() + ' SLOTS  ·  ' + cap + '/10' + (u >= 5 ? '  ·  MAX' : '  ·  ' + cost + ' tokens'), function cqb7() {
+      if (u >= 5) { sfx.click(); return; } if (META.tokens < cost) { sfx.click(); back('Not enough tokens.'); return; } if (!cqAsk('slot' + k, k.toUpperCase() + ' slots +1', '', cost, 'tokens', cqb7, back)) return;
       META.tokens -= cost; slotUp(k); saveMeta(); sfx.pick(G.t); back('Your ' + k + ' pack grows to ' + capOf(k) + '.');
     }, 'Carry one more ' + k + ' item per run. Starts at 5, tops out at 10', u >= 5 ? 'cat empty' : 'cat');
   });
@@ -2766,8 +2766,8 @@ function drawCrack(sx, sy) {
 /* ----- Stacked Fate's table (hub) ----- */
 var FATE = [['0 TOKENS', 22, 0], ['10 TOKENS', 24, 10], ['50 TOKENS', 20, 50], ['100 TOKENS', 14, 100], ['200 TOKENS', 8, 200], ['500 TOKENS!', 3.5, 500], ['1000 TOKENS!!!', 1.2, 1000], ['a Stacked Fate FLIER', 4, 'flierFate'], ['STACKED FATE\'S DECK', 3.3, 'deck']];
 function fateRows(list, sid, who) {
-  row(list, 'DRAW A CARD  ·  100 tokens', function () {
-    if (META.tokens < 100) { sfx.click(); hubShop(sid, who, 'Not enough tokens.'); return; }
+  row(list, 'DRAW A CARD  ·  100 tokens', function cqb8() {
+    if (META.tokens < 100) { sfx.click(); hubShop(sid, who, 'Not enough tokens.'); return; } if (!cqAsk('fate', 'Draw a card', 'Stacked Fate deals you one card.', 100, 'tokens', cqb8, function (m) { hubShop(sid, who, m); })) return;
     META.tokens -= 100; var f = FATE[weighted(FATE.map(function (q, i) { return [i, q[1]]; }))], msg;
     if (typeof f[2] === 'number') { META.tokens += f[2]; msg = 'The card reads ' + f[0] + '.' + (f[2] ? '' : ' Better luck next time.'); }
     else { var d = ITEMS[f[2]]; if (kindCount(d.k) >= capOf(d.k)) { META.tokens += 50; msg = 'The card reads ' + f[0] + '! Your pack is full, so here are 50 tokens instead.'; } else { P.inv.push({ id: f[2] }); msg = 'The card reads ' + f[0] + '! It is in your pack.'; } }
@@ -3084,6 +3084,19 @@ function openGameOpts() { closeInv(); G.state = 'opts'; G.optGame = true; el('op
 function closeGameOpts() { el('opts').hidden = true; G.optGame = false; G.state = 'play'; openInv(); }
 
 /* ----- spend tokens or drops in bulk: a quantity picker ----- */
+/* every shop asks before it spends (his ask): Buy / No, the cursor on NO. The handler runs again once you say yes */
+var CQASK = null; window.__cqAsk = function () { return cqAsk.apply(null, arguments); };
+function cqAsk(key, name, info, cost, unit, again, back) {
+  if (CQASK === key) { CQASK = null; return true; }
+  showEq(false); G.qty = null; var list = el('shopList'); list.innerHTML = '';
+  var h = document.createElement('p'); h.className = 'px'; h.style.margin = '2px 0'; h.textContent = String(name).toUpperCase() + '?'; list.appendChild(h);
+  var p = document.createElement('p'); p.className = 'px dim'; p.textContent = (info ? info + '   ·   ' : '') + cost + ' ' + unit; list.appendChild(p);
+  list.appendChild(mkBtn('use', 'BUY  ·  ' + cost + ' ' + unit, function () { sfx.click(); CQASK = key; again(); }));
+  var no = mkBtn('use', 'NO', function () { sfx.click(); back(); }); no.setAttribute('data-pad-default', ''); list.appendChild(no);
+  G.sBack = function () { back(); }; el('shopClose').textContent = 'BACK';
+  try { if (!('ontouchstart' in window)) no.focus(); } catch (e) {}
+  return false;
+}
 function buyQty(id, unit, money, unitName, doBuy, back) {
   var d = ITEMS[id], max = Math.min(Math.floor(money / unit), capOf(d.k) - kindCount(d.k));
   if (money < unit) { back('Not enough ' + unitName + '.'); return; }
@@ -3285,8 +3298,8 @@ function vendRender(note) {
   var max = Math.floor(G.gold / 100);
   [1, 5, 10, 0].forEach(function (q) {
     var n = q || max, lab = q ? 'BUY ' + q + ' TOKEN' + (q > 1 ? 'S' : '') + '  ·  ' + q * 100 + ' drops' : 'CONVERT ALL  ·  ' + max + ' token' + (max === 1 ? '' : 's') + ' for ' + max * 100 + ' drops';
-    var b = mkBtn('use', lab, function () {
-      if (n < 1 || G.gold < n * 100) { sfx.click(); vendRender('Not enough drops.'); return; }
+    var b = mkBtn('use', lab, function cqb2() {
+      if (n < 1 || G.gold < n * 100) { sfx.click(); vendRender('Not enough drops.'); return; } if (!cqAsk('vend' + n, n + ' token' + (n === 1 ? '' : 's'), '', n * 100, 'drops', cqb2, function (m) { vendRender(m); })) return;
       G.gold -= n * 100; addTokens(n); sfx.pick(G.t); vendRender('CLUNK. ' + n + ' token' + (n > 1 ? 's' : '') + ' dispensed.');
     }); if (n < 1 || G.gold < n * 100) b.style.opacity = 0.5; list.appendChild(b);
   });

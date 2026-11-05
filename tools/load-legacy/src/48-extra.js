@@ -99,7 +99,7 @@ function openGamble(e) {
   var rs = rsOf(G.roomKey); if (rs.broke) return;
   openMenu({ title: e.park ? "Steve's Prize Wheel" : 'The Cursed Slot', note: '', pic: null, bank: 'run', rebuild: function () {
     var c = gambleCost(rs), left = 3 - (rs.pulls || 0);
-    return { note: 'Pay to play. The house usually wins. It is rattling: ' + left + (left === 1 ? ' go' : ' goes') + ' left in it.', rows: [{ icon: 'coin', name: e.park ? 'SPIN THE WHEEL' : 'PULL THE LEVER', sub: 'A powerup, a jackpot, nothing at all, or a nasty surprise', price: fmtN(c), cls: 'sec', fn: function () { if (spend(c, true)) { rs.pulls = (rs.pulls || 0) + 1; closeMenu(); gambleSpin(e, c); } } }] };
+    return { note: 'Pay to play. The house usually wins. It is rattling: ' + left + (left === 1 ? ' go' : ' goes') + ' left in it.', rows: [{ noAsk: 1, icon: 'coin', name: e.park ? 'SPIN THE WHEEL' : 'PULL THE LEVER', sub: 'A powerup, a jackpot, nothing at all, or a nasty surprise', price: fmtN(c), cls: 'sec', fn: function () { if (spend(c, true)) { rs.pulls = (rs.pulls || 0) + 1; closeMenu(); gambleSpin(e, c); } } }] };
   } });
 }
 function gambleSpin(e, cost) {

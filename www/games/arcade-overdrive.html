@@ -50,6 +50,7 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 .mnote{margin:2px 0 0;text-align:center;color:var(--ash);font-size:13px;line-height:1.35}
 .mlogo{display:block;margin:0 auto 4px;width:auto;max-width:min(100%,420px);max-height:min(34vh,230px);object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.8))}
 .mart{display:flex;justify-content:center}.mart img,.mart canvas{image-rendering:pixelated;max-width:100%}
+.mart .mprev{max-height:30vh;width:auto;filter:drop-shadow(0 0 10px rgba(196,18,28,.35))}.mcost{margin:4px 0 0;text-align:center;font-family:var(--pixel,'Press Start 2P',monospace);font-size:12px;color:#ffe36a;line-height:1.8}.mcost small{font-size:8px;color:#a6968f}
 .mhtml{color:var(--bone);font-size:15px;line-height:1.4}.mhtml b{color:var(--gold);font-weight:700}
 .mlist{display:flex;flex-direction:column;gap:8px}.mlist.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 .mbtn{appearance:none;border:0;padding:11px 14px;background:#140809;color:var(--bone);font-family:var(--pixel);font-size:11px;line-height:1.4;letter-spacing:0.03em;text-align:left;cursor:pointer;box-shadow:inset 0 0 0 1px #4a1a1c;display:flex;flex-direction:column;gap:5px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
@@ -338,6 +339,16 @@ var KIT = (function () {
     if (o.note) { var n = document.createElement('p'); n.className = 'mnote'; n.textContent = o.note; box.appendChild(n); }
     down = {}; touchDown = {};
   }
+  /* confirm({ title, sub, price, have, unit, spr, sc, html, yes, no }): every shop asks before it spends (his ask).
+     Shows the thing (a sprite drawn big, or html), what it costs and what you have, then Buy / No (No is the default) */
+  function confirm(o) {
+    var poor = o.price !== undefined && o.have !== undefined && o.have < o.price, unit = o.unit || '';
+    menu({ cls: o.cls || '', title: o.title, sub: o.sub, html: (o.html || '') + (o.price !== undefined ? '<p class="mcost">' + (o.price ? o.price + ' ' + unit : 'FREE') + (o.have !== undefined ? '<br><small>YOU HAVE ' + o.have + ' ' + unit + '</small>' : '') + '</p>' : ''),
+      art: o.spr ? '<canvas class="mprev"></canvas>' : null,
+      items: [poor ? { label: 'Not enough ' + (unit || 'money').toLowerCase(), dis: true } : { label: o.yesLabel || 'Buy', fn: function () { if (o.yes) o.yes(); } },
+        { label: o.noLabel || 'No', back: true, def: true, fn: function () { if (o.no) o.no(); else closeMenu(); } }] });
+    if (o.spr) { var cv = menuEl.querySelector('.mprev'), f = SPR[o.spr]; if (cv && f) { var sc = o.sc || Math.max(2, Math.floor(110 / Math.max(f[2], f[3]))); cv.width = f[2] * sc; cv.height = f[3] * sc; var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; var draw = function () { if (ready) g.drawImage(SHEET, f[0], f[1], f[2], f[3], 0, 0, f[2] * sc, f[3] * sc); else setTimeout(draw, 100); }; draw(); } }
+  }
   function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
@@ -378,7 +389,7 @@ var KIT = (function () {
     g.fillStyle = 'rgba(240,138,176,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 3, r + 2, 3, 0, 0, 6.2832); g.fill(); g.fillStyle = 'rgba(255,208,224,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 4, r, 1.5, 0, 0, 6.2832); g.fill();
     g.restore();
   }
-  return { condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
+  return { confirm: confirm, condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,

@@ -108,8 +108,9 @@ function weaponMenu(sid) {
 function sanctumMenu(focus) {
   KIT.menu({ title: "Spermaid's Sanctum", sub: '"Sweetie! Even down here I keep a little stall."', wide: true, grid: true,
     items: POWERS.map(function (p) { var l = SV.ups[p.id] || 0, max = l >= p.max, cost = powerCost(p);
-      return { label: p.n + ' ' + l + '/' + p.max, sub: max ? 'MAX · ' + p.d : cost + ' drops · ' + p.d, dis: max || cost > SV.gold, def: p.id === focus, fn: function () { if (SV.gold < cost || max) return; SV.gold -= cost; SV.spent = (SV.spent || 0) + cost; SV.ups[p.id] = l + 1; persist(); sfx.play('coin'); sanctumMenu(p.id); } }; })
-    .concat([{ label: 'REFUND ALL', sub: 'Get every drop back', dis: !SV.spent, fn: function () { SV.gold += SV.spent || 0; SV.spent = 0; SV.ups = {}; persist(); sanctumMenu(); } }, { label: 'BACK', back: true, fn: titleMenu }]),
+      return { label: p.n + ' ' + l + '/' + p.max, sub: max ? 'MAX · ' + p.d : cost + ' drops · ' + p.d, dis: max, def: p.id === focus, fn: function () { if (max) return; KIT.confirm({ title: p.n + ' ' + (l + 1) + '/' + p.max + '?', sub: p.d, price: cost, have: Math.floor(SV.gold), unit: 'DROPS', no: function () { sanctumMenu(p.id); },
+        yes: function () { if (SV.gold < cost) return; SV.gold -= cost; SV.spent = (SV.spent || 0) + cost; SV.ups[p.id] = l + 1; persist(); sfx.play('coin'); sanctumMenu(p.id); } }); } }; })
+    .concat([{ label: 'REFUND ALL', sub: 'Get every drop back', dis: !SV.spent, fn: function () { KIT.confirm({ title: 'Refund everything?', sub: 'Every power goes back to 0 and you get ' + Math.floor(SV.spent || 0) + ' drops back.', yesLabel: 'Refund', no: function () { sanctumMenu(); }, yes: function () { SV.gold += SV.spent || 0; SV.spent = 0; SV.ups = {}; persist(); sanctumMenu(); } }); } }, { label: 'BACK', back: true, fn: titleMenu }]),
     note: Math.floor(SV.gold) + ' drops' });
 }
 function gridHTML(cells) { return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px">' + cells.join('') + '</div>'; }

@@ -261,6 +261,16 @@ var KIT = (function () {
     if (o.note) { var n = document.createElement('p'); n.className = 'mnote'; n.textContent = o.note; box.appendChild(n); }
     down = {}; touchDown = {};
   }
+  /* confirm({ title, sub, price, have, unit, spr, sc, html, yes, no }): every shop asks before it spends (his ask).
+     Shows the thing (a sprite drawn big, or html), what it costs and what you have, then Buy / No (No is the default) */
+  function confirm(o) {
+    var poor = o.price !== undefined && o.have !== undefined && o.have < o.price, unit = o.unit || '';
+    menu({ cls: o.cls || '', title: o.title, sub: o.sub, html: (o.html || '') + (o.price !== undefined ? '<p class="mcost">' + (o.price ? o.price + ' ' + unit : 'FREE') + (o.have !== undefined ? '<br><small>YOU HAVE ' + o.have + ' ' + unit + '</small>' : '') + '</p>' : ''),
+      art: o.spr ? '<canvas class="mprev"></canvas>' : null,
+      items: [poor ? { label: 'Not enough ' + (unit || 'money').toLowerCase(), dis: true } : { label: o.yesLabel || 'Buy', fn: function () { if (o.yes) o.yes(); } },
+        { label: o.noLabel || 'No', back: true, def: true, fn: function () { if (o.no) o.no(); else closeMenu(); } }] });
+    if (o.spr) { var cv = menuEl.querySelector('.mprev'), f = SPR[o.spr]; if (cv && f) { var sc = o.sc || Math.max(2, Math.floor(110 / Math.max(f[2], f[3]))); cv.width = f[2] * sc; cv.height = f[3] * sc; var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; var draw = function () { if (ready) g.drawImage(SHEET, f[0], f[1], f[2], f[3], 0, 0, f[2] * sc, f[3] * sc); else setTimeout(draw, 100); }; draw(); } }
+  }
   function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
@@ -301,7 +311,7 @@ var KIT = (function () {
     g.fillStyle = 'rgba(240,138,176,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 3, r + 2, 3, 0, 0, 6.2832); g.fill(); g.fillStyle = 'rgba(255,208,224,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 4, r, 1.5, 0, 0, 6.2832); g.fill();
     g.restore();
   }
-  return { condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
+  return { confirm: confirm, condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,

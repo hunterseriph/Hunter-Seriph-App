@@ -128,13 +128,19 @@ function statusScreen(m) {
   uiPush(s);
 }
 /* ---------- shops, the inn, the arcade ---------- */
+/* every purchase asks first (his ask): Buy / No, No picked to start so a double press never spends */
+function askBuy(name, price, yes) {
+  var s = listScreen({ x: W / 2 - 110, y: 128, w: 220, h: 62, rh: 20, help: false, items: function () { return [{ label: 'Buy', fn: function () { uiPop(); yes(); } }, { label: 'No', fn: function () { uiPop(); } }]; },
+    under: function () { win7(W / 2 - 150, 92, 300, 34); text('Buy ' + name + ' for ' + price + ' drops?', W / 2, 100, { size: 13, font: 'body', col: '#ffffff', align: 'center', max: 280 }); } });
+  s.cur = 1; uiPush(s);
+}
 function shopUI(B) {
   var goods = (B.shop || []).map(function (k) { return { k: k, it: ITEMS[k], gear: false }; }).concat((B.gear || []).map(function (k) { return { k: k, it: GEAR[k], gear: true }; }));
-  var s = listScreen({ x: 6, y: 66, w: 300, h: 198, rh: 20, items: function () { return goods.map(function (g) { var price = g.it.price; return { label: g.it.n, right: price, dis: S.drops < price, d: g.gear ? gearDesc(g.it) : g.it.d, fn: function () { S.drops -= price; if (g.gear) S.gear[g.k] = (S.gear[g.k] || 0) + 1; else S.inv[g.k] = (S.inv[g.k] || 0) + 1; sfx.play('coin'); } }; }); },
+  var s = listScreen({ x: 6, y: 66, w: 300, h: 198, rh: 20, items: function () { return goods.map(function (g) { var price = g.it.price; return { label: g.it.n, right: price, dis: S.drops < price, d: g.gear ? gearDesc(g.it) : g.it.d, fn: function () { askBuy(g.it.n, price, function () { S.drops -= price; if (g.gear) S.gear[g.k] = (S.gear[g.k] || 0) + 1; else S.inv[g.k] = (S.inv[g.k] || 0) + 1; sfx.play('coin'); }); } }; }); },
     under: function () { win7(6, 32, 468, 30); text(B.n + (B.who ? ' · ' + B.who : ''), 16, 38, { size: 14, font: 'body', col: '#ffe36a', max: 448 }); },
     over: function (s) { var g = goods[s.cur]; win7(310, 66, 164, 120); if (g) { text('Owned', 320, 72, { size: 13, font: 'body', col: '#8ab0ff' }); text(String(g.gear ? (S.gear[g.k] || 0) : (S.inv[g.k] || 0)), 464, 72, { size: 13, font: 'body', col: '#ffffff', align: 'right' });
         if (g.gear) S.party.forEach(function (m, i) { var can = g.it.w === 'all' || g.it.w === m.id, cur = GEAR[m[g.it.s]], st = g.it.s === 'wpn' ? 'atk' : 'def', d = (g.it[st] || 0) - (cur[st] || 0); text(heroName(m), 320, 96 + i * 26, { size: 13, font: 'body', col: can ? '#ffffff' : '#6a6a90' }); if (can) text((d >= 0 ? '+' : '') + d + ' ' + st.toUpperCase(), 464, 96 + i * 26, { size: 13, font: 'body', col: d > 0 ? '#7dff9a' : d < 0 ? '#ff6a74' : '#ffffff', align: 'right' }); }); }
-      win7(310, 190, 164, 30); text('Drops', 320, 196, { size: 13, font: 'body', col: '#8ab0ff' }); text(String(S.drops), 464, 196, { size: 14, font: 'body', col: '#ffe36a', align: 'right' }); win7(310, 224, 164, 40); text('A buys one.  B leaves.', 392, 236, { size: 12, font: 'body', col: '#c8c8e8', align: 'center' }); } });
+      win7(310, 190, 164, 30); text('Drops', 320, 196, { size: 13, font: 'body', col: '#8ab0ff' }); text(String(S.drops), 464, 196, { size: 14, font: 'body', col: '#ffe36a', align: 'right' }); win7(310, 224, 164, 40); text('A to buy.  B leaves.', 392, 236, { size: 12, font: 'body', col: '#c8c8e8', align: 'center' }); } });
   uiPush(s);
 }
 function innUI(B) {
