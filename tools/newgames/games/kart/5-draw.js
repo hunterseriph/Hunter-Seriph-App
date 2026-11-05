@@ -73,6 +73,8 @@ function buildDecals(R) {
   R.decalMesh = dmh.n ? dmh.upload() : dmh; R.signMesh = smh.n ? smh.upload() : smh;
 }
 /* ---------- the camera ---------- */
+/* looking behind (his ask): LOOK on the touch pad, R on the keyboard, the right stick clicked or pulled down, or LB + RB */
+function lookBack() { var g = KIT.gamepad, rs = g && g.axes && g.axes.length > 3 ? g.axes[3] : 0; return KIT.held('look') || (KIT.held('lb') && KIT.held('rb')) || !!(g && g.buttons && g.buttons[11] && g.buttons[11].pressed) || rs > 0.6; }
 function camera(dt) {
   var R = RACE, k = R.me, T = R.T;
   if (R.phase === 'intro') { // a slow swing round the starting grid
@@ -80,16 +82,17 @@ function camera(dt) {
     R.cam = { eye: eye, at: [s0.x, s0.y + 1, s0.z] }; R.camYaw = k.yaw; return R.cam;
   }
   if (R.phase === 'done' && R.doneT > 0.6) { var a2 = R.t * 0.4, eye2 = [k.x + Math.cos(a2) * 7, k.y + 2.6, k.z + Math.sin(a2) * 7]; R.cam = { eye: eye2, at: [k.x, k.y + 0.9, k.z] }; return R.cam; }
-  var want = k.yaw + (k.drift ? k.drift * 0.22 : 0), back = KIT.held('lb') && KIT.held('rb');
+  var want = k.yaw + (k.drift ? k.drift * 0.22 : 0), back = lookBack(); if (back !== !!R.lookB) { R.lookB = back; R.camSnap = true; } // swing straight round, not through the kart
   R.camYaw += angDiff(want, R.camYaw) * Math.min(1, dt * (k.drift ? 3.2 : 5.5));
   var dist = 6.2 + Math.min(1.2, Math.max(0, k.spd) / 30), hgt = 2.5, cy = R.camYaw + (back ? Math.PI : 0);
   var e = [k.x - Math.cos(cy) * dist, k.y + hgt, k.z - Math.sin(cy) * dist];
+  if (back) { var fy = R.camYaw; e = [k.x + Math.cos(fy) * 1.4, k.y + 2.9, k.z + Math.sin(fy) * 1.4]; } // like a mirror: from just over the driver's head, looking back down the road
   // keep the camera inside the walls on indoor courses
   var q = T.locate(e[0], e[2], k.seg); if (Math.abs(q.lat) > T.edge - 0.5 && R.def.wallH > 2.5) { var sd = Math.sign(q.lat), over = Math.abs(q.lat) - (T.edge - 0.5); e[0] -= q.s.nx * sd * over; e[2] -= q.s.nz * sd * over; }
   e[1] = Math.max(e[1], q.y + 1.6);
   if (!R.cam || R.camSnap) { R.cam = { eye: e, at: [k.x, k.y + 1, k.z] }; R.camSnap = false; }
   var ce = R.cam.eye; for (var i = 0; i < 3; i++) ce[i] += (e[i] - ce[i]) * Math.min(1, dt * 9);
-  var at = [k.x + Math.cos(cy) * 3, k.y + 1.1, k.z + Math.sin(cy) * 3]; R.cam.at = at;
+  var at = back ? [k.x + Math.cos(cy) * 14, k.y + 1.4, k.z + Math.sin(cy) * 14] : [k.x + Math.cos(cy) * 3, k.y + 1.1, k.z + Math.sin(cy) * 3]; R.cam.at = at;
   if (R.shake > 0) { R.shake -= dt; ce[0] += (Math.random() - 0.5) * 0.3; ce[1] += (Math.random() - 0.5) * 0.3; }
   return R.cam;
 }
@@ -198,6 +201,7 @@ function drawHud() {
   var R = RACE, ctx = KIT.ctx, k = R.me, C = Math.round((KIT.W - 480) / 2); ctx.clearRect(0, 0, KIT.W, 270);
   ctx.save(); ctx.translate(C, 0); // the HUD is laid out on 480 wide: centred on a wider screen, with its left and right corners pushed out to the edges
   try { hudBody(R, ctx, k, C); } finally { ctx.restore(); }
+  if (R.lookB && R.phase !== 'intro') { var lw = KIT.tw('LOOKING BEHIND', 8) + 12; KIT.R('rgba(7,4,5,0.75)', KIT.W / 2 - lw / 2, 62, lw, 14); KIT.text('LOOKING BEHIND', KIT.W / 2, 65, { size: 8, align: 'center', col: '#ffe36a' }); }
 }
 var PADE = { t: 0, x: 1e9 };
 function padEdge() { // where the on-screen buttons start, in HUD pixels (far off to the right when there are none)

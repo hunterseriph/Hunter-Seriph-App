@@ -53,6 +53,7 @@ function helpMenu(back) {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
+    '<b>Look behind</b>: hold LOOK on screen (R on the keyboard, click the right stick or pull it down on a controller, or hold LB and RB together).<br>' +
     '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
     '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
@@ -118,8 +119,9 @@ function draw() {
   if (!R3.ok) return;
   if (RACE) { drawRace(1 / 60); if (!RACE.demo) drawHud(); }
 }
-var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] }, PADCHAIN = false;
+var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'look', label: '&#8630;', sub: 'LOOK' }] }, PADCHAIN = false;
 function chainPad(on) { if (on === PADCHAIN) return; PADCHAIN = on; KIT.buildPad(on ? CHAINPAD : CKPAD); } // the CHAIN button only shows in a chain race
+KIT.setKeymap && KIT.setKeymap({ KeyR: 'look' });
 KIT.start({ w: 480, h: 270, wide: 720, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
 if (!R3.ok) KIT.menu({ title: 'Cumhead Kart', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the karts cannot run here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }

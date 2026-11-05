@@ -1427,15 +1427,22 @@ function driveKart(k, inp, dt) {
   }
   // height: follow the road, or fly off ramps and crests
   var gy = loc.y + (k.hopT > 0 ? 0 : 0);
+  // ramps are solid (he drove through them): on the wedge the ground is the wedge's own surface, and leaving its lip
+  // throws you up, however fast you crossed it (it used to need a frame exactly on the last sample)
+  var onRamp = null; R.ramps.forEach(function (r) { var di = (r.i - loc.i + T.N) % T.N; if (di >= 1 && di <= 3 && Math.abs(loc.lat) < def.hw * 0.75 + 0.3) { onRamp = r; gy = loc.y + Math.min(1.2, (3 - di + loc.t) * 0.4); } });
+  if (k.rampOn && !onRamp && !k.air) { var r0 = k.rampOn, past = (loc.i - r0.i + T.N) % T.N; if (past < 6) { k.y = Math.max(k.y, loc.y + 1.2);
+      if (k.spd > 8) { k.air = true; k.vy = (6.5 + 5 * r0.k) * Math.min(1.2, k.spd / 25) * (def.grav ? 0.8 : 1); k.y += 0.3; k.trickable = true; } else { k.air = true; k.vy = 0; } } }
+  if (k.air) k.rampOn = null;
   if (k.hopT > 0) k.hopT -= dt;
   if (k.air) {
     k.vy -= g * dt; k.y += k.vy * dt;
     if (k.y <= gy) { k.y = gy; k.air = false; if (k.vy < -6) { if (!k.ai || near(k)) sfx.play('land'); R.fx.push({ k: 'dust', x: k.x, y: k.y, z: k.z, t: 0.4 }); } k.vy = 0; if (k.trick) { k.trick = 0; k.boostT = Math.max(k.boostT, 0.8); if (!k.ai) sfx.play('power'); } k.trickable = false; }
   } else {
-    var wantVy = (gy - k.y) / dt; if (wantVy < k.vy - g * dt * 1.5 && k.spd > 14) { k.air = true; k.vy = Math.min(k.vy, 0); } else { k.vy = wantVy; k.y = gy; }
+    var wantVy = (gy - k.y) / dt; if (wantVy < k.vy - g * dt * 1.5 && k.spd > 14 && !onRamp) { k.air = true; k.vy = Math.min(k.vy, 0); } else { k.vy = wantVy; k.y = gy; }
   }
   // ramps
-  R.ramps.forEach(function (r) { if (!k.air && loc.i === r.i && Math.abs(loc.lat) < def.hw * 0.75 && k.spd > 8) { k.air = true; k.vy = (6.5 + 5 * r.k) * Math.min(1.2, k.spd / 25) * (def.grav ? 0.8 : 1); k.y += 0.3; k.trickable = true; } });
+
+  if (!k.air) k.rampOn = onRamp;
   // boost pads
   if (!k.air) R.pads.forEach(function (p) { var di = (loc.i - p.i + T.N) % T.N; if (di < p.len && Math.abs(loc.lat - p.lat) < 2) { if (k.boostT < 0.9) { k.boostT = 1.0; if (!k.ai) sfx.play('power'); } } });
   // conveyor belts and course hazards
@@ -1753,6 +1760,8 @@ function buildDecals(R) {
   R.decalMesh = dmh.n ? dmh.upload() : dmh; R.signMesh = smh.n ? smh.upload() : smh;
 }
 /* ---------- the camera ---------- */
+/* looking behind (his ask): LOOK on the touch pad, R on the keyboard, the right stick clicked or pulled down, or LB + RB */
+function lookBack() { var g = KIT.gamepad, rs = g && g.axes && g.axes.length > 3 ? g.axes[3] : 0; return KIT.held('look') || (KIT.held('lb') && KIT.held('rb')) || !!(g && g.buttons && g.buttons[11] && g.buttons[11].pressed) || rs > 0.6; }
 function camera(dt) {
   var R = RACE, k = R.me, T = R.T;
   if (R.phase === 'intro') { // a slow swing round the starting grid
@@ -1760,16 +1769,17 @@ function camera(dt) {
     R.cam = { eye: eye, at: [s0.x, s0.y + 1, s0.z] }; R.camYaw = k.yaw; return R.cam;
   }
   if (R.phase === 'done' && R.doneT > 0.6) { var a2 = R.t * 0.4, eye2 = [k.x + Math.cos(a2) * 7, k.y + 2.6, k.z + Math.sin(a2) * 7]; R.cam = { eye: eye2, at: [k.x, k.y + 0.9, k.z] }; return R.cam; }
-  var want = k.yaw + (k.drift ? k.drift * 0.22 : 0), back = KIT.held('lb') && KIT.held('rb');
+  var want = k.yaw + (k.drift ? k.drift * 0.22 : 0), back = lookBack(); if (back !== !!R.lookB) { R.lookB = back; R.camSnap = true; } // swing straight round, not through the kart
   R.camYaw += angDiff(want, R.camYaw) * Math.min(1, dt * (k.drift ? 3.2 : 5.5));
   var dist = 6.2 + Math.min(1.2, Math.max(0, k.spd) / 30), hgt = 2.5, cy = R.camYaw + (back ? Math.PI : 0);
   var e = [k.x - Math.cos(cy) * dist, k.y + hgt, k.z - Math.sin(cy) * dist];
+  if (back) { var fy = R.camYaw; e = [k.x + Math.cos(fy) * 1.4, k.y + 2.9, k.z + Math.sin(fy) * 1.4]; } // like a mirror: from just over the driver's head, looking back down the road
   // keep the camera inside the walls on indoor courses
   var q = T.locate(e[0], e[2], k.seg); if (Math.abs(q.lat) > T.edge - 0.5 && R.def.wallH > 2.5) { var sd = Math.sign(q.lat), over = Math.abs(q.lat) - (T.edge - 0.5); e[0] -= q.s.nx * sd * over; e[2] -= q.s.nz * sd * over; }
   e[1] = Math.max(e[1], q.y + 1.6);
   if (!R.cam || R.camSnap) { R.cam = { eye: e, at: [k.x, k.y + 1, k.z] }; R.camSnap = false; }
   var ce = R.cam.eye; for (var i = 0; i < 3; i++) ce[i] += (e[i] - ce[i]) * Math.min(1, dt * 9);
-  var at = [k.x + Math.cos(cy) * 3, k.y + 1.1, k.z + Math.sin(cy) * 3]; R.cam.at = at;
+  var at = back ? [k.x + Math.cos(cy) * 14, k.y + 1.4, k.z + Math.sin(cy) * 14] : [k.x + Math.cos(cy) * 3, k.y + 1.1, k.z + Math.sin(cy) * 3]; R.cam.at = at;
   if (R.shake > 0) { R.shake -= dt; ce[0] += (Math.random() - 0.5) * 0.3; ce[1] += (Math.random() - 0.5) * 0.3; }
   return R.cam;
 }
@@ -1878,6 +1888,7 @@ function drawHud() {
   var R = RACE, ctx = KIT.ctx, k = R.me, C = Math.round((KIT.W - 480) / 2); ctx.clearRect(0, 0, KIT.W, 270);
   ctx.save(); ctx.translate(C, 0); // the HUD is laid out on 480 wide: centred on a wider screen, with its left and right corners pushed out to the edges
   try { hudBody(R, ctx, k, C); } finally { ctx.restore(); }
+  if (R.lookB && R.phase !== 'intro') { var lw = KIT.tw('LOOKING BEHIND', 8) + 12; KIT.R('rgba(7,4,5,0.75)', KIT.W / 2 - lw / 2, 62, lw, 14); KIT.text('LOOKING BEHIND', KIT.W / 2, 65, { size: 8, align: 'center', col: '#ffe36a' }); }
 }
 var PADE = { t: 0, x: 1e9 };
 function padEdge() { // where the on-screen buttons start, in HUD pixels (far off to the right when there are none)
@@ -3176,6 +3187,7 @@ function helpMenu(back) {
   KIT.menu({ cls: 'ck plain', title: 'How to drive', wide: true, html: '<b>Steer</b> with the d-pad or left stick.<br><b>Gas</b> A (or up, or the right trigger). <b>Brake / reverse</b> B (or the left trigger). Hold <b>down</b> as you use an item to throw it behind you. <b>Start boost:</b> hold A on the grid to rev, and keep the needle in the green when GO lands; red over-revs and stalls you. On a phone, auto accelerate is on, so you only steer.<br>' +
     '<b>Drift</b>: hold R (RB, C or Shift) while turning. Hold it through the bend: blue sparks, then orange, then cream. Let go for a boost. The longer the drift, the bigger the boost.<br>' +
     '<b>Items</b>: drive through the red boxes, then Z (Y, LB or V) to use. Hold back to throw pies and pills behind you, up to lob a pill ahead.<br>' +
+    '<b>Look behind</b>: hold LOOK on screen (R on the keyboard, click the right stick or pull it down on a controller, or hold LB and RB together).<br>' +
     '<b>Ramps</b>: press drift in the air for a trick and a boost when you land.<br><b>Drops</b> on the road make you a little faster, up to ten. Getting hit spills two.<br><br>' +
     '<b>Chain Race</b>: ' + CHAINHELP + '<br><br>' +
     Object.keys(ITEMS).filter(function (k) { return k !== 'cuppa3'; }).map(function (k) { return '<b>' + ITEMS[k].n + '</b>: ' + ITEMS[k].d; }).join('<br>'),
@@ -3241,8 +3253,9 @@ function draw() {
   if (!R3.ok) return;
   if (RACE) { drawRace(1 / 60); if (!RACE.demo) drawHud(); }
 }
-var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }] }, PADCHAIN = false;
+var CKPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'look', label: '&#8630;', sub: 'LOOK' }] }, PADCHAIN = false;
 function chainPad(on) { if (on === PADCHAIN) return; PADCHAIN = on; KIT.buildPad(on ? CHAINPAD : CKPAD); } // the CHAIN button only shows in a chain race
+KIT.setKeymap && KIT.setKeymap({ KeyR: 'look' });
 KIT.start({ w: 480, h: 270, wide: 720, update: update, draw: draw, idleUpdate: idle, onPause: pauseMenu, startPauses: true, pad: CKPAD });
 if (!R3.ok) KIT.menu({ title: 'Cumhead Kart', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the karts cannot run here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }
@@ -4161,7 +4174,7 @@ function netClientEnd(m) {
    ===================================================================================================== */
 var CHAIN = { L: 7.5, MAX: 15, SNAP: 3.2, SLING: 1.15, SLINGCD: 3.5, SNAGMAX: 1.6 };
 var TEAMPTS = [15, 10, 6, 3];
-var CHAINPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'lb', label: 'L', sub: 'CHAIN', cls: 'gold' }] };
+var CHAINPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'lb', label: 'L', sub: 'CHAIN', cls: 'gold' }, { k: 'look', label: '&#8630;', sub: 'LOOK' }] };
 
 /* called from startRace when o.chain: karts 0+1, 2+3, 4+5, 6+7 are teams */
 function chainSetup(R) {

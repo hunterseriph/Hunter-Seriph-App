@@ -142,15 +142,22 @@ function driveKart(k, inp, dt) {
   }
   // height: follow the road, or fly off ramps and crests
   var gy = loc.y + (k.hopT > 0 ? 0 : 0);
+  // ramps are solid (he drove through them): on the wedge the ground is the wedge's own surface, and leaving its lip
+  // throws you up, however fast you crossed it (it used to need a frame exactly on the last sample)
+  var onRamp = null; R.ramps.forEach(function (r) { var di = (r.i - loc.i + T.N) % T.N; if (di >= 1 && di <= 3 && Math.abs(loc.lat) < def.hw * 0.75 + 0.3) { onRamp = r; gy = loc.y + Math.min(1.2, (3 - di + loc.t) * 0.4); } });
+  if (k.rampOn && !onRamp && !k.air) { var r0 = k.rampOn, past = (loc.i - r0.i + T.N) % T.N; if (past < 6) { k.y = Math.max(k.y, loc.y + 1.2);
+      if (k.spd > 8) { k.air = true; k.vy = (6.5 + 5 * r0.k) * Math.min(1.2, k.spd / 25) * (def.grav ? 0.8 : 1); k.y += 0.3; k.trickable = true; } else { k.air = true; k.vy = 0; } } }
+  if (k.air) k.rampOn = null;
   if (k.hopT > 0) k.hopT -= dt;
   if (k.air) {
     k.vy -= g * dt; k.y += k.vy * dt;
     if (k.y <= gy) { k.y = gy; k.air = false; if (k.vy < -6) { if (!k.ai || near(k)) sfx.play('land'); R.fx.push({ k: 'dust', x: k.x, y: k.y, z: k.z, t: 0.4 }); } k.vy = 0; if (k.trick) { k.trick = 0; k.boostT = Math.max(k.boostT, 0.8); if (!k.ai) sfx.play('power'); } k.trickable = false; }
   } else {
-    var wantVy = (gy - k.y) / dt; if (wantVy < k.vy - g * dt * 1.5 && k.spd > 14) { k.air = true; k.vy = Math.min(k.vy, 0); } else { k.vy = wantVy; k.y = gy; }
+    var wantVy = (gy - k.y) / dt; if (wantVy < k.vy - g * dt * 1.5 && k.spd > 14 && !onRamp) { k.air = true; k.vy = Math.min(k.vy, 0); } else { k.vy = wantVy; k.y = gy; }
   }
   // ramps
-  R.ramps.forEach(function (r) { if (!k.air && loc.i === r.i && Math.abs(loc.lat) < def.hw * 0.75 && k.spd > 8) { k.air = true; k.vy = (6.5 + 5 * r.k) * Math.min(1.2, k.spd / 25) * (def.grav ? 0.8 : 1); k.y += 0.3; k.trickable = true; } });
+
+  if (!k.air) k.rampOn = onRamp;
   // boost pads
   if (!k.air) R.pads.forEach(function (p) { var di = (loc.i - p.i + T.N) % T.N; if (di < p.len && Math.abs(loc.lat - p.lat) < 2) { if (k.boostT < 0.9) { k.boostT = 1.0; if (!k.ai) sfx.play('power'); } } });
   // conveyor belts and course hazards

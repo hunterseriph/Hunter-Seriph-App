@@ -13,7 +13,7 @@
    ===================================================================================================== */
 var CHAIN = { L: 7.5, MAX: 15, SNAP: 3.2, SLING: 1.15, SLINGCD: 3.5, SNAGMAX: 1.6 };
 var TEAMPTS = [15, 10, 6, 3];
-var CHAINPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'lb', label: 'L', sub: 'CHAIN', cls: 'gold' }] };
+var CHAINPAD = { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'GAS', cls: 'big' }, { k: 'x', label: 'R', sub: 'DRIFT' }, { k: 'y', label: 'Z', sub: 'ITEM', cls: 'gold' }, { k: 'b', label: 'B', sub: 'BRAKE' }, { k: 'lb', label: 'L', sub: 'CHAIN', cls: 'gold' }, { k: 'look', label: '&#8630;', sub: 'LOOK' }] };
 
 /* called from startRace when o.chain: karts 0+1, 2+3, 4+5, 6+7 are teams */
 function chainSetup(R) {

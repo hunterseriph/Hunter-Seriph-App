@@ -123,6 +123,9 @@ function hitFoe(e, n, stomp) {
 /* ---------- touching things ---------- */
 function touch(e, dt) {
   var p = PL, px = p.x, py = p.y, k = e.k;
+  if (k === 'drop' && e.alive && p.loop) { // round a loop he is sideways or upside down: his body points at the loop's middle, so the pickup box turns with him
+    var Lc = p.loop.e, lx = Lc.x - px, ly = Lc.y - LOOPR - py, ll = Math.hypot(lx, ly) || 1, bx = px + lx / ll * PH * 0.45, by = py + ly / ll * PH * 0.45;
+    if (Math.hypot(e.x - bx, e.y - 6 - by) < PH * 0.5 + 9) { e.alive = false; gotDrop(); FX.push({ k: 'spark', x: e.x, y: e.y - 6, t: 0.25 }); } return; }
   if (k === 'drop') { if (e.alive && Math.abs(px - e.x) < 11 && e.y - 6 > py - PH - 4 && e.y - 6 < py + 4) { e.alive = false; gotDrop(); FX.push({ k: 'spark', x: e.x, y: e.y - 6, t: 0.25 }); } return; }
   if (k === 'foe') {
     if (!e.alive || p.state !== 'normal') return; var F = e.F, w = e.small ? 8 : 11, h = e.small ? 14 : 24;
