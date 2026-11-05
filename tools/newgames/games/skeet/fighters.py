@@ -11,26 +11,27 @@ def build_rigs(B):
     rigs = {}
     # CUMHEAD: his head and shirt, black sleeves and trousers with his red edging, big white gloves, chunky boots
     head = R.erase(ch.crop((4, 0, 30, 28)), [(0, 22, 4, 28), (21, 22, 26, 28)])
-    body = R.reline(R.erase(ch.crop((7, 26, 24, 45)), [(0, 8, 2, 19), (15, 8, 17, 19)]), '#b31b24')
-    rigs['cu'] = dict(head=(head, (15 - 4, 27)), body=(body, (15 - 7, 43 - 26)), hipRow=43, neckRow=27, hipW=3.5,
-        shf=(4, 13), shb=(-4, 13), arm=(6, 6), armR=2.3, armPal=('#3a3034', '#201a1d', '#0a0809'), armPalB=('#2a2226', '#161013', '#060405'), armOut='#b31b24',
-        handR=3.6, handPal=('#ffffff', '#dcd6e0', '#8a8494'), leg=(7, 6.5), legR=3.1, legPal=('#3a3034', '#201a1d', '#0a0809'), legPalB=('#2a2226', '#161013', '#060405'),
-        legOut='#b31b24', footR=(4.6, 2.6), footF=1.6, footPal=('#4a3a40', '#1a1416', '#070506'), sole=('#ff3a44', '#c4121c', '#6a0a10'),
-        rest=dict(hip=(0, 0.95), lean=1, ff=(0.34, 0), bf=(-0.32, 0), fh=(0.5, 0.32), bh=(0.42, 0.45)))
+    body = R.reline(R.erase(ch.crop((7, 26, 24, 39)), [(0, 8, 2, 13), (15, 8, 17, 13)]), '#b31b24') # the shirt only: the trousers are drawn as legs
+    rigs['cu'] = dict(head=(head, (15 - 4, 27)), body=(body, (15 - 7, 38 - 26)), hipRow=38, neckRow=27, hipW=3.2,
+        shf=(4, 9), shb=(-3, 9), arm=(5.5, 5.5), armR=1.9, armPal=('#5a4a52', '#2e2529', '#141012'), armPalB=('#3a3034', '#1e181b', '#0a0809'), armOut='#b31b24',
+        handR=3.3, handPal=('#ffffff', '#dcd6e0', '#8a8494'), leg=(9, 8.5), legR=2.7, legTaper=0.9, legPal=('#5a4a52', '#2e2529', '#141012'), legPalB=('#3a3034', '#1e181b', '#0a0809'),
+        legOut='#b31b24', footR=(4.4, 2.5), footF=1.6, footPal=('#5a4a52', '#221a1e', '#070506'), sole=('#ff3a44', '#c4121c', '#6a0a10'),
+        outer='#b31b24', inner='#6a0a10',
+        rest=dict(hip=(0, 0.95), lean=1, ff=(0.4, 0), bf=(-0.36, 0), fh=(0.62, 0.3), bh=(0.3, 0.22)))
     # GREEBO: the whole pie and hat, his black apron with the G, white chef sleeves and gloves, little black legs
     ghead = R.reline(R.erase(gr.crop((8, 0, 33, 32)), [(0, 18, 3, 32), (21, 18, 25, 32)]), '#12040a')
-    gbody = R.reline(R.erase(gr.crop((9, 30, 31, 41)), [(0, 0, 2, 11), (20, 0, 22, 11)]), '#12040a')
+    gbody = R.reline(R.erase(gr.crop((9, 30, 31, 41)), [(0, 0, 3, 11), (18, 0, 22, 11)]), '#12040a')
     rigs['gr'] = dict(head=(ghead, (19 - 8, 31)), body=(gbody, (19 - 9, 39 - 30)), hipRow=39, neckRow=31, hipW=4,
-        shf=(6, 7), shb=(-6, 7), arm=(5.5, 5.5), armR=2.6, armPal=('#ffffff', '#dcdcdc', '#9a9a9a'), armPalB=('#dcdcdc', '#b0b0b0', '#7a7a7a'), armOut='#12040a',
-        handR=3.8, handPal=('#ffffff', '#e4e4e4', '#a0a0a0'), leg=(3.2, 3.2), legR=2.8, legPal=('#3a3a3a', '#2c2c2c', '#141414'), legPalB=('#2c2c2c', '#1c1c1c', '#0c0c0c'),
+        shf=(6, 7), shb=(-5, 7), arm=(5.5, 5.5), armR=2.2, armPal=('#ffffff', '#dcdcdc', '#9a9a9a'), armPalB=('#dcdcdc', '#b0b0b0', '#7a7a7a'), armOut='#12040a',
+        handR=3.4, handPal=('#ffffff', '#e4e4e4', '#a0a0a0'), leg=(3.2, 3.2), legR=2.5, legPal=('#3a3a3a', '#2c2c2c', '#141414'), legPalB=('#2c2c2c', '#1c1c1c', '#0c0c0c'),
         legOut='#12040a', footR=(4.2, 2.3), footF=1.4, footPal=('#4a4a4a', '#222222', '#0a0a0a'),
         rest=dict(hip=(0, 0.92), lean=1, ff=(0.45, 0), bf=(-0.45, 0), fh=(0.55, 0.35), bh=(0.45, 0.5)))
     # THE HOMUNCULUS: his head and body, long teal arms with bone claws, digitigrade-ish legs
     hhead = R.erase(ho.crop((10, 0, 34, 18)), [])
     hbody = R.reline(R.erase(ho.crop((12, 15, 30, 31)), [(10, 2, 18, 16)]), '#12040a')
     rigs['ho'] = dict(head=(hhead, (19 - 10, 16)), body=(hbody, (19 - 12, 29 - 15)), hipRow=29, neckRow=16, hipW=3,
-        shf=(3, 11), shb=(-3, 11), arm=(6.5, 6.5), armR=2.0, armTaper=0.8, armPal=('#5cc7c9', '#2a8a94', '#16505a'), armPalB=('#3aa0a8', '#1e6a74', '#0e3a42'), armOut='#12040a',
-        handR=2.4, handPal=('#e8dcc0', '#bfae8e', '#7a6a4e'), claw=1, leg=(6, 6.5), legR=2.6, legTaper=0.8, legPal=('#5cc7c9', '#2a8a94', '#16505a'), legPalB=('#3aa0a8', '#1e6a74', '#0e3a42'),
+        shf=(3, 11), shb=(-3, 11), arm=(6.5, 6.5), armR=1.8, armTaper=0.75, armPal=('#5cc7c9', '#2a8a94', '#16505a'), armPalB=('#3aa0a8', '#1e6a74', '#0e3a42'), armOut='#12040a',
+        handR=2.4, handPal=('#e8dcc0', '#bfae8e', '#7a6a4e'), claw=1, leg=(6, 6.5), legR=2.3, legTaper=0.75, legPal=('#5cc7c9', '#2a8a94', '#16505a'), legPalB=('#3aa0a8', '#1e6a74', '#0e3a42'),
         legOut='#12040a', footR=(3, 2), footF=1, footPal=('#e8dcc0', '#bfae8e', '#7a6a4e'),
         rest=dict(hip=(0, 0.9), lean=2, ff=(0.36, 0), bf=(-0.34, 0), fh=(0.6, 0.15), bh=(0.5, 0.3)))
     # SPERMAID: her whole droplet from his drawing, her tail drawn as one sweeping curve with the pink fin, little arms
@@ -58,14 +59,14 @@ def anims(k):
     tail = k == 'sp'; heavy = k == 'gr'; beast = k == 'ho'
     g = 0.04 if heavy else 0 # Greebo stands wider and lower
     # IDLE: a fighting stance that breathes
-    A['idle'] = cyc(4, lambda i, a: P(hip=(0, 0.93 - 0.03 * (1 - math.cos(a)) / 2), fh=(0.5, 0.3 - 0.04 * math.sin(a)), bh=(0.42, 0.44 - 0.04 * math.sin(a)), head=(0, -round((1 - math.cos(a)) / 2)),
+    A['idle'] = cyc(4, lambda i, a: P(hip=(0, 0.93 - 0.03 * (1 - math.cos(a)) / 2), fh=(0.62, 0.3 - 0.04 * math.sin(a)), bh=(0.3, 0.22 - 0.04 * math.sin(a)), head=(0, -round((1 - math.cos(a)) / 2)),
         ff=(0.55, 0.12 + 0.05 * math.sin(a)) if tail else (0.34, 0)))
     # WALK: proper steps, feet planted on the floor, the hip bobbing
     def walk(i, a):
         s = math.sin(a); c = math.cos(a)
         if tail: return P(hip=(0, 0.95 + 0.04 * s), lean=1 + round(c), ff=(0.5 + 0.12 * c, 0.1 + 0.08 * s), fh=(0.5, 0.28 + 0.04 * s), bh=(0.4, 0.4 - 0.04 * s))
-        return P(hip=(0.02, 0.92 - 0.035 * abs(math.cos(a))), lean=1, ff=(0.05 + 0.32 * c, max(0, 0.22 * s)), bf=(0.05 - 0.32 * c, max(0, -0.22 * s)),
-                 fh=(0.5, 0.3 + 0.03 * c), bh=(0.42, 0.44 - 0.03 * c))
+        return P(hip=(0.02, 0.93 - 0.035 * abs(math.cos(a))), lean=1, ff=(0.04 + 0.34 * c, max(0, 0.2 * s)), bf=(0.0 - 0.34 * c, max(0, -0.2 * s)),
+                 fh=(0.62, 0.3 + 0.03 * c), bh=(0.3, 0.22 - 0.03 * c))
     A['walk'] = cyc(8, walk)
     # RUN: long strides, arms pumping, leaning in
     def run(i, a):

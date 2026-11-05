@@ -181,7 +181,7 @@ function drawDuelHUD() {
   KIT.panel(cx - 18, y - 9, 36, 22, { fill: 'solid' }); T(String(Math.ceil(D.clock)).padStart(2, '0'), cx, y - 5, { size: 16, align: 'center', col: D.clock < 10 ? '#ff2630' : '#ffe36a', font: 'px' });
   if (G.arc) T((G.arc.i + 1) + '/10', cx, y + 15, { size: 6, align: 'center', col: '#a6968f' });
   if (G.combo >= 2 && G.comboT > 0) T(G.combo + ' HITS', 10, 52, { size: 16, col: '#ffe36a', outline: true, font: 'title' });
-  if (G.callout) T(G.callout.s, cx, 64, { size: 8, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, G.callout.t * 3) });
+  if (G.callout) T(G.callout.s, cx, HH - 24, { size: 8, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, G.callout.t * 3) }); // move names low, clear of the backdrop's signs
   if (D.phase === 'intro') { var a = D.t < 1.1 ? (D.round === 3 || (D.wins[0] === 1 && D.wins[1] === 1) ? 'FINAL ROUND' : 'ROUND ' + D.round) : 'FIGHT!'; T(a, cx, 70, { size: 32, align: 'center', col: a === 'FIGHT!' ? '#ff2630' : '#f1e7d0', outline: true, font: 'title' }); }
   if (D.phase === 'ko' && D.t > 0.1) { if (D.t < 2) T(D.msg, cx, 60, { size: D.msg === 'K.O.' ? 48 : 32, align: 'center', col: D.msg === 'PERFECT' ? '#ffe36a' : '#ff2630', outline: true, font: 'title' });
     else T(D.winner === P ? 'YOU WIN' : 'YOU LOSE', cx, 64, { size: 32, align: 'center', col: D.winner === P ? '#ffe36a' : '#a6968f', outline: true, font: 'title' }); }
@@ -235,9 +235,11 @@ function drawSelect() {
   T(G.pickKind === 'arcade' ? 'ARCADE' : 'STORY', 8, 8, { size: 8, col: '#ffe36a' });
   var tx = W * 0.47;
   T(H.n, tx, 66, { size: 16, col: '#f1e7d0', outline: true, font: 'title' });
-  KIT.wrap(H.blurb, W - tx - 8, 8).forEach(function (l, i) { T(l, tx, 86 + i * 10, { size: 8, col: '#a6968f' }); });
-  ['POWER', 'SPEED', 'RANGE'].forEach(function (s, i) { T(s, tx, 110 + i * 10, { size: 8, col: '#f1e7d0' }); for (var j = 0; j < 5; j++) R(j < H.stats[i] ? '#ff2630' : '#2a0a0e', tx + 50 + j * 10, 110 + i * 10, 8, 7); });
-  var sp = H.sp; [['X', sp.fire.n], ['UP+X', sp.rise.n], ['FWD+X', sp.dash.n], ['DOWN+X', sp.ground.n], ['Y', sp.sup.n]].forEach(function (r, i) { T(r[0], tx, 144 + i * 10, { size: 8, col: '#ffe36a' }); T(r[1], tx + 50, 144 + i * 10, { size: 8, col: '#f1e7d0' }); });
+  // everything stacks under the one before, however many lines the blurb wraps to (it ran into the stats on his phone)
+  var bl = KIT.wrap(H.blurb, W - tx - 8, 8), yy = 86; bl.forEach(function (l, i) { T(l, tx, yy + i * 10, { size: 8, col: '#a6968f' }); }); yy += bl.length * 10 + 4;
+  var room = HH - 22 - yy, gapL = Math.max(9, Math.min(10, Math.floor(room / 8)));
+  ['POWER', 'SPEED', 'RANGE'].forEach(function (s, i) { var y2 = yy + i * gapL; T(s, tx, y2, { size: 8, col: '#f1e7d0' }); for (var j = 0; j < 5; j++) R(j < H.stats[i] ? '#ff2630' : '#2a0a0e', tx + 50 + j * 10, y2, 8, 7); }); yy += gapL * 3 + 4;
+  var sp = H.sp; [['X', sp.fire.n], ['UP+X', sp.rise.n], ['FWD+X', sp.dash.n], ['DOWN+X', sp.ground.n], ['Y', sp.sup.n]].forEach(function (r, i) { T(r[0], tx, yy + i * gapL, { size: 8, col: '#ffe36a' }); T(r[1], tx + 50, yy + i * gapL, { size: 8, col: '#f1e7d0', max: W - tx - 56 }); });
   if (G.pickKind === 'arcade' && SV.arc && SV.arc[HEROLIST[sel]]) T((SV.arcClear && SV.arcClear[HEROLIST[sel]] ? 'CLEARED' : 'BEST ' + SV.arc[HEROLIST[sel]] + '/10'), x0 + cw * 4 + gap * 3 + 8, 36, { size: 8, col: '#9aff5a' });
   else if (SV.best[HEROLIST[sel]]) T('BEST ' + SV.best[HEROLIST[sel]], x0 + cw * 4 + gap * 3 + 8, 36, { size: 8, col: '#9aff5a' });
   if (Math.floor(G.t * 2) % 2) T('A: FIGHT   B: BACK', W / 2, HH - 10, { size: 8, align: 'center', col: '#a6968f' });

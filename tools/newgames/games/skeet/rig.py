@@ -19,13 +19,34 @@ LIGHT = (-0.55, 0.83) # light from the top left (game coordinates: y up)
 
 class Frame:
     def __init__(self, W=96, H=80, ox=48, oy=78):
-        self.im = Image.new('RGBA', (W, H), (0, 0, 0, 0)); self.W, self.H, self.ox, self.oy = W, H, ox, oy
+        self.im = Image.new('RGBA', (W, H), (0, 0, 0, 0)); self.W, self.H, self.ox, self.oy = W, H, ox, oy; self.parts = []
+    def compose(self, outer, inner):
+        """lay every part in order, then ONE outline round the outside of the limbs (never doubled on the cut sprite pieces,
+        they keep their own) and a thin seam where a limb crosses something else, so arms and legs read cleanly"""
+        own = {}; col = {}
+        for i, pt in enumerate(self.parts):
+            for k, c in pt.col.items(): col[k] = c; own[k] = i
+        seam = set()
+        for k, i in own.items():
+            if self.parts[i].kind != 'limb': continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (k[0] + dx, k[1] + dy); j = own.get(n)
+                if j is not None and j < i and self.parts[j].group != self.parts[i].group: seam.add(k); break
+        dst = self.im.load()
+        for k, c in col.items(): dst[k] = hexc(inner) if k in seam else c
+        if outer:
+            oc = hexc(outer)
+            for k, i in own.items():
+                if self.parts[i].kind != 'limb': continue
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    n = (k[0] + dx, k[1] + dy)
+                    if n not in col and 0 <= n[0] < self.W and 0 <= n[1] < self.H: dst[n] = oc
     def px(self, x, y): return self.ox + x, self.oy - y
 
 class Part:
     """one piece drawn into its own layer, outlined, then laid on the frame"""
-    def __init__(self, fr, outline):
-        self.fr = fr; self.col = {}; self.outline = hexc(outline) if isinstance(outline, str) else outline
+    def __init__(self, fr, outline, kind='limb', group=None):
+        self.fr = fr; self.col = {}; self.outline = hexc(outline) if isinstance(outline, str) else outline; self.kind = kind; self.group = group
     def put(self, X, Y, c):
         if 0 <= X < self.fr.W and 0 <= Y < self.fr.H: self.col[(X, Y)] = c
     def cap(self, a, b, r0, pal, r1=None):
@@ -61,6 +82,8 @@ class Part:
             for x in range(im.width):
                 if p[x, y][3] > 40: self.put(X + x, Y + y, p[x, y])
     def lay(self, skip_outline=False):
+        if skip_outline and self.kind == 'limb': self.kind = 'img'
+        self.fr.parts.append(self); return
         fr = self.fr; dst = fr.im.load()
         if not skip_outline and self.outline:
             for (X, Y) in list(self.col):
@@ -131,7 +154,7 @@ def render(C, pose):
             if P.get(key) is None: continue
             s = sh[side]; tgt = (s[0] + P[key][0] * AL, s[1] + P[key][1] * AL)
             j, t = ik(s, tgt, C['arm'][0], C['arm'][1], P.get(side + 'eb', (-0.4, -1)))
-            pt = Part(fr, C['armOut']); pal = C['armPal'] if side == 'f' else C.get('armPalB', C['armPal'])
+            pt = Part(fr, C['armOut'], group='a' + side); pal = C['armPal'] if side == 'f' else C.get('armPalB', C['armPal'])
             pt.cap(s, j, C['armR'], pal); pt.cap(j, t, C['armR'], pal, C['armR'] * C.get('armTaper', 1))
             hand = P.get(side + 'hand', 'fist'); hr = C['handR'] * (1.15 if hand == 'big' else 1)
             if C.get('claw'): # the Homunculus: three claws
@@ -149,7 +172,7 @@ def render(C, pose):
             if P.get(key) is None: continue
             a = hipj[side]; tgt = (P[key][0] * LL, P[key][1] * LL)
             j, t = ik(a, tgt, C['leg'][0], C['leg'][1], P.get(side + 'kb', (1, 0.2)))
-            pt = Part(fr, C['legOut']); pal = C['legPal'] if side == 'f' else C.get('legPalB', C['legPal'])
+            pt = Part(fr, C['legOut'], group='l' + side); pal = C['legPal'] if side == 'f' else C.get('legPalB', C['legPal'])
             pt.cap(a, j, C['legR'], pal); pt.cap(j, t, C['legR'], pal, C['legR'] * C.get('legTaper', 1))
             # the foot points along the floor, or along the leg when it is kicking out
             ang = math.atan2(t[1] - j[1], t[0] - j[0]); kick = P.get(side + 'kick', False)
@@ -176,6 +199,7 @@ def render(C, pose):
             X, Y = fr.px(nx, ny); pt = Part(fr, None); pt.img(im, int(round(X - ox)), int(round(Y - oy))); pt.lay(True)
         elif part == 'extra' and P.get('extra'):
             P['extra'](fr, hip, sh)
+    fr.compose(C.get('outer', '#12040a'), C.get('inner', '#12040a'))
     return crop(fr)
 
 def draw_tail(fr, C, hip, tip, LL):
@@ -185,7 +209,7 @@ def draw_tail(fr, C, hip, tip, LL):
     pts = []
     for i in range(13):
         t = i / 12; x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * ctrl[0] + t * t * b[0]; y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * ctrl[1] + t * t * b[1]; pts.append((x, y))
-    pt = Part(fr, C['legOut'])
+    pt = Part(fr, C['legOut'], group='tail')
     for i in range(12):
         r0 = C['legR'] * (1 - i / 12 * 0.6); r1 = C['legR'] * (1 - (i + 1) / 12 * 0.6); pt.cap(pts[i], pts[i + 1], r0, C['legPal'], r1)
     # scales: a darker fleck every few pixels along the middle
@@ -195,7 +219,7 @@ def draw_tail(fr, C, hip, tip, LL):
     pt.lay()
     # the fin: two lobes splayed out from the tip, across the way the tail is going
     ex, ey = pts[-1]; px_, py_ = pts[-3]; ang = math.atan2(ey - py_, ex - px_)
-    fin = Part(fr, C['legOut'])
+    fin = Part(fr, C['legOut'], group='tail')
     for da in (-0.9, 0.9):
         c = (ex + math.cos(ang + da) * 4, ey + math.sin(ang + da) * 4); fin.cap((ex, ey), c, 1.6, C['finPal'], 2.6)
     fin.lay()
