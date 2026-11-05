@@ -73,13 +73,20 @@ function cityTowers(g, r, seed) { // the black towers (two depths were drawn by 
     x += w + Math.floor(r() * 6);
   }
 }
-function distLayer(id) { return KIT.layer('dback_' + id, 960, 300, function () { var g = KIT.ctx, r = rngOf(id.length * 131 + id.charCodeAt(0)); (BACKS[DIST[id].back] || BACKS.towers)(g, r); }, { px: 1, crisp: 1 }); } // painted at game pixel size with hard edges: crisp Mega Drive scenery, nothing see-through
+function distLayer(id) { return KIT.layer('dback_' + id, 960, 300, function () { var g = KIT.ctx, r = rngOf(id.length * 131 + id.charCodeAt(0)); (BACKS[DIST[id].back] || BACKS.towers)(g, r); liftDark(g, LV.zone); }, { px: 1, crisp: 1 }); }
+function liftDark(g, Z) { // no black chunks (his ask): silhouettes keep their shape but take the zone's own dark colour, lit on top
+  try { var c = g.canvas, id = g.getImageData(0, 0, c.width, c.height), d = id.data, w = c.width, city = Z.id === 'city', hz = hexRgb(Z.sky[2]), lo = city ? [34, 10, 14] : [Math.round(hz[0] * 1.5 + 14), Math.round(hz[1] * 1.5 + 14), Math.round(hz[2] * 1.5 + 14)], k = city ? 0 : 0.3;
+    for (var i = 0; i < d.length; i += 4) { if (d[i + 3] < 96) continue; var r0 = d[i], g0 = d[i + 1], b0 = d[i + 2];
+      if (k) { r0 = r0 * (1 - k) + lo[0] * k; g0 = g0 * (1 - k) + lo[1] * k; b0 = b0 * (1 - k) + lo[2] * k; }
+      if (Math.max(r0, g0, b0) < Math.max(lo[0], lo[1], lo[2])) { var up = i >= w * 4 && d[i - w * 4 + 3] < 96; r0 = Math.max(r0, up ? lo[0] * 1.8 : lo[0]); g0 = Math.max(g0, up ? lo[1] * 1.8 : lo[1]); b0 = Math.max(b0, up ? lo[2] * 1.8 : lo[2]); }
+      d[i] = r0; d[i + 1] = g0; d[i + 2] = b0; }
+    g.putImageData(id, 0, 0); } catch (e) {} } // painted at game pixel size with hard edges: crisp Mega Drive scenery, nothing see-through
 /* draw the district backdrop at the camera. Where one district meets the next, the new scenery starts at a gateway
    column that moves with the ground (a hard cut, hidden behind a tall pillar), never a see-through blend */
-function drawDistrictBack(g, cx, vy, W, H) {
-  var ds = LV.dists, my = Math.round(vy * 1.4) + H - 300 + 46; // sat low enough that the far and middle layers show above it
-  if (LV.zone.id === 'city') { var far = cityMid('citymid0', 0.55), fx = -(((cx * 0.22) % 960) + 960) % 960; var fy = Math.round(vy * 1.22) + H - 270; for (; fx < W; fx += 960) KIT.blit(far, fx, fy); if (fy + 299 < H) { g.fillStyle = '#0a0406'; g.fillRect(0, fy + 298, W, H - fy - 298); } }
-  function one(id, x0, x1) { if (!id || x1 <= x0) return; var L = distLayer(id), mx = -(((cx * 0.4) % 960) + 960) % 960; g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); for (; mx < W; mx += 960) KIT.blit(L, mx, my); if (my + 300 < H) { g.fillStyle = '#0a0406'; g.fillRect(x0, my + 299, x1 - x0, H - my - 299); } g.restore(); }
+function drawDistrictBack(g, cx, D, W, H) {
+  var ds = LV.dists, city = LV.zone.id === 'city', my = Math.round(D * 1.3) + H - (city ? 254 : 270); // sat low enough that the far and middle layers show above it
+  if (city) { var far = cityMid('citymid0', 0.12), fx = -(((cx * 0.22) % 960) + 960) % 960; var fy = Math.round(D * 1.22) + H - 270; for (; fx < W; fx += 960) KIT.blit(far, fx, fy); downBand(g, far, cx * 0.22, fy, W, H, 36); }
+  function one(id, x0, x1) { if (!id || x1 <= x0) return; var L = distLayer(id), mx = -(((cx * 0.4) % 960) + 960) % 960; g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); for (; mx < W; mx += 960) KIT.blit(L, mx, my); if (city) downBand(g, L, cx * 0.4, my, W, H, 30); g.restore(); }
   var left = distAt(Math.floor(cx / TS)), x = 0, gates = [];
   for (var i = 0; i < ds.length; i++) { var bx = Math.round(ds[i].c * TS - cx); if (bx <= 0 || bx >= W) continue; one(left, x, bx); gates.push(bx); left = ds[i].id; x = bx; }
   one(left, x, W);

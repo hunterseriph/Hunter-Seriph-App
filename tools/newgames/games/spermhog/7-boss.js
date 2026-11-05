@@ -51,4 +51,9 @@ function stepOne(b, dt) {
 }
 function idle(b, t) { b.st = 'idle'; b.t = t; b.s = 0; }
 function wave(x, y) { [-1, 1].forEach(function (d) { SHOTS.push({ x: x + d * 20, y: y - 6, vx: d * 200, vy: 0, life: 2.2, k: 'wave', ghost: 0 }); }); }
-function freeCage() { var e = G.arena, p = PL; FX.push({ k: 'cage', x: (G.lock.x0 + G.lock.x1) / 2, y: e.y, t: 3 }); sfx.play('goal'); actClear(true); }
+function freeCage() { var e = G.arena, p = PL; FX.push({ k: 'cage', x: (G.lock.x0 + G.lock.x1) / 2, y: e.y, t: 3 }); sfx.play('goal');
+  // the arena's right wall comes down and the camera holds still, so he runs off the screen (he said he always ran into a wall)
+  var fr = LV.h; for (var y = 0; y < LV.h; y++) if (isSolid(T(e.c1 - 2, y), e.c1 - 2, y)) { fr = y; break; }
+  for (var c = e.c1; c < e.c1 + 4; c++) for (var r = Math.max(0, fr - 24); r < fr; r++) LV.t[r * LV.w + c] = '.';
+  for (var c3 = e.c1; c3 < e.c1 + 4; c3++) for (var r3 = fr; r3 < LV.h; r3++) LV.t[r3 * LV.w + c3] = T(e.c1 - 2, r3) === '.' ? '#' : T(e.c1 - 2, r3);
+  G.lock = { x0: e.c0 * TS, x1: 1e9, cam: G.lock.cam }; actClear(true); }

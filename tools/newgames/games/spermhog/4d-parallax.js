@@ -47,7 +47,7 @@ function drawPar(g, kind, z, cx, vy, W, H) {
   for (; x < W; x += 960) KIT.blit(L, x, y);
   // every layer carries on down to the bottom of the screen, so going up a hill never shows its bottom edge floating (he spotted the fence doing it)
   if (y + L.lh >= H) return;
-  if (kind !== 'near') { g.fillStyle = kind === 'far' ? '#0a0406' : '#080304'; g.fillRect(0, y + L.lh - 1, W, H - y - L.lh + 1); return; }
+  if (kind !== 'near') { downBand(g, L, cx * par, y, W, H, 30); return; }
   // the near layer (railings, pipes, posts) carries on downwards as itself: its bottom band repeats to the bottom of the screen, never a solid block
   var band = NEARBAND[z] === undefined ? 24 : NEARBAND[z], sc = L.height / L.lh, x2; if (!band) return;
   for (var yy = y + L.lh; yy < H; yy += band) for (x2 = -(((cx * par) % 960) + 960) % 960; x2 < W; x2 += 960) g.drawImage(L, 0, (L.lh - band) * sc, L.width, band * sc, Math.round(x2), Math.round(yy), 960, band);

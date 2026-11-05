@@ -56,26 +56,44 @@ function drawWorld() {
   if (PL) drawPlayer(PL, cx, cy);
   FX.forEach(function (f) { drawFx(g, f, f.x - cx, f.y - cy); });
   // dark rooms in the Bone Pit: a light round Cumhead
-  if (Z.id === 'bone') { var lx = PL.x - cx, ly = PL.y - 20 - cy, DK = KIT.layer('bonedark', 640, 480, function () { var c = KIT.ctx; [[1, 0.72], [0.62, 0.5], [0.44, 0.26]].forEach(function (q, i) { c.globalCompositeOperation = 'source-over'; if (i === 0) { c.fillStyle = 'rgba(0,0,0,' + q[1] + ')'; c.fillRect(0, 0, 640, 480); } }); c.globalCompositeOperation = 'destination-out'; [[230, 0.3], [170, 0.35], [110, 1]].forEach(function (q) { c.fillStyle = 'rgba(0,0,0,' + q[1] + ')'; c.beginPath(); c.arc(320, 240, q[0], 0, 6.3); c.fill(); }); c.globalCompositeOperation = 'source-over'; }, { px: 1 }); g.drawImage(DK, Math.round(lx - 320), Math.round(ly - 240)); var ex = Math.round(lx - 320), ey = Math.round(ly - 240); g.fillStyle = 'rgba(0,0,0,0.72)'; if (ex > 0) g.fillRect(0, 0, ex, H); if (ex + 640 < W) g.fillRect(ex + 640, 0, W - ex - 640, H); if (ey > 0) g.fillRect(Math.max(0, ex), 0, 640, ey); if (ey + 480 < H) g.fillRect(Math.max(0, ex), ey + 480, 640, H - ey - 480); } // dark rooms: three hard rings of light round him
+  if (Z.id === 'bone') { var lx = PL.x - cx, ly = PL.y - 20 - cy, DK = KIT.layer('bonedark', 640, 480, function () { var c = KIT.ctx; [[1, 0.5], [0.62, 0.5], [0.44, 0.26]].forEach(function (q, i) { c.globalCompositeOperation = 'source-over'; if (i === 0) { c.fillStyle = 'rgba(8,5,3,' + q[1] + ')'; c.fillRect(0, 0, 640, 480); } }); c.globalCompositeOperation = 'destination-out'; [[230, 0.3], [170, 0.35], [110, 1]].forEach(function (q) { c.fillStyle = 'rgba(0,0,0,' + q[1] + ')'; c.beginPath(); c.arc(320, 240, q[0], 0, 6.3); c.fill(); }); c.globalCompositeOperation = 'source-over'; }, { px: 1 }); g.drawImage(DK, Math.round(lx - 320), Math.round(ly - 240)); var ex = Math.round(lx - 320), ey = Math.round(ly - 240); g.fillStyle = 'rgba(8,5,3,0.5)'; if (ex > 0) g.fillRect(0, 0, ex, H); if (ex + 640 < W) g.fillRect(ex + 640, 0, W - ex - 640, H); if (ey > 0) g.fillRect(Math.max(0, ex), 0, 640, ey); if (ey + 480 < H) g.fillRect(Math.max(0, ex), ey + 480, 640, H - ey - 480); } // dark rooms: three hard rings of light round him
 }
 function qOn(c) { for (var i = 0; i < ENTS.length; i++) { var e = ENTS[i]; if (e.k === 'zap' && Math.abs(e.x - (c * TS + 8)) < 30) return e.on || (e.warn && Math.floor(G.t * 16) % 2); } return false; }
 function drawBack(g, Z, cx, cy, W, H) {
   skyBands(g, Z.sky, W, H); // hard bands of colour like a Mega Drive sky, not a smooth fade
-  var vy = Math.round(-cy * 0.08); // the backdrop rises a little as you climb
+  var D = bkDrift(cy), vy = Math.round(D * 0.9); // the backdrop drifts a little as you climb, but only so far, so no layer ever shows its bottom edge
   if (Z.id === 'city') {
     if (imgOk(HOGIM.sky)) tile(g, HOGIM.sky, cx * 0.05, vy - 30, H + 40, 1);
     if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 1);
     if (imgOk(HOGIM.skyline)) { var SL = imgLayer('skyl', HOGIM.skyline, 130, 0.5), sw = SL.lw, sx = -(((cx * 0.12) % sw) + sw) % sw; for (; sx < W; sx += sw) KIT.blit(SL, sx, vy + H - 200); }
     drawPar(g, 'far', 'city', cx, vy, W, H);
-    if (LV.dists && LV.dists.length) { drawDistrictBack(g, cx, vy, W, H); drawPar(g, 'near', 'city', cx, vy, W, H); drawAir(g, 'city', cx, cy, W, H); return; } else
-    [[0.22, 'citymid0', 30, 0.55], [0.4, 'citymid1', 0, 1]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(vy * (1 + L[0])) + H - 300 + L[2]; g.globalAlpha = L[3]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); g.globalAlpha = 1; if (L[3] === 1 && my + 300 < H) { g.fillStyle = '#0d0507'; g.fillRect(0, my + 299, W, H - my - 299); } });
+    if (LV.dists && LV.dists.length) { drawDistrictBack(g, cx, D, W, H); drawZL(g, 'city', 'near', cx, D, W, H); drawAir(g, 'city', cx, cy, W, H); return; }
+    [[0.22, 'citymid0', 30], [0.4, 'citymid1', 0]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(D * (1 + L[0])) + H - 300 + L[2]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); downBand(g, mid, cx * L[0], my, W, H, 36); });
     return;
   }
-  // moon and stars, then three painted layers (or this part of the zone's own scenery)
-  g.fillStyle = 'rgba(241,231,208,0.5)'; for (var i = 0; i < 40; i++) { var sx = ((i * 97 - cx * 0.03) % W + W) % W, sy = (i * 53) % (H * 0.6); g.fillRect(sx, sy, 1, 1); }
-  if (LV.dists && LV.dists.length) { if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); } drawPar(g, 'far', Z.id, cx, vy, W, H); drawPar(g, 'mid', Z.id, cx, vy, W, H); drawDistrictBack(g, cx, vy, W, H); drawPar(g, 'near', Z.id, cx, vy, W, H); drawAir(g, Z.id, cx, cy, W, H); return; }
-  if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 50 + vy * 0.5, 22, 0, 6.3); g.fill(); }
-  [0, 1, 2].forEach(function (n) { var Lc = bgLayer(Z, n, 640, 270); var par = [0.15, 0.3, 0.5][n], x = -(((cx * par) % 640) + 640) % 640, ly = vy * (1 + n * 0.5) + (H - 270); for (; x < W; x += 640) KIT.blit(Lc, x, ly); if (n === 2 && ly + 270 < H) { g.fillStyle = 'rgba(0,0,0,0.9)'; g.fillRect(0, ly + 269, W, H - ly - 269); } });
+  // stars and the moon, then the zone's painted far layer, this district's own scenery, the painted middle and near layers
+  g.fillStyle = 'rgba(241,231,208,0.5)'; for (var i = 0; i < 40; i++) { var sx2 = ((i * 97 - cx * 0.03) % W + W) % W, sy = (i * 53) % (H * 0.35); g.fillRect(sx2, sy, 1, 1); }
+  if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 34 + D * 0.3, 22, 0, 6.3); g.fill(); if (Z.id === 'park') { g.fillStyle = '#8a0a14'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02 + 6, 30 + D * 0.3, 6, 0, 6.3); g.fill(); } }
+  drawZL(g, Z.id, 'far', cx, D, W, H);
+  if (LV.dists && LV.dists.length) drawDistrictBack(g, cx, D, W, H);
+  drawZL(g, Z.id, 'mid', cx, D, W, H);
+  drawZL(g, Z.id, 'near', cx, D, W, H);
+  drawAir(g, Z.id, cx, cy, W, H);
+}
+/* the painted layers (tools/spermhog/backs: real pixel art with outlines and lit edges, his ask: the backdrops were too basic).
+   [where its horizon sits on screen, how far it drifts, scroll speed, its horizon row in the picture] */
+var HOGBK = {}; Object.keys(typeof HOGBKIMG === 'undefined' ? {} : HOGBKIMG).forEach(function (k) { var i = new Image(); i.src = HOGBKIMG[k]; HOGBK[k] = i; });
+var BKF = { far: [0.52, 0.6, 0.1, 140], mid: [0.64, 1.0, 0.24, 170], near: [0.86, 1.6, 0.6, 90] };
+function bkDrift(cy) { var base = (LV.sy || 0) - KIT.H * 0.62; return Math.max(-50, Math.min(50, (base - cy) * 0.07)); }
+function downBand(g, L, off, y, W, H, band) { // a layer carries on down to the bottom of the screen as itself (its bottom rows repeat), never a black block
+  var bot = y + L.lh; if (bot >= H) return; var sc = L.height / L.lh, lw = L.lw, x0 = -((off % lw) + lw) % lw;
+  for (var yy = bot; yy < H; yy += band) for (var x = x0; x < W; x += lw) g.drawImage(L, 0, (L.lh - band) * sc, L.width, band * sc, Math.round(x), Math.round(yy), lw, band);
+}
+function drawZL(g, z, kind, cx, D, W, H) {
+  var im = HOGBK[z + '_' + kind]; if (!imgOk(im)) return false;
+  var F = BKF[kind], L = imgLayer('zl_' + z + '_' + kind, im, im.naturalHeight, 0), y = Math.round(H * F[0] + D * F[1] - F[3]), lw = L.lw, x0 = -(((cx * F[2]) % lw) + lw) % lw;
+  for (var x = x0; x < W; x += lw) KIT.blit(L, x, y);
+  downBand(g, L, cx * F[2], y, W, H, 32); return true;
 }
 function lampCone() { // the lamp's light on the street: a hard-edged cone of dotted warm pixels, the old way to do see-through
   return KIT.layer('lampcone', 80, 64, function () { var c = KIT.ctx; for (var y = 0; y < 64; y++) { var hw = 4 + y * 0.56; for (var x = Math.round(40 - hw); x < 40 + hw; x++) if ((x + y) % 2 === 0 && (y > 4 || (x + y) % 4 === 0)) { c.fillStyle = y > 58 ? '#c87a30' : '#7a4418'; c.fillRect(x, y, 1, 1); } } }, { px: 1 });
@@ -148,7 +166,7 @@ function drawPlayer(p, cx, cy) {
     var gf = goldFrame(n); if (gf) { gl.save(); gl.translate(x, y + 1); if (rot) gl.rotate(rot); if (p.face < 0) gl.scale(-1, 1); gl.drawImage(gf, -gf.width / 2, -gf.height); gl.restore(); }
     if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 30, y: p.y - Math.random() * 50, vx: 0, vy: -40, t: 0.4, c: Math.random() < 0.5 ? '#ffe36a' : '#fffbe8' });
   } else spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
-  if (p.shield) KIT.condom(x, y + 3, 38, 56, G.t); // the condom: takes the next hit
+  if (p.shield) { var cg = g0(); cg.save(); cg.translate(x, y + 1); if (rot) cg.rotate(rot); KIT.condom(0, 2, 38, 56, G.t); cg.restore(); } // the condom: takes the next hit, turned with him round loops and slopes
   if (G.star > 0 && !G.super) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
   if (G.shoes > 0 && sp > 120 && Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - p.face * 8, y: p.y - 4, vx: -p.face * 40, vy: -20, t: 0.3, c: '#ffe36a' });
 }
@@ -187,13 +205,13 @@ function cityMid(id, dim) {
     var g = KIT.ctx, s = id === 'citymid0' ? 191 : 77; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
     for (var x = -20; x < 960; ) {
       var w = 50 + Math.floor(r() * 70), h = 120 + Math.floor(r() * 170), top = 300 - h;
-      g.fillStyle = r() < 0.5 ? '#12060a' : '#180a0e'; g.fillRect(x, top, w, h); g.fillStyle = '#060203'; g.fillRect(x + w - 4, top, 4, h); g.fillRect(x, top, w, 3);
+      g.fillStyle = r() < 0.5 ? '#1e0a10' : '#261016'; g.fillRect(x, top, w, h); g.fillStyle = '#12040a'; g.fillRect(x + w - 4, top, 4, h); g.fillStyle = '#3a141c'; g.fillRect(x, top, w, 2); g.fillRect(x, top, 1, h);
       for (var wy = top + 10; wy < 290; wy += 12) for (var wx = x + 6; wx < x + w - 8; wx += 9) { var q = r(); if (q < 0.18) { g.fillStyle = q < 0.04 ? 'rgba(255,60,60,0.55)' : 'rgba(255,214,120,0.45)'; g.fillRect(wx, wy, 4, 6); } else if (q < 0.5) { g.fillStyle = 'rgba(60,20,26,0.8)'; g.fillRect(wx, wy, 4, 6); } }
       if (r() < 0.35) { g.fillStyle = '#0a0406'; g.fillRect(x + 10, top - 18, 22, 14); g.fillRect(x + 12, top - 4, 3, 4); g.fillRect(x + 27, top - 4, 3, 4); g.beginPath(); g.moveTo(x + 8, top - 18); g.lineTo(x + 21, top - 26); g.lineTo(x + 34, top - 18); g.fill(); }
       else if (r() < 0.5) { g.fillStyle = '#0a0406'; g.fillRect(x + w / 2, top - 30, 2, 30); g.fillStyle = '#ff2630'; g.fillRect(x + w / 2 - 1, top - 32, 4, 3); }
       x += w + Math.floor(r() * 6);
     }
-    g.fillStyle = 'rgba(10,3,5,0.35)'; g.fillRect(0, 0, 960, 300);
+    g.fillStyle = 'rgba(10,3,5,0.2)'; g.fillRect(0, 0, 960, 300);
   }, { px: 1, crisp: 1, dim: dim });
 }
 function drawProps(g, cx, cy, W, H) {

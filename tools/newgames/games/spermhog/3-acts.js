@@ -184,14 +184,20 @@ ACTS.forEach(function (a) { var first = true; a.plan = a.plan.map(function (p) {
 /* HEIGHT (his ask: Sonic levels are vertical, not flat left to right): every district gets its own way up or down
    straight after it starts, and another before its checkpoint, each district a different shape */
 (function () {
-  var VERT = [[['ascent', 14, 'm']], [['bigHill', 10]], [['springShaft', 16]], [['descent', 14, 'n']], [['ridge', 'm']], [['plunge', 14]], [['bigHill', 8], ['loop']], [['ascent', 9], ['plunge', 12]],
-              [['descent', 10], ['loop']], [['springShaft', 13], ['ridge']], [['ridge'], ['descent', 12]], [['ascent', 12], ['bigHill', 6]]];
+  var VERT = [[['ascent', 22, 'm']], [['bigHill', 14]], [['springShaft', 18], ['ascent', 8]], [['descent', 22, 'n']], [['ridge', 'm'], ['ascent', 10]], [['plunge', 22]], [['bigHill', 12], ['loop']], [['ascent', 14], ['plunge', 18]],
+              [['descent', 16], ['loop']], [['springShaft', 16], ['ridge']], [['ridge'], ['descent', 18]], [['ascent', 18], ['bigHill', 10]], [['plunge', 16], ['springShaft', 14]], [['descent', 12], ['bigHill', 12]]];
+  // climbs and falls come in runs: three ways up in a row (or more), then the long way down, so an act really rises and falls instead of wobbling about one height
+  var UPV = [[['ascent', 20, 'm']], [['springShaft', 18]], [['ascent', 14], ['bigHill', 10]], [['springShaft', 15], ['ridge']], [['ascent', 16]], [['bigHill', 12], ['ascent', 10]]],
+      DNV = [[['plunge', 24]], [['descent', 22, 'n']], [['descent', 16], ['loop']], [['plunge', 18], ['bigHill', 8]], [['descent', 20]], [['plunge', 20], ['ridge']]];
+  VERT = []; for (var vi = 0; vi < 6; vi++) { VERT.push(UPV[vi], UPV[(vi + 2) % 6], UPV[(vi + 4) % 6], DNV[vi], DNV[(vi + 3) % 6], DNV[(vi + 1) % 6]); }
+  var SKIPV = { check: 1, district: 1, cave: 1, start: 1, lanes: 1, goal: 1, arena: 1, run: 1, loop: 1, portal: 1 };
   ACTS.forEach(function (a, ai) { var out = [], k = ai * 5, p = a.plan, arenaDist = false;
     for (var i = 0; i < p.length; i++) { var q = p[i];
       if (q[0] === 'district' || q[0] === 'cave') { arenaDist = p.slice(i + 1, i + 4).some(function (x) { return x[0] === 'arena'; }); }
       if (q[0] === 'check' && !arenaDist && p[i - 1] && p[i - 1][0] !== 'lanes') out.push.apply(out, VERT[(k++) % VERT.length]);
       out.push(q);
       if (((q[0] === 'district' || q[0] === 'cave') && !(p[i + 1] && p[i + 1][0] === 'start')) || q[0] === 'start') { if (!arenaDist) out.push.apply(out, VERT[(k++) % VERT.length]); }
+      else if (!SKIPV[q[0]] && !arenaDist && (i % 2 === 0) && p[i + 1] && !SKIPV[p[i + 1][0]] ) out.push.apply(out, VERT[(k++) % VERT.length]); // and more climbs and drops between the set pieces (he said the levels were still flat)
     }
     a.plan = out; });
 })();

@@ -7,9 +7,9 @@
    (right, left)  'Q' electric floor  'D' trapdoor  'W' wall you cannot jump through (same as '#', drawn darker)
    'k' open space underground (drawn as a dark back wall, not sky)
    ===================================================================================================== */
-var HMIN = 34, HMAX = 98; // the rows an act's ground can rise and fall between (it starts at 66)
+var HMIN = 22, HMAX = 136; // the rows an act's ground can rise and fall between (it starts at 80; widened for more height, his ask)
 function Builder(zone, seed) {
-  var ROWS = 120, b = { zone: zone, cols: [], top: [], col: 0, h: 66, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [], caves: [] };
+  var ROWS = 160, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [], caves: [] };
   var r = seed || 1; b.rnd = function () { r = (r * 16807) % 2147483647; return (r - 1) / 2147483646; };
   function colAt(c) { while (b.cols.length <= c) { var a = []; for (var i = 0; i < ROWS; i++) a.push('.'); b.cols.push(a); b.top.push(null); } return b.cols[c]; }
   b.set = function (c, row, ch) { if (row < 0 || row >= ROWS || c < 0) return; colAt(c)[row] = ch; };
@@ -53,7 +53,9 @@ function Builder(zone, seed) {
 var SEC = {
   district: function (b, id) { b.dists.push({ c: b.col, id: id }); b.ent('dsign', b.col + 3, b.h, { id: id }); return b; }, // a new part of town starts here
   start: function (b) { b.ground(16); b.thing(-13, 'start'); b.drops(-9, 5, 2); return b; },
-  run: function (b, n, foe) { b.ground(n); if (n >= 8) b.drops(-n + 2, Math.floor(n / 3), 2); if (foe) b.foe(-Math.floor(n / 2), foe); return b; },
+  run: function (b, n, foe) { // long runs roll over a hump or dip instead of lying flat (he said the levels were flat and samey)
+    if (n >= 12 && !b.noRoll) { var hh = 2 + (b.col % 3), upF = b.h - hh >= HMIN && (b.col % 2 === 0 || b.h + hh > HMAX), a = Math.floor((n - 8) / 2); b.ground(a); if (upF) b.up(hh, true); else b.down(hh, true); b.ground(Math.max(3, n - 2 * a - 4)); b.drops(-3, 3, 2, 'arc', 1); if (foe) b.foe(-2, foe); if (upF) b.down(hh, true); else b.up(hh, true); b.ground(a); return b; }
+    b.ground(n); if (n >= 8) b.drops(-n + 2, Math.floor(n / 3), 2); if (foe) b.foe(-Math.floor(n / 2), foe); return b; },
   rollers: function (b, k) { // gentle hills: speed
     for (var i = 0; i < (k || 2); i++) { b.ground(3); b.up(2); b.ground(4); b.drops(-4, 3, 2); b.down(2); }
     b.ground(3); return b;
@@ -228,5 +230,5 @@ var SEC = {
     b.ground(Math.floor(n / 2)); SEC.district(b, id); b.ground(n - Math.floor(n / 2)); b.ground(4); return b;
   },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(40); return b; }, // no wall after the sign: the camera stops and he runs off
-  arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(3); b.ceil(-3, 3, 0, 18, 'W'); return b; }
+  arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(48); return b; } // road on past the arena: the wall comes down after the boss and he runs off the screen
 };

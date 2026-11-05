@@ -15,28 +15,24 @@ var SSDIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
    over the place). Each is one quarter, 16 x 16, mirrored left-right and top-bottom into the 32 x 32 world, so it is
    symmetric like the real ones. Cumhead starts in the middle facing up.
    b cream sphere, r red sphere, y gold spring, u bumper, o drop, . floor */
-var SSQ = [
-  [ // THE BLOOD CHALICE: four red rooms with a door, a block of spheres in each, a long row across the middle
-    '................', '.rrrrrrrr.......', '.r......r.......', '.r.bbbb.r.......', '.r.bbbb.r...o...', '.r.bbbb.r..ooo..', '.r.bbbb.r...o...', '.r......r.......',
-    '.rrr..rrr.......', '................', '................', '....bbbbbbbbb...', '...............b', '...............b', '...............b', '................'],
-  [ // THE GOLD CHALICE: corridors walled with red, run them end to end
-    '................', 'rrrrrrrrrrrr....', 'bbbbbbbbbbbb....', 'rrrrrrrrrrrr....', '................', '...rrrrrrrrr....', '...bbbbbbbbb.o..', '...rrrrrrrrr.o..',
-    '................', '..r..r..r..r....', '..b..b..b..b....', '..b..b..b..b....', '..r..r..r..r...b', '...............b', '...............b', '................'],
-  [ // THE CREAM CHALICE: ladders: up and down the columns, the red rungs stop you cutting across
-    '................', '..b.b.b.b.b.....', '..b.b.b.b.b.....', '..brbrbrbrb.....', '..b.b.b.b.b.....', '..b.b.b.b.b.....', '..brbrbrbrb.....', '..b.b.b.b.b..o..',
-    '..b.b.b.b.b.ooo.', '..............o.', '................', 'rrrr....rrrr....', 'bbbb....bbbb....', 'rrrr....rrrr...b', '...............b', '................'],
-  [ // THE VOID CHALICE: a ring round a red heart, rows between red teeth, a box with red corners
-    '................', '.bbbbbb.........', '.b....b.........', '.b.rr.b.........', '.b.rr.b...r.r.r.', '.b....b....b.b.b', '.bbbbbb...r.r.r.', '...........b.b.b',
-    '..........r.r.r.', '................', '..rbbbbbr.......', '..b.....b.......', '..b.....b.......', '..b.....b......b', '..rbbbbbr......b', '................'],
-  [ // THE TEAR CHALICE: a red keep: in through the gate, round the ring of spheres, a bumper in the middle
-    'rrrrrrrrrrrrr...', 'r...........r...', 'r.bbbbbbbbb.r...', 'r.b.......b.r...', 'r.b.rrrrr.b.r...', 'r.b.r...r.b.r...', 'r.b.r.u.r.b.r...', 'r.b.r...r.b.r...',
-    'r.b.rr.rr.b.r...', 'r.b.......b.r...', 'r.bbbbbbbbb.r..o', 'r...........r..o', 'rrrrrr.rrrrrr...', '...............b', '...............b', '................'],
-  [ // THE ROT CHALICE: red lanes, bumpers in the open, four solid blocks to run round
-    '................', '..u..........u..', '................', '...rrrrrrrrr....', '....bbbbbbb.....', '...rrrrrrrrr....', '................', '..bbbb...bbbb...',
-    '..bbbb...bbbb...', '..bbbb...bbbb...', '..bbbb...bbbb...', '................', '.r.r.r.r.r.r.r..', '...............b', '.y.............b', '................'],
-  [ // THE BLACK CHALICE: everything: a red fence, a ring, a red room with a block inside, springs over the walls
-    'r.r.r.r.r.r.r.r.', '................', 'r.bbbbbbbbbbb.r.', '..b.........b...', 'r.b.rrrrrrr.b.r.', '..b.r.....r.b...', 'r.b.r.bbb.r.b.r.', '..b.r.bbb.r.b...',
-    'r.b.r.bbb.r.b.r.', '..b.r.....r.b...', 'r.b.rrr.rrr.b.r.', '..bbbbb.bbbbb...', 'r.............r.', '..y............b', 'r..............b', '................']];
+var SSQ = [ // seven worlds, made to feel like Sonic 3's (his ask: proper special stages): dense fields of cream to run round, red to steer you
+  [ // THE BLOOD CHALICE: big blocks of cream to run round (the whole block turns to drops), a row up the middle to start
+    '................', '.bbbb...bbbb....', '.bbbb...bbbb....', '.bbbb...bbbb....', '.bbbb...bbbb....', '................', '......r....r....', '...............b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '........bbbbb..b', '....o..........b', '...ooo.........b', '................'],
+  [ // THE GOLD CHALICE: lanes between red rails, blocks either side of a pair of bumpers, a row of red posts
+    '................', '.bbbbbbbbbbbb...', '................', '.rrrrrr..rrrrrr.', '................', '..bbbb....bbbb..', '..bbbb....bbbb..', '..bbbb.uu.bbbb.b', '..bbbb....bbbb.b', '...............b', '.r.r.r.r.r.r....', '................', '.bbbbbbb..y.....', '.bbbbbbb........', '.bbbbbbb.......b', '................'],
+  [ // THE CREAM CHALICE: diamonds of cream, red posts, a solid block to run round, a cross of drops
+    '................', '....b......b....', '...bbb....bbb...', '..bbbbb..bbbbb..', '...bbb....bbb...', '....b......b....', '................', '.rr....rr....rr.', '...............b', '..bbbbbbb......b', '..bbbbbbb...o..b', '..bbbbbbb..ooo.b', '..bbbbbbb...o..b', '..bbbbbbb......b', '...............b', '................'],
+  [ // THE VOID CHALICE: a red keep wall with gaps, long rows of cream, blocks, bumpers and springs
+    'rrrrrrrrrrrrrrr.', 'r...............', 'r.bbbbbbbbbbbb..', 'r.bbbbbbbbbbbb..', 'r...............', 'r.rrrrrr.rrrrrr.', 'r...............', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r...............', 'r.u....y....u...', 'r..............b', 'r..............b', 'r...............'],
+  [ // THE TEAR CHALICE: red rooms with a door each, a big block of cream to run round, a nest of drops
+    '................', '.rrrrrr..rrrrrr.', '.r....r..r....r.', '.r.bb.r..r.bb.r.', '.r.bb.r..r.bb.r.', '.r....r..r....r.', '.rrr.rr..rr.rrr.', '................', '...........ooo..', '...bbbbbbb..o...', '...bbbbbbb.....b', '...bbbbbbb.....b', '...bbbbbbb.....b', '...bbbbbbb......', '................', '................'],
+  [ // THE ROT CHALICE: bumpers in a row, two big blocks, a red fence, a wide slab
+    '................', '..u....u....u...', '................', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb...b', '...............b', '.rrrr..rrrr....b', '...............b', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '................', '................'],
+  [ // THE BLACK CHALICE: everything: red fence posts, a block of cream, a red box with a door and a drop inside, a long double row, bumpers and springs
+    'r.r.r.r.r.r.r.r.', '................', 'r.bbbbb.........', '..bbbbb..rrrr...', 'r.bbbbb..r..r...', '..bbbbb..r.or...', 'r.bbbbb..r..r...', '..bbbbb..rr.r..b', 'r..............b', '..bbbbbbbbbbb..b', 'r.bbbbbbbbbbb...', '................', 'r.u..y....y..u..', '...............b', 'r..............b', '................']];
+/* each world has its own floor (light square, dark square) and sky, like each Blue Sphere stage */
+var SSFLOOR = [['#6a2a7a', '#1e0a26'], ['#a8701a', '#2a1806'], ['#2a7a8a', '#0a2028'], ['#7a3a9a', '#1a0a26'], ['#2a6aaa', '#081a30'], ['#2a8a40', '#0a2410'], ['#6a6a7a', '#141418']];
+var SSSKY = [['#0a0410', '#1e0a2a'], ['#100804', '#2a1806'], ['#040c10', '#0a2a30'], ['#08040e', '#24103a'], ['#040810', '#0e2440'], ['#040a06', '#0e2a14'], ['#050506', '#1e1e26']];
 function ssWorld(lv) {
   var q = SSQ[Math.min(6, lv)], m = [], nb = 0;
   for (var y = 0; y < SSN; y++) { m.push([]); var qy = y < 16 ? y : 31 - y; for (var x = 0; x < SSN; x++) { var qx = x < 16 ? x : 31 - x, ch = q[qy].charAt(qx) || '.'; m[y].push(ch); if (ch === 'b') nb++; } }
@@ -106,15 +102,15 @@ function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up:
   var vx = x, vy0 = y - SSCH, vz0 = z + SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH), vz = vz0 * cp - vy0 * sp, vy = vy0 * cp + vz0 * sp; // from the camera, tipped down
   if (vz < 0.25) return null;
   var bx = nx * SSR, by = ny * SSR - SSR, bz = nz * SSR; if (nx * (-bx) + ny * (SSCH - by) + nz * (-SSCD - bz) < 0) return null; // round the back of the ball: hidden
-  var F = Math.min(W * 0.1, H * 0.17) / SSK0.s; // a square under his feet is a tenth of the screen wide
+  var F = Math.min(W * 0.135, H * 0.235) / SSK0.s; // a square under his feet is about a sixth of the screen wide (he said they were small)
   return { x: W / 2 + vx * F / vz, y: H * 0.8 - (vy / vz - SSK0.k) * F, s: F / vz, d: vz };
 }
 function drawSpecial() {
   var g = KIT.ctx, W = KIT.W, H = KIT.H, S = SS, cam = S.cam, ca = Math.cos(cam), sa = Math.sin(cam);
   // sky: hard bands of red night; the stars and the moon turn with him
-  var bands = ['#060104', '#0a0206', '#10030a', '#18050c', '#22070e', '#2c0a10', '#360c12'];
+  var SK = SSSKY[S.lv] || SSSKY[0], bands = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return mixHex(SK[0], SK[1], i / 6); });
   for (var b = 0; b < bands.length; b++) R(bands[b], 0, b * H * 0.08, W, H * 0.08 + 1);
-  R('#360c12', 0, H * 0.56, W, H * 0.44);
+  R(bands[6], 0, H * 0.56, W, H * 0.44);
   for (var i = 0; i < 46; i++) { var sx = ((i * 97 - cam * 160) % W + W) % W; R(i % 5 ? '#6a3a40' : '#f1e7d0', sx, (i * 37) % (H * 0.42), 1, 1); }
   var mx = ((W * 0.75 - cam * 160) % (W + 120) + W + 120) % (W + 120) - 60; g.fillStyle = '#c4121c'; g.beginPath(); g.arc(mx, H * 0.16, 16, 0, 6.3); g.fill(); g.fillStyle = '#ff2630'; g.beginPath(); g.arc(mx - 3, H * 0.16 - 3, 11, 0, 6.3); g.fill();
   var DD = SSDIR[S.d], mv = S.rev ? -1 : 1, px = S.x + DD[0] * mv * S.p, py = S.y + DD[1] * mv * S.p, tiles = [], things = [];
@@ -129,7 +125,7 @@ function drawSpecial() {
     var ch = ssAt(S, tx, ty); if (ch !== '.') things.push({ ch: ch, l: cc.l, f: cc.f, far: far });
   }
   tiles.sort(function (a, b) { return b.d - a.d; });
-  var LIGHT = ['#c4121c', '#a00e18', '#7a0a12', '#560810'], DARK = ['#3a0a10', '#2e080c', '#22060a', '#180408'];
+  var FL = SSFLOOR[S.lv] || SSFLOOR[0], LIGHT = [0, 0.18, 0.36, 0.54].map(function (k) { return shadeHex(FL[0], k); }), DARK = [0, 0.18, 0.36, 0.54].map(function (k) { return shadeHex(FL[1], k); });
   tiles.forEach(function (t) { var q = t.q, k = Math.min(3, Math.floor(t.far * 4)); g.fillStyle = t.dark ? DARK[k] : LIGHT[k]; g.beginPath(); g.moveTo(q[0].x, q[0].y); for (var n = 1; n < 4; n++) g.lineTo(q[n].x, q[n].y); g.closePath(); g.fill(); });
   // spheres, bumpers, springs and drops, each standing on its own square, far ones first
   things.forEach(function (o) { o.p = ssP(o.l, o.f, 0, W, H); }); things = things.filter(function (o) { return o.p; }).sort(function (a, b) { return b.p.d - a.p.d; });
@@ -152,14 +148,17 @@ function drawSpecial() {
     if (ch === 'u') { g.fillStyle = '#c4121c'; g.beginPath(); g.arc(P.x, P.y, r * 0.42, 0, 6.3); g.fill(); g.fillStyle = '#ffffff'; g.fillRect(P.x - r * 0.24, P.y - r * 0.06, r * 0.48, r * 0.12); } // a bumper
     if (ch === 'y') { g.strokeStyle = '#7a5010'; g.lineWidth = Math.max(1, r * 0.12); for (var sp = -1; sp <= 1; sp++) { g.beginPath(); g.moveTo(P.x - r * 0.6, P.y + sp * r * 0.3); g.lineTo(P.x + r * 0.6, P.y + sp * r * 0.3); g.stroke(); } } // a spring
   }
+  things = things.filter(function (o) { return !(Math.abs(o.l) < 0.45 && o.f > -0.7 && o.f < 0.35 && o.ch === 'R'); }); // the sphere he is standing on hides under him
   things.forEach(drawThing); // every sphere, far ones first; Cumhead goes on top of them all, like Sonic does
   // Cumhead from behind, hopping when he jumps
   var jy = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 46 : 26) : 0;
-  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (1.35 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3, base.s * 0.1, 0, 0, 6.3); g.fill();
+  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (1.1 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3, base.s * 0.1, 0, 0, 6.3); g.fill();
   if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jy * base.s / 60, { sc: csc });
   // the count, Blue Sphere style: spheres left and drops
-  KIT.panel(8, 6, 150, 26); g.fillStyle = '#e8d8a8'; g.beginPath(); g.arc(24, 19, 6, 0, 6.3); g.fill(); text(String(S.left), 36, 13, { size: 8 }); spr('hog_drop', 92, 28, {}); text(String(S.drops), 104, 13, { size: 8, col: '#ffe36a' });
-  for (var c7 = 0; c7 < 7; c7++) spr('hog_chal' + c7, 20 + c7 * 20, 56, { alpha: SV.chal[c7] ? 1 : 0.22 });
+  KIT.panel(8, 6, 92, 34); g.fillStyle = '#12040a'; g.beginPath(); g.arc(28, 23, 11, 0, 6.3); g.fill(); g.fillStyle = '#c8a868'; g.beginPath(); g.arc(28, 23, 10, 0, 6.3); g.fill(); g.fillStyle = '#f1e0b0'; g.beginPath(); g.arc(26, 21, 7, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(22, 16, 3, 3);
+  text(String(S.left), 46, 15, { size: 14, col: '#f1e7d0' });
+  var dw = 92; KIT.panel(W - dw - 96, 6, dw, 34); spr('hog_drop', W - dw - 74, 36, { sc: 1.6 }); text(String(S.drops), W - dw - 58, 15, { size: 14, col: '#ffe36a' });
+  for (var c7 = 0; c7 < 7; c7++) spr('hog_chal' + c7, 112 + c7 * 18, 32, { alpha: SV.chal[c7] ? 1 : 0.22 });
   if (S.state === 'in') { var a = Math.min(1, S.st * 3); g.fillStyle = 'rgba(255,255,255,' + (1 - a).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
   if (S.state === 'in' || (S.state === 'play' && S.st < 2.5)) { text('GET ' + S.total + ' CREAM SPHERES', W / 2, H * 0.3, { size: 14, align: 'center', col: '#f1e7d0', font: 'title', outline: true }); text('AVOID THE RED ONES', W / 2, H * 0.3 + 22, { size: 8, align: 'center', col: '#ff2630', outline: true }); }
   if (S.state === 'win' || S.state === 'fail') {
@@ -175,3 +174,5 @@ function endSpecial() {
   var S = SS; SS = null; G.mode = 'play'; music.play(LV.zone.song); FXS = [];
   PL.vx = PL.vy = PL.gsp = 0; PL.inv = 1.2; PL.state = 'normal';
 }
+function shadeHex(h, k) { var c = hexRgb(h); return 'rgb(' + c.map(function (v) { return Math.round(v * (1 - k)); }).join(',') + ')'; }
+function mixHex(a, b, t) { var A = hexRgb(a), B = hexRgb(b); return 'rgb(' + A.map(function (v, i) { return Math.round(v + (B[i] - v) * t); }).join(',') + ')'; }

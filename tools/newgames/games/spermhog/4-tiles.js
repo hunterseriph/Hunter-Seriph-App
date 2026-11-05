@@ -77,7 +77,7 @@ function buildTileset(Z) {
     TILEKEYS[k] = ti; var ox = ti * 16;
     for (var y = 0; y < 16; y++) for (var x = 0; x < 16; x++) {
       var wx = x + ti * 37, col = null;
-      if (k === 'k') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.32 | 0; }); if (y === 0 || x === 0) col = col.map(function (v) { return v * 0.7 | 0; }); } // underground: the back wall
+      if (k === 'k') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.55 | 0; }); if (y === 0 || x === 0) col = col.map(function (v) { return v * 0.78 | 0; }); } // underground: the back wall
       else if (k === '#') col = fillPix(Z, x, y + 16);
       else if (k === '#t') col = edgePix(Z, x, y) || fillPix(Z, x, y + 16);
       else if (k === 'W' || k === 'Wt') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.55 | 0; }); if (k === 'Wt' && y < 2) col = y === 0 ? OUTL : hexc(Z.edge[2]); }
