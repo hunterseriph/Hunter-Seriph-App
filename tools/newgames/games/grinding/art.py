@@ -52,8 +52,9 @@ def heart(half):
 def hearte():
     g = Grid(12, 11); g.ellipse(3.5, 3.5, 3.5, 3.5, 'h'); g.ellipse(8.5, 3.5, 3.5, 3.5, 'h'); g.poly([(0, 4), (12, 4), (6, 11)], 'h'); return g, {'h': ('#4a2a30', '#2a1418', '#1a0a0e')}
 
-def shield():
-    g = Grid(12, 11); g.ellipse(3.5, 3.5, 3.5, 3.5, 'h'); g.ellipse(8.5, 3.5, 3.5, 3.5, 'h'); g.poly([(0, 4), (12, 4), (6, 11)], 'h'); return g, {'h': ('#e0ecff', '#8aa8d8', '#3a4a7a')}
+def shield(): # the extra hit points are condoms now (his ask: every shield is a condom)
+    from pixelkit import condom_pack
+    return condom_pack(12, 11)
 
 def coin(big):
     g = Grid(10, 10); g.ellipse(5, 5, 4.5, 4.5, 'c'); g.rect(4, 2, 2, 6, 'd')

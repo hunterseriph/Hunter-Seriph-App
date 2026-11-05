@@ -14,8 +14,9 @@ def shot():
     g = Grid(16, 9); g.ellipse(11, 4.5, 4, 3.5, 'c'); g.poly([(0, 4), (8, 2), (8, 7)], 'c'); g.put(12, 3, 'hi')
     return g, {'c': CREAM, 'hi': '#ffffff'}
 
-def ishield():
-    g = Grid(14, 14); g.ellipse(7, 7, 6.5, 6.5, 'b'); g.ellipse(5, 5, 2, 2, 'hi'); return g, {'b': BLUE, 'hi': '#ffffff'}
+def ishield(): # a condom packet (his ask: every shield is a condom)
+    from pixelkit import condom_pack
+    return condom_pack(14, 14)
 
 def ishoes():
     g = Grid(16, 12); g.poly([(1, 4), (9, 4), (15, 8), (15, 11), (1, 11)], 's'); g.rect(1, 9, 15, 2, 'sole'); g.rect(4, 5, 2, 3, 'lace'); g.rect(7, 5, 2, 3, 'lace')

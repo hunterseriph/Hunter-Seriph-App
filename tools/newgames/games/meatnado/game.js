@@ -55,7 +55,7 @@ var UPS = [
   { id: 'pupt', n: 'Long Lasting', max: 5, cost: 70, d: function (l) { return 'Power-ups last ' + l * 15 + '% longer.'; } },
   { id: 'pups', n: 'Lucky Streets', max: 5, cost: 70, d: function (l) { return 'Power-ups turn up ' + l * 10 + '% more often.'; } },
   { id: 'value', n: 'Fat Drops', max: 5, cost: 100, d: function (l) { return 'Bank ' + l * 10 + '% more drops after a run.'; } },
-  { id: 'shield', n: 'Bubble Shield', max: 2, cost: 300, grow: 2.2, d: function (l) { return l === 1 ? 'Start every run with a shield.' : 'Start with a shield, and it grows back once.'; } },
+  { id: 'shield', n: 'Box of Condoms', max: 2, cost: 300, grow: 2.2, d: function (l) { return l === 1 ? 'Start every run wearing a condom (it takes one hit).' : 'Start wearing a condom, and put a fresh one on once it splits.'; } },
   { id: 'launch', n: 'Launch Pad', max: 2, cost: 400, grow: 2, d: function (l) { return 'Start every run with a ' + l * 2 + ' s rocket.'; } },
   { id: 'revive', n: 'Second Wind', max: 1, cost: 800, d: function () { return 'Once a run, when it catches you, it flings you out on one of its sausages. Ride it until the meatnado bar is empty.'; } }
 ];
@@ -63,7 +63,7 @@ function upCost(u) { return Math.round(u.cost * Math.pow(u.grow || 1.7, U(u.id))
 
 /* ---------- power-ups on the road ---------- */
 var PUPS = {
-  magnet: { n: 'MAGNET', t: 9, w: 3 }, shield: { n: 'SHIELD', w: 2 }, rocket: { n: 'ROCKET!', t: 3, w: 2 },
+  magnet: { n: 'MAGNET', t: 9, w: 3 }, shield: { n: 'CONDOM', w: 2 }, rocket: { n: 'ROCKET!', t: 3, w: 2 },
   double: { n: 'DOUBLE DROPS', t: 10, w: 3 }, rapid: { n: 'RAPID FIRE', t: 8, w: 2 }, cracker: { n: 'CUM CRACKER', w: 2 }
 };
 function pupLen(k) { return PUPS[k].t * (1 + U('pupt') * 0.15); }
@@ -182,7 +182,7 @@ function killPlayer(fall) {
 }
 function hurtPlayer(srcx) {
   if (P.inv > 0 || P.state !== 'normal' || G.pw.rocket > 0) return;
-  if (P.shield > 0) { P.shield--; P.inv = 1.2; sfx.play('pop'); poof(P.x, P.y - 18, 14, ['#9adfff', '#ffffff']); if (P.regrow > 0 && !P.shield) { P.regrow--; P.regrowT = 12; } return; }
+  if (P.shield > 0) { P.shield--; P.inv = 1.2; sfx.play('pop'); poof(P.x, P.y - 18, 14, ['#f08ab0', '#ffd0e0']); if (P.regrow > 0 && !P.shield) { P.regrow--; P.regrowT = 12; } return; }
   G.shake = 5; sfx.play('hurt'); G.stumble = 0.5; if (G.char.id === 'tb') tbSay();
   var loss = (G.drops > 0 ? 24 : 40) * (1 - U('skin') * 0.12) * (G.char.hitK || 1) * (G.hom && G.hom.b === 'guard' ? 0.75 : 1); G.gap -= loss;
   if (G.gap <= CATCH) { killPlayer(false); return; }
@@ -503,7 +503,7 @@ function draw() {
     if (G.ride) { spr('mn_sausage', px, P.y + 10, { anchor: 'c', sc: 2.2, rot: Math.sin(G.t * 9) * 0.12 }); if (Math.random() < 0.5) parts.push({ x: P.x - 14, y: P.y + 10, vx: -140, vy: rnd(-10, 20), life: 0.3, c: pick(['#c4121c', '#7a0a10', '#f1e7d0']) }); }
     else if (G.pw.rocket > 0) { R('rgba(255,154,48,0.25)', px - 22, P.y - 46, 44, 50); }
     drawRunner(G.mode === 'play' || G.mode === 'over' ? (G.char || me()).id : me().id, px, P.y);
-    if (P.shield > 0) { c.save(); c.strokeStyle = 'rgba(154,223,255,' + (0.55 + 0.25 * Math.sin(G.t * 6)).toFixed(2) + ')'; c.lineWidth = 2; c.beginPath(); c.ellipse(px, P.y - 20, 20, 26, 0, 0, 6.2832); c.stroke(); c.restore(); }
+    if (P.shield > 0) KIT.condom(px, P.y + 2, 34, 50, G.t); // wearing a condom: the next hit does nothing
     if (G.pw.magnet > 0) { var mr = 22 + (G.t * 40) % 30; c.save(); c.strokeStyle = 'rgba(255,58,68,' + (0.5 * (1 - (mr - 22) / 30)).toFixed(2) + ')'; c.beginPath(); c.arc(px, P.y - 18, mr, 0, 6.2832); c.stroke(); c.restore(); }
   }
   if (G.say && G.mode === 'play') { var lines = KIT.wrap(G.say.s, 150, 6), bw = 0; lines.forEach(function (l) { bw = Math.max(bw, KIT.tw(l, 6)); }); var bx = clamp(P.x - G.cam - bw / 2, 4, W - bw - 12), by = P.y - 74 - lines.length * 9;
@@ -564,7 +564,7 @@ function helpMenu() {
   KIT.menu({ title: 'How to Play', html: '<p>You run by yourself. <b>A</b> (or tap the screen) jumps, press it again in the air to double jump. Hold it for a higher jump. <b>B</b> fires (hold it to keep firing).</p>' +
     '<p>The <b>meatnado</b> is behind you. Every hit, pit and sausage it throws lets it catch up; drops and kills push it back. When it catches you, the run is over.</p>' +
     '<p>Jump on foes to squash them. Knights block shots from the front: jump on them. Steve balloons burst into bits when shot.</p>' +
-    '<p><b>Power-ups</b> on the road: Magnet, Shield, Rocket, Double Drops, Rapid Fire and Cum Crackers (pushes it right back).</p>' +
+    '<p><b>Power-ups</b> on the road: Magnet, Condom (takes a hit for you), Rocket, Double Drops, Rapid Fire and Cum Crackers (pushes it right back).</p>' +
     '<p>Every drop you grab goes in the bank. Spend them at <b>Saba\'s</b> on upgrades, and on new runners: Greebo, Amy, the Homunculus and TB.</p>',
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] });
 }

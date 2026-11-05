@@ -11,7 +11,7 @@ var EVT = {
   race: { n: 'Race', ic: 'ck_star', d: 'Finish in the top three.' },
   duel: { n: 'Duel', ic: 'ck_gold', d: 'One on one. Beat them to the line.' },
   drift: { n: 'Drift Challenge', ic: 'ck_flame0', d: 'Score points by drifting. Longer drifts score more.' },
-  rings: { n: 'Ring Run', ic: 'ck_bubble', d: 'Drive through the gates. Each one adds time to the clock. Reach the finish before it runs out.' },
+  rings: { n: 'Ring Run', ic: 'ck_star', d: 'Drive through the gates. Each one adds time to the clock. Reach the finish before it runs out.' },
   boost: { n: 'Boost Challenge', ic: 'it_espresso', d: 'Boost pads everywhere. Set a fast time.' },
   pursuit: { n: 'Pursuit', ic: 'it_pie', d: 'Hunt them down. Hit them with items before the clock runs out.' },
   nado: { n: 'Meatnado Escape', ic: 'ck_nado', d: 'The meatnado is coming. Every so often whoever is last gets eaten. Be the last one standing.' },

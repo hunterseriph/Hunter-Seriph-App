@@ -40,10 +40,12 @@ function update(dt) {
     case 'select': G.t += dt; return stepSelect();
     case 'card': G.t += dt; G.cardT += dt; if (G.cardT > 2.2 || (G.cardT > 0.5 && KIT.pressed('a'))) { G.mode = 'play'; if (G.rush) { P.x = 60; } } return;
     case 'play': if (G.bot) botThink(); return stepPlay(dt);
-    case 'vs': G.t += dt; G.vsT += dt; if (G.vsT > 3.4 || (G.vsT > 0.9 && (KIT.pressed('a') || G.bot))) bossFight(); return;
+    case 'vs': G.t += dt; G.vsT += dt; if (G.vsT > 3.4 || (G.vsT > 0.9 && (KIT.pressed('a') || G.bot))) { if (G.arc) startDuel(G.vsOpp.o); else bossFight(); } return;
+    case 'duel': return stepDuel(dt);
+    case 'won': G.t += dt; G.wonT += dt; stepFx(dt); if (P.st !== 'win') { P.st = 'win'; P.t = 0; } P.t += dt; if (G.wonT > 1.2 && (KIT.pressed('a') || KIT.pressed('start') || G.bot || G.wonT > 6)) arcadeNext(); return;
     case 'clear': G.t += dt; G.clearT += dt; stepFx(dt); if (G.clearT > 2.6 && (KIT.pressed('a') || KIT.pressed('start') || G.bot)) nextStage(); return;
     case 'over': G.t += dt; G.overT += dt; if (G.overT > 0.6 && (KIT.pressed('a') || KIT.pressed('start'))) return continueGame(); if (G.overT > 10 || (G.overT > 0.6 && KIT.pressed('b'))) titleMenu(); return;
-    case 'end': G.t += dt; G.endT += dt; if (G.endT > 9 && (KIT.pressed('a') || KIT.pressed('start'))) titleMenu(); return;
+    case 'end': G.t += dt; G.endT += dt; if (G.endT > 9 && (KIT.pressed('a') || KIT.pressed('start') || G.bot)) titleMenu(); return;
   }
 }
 function draw() {
@@ -52,25 +54,29 @@ function draw() {
   if (G.mode === 'vs') return drawVS();
   if (G.mode === 'end') return drawEnd();
   if (G.mode === 'title') { G.S = STAGES[0]; drawBack(); HEROLIST.forEach(function (id, i) { var H = HEROES[id]; var hx = W * 0.1 + i * 30; shadow(hx, 60, H.w, 0); KIT.spr(H.idle[Math.floor(G.t * H.idleF + i) % H.idle.length], hx, FLOOR + 60, {}); }); drawFront(); return; }
-  drawWorld(); drawHUD();
+  var zoomed = G.mode === 'duel' || G.mode === 'won' || (G.mode === 'over' && G.duel), g = KIT.ctx;
+  if (zoomed) { var z = G.zoom || 1.5; g.save(); g.translate(0, KIT.H - 22); g.scale(z, z); g.translate(0, -(FLOOR + LANE)); }
+  drawWorld();
+  if (zoomed) g.restore();
+  if (zoomed) { drawDuelHUD(); if (G.mode === 'won') drawWon(); else if (G.mode === 'over') drawOver(); return; }
+  drawHUD();
   if (G.mode === 'card') drawCard(); else if (G.mode === 'clear') drawClear(); else if (G.mode === 'over') drawOver();
 }
 /* ---------- menus ---------- */
 function titleMenu() {
   G.mode = 'title'; G.S = STAGES[0]; G.cam = 0; music.play('sktitle'); KIT.dropLayer();
   KIT.menu({ cls: 'clear', logo: '../assets/sk-logo.webp', title: 'Skeet Fighter', items: [
-    { label: 'Arcade', fn: function () { toSelect(false); } },
-    SV.rushOpen ? { label: 'Boss Rush', fn: function () { toSelect(true); } } : null,
-    { label: 'Story', fn: storyMenu },
+    { label: 'Story', fn: function () { toSelect('story'); } },
+    { label: 'Arcade', fn: function () { toSelect('arcade'); } },
     { label: 'How to Play', fn: helpMenu },
     { label: 'Options', fn: function () { optionsMenu(titleMenu); } }] });
 }
 function storyMenu() { KIT.menu({ title: 'Skeet Fighter', html: STORY.map(function (s) { return '<p>' + s + '</p>'; }).join(''), items: [{ label: 'Back', back: true, fn: titleMenu }] }); }
 function helpMenu(back) {
-  KIT.menu({ title: 'How to Play', html: '<p><b>Move</b>: d-pad, stick or arrows/WASD (up and down walk into and out of the screen). <b>A</b> attack (keep pressing for a combo; it also picks things up), <b>B</b> jump, <b>X</b> special, <b>Y</b> super when the meter is full. Double tap forward to run, A while running for a dash attack, A in the air for a flying kick.</p>' +
-    '<p><b>Specials</b>: X on its own is the fireball. UP + X the rising move, FORWARD + X the dash, DOWN + X the ground move. <b>Street Fighter motions</b> do the stronger EX version for free: down, down-forward, forward + A (EX fireball) and forward, down, down-forward + A (EX rising move). X at the end of a combo that hit cancels into the fireball.</p>' +
-    '<p><b>Grab</b>: walk into someone. A knees them, A with a direction throws them into the others. <b>Breakaway</b>: X while you are being hit knocks everyone off you for a little health.</p>' +
-    '<p><b>Pick ups</b>: smash bins, crates, barrels and coffins. Food heals (Cum Crackers, Cumpuccinos, Greebo\'s pies, Amy\'s chilli). Weapons wear out (the bar under the icon): swing them with A, DOWN + A throws a melee weapon. Get knocked down and you drop it.</p>' +
+  KIT.menu({ title: 'How to Play', html: '<p><b>Story</b>: the streets of Clubhouse Row, beat-em-up style, six stages. At the end of each one the boss stops the brawl and it turns into a one on one, Street Fighter style. <b>Arcade</b>: ten one on one fights in a row; lose one and you can continue.</p>' +
+    '<p><b>On the streets</b>: up and down walk into and out of the screen. <b>A</b> attack (keep pressing for a combo, it also picks things up), <b>B</b> jump, <b>X</b> special, <b>Y</b> super with a full meter. Double tap forward to run, A while running for a dash attack, A in the air for a flying kick. Walk into someone to grab them: A knees, A with a direction throws. X while you are being hit breaks away for a little health. Smash bins and crates for food and weapons; weapons wear out, DOWN + A throws one.</p>' +
+    '<p><b>One on one</b>: <b>A</b> punch, <b>B</b> kick, <b>UP</b> jump (with a direction to jump at them or away), <b>DOWN</b> crouch. <b>Hold back to block</b>: low sweeps need down-back, jump-ins need standing. Down + A jab low, down + B sweep, down-forward + A uppercut, forward + B roundhouse, A and B in the air. Forward + A up close throws (it cannot be blocked). Chains: A then A, then B. A normal that hits cancels into a special with X.</p>' +
+    '<p><b>Specials</b> (both modes): X fireball, UP + X rising move, FORWARD + X dash, DOWN + X ground move. <b>Motions</b>: down, down-forward, forward + a button is the EX fireball; forward, down, down-forward + a button the EX rising move (a quarter of the meter in a one on one, free on the streets).</p>' +
     '<p>The <b>Blumwashed homunculi</b> are not evil, just full of goo: beat it out of them and they go home.</p>', items: [{ label: 'Back', back: true, fn: back || titleMenu }] });
 }
 function optionsMenu(back) {
@@ -78,21 +84,22 @@ function optionsMenu(back) {
     SV.hardOpen ? { label: 'DIFFICULTY: ' + (SV.hard ? 'HARD' : 'NORMAL'), fn: function () { SV.hard = !SV.hard; persist(); optionsMenu(back); } } : { label: 'DIFFICULTY: NORMAL', sub: 'Hard opens when you beat Blumhead', dis: true },
     { label: 'Back', back: true, fn: back }] });
 }
-function toSelect(rush) { KIT.closeMenu(); G.mode = 'select'; G.rushPick = rush; G.sel = G.sel || 0; G.selBox = []; music.play('sktitle'); }
+function toSelect(kind) { KIT.closeMenu(); G.mode = 'select'; G.pickKind = kind; G.rushPick = false; G.sel = G.sel || 0; G.selBox = []; music.play('sktitle'); }
 function stepSelect() {
   if (KIT.pressed('right')) { G.sel = (G.sel + 1) % 4; sfx.play('blip'); } if (KIT.pressed('left')) { G.sel = (G.sel + 3) % 4; sfx.play('blip'); }
   if (KIT.ptr.tap && G.selBox) G.selBox.forEach(function (b, i) { var p = KIT.ptr; if (p.x > b[0] && p.x < b[0] + b[2] && p.y > b[1] && p.y < b[1] + b[3]) { if (G.sel === i) pickFighter(); else { G.sel = i; sfx.play('blip'); } } });
   if (KIT.pressed('a') || KIT.pressed('start')) pickFighter();
   if (KIT.pressed('b')) titleMenu();
 }
-function pickFighter() { sfx.play('fight'); newGame(HEROLIST[G.sel], { rush: G.rushPick }); }
+function pickFighter() { sfx.play('fight'); if (G.pickKind === 'arcade') arcadeStart(HEROLIST[G.sel]); else newGame(HEROLIST[G.sel], {}); }
 function pauseMenu() {
-  if (G.mode !== 'play' && G.mode !== 'card') return;
-  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.S.n + (G.rush ? ' (Boss Rush)' : ''), items: [{ label: 'Resume', fn: KIT.closeMenu }, { label: 'Move List', fn: moveList }, { label: 'How to Play', fn: function () { helpMenu(pauseMenu); } }, { label: 'Options', fn: function () { optionsMenu(pauseMenu); } }, { label: 'Quit to Title', fn: titleMenu }] });
+  if (G.mode !== 'play' && G.mode !== 'card' && G.mode !== 'duel') return;
+  KIT.menu({ cls: 'clear', title: 'Paused', sub: G.arc ? 'Arcade · fight ' + (G.arc.i + 1) + ' of 10' : G.S.n, items: [{ label: 'Resume', fn: KIT.closeMenu }, { label: 'Move List', fn: moveList }, { label: 'How to Play', fn: function () { helpMenu(pauseMenu); } }, { label: 'Options', fn: function () { optionsMenu(pauseMenu); } }, { label: 'Quit to Title', fn: titleMenu }] });
 }
 function moveList() {
-  var H = P.hero, sp = H.sp;
-  KIT.menu({ title: H.n, html: '<p><b>A A A A</b>: combo, ending in ' + (H.combo[H.combo.length - 1].n || 'a finisher') + '. <b>Run + A</b>: ' + (H.dash.n || 'dash attack') + '. <b>Air A</b>: ' + (H.air.n || 'flying kick') + '.</p>' +
+  var H = P.hero, sp = H.sp, V = H.vs;
+  KIT.menu({ title: H.n, html: (G.duel ? '<p><b>A</b> jab, A again: cross, then B: ' + V.rh.n.toLowerCase() + '. <b>B</b> kick, <b>Forward + B</b> ' + V.rh.n.toLowerCase() + '. <b>Down + A</b> low jab, <b>Down + B</b> sweep, <b>Down-forward + A</b> uppercut. <b>Forward + A</b> close: throw. <b>Air A / B</b>: jump-ins. <b>Hold back</b>: block.</p>'
+      : '<p><b>A A A A</b>: combo, ending in ' + (H.combo[H.combo.length - 1].n || 'a finisher') + '. <b>Run + A</b>: ' + (H.dash.n || 'dash attack') + '. <b>Air A</b>: ' + (H.air.n || 'flying kick') + '.</p>') +
     '<p><b>X</b>: ' + sp.fire.n + ' · <b>Up + X</b>: ' + sp.rise.n + ' · <b>Forward + X</b>: ' + sp.dash.n + ' · <b>Down + X</b>: ' + sp.ground.n + '</p>' +
     '<p><b>Down, down-forward, forward + A</b>: EX ' + sp.fire.n + ' · <b>Forward, down, down-forward + A</b>: EX ' + sp.rise.n + '</p><p><b>Y</b> (full meter): ' + sp.sup.n + '</p>', items: [{ label: 'Back', back: true, fn: pauseMenu }] });
 }

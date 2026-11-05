@@ -148,7 +148,7 @@ function drawPlayer(p, cx, cy) {
     var gf = goldFrame(n); if (gf) { gl.save(); gl.translate(x, y + 1); if (rot) gl.rotate(rot); if (p.face < 0) gl.scale(-1, 1); gl.drawImage(gf, -gf.width / 2, -gf.height); gl.restore(); }
     if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 30, y: p.y - Math.random() * 50, vx: 0, vy: -40, t: 0.4, c: Math.random() < 0.5 ? '#ffe36a' : '#fffbe8' });
   } else spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
-  if (p.shield) { var g = KIT.ctx; g.strokeStyle = 'rgba(154,223,255,' + (0.5 + 0.3 * Math.sin(G.t * 8)).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - 26, 22, 30, 0, 0, 6.3); g.stroke(); }
+  if (p.shield) KIT.condom(x, y + 3, 38, 56, G.t); // the condom: takes the next hit
   if (G.star > 0 && !G.super) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
   if (G.shoes > 0 && sp > 120 && Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - p.face * 8, y: p.y - 4, vx: -p.face * 40, vy: -20, t: 0.3, c: '#ffe36a' });
 }

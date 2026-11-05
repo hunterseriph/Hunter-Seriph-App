@@ -37,18 +37,26 @@ function dust(x, z, n) { for (var i = 0; i < n; i++) G.fx.push({ k: 'spr', spr: 
 function boxOf(e, b) { var a = e.x + e.face * b[0], c = e.x + e.face * b[1]; return { x0: Math.min(a, c), x1: Math.max(a, c), h0: e.h + b[2], h1: e.h + b[3] }; }
 function overlaps(B, t, zr) { return t.x + t.w / 2 > B.x0 && t.x - t.w / 2 < B.x1 && t.h + t.ht > B.h0 && t.h < B.h1 && Math.abs(t.z - B.z) <= zr; }
 function hittable(t) { return t.st !== 'dead' && t.st !== 'down' && t.st !== 'gone' && t.inv <= 0 && t.st !== 'getup' && !t.leaving && !t.intro; }
-function targetsOf(team) { var out = []; G.ents.forEach(function (e) { if (e.team !== team && e.team !== 'o' && hittable(e)) out.push(e); }); if (team === 'p') G.props.forEach(function (p) { if (p.hp > 0) out.push(p); }); return out; }
+/* who an attacker of this team can hit (the player is not in G.ents, so foes get him added) */
+function targetsOf(team) { var out = []; G.ents.forEach(function (e) { if (e.team !== team && e.team !== 'o' && hittable(e)) out.push(e); }); if (team === 'p') G.props.forEach(function (p) { if (p.hp > 0) out.push(p); }); else if (P && P.team !== team && hittable(P)) out.push(P); return out; }
 /* one blow lands. m: {dmg, kb, lift, kd, stun, hs, sfx, fx, dir, from, guardBreak} */
 function strike(t, m, dir) {
   var from = m.from;
   if (t.prop) { t.hp -= 1; spark(t.x, t.z, 22, 1); sfx.play('thud'); if (t.hp <= 0) breakProp(t); return true; }
   // the Hollow Knight blocks from the front unless he is busy attacking
   if (t.def && t.def.ai === 'shield' && !t.mv && t.st !== 'hurt' && t.st !== 'grabbed' && t.face === -dir && !m.guardBreak && !m.shot) { t.vx = dir * 80; spark(t.x - dir * 8, t.z, t.h + 22, 0, '#a6968f'); sfx.play('block'); t.blockT = 0.3; G.hs = 0.03; return false; }
+  // a duel: holding back blocks (low attacks need down-back, jump-ins need standing). A little chip damage gets through
+  if (G.duel && t.guard && !m.unblock && !t.prop && G.duel.phase === 'fight') { var okG = m.low ? t.guard === 'lo' : m.over ? t.guard === 'hi' : true;
+    if (okG) { var chip = (m.dmg || 0) * 0.12; if (t.hp > 1) t.hp = Math.max(1, t.hp - chip); t.st = 'block'; t.mv = null; t.stun = 0.16 + Math.min(0.25, (m.dmg || 0) * 0.012); t.vx = dir * Math.max(90, (m.kb || 60) * 0.8);
+      if (from && from.hero) from.vx = -dir * 30; spark(t.x - dir * 8, t.z, t.h + t.ht * (t.guard === 'lo' ? 0.35 : 0.7), 0, '#a6968f'); sfx.play('block'); G.hs = Math.max(G.hs, 0.04); if (t.hero) t.meter = Math.min(100, t.meter + 2); return false; } }
   var dmg = m.dmg * (t.team === 'p' ? G.hardK : 1) * (from && from.fire > 0 ? 1.3 : 1);
+  t.hurtK = (m.low || t.crouch) ? 1 : (m.kb || 0) >= 100 ? 0 : (t.hurtK ? 0 : 1);
   if (t.team === 'p' && t.shieldT > 0) dmg *= 0.3;
   t.hp -= dmg; t.flash = 0.1; t.lastHitBy = from;
   if (t.team === 'p') { t.meter = Math.min(100, t.meter + dmg * 0.5); G.hurtThisStage = true; if (dmg > 0) { G.combo = 0; } }
   if (from && from.team === 'p' && t.team !== 'p') { from.meter = Math.min(100, from.meter + (m.meter || dmg * 0.5)); G.combo++; G.comboT = 1.4; G.best = Math.max(G.best || 0, G.combo); G.score += Math.round(dmg * 10) + G.combo * 5; G.tag = t; G.tagT = 2.5; if (m.heal) from.hp = Math.min(from.mhp, from.hp + m.heal); }
+  if (G.duel && from && from.cpu && from.hero) from.meter = Math.min(100, from.meter + dmg * 0.6);
+  if (G.duel && t.cpu && t.hero) t.meter = Math.min(100, t.meter + dmg * 0.4);
   if (from && from.def && from.def.drain) from.hp = Math.min(from.mhp, from.hp + dmg * 0.5);
   G.hs = Math.max(G.hs, m.hs || 0.05); spark(t.x - dir * 4, t.z, t.h + t.ht * 0.6, m.kd || dmg >= 14 ? 2 : 1); sfx.play(m.sfx || 'hit');
   if (m.kd || dmg >= 14) KIT.shake(m.kd ? 4 : 2);
@@ -72,11 +80,11 @@ function hitWith(e, mv, box) {
 }
 /* everything near a point (ground pounds, explosions, throws landing) */
 function hitArea(x, z, r, zr, m) {
-  var n = 0; targetsOf(m.team === 'p' ? 'f' : 'p').concat(m.team === 'f' ? [] : []).forEach(function (t) { if (t === m.from) return; if (Math.abs(t.x - x) > r + t.w / 2 || Math.abs(t.z - z) > zr) return; if (t.h > 40 && !m.air) return; if (strike(t, m, t.x >= x ? 1 : -1)) n++; });
-  if (m.team === 'f') { if (P && hittable(P) && Math.abs(P.x - x) < r + P.w / 2 && Math.abs(P.z - z) <= zr && P.h < 40) { strike(P, m, P.x >= x ? 1 : -1); n++; } }
+  var n = 0; targetsOf(m.team || 'p').forEach(function (t) { if (t === m.from || t.assist) return; if (Math.abs(t.x - x) > r + (t.w || 16) / 2 || Math.abs(t.z - z) > zr) return; if (t.h > 40 && !m.air) return; if (strike(t, m, t.x >= x ? 1 : -1)) n++; });
   return n;
 }
 function onKO(t, from) {
+  if (G.duel) return duelKO(t, from);
   if (t.team === 'f') { G.kills++; if (!t.boss) G.score += t.def.score || 200; if (t.washed) { t.freed = true; } if (t.boss) bossDown(t); else if (Math.random() < 0.22) dropItem(pick(RANDOMDROP), t.x, t.z); }
   if (G.ents.filter(function (e) { return e.team === 'f' && e.hp > 0 && e.st !== 'dead'; }).length === 0 && (locked() || G.bossOn)) { G.slow = 0.6; } // the last one down: a moment of slow motion
 }

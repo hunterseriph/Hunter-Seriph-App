@@ -290,7 +290,18 @@ var KIT = (function () {
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
     requestAnimationFrame(frame);
   }
-  return { start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
+  /* the CONDOM worn over someone (his ask: every shield is a condom): see-through latex, a dome with the little teat on
+     top, sides down to the feet and a rolled rim at the bottom. x = centre, fy = feet, w/h = size, t = time (it wobbles) */
+  function condom(x, fy, w, h, t, a) {
+    var g = ctx, top = fy - h, wob = Math.sin((t || 0) * 7) * 1.2, r = w / 2; a = a === undefined ? 1 : a;
+    g.save(); g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(x - r, fy - 3); g.lineTo(x - r, top + r * 0.8); g.quadraticCurveTo(x - r, top, x - 3, top); g.quadraticCurveTo(x - 3, top - 6 + wob, x, top - 7 + wob); g.quadraticCurveTo(x + 3, top - 6 + wob, x + 3, top); g.quadraticCurveTo(x + r, top, x + r, top + r * 0.8); g.lineTo(x + r, fy - 3);
+    g.fillStyle = 'rgba(255,190,215,' + (0.16 * a).toFixed(3) + ')'; g.fill(); g.strokeStyle = 'rgba(255,160,200,' + (0.8 * a).toFixed(3) + ')'; g.lineWidth = 1.5; g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,' + (0.45 * a).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - r + 3, top + r * 0.9); g.lineTo(x - r + 3, fy - h * 0.35); g.stroke();
+    g.fillStyle = 'rgba(240,138,176,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 3, r + 2, 3, 0, 0, 6.2832); g.fill(); g.fillStyle = 'rgba(255,208,224,' + (0.9 * a).toFixed(3) + ')'; g.beginPath(); g.ellipse(x, fy - 4, r, 1.5, 0, 0, 6.2832); g.fill();
+    g.restore();
+  }
+  return { condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
     sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,

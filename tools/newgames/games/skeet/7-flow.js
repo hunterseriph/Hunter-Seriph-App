@@ -11,7 +11,7 @@ var STORY = [
   'Beat the goo out of every one of them. Then go and beat it out of Blumhead.'
 ];
 function newGame(hero, o) {
-  o = o || {}; G.hero = hero; G.rush = !!o.rush; G.hard = !!SV.hard; G.hardK = G.hard ? 1.35 : 1; G.si = o.stage || 0; G.lives = 3; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; G.conts = 0;
+  o = o || {}; G.arc = null; G.duel = null; G.endArc = false; padSubs(false); G.hero = hero; G.rush = !!o.rush; G.hard = !!SV.hard; G.hardK = G.hard ? 1.35 : 1; G.si = o.stage || 0; G.lives = 3; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; G.conts = 0;
   P = makePlayer(hero); startStage(G.si);
 }
 function startStage(i) {
@@ -50,13 +50,13 @@ function stepSections(dt) {
   // the arena
   if (!locked() && G.secI >= G.secs.length - 1 && P.x > G.arena + 60) { G.lock = G.arena; G.cam = Math.min(G.cam, G.arena); bossIntro(); }
 }
-function bossIntro() {
-  G.ents = G.ents.filter(function (e) { return e.team !== 'f' || e.hp > 0; });
-  var id = G.S.boss, bx = G.arena + KIT.W * 0.7;
-  if (id === 'brothers') { spawnBoss('pig', bx, 22); spawnBoss('cowpig', bx + 20, 52); } else spawnBoss(id, bx, 36);
+function bossIntro() { // the brawl stops here: the Street Fighter VS screen, then a one on one
+  G.ents = G.ents.filter(function (e) { return e.team !== 'f' || e.hp > 0; }).filter(function (e) { return e.team !== 'f'; });
+  var id = G.S.boss, o = id === 'brothers' ? { boss: 'pig', assist: 'cowpig' } : { boss: id };
+  G.cam = G.arena; G.lock = G.arena; G.vsOpp = { o: o, name: oppName(o), quote: oppQuote(o), art: oppArt(o) };
   G.bossOn = true; G.mode = 'vs'; G.vsT = 0; music.play(BOSSES[id].song); sfx.play('vs');
 }
-function bossFight() { G.mode = 'play'; G.fightT = 1.4; G.ents.forEach(function (e) { if (e.boss) { e.intro = false; e.wait = 0.8; } }); sfx.play('fight'); }
+function bossFight() { G.cam = G.lock = G.arena; startDuel(G.vsOpp.o); }
 function stageClear() {
   G.mode = 'clear'; G.clearT = 0; music.play('skclear'); var tb = Math.max(0, Math.round((240 - G.stageT) * 20)), nb = G.hurtThisStage ? 0 : 10000, cb = (G.best || 0) * 100;
   G.tally = { time: tb, nodmg: nb, combo: cb, freed: (G.freed || 0) * 300, total: tb + nb + cb };
@@ -64,7 +64,7 @@ function stageClear() {
 }
 function nextStage() { if (G.si >= STAGES.length - 1) return theEnd(); startStage(G.si + 1); }
 function gameOver() { G.mode = 'over'; G.overT = 0; music.stop(0.6); sfx.play('lose'); }
-function continueGame() { G.conts++; G.lives = 2; G.score = Math.floor(G.score / 2); P.hp = P.mhp; P.st = 'air'; P.h = 160; P.vh = 0; P.inv = 2.6; P.meter = 100; G.mode = 'play'; music.play(G.bossOn ? BOSSES[G.S.boss].song : G.S.song); sfx.play('power'); hitArea(P.x, P.z, 90, 40, { dmg: 0, kd: true, kb: 220, lift: 200, from: P, team: 'p' }); }
+function continueGame() { G.conts = (G.conts || 0) + 1; if (G.duel) { G.lives = 2; G.score = Math.floor(G.score / 2); return duelRetry(); } G.lives = 2; G.score = Math.floor(G.score / 2); P.hp = P.mhp; P.st = 'air'; P.h = 160; P.vh = 0; P.inv = 2.6; P.meter = 100; G.mode = 'play'; music.play(G.bossOn ? BOSSES[G.S.boss].song : G.S.song); sfx.play('power'); hitArea(P.x, P.z, 90, 40, { dmg: 0, kd: true, kb: 220, lift: 200, from: P, team: 'p' }); }
 function theEnd() {
   G.mode = 'end'; G.endT = 0; music.play('skend'); SV.wins = (SV.wins || 0) + 1; if (G.rush) SV.rush = Math.max(SV.rush || 0, G.score); SV.cleared = 1; SV.rushOpen = 1; SV.hardOpen = 1; persist();
 }

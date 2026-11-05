@@ -17,8 +17,9 @@ def badge(icon):
     pal = {'rim': GOLD, 'in': ('#5a1018', '#2a060a', '#12040a')}
     if icon == 'magnet':
         g.rect(5, 5, 3, 8, 'm'); g.rect(12, 5, 3, 8, 'm'); g.rect(5, 12, 10, 3, 'm'); g.rect(5, 5, 3, 2, 'tip'); g.rect(12, 5, 3, 2, 'tip'); pal.update({'m': RED, 'tip': IRON})
-    elif icon == 'shield':
-        g.poly([(5, 5), (15, 5), (15, 10), (10, 16), (5, 10)], 's'); g.rect(9, 6, 2, 8, 'x'); pal.update({'s': BLUE, 'x': '#ffffff'})
+    elif icon == 'shield': # a condom packet (his ask: shields are condoms)
+        from pixelkit import condom_pack
+        pal.update(condom_pack(10, 10, 5, 5, g))
     elif icon == 'rocket':
         g.poly([(10, 3), (13, 8), (13, 13), (7, 13), (7, 8)], 'r'); g.poly([(7, 11), (5, 15), (7, 14)], 'f'); g.poly([(13, 11), (15, 15), (13, 14)], 'f'); g.rect(9, 14, 2, 3, 'fl'); g.ellipse(10, 8, 1.5, 1.5, 'w')
         pal.update({'r': IRON, 'f': RED, 'fl': ('#ffe36a', '#ff9a30', '#c4301a'), 'w': '#9adfff'})

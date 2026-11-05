@@ -265,7 +265,7 @@ function kartPerks(k, dt) {
 function hitKart(k, by, how, p) {
   var R = RACE; if (k.floatT > 0) return false; if (k.invT > 0 || k.nadoT > 0) return false;
   if (k.shieldT > 0 && how !== 'bite') { // Spermaid's bubble: what was thrown goes back where it came from
-    k.shieldT = 0; k.invT = 0.5; sfx.play('magic'); R.fx.push({ k: 'pop', x: k.x, y: k.y + 1, z: k.z, t: 0.4, col: '#9adfff' });
+    k.shieldT = 0; k.invT = 0.5; sfx.play('magic'); R.fx.push({ k: 'pop', x: k.x, y: k.y + 1, z: k.z, t: 0.4, col: '#f08ab0' });
     if (p && by && by !== k) { var q = { k: p.k, x: k.x, z: k.z, y: k.y + 0.6, seg: k.seg, life: 6, by: k, safe: 0.4 }; if (p.k === 'pie') { var a = Math.atan2(by.z - k.z, by.x - k.x); q.vx = Math.cos(a) * 44; q.vz = Math.sin(a) * 44; } if (p.k === 'sperm') { q.tgt = by; q.sp = 50; } if (p.k === 'pie' || p.k === 'sperm') R.proj.push(q); }
     return true;
   }

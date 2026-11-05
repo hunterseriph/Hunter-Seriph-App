@@ -30,7 +30,7 @@ var CLASSES = [
   { id: 'dyn', n: 'Dynamite', sub: 'Flat out. Nobody holds back', spd: 1.28, ai: 0.985, lock: 'Win any cup on Hot' }
 ];
 /* power-ups from the item boxes. Each one does its own thing to you, so getting hit by each feels different:
-   pie splats your screen, the pill does something silly, goo makes you slide, the bubble sends things back, the meatnado tosses karts in the air. */
+   pie splats your screen, the pill does something silly, goo makes you slide, the condom sends things back, the meatnado tosses karts in the air. */
 var ITEMS = {
   pie: { n: 'Cream Pie', ic: 'it_pie', d: 'Throw it ahead (hold back to throw it behind). A hit splats cream over their screen and slows them.' },
   pie3: { n: 'Three Pies', ic: 'it_pie', n3: 3, d: 'Three pies spin round you as a shield, each one stops a hit. Throw them one at a time.' },
@@ -38,14 +38,14 @@ var ITEMS = {
   sperm: { n: 'Homing Sperm', ic: 'ck_sperm', d: 'Swims after the racer in front of you and spins them out.' },
   cuppa: { n: 'Cumpuccino', ic: 'it_espresso', d: 'A shot of speed.' },
   cuppa3: { n: 'Three Cumpuccinos', ic: 'it_espresso', n3: 3, d: 'Three shots of speed.' },
-  bubble: { n: "Spermaid's Bubble", ic: 'ck_bubble', d: 'Wraps you in a bubble. The next thing thrown at you bounces straight back at whoever threw it.' },
+  bubble: { n: 'Condom', ic: 'ck_bubble', d: 'Rolls a condom over your kart. The next thing thrown at you bounces straight back at whoever threw it.' },
   cracker: { n: 'Cum Cracker', ic: 'ck_cracker', d: 'Three drops and a little push.' },
   meatnado: { n: 'Meatnado', ic: 'ck_nado', d: 'Become a spinning meatnado: faster, nothing can hurt you, and anyone you touch is tossed in the air.' },
   goo: { n: "Blum's Goo", ic: 'ck_goo', d: 'Drop a big puddle of goo behind you (or lob it ahead). Drive through it and you slide about and slow right down.' },
   sirj: { n: 'Sir Johnathan', ic: 'cat', d: 'He bolts down the track and pounces on whoever is winning.' },
   egg: { n: 'Homunculus Egg', ic: 'h_gloop_egg0', d: 'Hatches a little Gloop that rides on your kart for a while and bites anyone who drives beside you, stealing a drop.' },
   balloon: { n: 'Steve Balloon', ic: 'f_balloon_0', d: 'Steve lifts your kart up over everything for a few seconds: nothing on the road can touch you.' },
-  beat: { n: "Pulsar's Beat Drop", ic: 'it_phones', d: 'A bass drop. The shockwave knocks every kart near you flying outward and pops their bubbles.' },
+  beat: { n: "Pulsar's Beat Drop", ic: 'it_phones', d: 'A bass drop. The shockwave knocks every kart near you flying outward and splits their condoms.' },
   magnet: { n: "Potbelly's Coin Magnet", ic: 'ck_magnet', d: 'For a few seconds you pull drops off every kart near you, and off the road.' }
 };
 /* what the boxes give, by place (1st .. 8th): rarer and nastier things the further back you are */

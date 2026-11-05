@@ -114,3 +114,30 @@ def preview(rows, path, scale=4, bg=(34, 20, 22, 255)):
         for t in r:
             big = t.resize((t.width * scale, t.height * scale), Image.NEAREST); pv.paste(big, (x, i * rh + rh - big.height - 4), big); x += big.width + 8
     pv.save(path)
+
+
+# ---------------------------------------------------------------- the CONDOM (his ask: every shield power-up is a condom)
+CONDOM_FOIL = ('#ff4a5a', '#c4121c', '#5a0a10'); CONDOM_CRIMP = ('#fff09a', '#ffc840', '#a8741a'); CONDOM_RING = ('#ffd0e0', '#f08ab0', '#8a2a58')
+def condom_pack(w=16, h=16, ox=0, oy=0, g=None):
+    """the foil packet: crimped gold edges, the ring pressing up through the foil, a tear notch. Draws into g if given."""
+    own = g is None
+    if own: g = Grid(w, h)
+    g.rect(ox + 1, oy + 1, w - 2, h - 2, 'cf')
+    for i in range(0, w, 2): g.put(ox + i, oy, 'cc'); g.put(ox + i, oy + h - 1, 'cc')
+    for i in range(0, h, 2): g.put(ox, oy + i, 'cc'); g.put(ox + w - 1, oy + i, 'cc')
+    cx, cy, r = ox + w / 2, oy + h / 2, min(w, h) * 0.32
+    g.ellipse(cx, cy, r, r, 'cr'); g.ellipse(cx, cy, r * 0.62, r * 0.62, 'cf')
+    g.put(int(cx - r * 0.55), int(cy - r * 0.6), 'ch'); g.put(ox + w - 3, oy + 1, 'cn'); g.put(ox + w - 2, oy + 2, 'cn')
+    pal = {'cf': CONDOM_FOIL, 'cc': CONDOM_CRIMP, 'cr': CONDOM_RING, 'ch': '#ffffff', 'cn': '#2a0408'}
+    return (g, pal) if own else pal
+def condom_sheath(w=40, h=34):
+    """the condom itself, unrolled over something: a dome with the little teat on top, see-through sides, a rolled rim at the bottom (outline only, so whoever wears it shows through)"""
+    import math
+    g = Grid(w, h); cx = w / 2; top = 6; rx = w / 2 - 2; bot = h - 3
+    for a in range(180, 361, 2): # the dome
+        x = cx + math.cos(math.radians(a)) * rx; y = top + rx * 0.55 + math.sin(math.radians(a)) * rx * 0.55; g.put(int(round(x)), int(round(y)), 'cl')
+    for y in range(int(top + rx * 0.55), bot): g.put(int(cx - rx), y, 'cl'); g.put(int(cx + rx), y, 'cl')
+    g.ellipse(cx, top - 1, 2.2, 2.6, 'cl'); g.rect(int(cx) - 1, top, 2, 2, 'cl') # the teat
+    for x in range(int(cx - rx) - 1, int(cx + rx) + 2): g.put(x, bot, 'cr'); g.put(x, bot + 1, 'cr') # the rolled rim
+    g.put(int(cx - rx) + 2, top + 8, 'ch'); g.put(int(cx - rx) + 2, top + 9, 'ch'); g.put(int(cx - rx) + 2, top + 10, 'ch')
+    return g, {'cl': CONDOM_RING, 'cr': ('#ffb0cc', '#e06090', '#7a2048'), 'ch': '#ffffff'}

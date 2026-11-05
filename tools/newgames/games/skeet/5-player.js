@@ -14,7 +14,7 @@ function makePlayer(id) {
   return e;
 }
 function specialMove(s, kind, ex) {
-  var k = ex ? 1.5 : 1, m = MV({ pose: s.pose, st: s.st || 0.08, rc: s.rc || 0.22, ac: 0.06, n: (ex ? 'EX ' : '') + s.n, kind: kind, ex: ex, meter: 6, dmg: (s.dmg || 0) * k, kd: s.kd, lift: s.lift, kb: s.kb || 120, hs: 0.08, sfx: 'heavy', inv: s.inv || ex });
+  var k = ex ? 1.5 : 1, m = MV({ an: s.an, st: s.st || 0.08, rc: s.rc || 0.22, ac: 0.06, n: (ex ? 'EX ' : '') + s.n, kind: kind, ex: ex, meter: 6, dmg: (s.dmg || 0) * k, kd: s.kd, lift: s.lift, kb: s.kb || 120, hs: 0.08, sfx: 'heavy', inv: s.inv || ex });
   if (kind === 'fire') { m.ac = 0.05; m.shot = ex && s.ex ? s.ex : s.shot; m.triple = ex && s.ex && s.ex.triple; }
   if (kind === 'rise') { m.ac = 0.7; m.rc = 0.16; m.box = s.box; m.vh = s.vh * (ex ? 1.12 : 1); m.fwd = s.fwd; m.hits = s.hits + (ex ? 2 : 0); m.spin = s.spin; m.heal = s.heal; m.rise = 1; }
   if (kind === 'dash') { m.ac = s.dur; m.rc = 0.2; m.lunge = s.lunge * (ex ? 1.15 : 1); m.box = s.box; m.ghost = s.ghost; m.fx = s.fx; m.lift = s.lift || 160; }
@@ -87,7 +87,7 @@ function stepMove(e, dt) {
     if (m.triple) [-14, 0, 14].forEach(function (dz) { shoot(e, m.shot, { h: hh, dz: dz, vz: dz * 2 }); }); else shoot(e, m.shot, { h: hh });
     if (m.kind === 'fire' && m.ex) KIT.flash(0.05); }
   if (m.ring && t >= m.st && !f.ring) { f.ring = 1; G.fx.push({ k: 'ring', x: e.x, z: e.z, t: 0, life: 0.35, r: m.ring, col: H.col }); KIT.shake(m.quake ? 7 : 4); sfx.play(m.quake ? 'boom' : 'heavy');
-    hitArea(e.x, e.z, m.ring, m.ring * 0.4, { dmg: m.dmg, kd: m.kd, kb: m.kb || 140, lift: m.lift, from: e, team: 'p', hs: 0.08, meter: 6 }); if (m.fx) for (var i = 0; i < 6; i++) G.fx.push({ k: 'spr', spr: m.fx, x: e.x + rnd(-m.ring, m.ring), z: e.z + rnd(-8, 8), h: 0, t: 0, life: 0.4 }); if (m.shield) e.shieldT = m.shield; }
+    hitArea(e.x, e.z, m.ring, m.ring * 0.4, { dmg: m.dmg, kd: m.kd, kb: m.kb || 140, lift: m.lift, from: e, team: e.team, hs: 0.08, meter: 6, low: G.duel ? 1 : 0 }); if (m.fx) for (var i = 0; i < 6; i++) G.fx.push({ k: 'spr', spr: m.fx, x: e.x + rnd(-m.ring, m.ring), z: e.z + rnd(-8, 8), h: 0, t: 0, life: 0.4 }); if (m.shield) e.shieldT = m.shield; }
   var act = t >= m.st && t < m.st + m.ac && m.box && m.dmg > 0 && !m.shot;
   if (m.rise && f.rose) act = e.h > 0 || e.vh > 0;
   if (act) { if (m.hits > 1 && t - (f.lastReset || 0) > m.ac / m.hits * 0.9) { f.lastReset = t; e.hit = {}; } var n = hitWith(e, m); if (n) { f.landed = 1; if (e.weapon && m.weap) weaponWear(e, n); } }
@@ -108,13 +108,13 @@ function weaponAttack(e, dn) {
   var w = WEAPONS[e.weapon.id], H = e.hero;
   if (w.kind === 'melee') {
     if (dn === 2 || dn === 1 || dn === 3) { // down + A: throw it
-      shoot(e, { spr: e.weapon.id, spd: 320, dmg: w.dmg * 1.4, kd: true, kb: 200, spin: 1, life: 0.9 }, { h: e.ht * 0.5 }); e.weapon = null; sfx.play('throw'); startMove(e, MV({ pose: H.combo[1].pose, st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); return; }
-    startMove(e, MV({ pose: H.combo[1].pose, st: 0.07, ac: 0.09, rc: w.spd, box: [0, w.reach, 4, H.ht], dmg: w.dmg, kb: w.kb, kd: !!w.kd, lift: w.kd ? 200 : 0, sfx: w.sfx, hs: 0.07, weap: 1, zr: w.wide ? 16 : 10, meter: 5 }));
+      shoot(e, { spr: e.weapon.id, spd: 320, dmg: w.dmg * 1.4, kd: true, kb: 200, spin: 1, life: 0.9 }, { h: e.ht * 0.5 }); e.weapon = null; sfx.play('throw'); startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); return; }
+    startMove(e, MV({ an: 'cross', st: 0.07, ac: 0.09, rc: w.spd, box: [0, w.reach, 4, H.ht], dmg: w.dmg, kb: w.kb, kd: !!w.kd, lift: w.kd ? 200 : 0, sfx: w.sfx, hs: 0.07, weap: 1, zr: w.wide ? 16 : 10, meter: 5 }));
     return;
   }
   if (w.kind === 'gun' && e.gunCd > 0) return;
   shoot(e, w.shot, { h: e.ht * 0.55 }); e.gunCd = w.rate || 0; sfx.play(w.kind === 'gun' ? 'gun' : 'throw');
-  startMove(e, MV({ pose: H.combo[0].pose, st: 0.03, ac: 0.02, rc: w.kind === 'gun' ? 0.1 : 0.2, dmg: 0, box: null, weap: 1 }));
+  startMove(e, MV({ an: 'jab', st: 0.03, ac: 0.02, rc: w.kind === 'gun' ? 0.1 : 0.2, dmg: 0, box: null, weap: 1 }));
   weaponWear(e, 1);
 }
 function weaponWear(e, n) { if (!e.weapon) return; e.weapon.dur -= n; if (e.weapon.dur <= 0) { var w = WEAPONS[e.weapon.id]; e.weapon = null; sfx.play('crash'); G.fx.push({ k: 'text', s: w.kind === 'melee' ? 'BROKEN!' : 'EMPTY!', x: e.x, z: e.z, h: e.ht + 10, t: 0, life: 0.8, col: '#ff2630' }); for (var i = 0; i < 4; i++) G.fx.push({ k: 'spr', spr: 'b_bits', x: e.x + e.face * 14, z: e.z, h: 24, vx: rnd(-60, 60), vh: rnd(60, 160), grav: 1, life: 0.6, t: 0 }); } }
@@ -137,7 +137,7 @@ function stepGrab(e, dt) {
   }
 }
 function throwFoe(e, t) {
-  e.held = null; e.st = 'atk'; startMove(e, MV({ pose: e.hero.wind, st: 0.05, ac: 0.02, rc: 0.25, dmg: 0, box: null, n: 'THROW' }));
+  e.held = null; e.st = 'atk'; startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.25, dmg: 0, box: null, n: 'THROW' }));
   t.heldBy = null; strike(t, { dmg: 16 * (e.hero.armorHeavy ? 1.3 : 1), kd: true, kb: 280, lift: 200, hs: 0.08, from: e, meter: 10 }, e.face);
   if (t.hp > 0) { t.st = 'thrown'; t.vx = e.face * 280; t.vh = 200; t.h = 6; } sfx.play('throw'); KIT.shake(3);
 }
@@ -146,19 +146,20 @@ function stepThrown(e) { if (e.st !== 'thrown') return; G.ents.forEach(function 
 
 /* ---------- supers: the screen goes dark, the face cuts in, then something big ---------- */
 function startSuper(e) {
-  var S = e.hero.sp.sup; e.meter = 0; e.st = 'idle'; e.vx = e.vz = 0; e.inv = 3; G.superT = 2.2; G.sup = { kind: S.kind, n: S.n, col: S.col, dmg: S.dmg, t: 0, hit: {}, x: e.x, z: e.z, face: e.face };
-  G.cutin = { t: 0, n: S.n }; sfx.play('super'); KIT.flash(0.15); KIT.shake(4);
+  var S = e.hero.sp.sup; e.meter = 0; e.st = 'idle'; e.mv = null; e.vx = e.vz = 0; e.inv = 3; G.superT = 2.2; G.sup = { kind: S.kind, n: S.n, col: S.col, dmg: S.dmg * (G.duel ? 0.6 : 1), t: 0, hit: {}, x: e.x, z: e.z, face: e.face, by: e };
+  G.cutin = { t: 0, n: S.n, face: e.hero.face, shade: e.shade }; sfx.play('super'); KIT.flash(0.15); KIT.shake(4);
 }
 function stepSuper(dt) {
-  var S = G.sup; if (!S) return; S.t += dt; G.superT -= dt; var e = P;
+  var S = G.sup; if (!S) return; S.t += dt; G.superT -= dt; var e = S.by || P;
   if (S.t < 0.7) return; // the cut-in
-  var foes = G.ents.filter(function (o) { return o.team === 'f' && o.hp > 0 && o.st !== 'dead' && o.st !== 'gone' && !o.leaving && o.x > G.cam - 20 && o.x < G.cam + KIT.W + 20; });
+  var foes = e === P ? G.ents.filter(function (o) { return o.team === 'f' && o.hp > 0 && !o.assist && o.st !== 'dead' && o.st !== 'gone' && o.st !== 'ko' && !o.leaving && o.x > G.cam - 20 && o.x < G.cam + KIT.W + 20; }) : (P && P.hp > 0 && P.st !== 'ko' ? [P] : []);
   var tick = Math.floor((S.t - 0.7) / 0.12); if (tick !== S.tick) { S.tick = tick;
     if (S.kind === 'beam') foes.forEach(function (o) { if ((o.x - S.x) * S.face > -10 && Math.abs(o.z - S.z) < 22) { o.inv = 0; strike(o, { dmg: S.dmg / 10, kb: 40, stun: 0.5, hs: 0.02, from: e, meter: 0, sfx: 'hit', kd: tick === 9, lift: 240 }, S.face); } });
     if (S.kind === 'storm' || S.kind === 'pies') { var o = foes[tick % Math.max(1, foes.length)]; if (o) { G.fx.push({ k: S.kind === 'storm' ? 'column' : 'piefall', x: o.x, z: o.z, t: 0, life: 0.35 }); o.inv = 0; strike(o, { dmg: S.dmg / 4, kd: true, kb: 120, lift: 260, hs: 0.04, from: e, meter: 0, sfx: S.kind === 'storm' ? 'splash' : 'splat' }, o.x >= S.x ? 1 : -1); } else G.fx.push({ k: S.kind === 'storm' ? 'column' : 'piefall', x: G.cam + rnd(30, KIT.W - 30), z: rnd(10, DEPTH - 10), t: 0, life: 0.35 }); }
     if (S.kind === 'flood') { var r = (S.t - 0.7) * 380; foes.forEach(function (o) { if (Math.abs(o.x - S.x) < r && !S.hit[o.id]) { S.hit[o.id] = 1; o.inv = 0; strike(o, { dmg: S.dmg, kd: true, kb: 220, lift: 300, hs: 0.06, from: e, meter: 0, sfx: 'splash' }, o.x >= S.x ? 1 : -1); } }); }
   }
   if (G.superT <= 0) { G.sup = null; G.superT = 0; e.inv = 0.4; }
+  if (G.duel && G.duel.phase !== 'fight' && G.sup) { G.sup = null; G.superT = 0; }
 }
 function playerOut() {
   G.lives--; if (G.lives < 0) { G.lives = 0; return gameOver(); }

@@ -26,18 +26,12 @@ RED = ('#ff3a44', '#c4121c', '#6a0a10'); CREAM = ('#fffbe8', '#f1e0b0', '#b8a070
 def sperm():
     g = Grid(22, 12); g.ellipse(16, 6, 5, 4.2, 'h'); g.line(11, 6, 2, 4, 't', 1.1); g.line(6, 5, 1, 8, 't', 0.8); g.put(18, 4, 'e'); g.put(17, 5, 'hi')
     return g, {'h': CREAM, 't': CREAM, 'e': '#12040a', 'hi': '#ffffff'}
-def bubble():
-    g = Grid(18, 18); g.ellipse(9, 9, 8.2, 8.2, 'b'); g.ellipse(9, 9, 6.5, 6.5, 'in'); g.put(5, 5, 'hi'); g.put(6, 5, 'hi'); g.put(5, 6, 'hi')
-    return g, {'b': BLUE, 'in': ('#2a6a9a', '#1a4a7a', '#0a2a4a'), 'hi': '#ffffff'}
-def shield():
-    g = Grid(40, 34)
-    for a in range(0, 360, 3):
-        import math
-        x = 20 + math.cos(math.radians(a)) * 18; y = 17 + math.sin(math.radians(a)) * 15.5
-        g.put(int(round(x)), int(round(y)), 'r')
-        x2 = 20 + math.cos(math.radians(a)) * 17; y2 = 17 + math.sin(math.radians(a)) * 14.5
-        if 200 < a < 260: g.put(int(round(x2)), int(round(y2)), 'hi')
-    return g, {'r': BLUE, 'hi': '#ffffff'}
+def bubble(): # the condom item (his ask: every shield is a condom): its packet
+    from pixelkit import condom_pack
+    return condom_pack(18, 18)
+def shield(): # the condom unrolled round your kart
+    from pixelkit import condom_sheath
+    return condom_sheath(40, 34)
 ART['ck_shield'] = shield
 def kartside():  # a kart seen from the side, for the Games card
     g = Grid(44, 20)

@@ -56,4 +56,4 @@ var FOES = {
   knight: { spr: 'f_knight_', n: 4, beh: 'walk', v: 22, hp: 2, shield: 1, pts: 300 }
 };
 /* what an item box gives */
-var ITEMS = { drops: 'TEN DROPS', shield: 'BUBBLE', shoes: 'SPEED SHOES', star: 'INVINCIBLE', life: 'EXTRA LIFE' };
+var ITEMS = { drops: 'TEN DROPS', shield: 'CONDOM', shoes: 'SPEED SHOES', star: 'INVINCIBLE', life: 'EXTRA LIFE' };

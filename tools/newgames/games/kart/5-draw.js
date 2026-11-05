@@ -157,7 +157,7 @@ function drawRace(dt) {
   var st = sheetTex(); if (!st) return;
   R.karts.forEach(function (kk) {
     var d = kk._drv; if (d) billboard(sp, d.x, d.y, d.z, d.n, d.sc, { flip: d.flip, squash: d.sq });
-    if (kk.shieldT > 0) billboard(sp, kk.x, kk.y + (kk.floatY || 0) - 0.1, kk.z, 'ck_shield', 0.075, { col: [0.6, 0.6, 0.7] });
+    if (kk.shieldT > 0) billboard(sp, kk.x, kk.y + (kk.floatY || 0) - 0.1, kk.z, 'ck_shield', 0.075, { col: [0.8, 0.6, 0.7] });
     if (kk.nadoT > 0) for (var j = 0; j < 7; j++) { var a = R.t * 9 + j * 0.9, r = 1.2 + (j % 3) * 0.25; billboard(sp, kk.x + Math.cos(a) * r, kk.y + 0.1 + j * 0.28, kk.z + Math.sin(a) * r, j % 2 ? 'mn_sausage' : 'ao_meat' + (j % 4 ? 0 : 1), 0.045); }
     var ky = kk.y + (kk.floatY || 0);
     if (kk.gooT > 0) billboard(sp, kk.x, ky + 1.7, kk.z, 'f_blumling_' + (Math.floor(R.t * 6) % 4), 0.04);
@@ -223,7 +223,7 @@ function hudBody(R, ctx, k, C) {
   KIT.panel(214, 4, 52, 44); var it = k.item;
   if (k.roul > 0) { var keys = Object.keys(ITEMS), ik = ITEMS[keys[Math.floor(R.t * 14) % keys.length]].ic; spr(ik, 240, 40, { sc: 1.5 }); sfx.play && Math.floor(R.t * 14) !== Math.floor((R.t - 1 / 60) * 14) && sfx.play('tick'); }
   else if (it) { spr(ITEMS[it].ic, 240, 40, { sc: it === 'sirj' ? 1.4 : 1.5 }); if (k.itemN > 1) text('×' + k.itemN, 258, 36, { size: 8, col: '#ffe36a' }); }
-  if (k.shieldT > 0) { R2('#9adfff', 216, 47, 48 * k.shieldT / 14, 2); }
+  if (k.shieldT > 0) { R2('#f08ab0', 216, 47, 48 * k.shieldT / 14, 2); }
   // place and map (right corner), kept clear of the on-screen buttons when they are showing
   ctx.save(); ctx.translate(Math.min(C, padEdge() - 480 - C), 0);
   if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }

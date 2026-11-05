@@ -112,58 +112,19 @@ def add(name):
     def deco(fn): ART[name] = fn; return fn
     return deco
 
-# ---- CUMHEAD: his own atlas has idle, walk, run, a punch, jumps, hurt and a fall
-def _cum(n, f=None, w=None): return lambda: f(centred(B(n), W=w)) if f else centred(B(n), W=w)
-for i in range(7): ART['sk_cu_idle%d' % i] = _cum('ch_idle%d' % i)
-for i in range(9): ART['sk_cu_walk%d' % i] = _cum('ch_walk%d' % i)
-for i in range(8): ART['sk_cu_run%d' % i] = _cum('ch_rn%d' % i)
-ART['sk_cu_jab'] = lambda: centred(B('ch_attack'), fx=feet_x(B('ch_attack')) - 4)
-ART['sk_cu_jab2'] = lambda: centred(lean(B('ch_attack'), 3), fx=feet_x(B('ch_attack')) - 2)
-ART['sk_cu_upper'] = lambda: centred(stretch(lean(B('ch_jump1'), -2), 4))
-ART['sk_cu_wind'] = lambda: centred(lean(B('ch_idle0'), -4))
-ART['sk_cu_crouch'] = lambda: centred(squash(B('ch_idle0'), 8))
-ART['sk_cu_kick'] = lambda: centred(lean(B('ch_rn3'), 4))
-for i in range(4): ART['sk_cu_jump%d' % i] = _cum('ch_jump%d' % i)
-ART['sk_cu_hurt'] = lambda: centred(lean(B('ch_hurt0'), -3))
-ART['sk_cu_down'] = lambda: centred(B('ch_death1'))
-ART['sk_cu_fall'] = lambda: centred(B('ch_death0'))
-
-# ---- SPERMAID: his drawing (slim droplet, curled tip, tail). She floats; her tail does the hitting
-for i in range(3): ART['sk_sp_idle%d' % i] = (lambda i: lambda: centred(B('spermaid_s%d' % i)))(i)
-ART['sk_sp_front'] = lambda: centred(B('spermaid_d'))
-ART['sk_sp_jab'] = lambda: centred(lean(B('spermaid_s1'), 4))
-ART['sk_sp_jab2'] = lambda: centred(lean(B('spermaid_s2'), 6))
-ART['sk_sp_spin'] = lambda: centred(flipx(lean(B('spermaid_s0'), 3)))
-ART['sk_sp_wind'] = lambda: centred(lean(B('spermaid_s0'), -5))
-ART['sk_sp_upper'] = lambda: centred(stretch(lean(B('spermaid_s2'), -2), 5))
-ART['sk_sp_crouch'] = lambda: centred(squash(B('spermaid_s0'), 7))
-ART['sk_sp_hurt'] = lambda: centred(lean(B('spermaid_s0'), -4))
-ART['sk_sp_down'] = lambda: centred(B('spermaid_dead'))
-
-# ---- GREEBO: a cream pie in a chef's hat; strong and slow
-for i in range(3): ART['sk_gr_walk%d' % i] = (lambda i: lambda: centred(B('greebo_s%d' % i)))(i)
-ART['sk_gr_idle0'] = lambda: centred(B('greebo_s0'))
-ART['sk_gr_idle1'] = lambda: centred(squash(B('greebo_s0'), 1))
-ART['sk_gr_front'] = lambda: centred(B('greebo_d'))
-ART['sk_gr_jab'] = lambda: centred(lean(B('greebo_s1'), 5))
-ART['sk_gr_jab2'] = lambda: centred(lean(B('greebo_s2'), 7))
-ART['sk_gr_wind'] = lambda: centred(lean(B('greebo_s0'), -5))
-ART['sk_gr_upper'] = lambda: centred(stretch(lean(B('greebo_s1'), -3), 4))
-ART['sk_gr_crouch'] = lambda: centred(squash(B('greebo_s0'), 8))
-ART['sk_gr_hurt'] = lambda: centred(lean(B('greebo_s0'), -4))
-ART['sk_gr_down'] = lambda: centred(B('greebo_dead'))
-
-# ---- THE HOMUNCULUS: the standard Gloop breed, full grown
-ART['sk_ho_idle0'] = lambda: centred(B('h_gloop_adult_idle0')); ART['sk_ho_idle1'] = lambda: centred(B('h_gloop_adult_idle1'))
-for i in range(4): ART['sk_ho_walk%d' % i] = (lambda i: lambda: centred(B('h_gloop_adult_run%d' % i)))(i)
-ART['sk_ho_jab'] = lambda: centred(B('h_gloop_adult_atk'))
-ART['sk_ho_jab2'] = lambda: centred(lean(B('h_gloop_adult_atk'), 4))
-ART['sk_ho_wind'] = lambda: centred(lean(B('h_gloop_adult_idle0'), -4))
-ART['sk_ho_upper'] = lambda: centred(stretch(B('h_gloop_adult_jump'), 4))
-ART['sk_ho_jump'] = lambda: centred(B('h_gloop_adult_jump'))
-ART['sk_ho_crouch'] = lambda: centred(squash(B('h_gloop_adult_idle0'), 8))
-ART['sk_ho_hurt'] = lambda: centred(B('h_gloop_adult_hurt'))
-ART['sk_ho_down'] = lambda: centred(lean(B('h_gloop_adult_hurt'), -6))
+# ---- THE FOUR FIGHTERS: posed by the rig (rig.py, fighters.py): their own heads and bodies, limbs drawn to match
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fighters as FT
+_FR = {}
+def _fighter(n):
+    def go():
+        if not _FR: _FR.update(FT.frames(B))
+        return _FR[n]
+    return go
+for _k in ('cu', 'sp', 'gr', 'ho'):
+    for _a, _L in FT.anims(_k).items():
+        for _i in range(len(_L)): ART['sk_%s_%s%d' % (_k, _a, _i)] = _fighter('sk_%s_%s%d' % (_k, _a, _i))
 
 # ---- BLUMWASHED HOMUNCULI: Blumhead's goo got into them. Real breed art, dyed his purple
 WASHED = ['gloop', 'frost', 'volt', 'ember', 'titan', 'leech', 'goldie', 'blood', 'scout', 'guard', 'medic']
