@@ -15,21 +15,21 @@ var SSDIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
    over the place). Each is one quarter, 16 x 16, mirrored left-right and top-bottom into the 32 x 32 world, so it is
    symmetric like the real ones. Cumhead starts in the middle facing up.
    b cream sphere, r red sphere, y gold spring, u bumper, o drop, . floor */
-var SSQ = [ // seven worlds, made to feel like Sonic 3's (his ask: proper special stages): dense fields of cream to run round, red to steer you
-  [ // THE BLOOD CHALICE: big blocks of cream to run round (the whole block turns to drops), a row up the middle to start
-    '................', '.bbbb...bbbb....', '.bbbb...bbbb....', '.bbbb...bbbb....', '.bbbb...bbbb....', '................', '......r....r....', '...............b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '.bbbb...bbbbb..b', '........bbbbb..b', '....o..........b', '...ooo.........b', '................'],
-  [ // THE GOLD CHALICE: lanes between red rails, blocks either side of a pair of bumpers, a row of red posts
-    '................', '.bbbbbbbbbbbb...', '................', '.rrrrrr..rrrrrr.', '................', '..bbbb....bbbb..', '..bbbb....bbbb..', '..bbbb.uu.bbbb.b', '..bbbb....bbbb.b', '...............b', '.r.r.r.r.r.r....', '................', '.bbbbbbb..y.....', '.bbbbbbb........', '.bbbbbbb.......b', '................'],
-  [ // THE CREAM CHALICE: diamonds of cream, red posts, a solid block to run round, a cross of drops
-    '................', '....b......b....', '...bbb....bbb...', '..bbbbb..bbbbb..', '...bbb....bbb...', '....b......b....', '................', '.rr....rr....rr.', '...............b', '..bbbbbbb......b', '..bbbbbbb...o..b', '..bbbbbbb..ooo.b', '..bbbbbbb...o..b', '..bbbbbbb......b', '...............b', '................'],
-  [ // THE VOID CHALICE: a red keep wall with gaps, long rows of cream, blocks, bumpers and springs
-    'rrrrrrrrrrrrrrr.', 'r...............', 'r.bbbbbbbbbbbb..', 'r.bbbbbbbbbbbb..', 'r...............', 'r.rrrrrr.rrrrrr.', 'r...............', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r.bbbb..bbbb...b', 'r...............', 'r.u....y....u...', 'r..............b', 'r..............b', 'r...............'],
-  [ // THE TEAR CHALICE: red rooms with a door each, a big block of cream to run round, a nest of drops
-    '................', '.rrrrrr..rrrrrr.', '.r....r..r....r.', '.r.bb.r..r.bb.r.', '.r.bb.r..r.bb.r.', '.r....r..r....r.', '.rrr.rr..rr.rrr.', '................', '...........ooo..', '...bbbbbbb..o...', '...bbbbbbb.....b', '...bbbbbbb.....b', '...bbbbbbb.....b', '...bbbbbbb......', '................', '................'],
-  [ // THE ROT CHALICE: bumpers in a row, two big blocks, a red fence, a wide slab
-    '................', '..u....u....u...', '................', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb....', '.bbbbb.bbbbb...b', '...............b', '.rrrr..rrrr....b', '...............b', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '................', '................'],
-  [ // THE BLACK CHALICE: everything: red fence posts, a block of cream, a red box with a door and a drop inside, a long double row, bumpers and springs
-    'r.r.r.r.r.r.r.r.', '................', 'r.bbbbb.........', '..bbbbb..rrrr...', 'r.bbbbb..r..r...', '..bbbbb..r.or...', 'r.bbbbb..r..r...', '..bbbbb..rr.r..b', 'r..............b', '..bbbbbbbbbbb..b', 'r.bbbbbbbbbbb...', '................', 'r.u..y....y..u..', '...............b', 'r..............b', '................']];
+var SSQ = [ // seven worlds made like Sonic 3's: a handful of shapes to run round, red to steer you. He said 300 cream spheres was silly: 64 to about 128 now, rising each world
+  [ // THE BLOOD CHALICE (64): a block to run round, a row up the middle to start, a few to pick off
+    '................', '................', '...bbb..........', '...bbb....rr....', '...bbb....rr....', '................', '........o.......', '.......ooo......', '......bbb.o.....', '................', '................', '...............b', '...............b', '...............b', '...............b', '................'],
+  [ // THE GOLD CHALICE (80): a long row, red rails, two blocks, a bumper and a spring
+    '................', '.bbbbbb.........', '................', '.rrrr....rrrr...', '................', '...bbb..........', '...bbb....u.....', '................', '..bbbb....y.....', '................', '.r.r.r.r........', '...............b', '...............b', '....oooo.......b', '...............b', '................'],
+  [ // THE CREAM CHALICE (92): a diamond, red steps, a block, a cross of drops
+    '................', '....b...........', '...bbb..........', '..bbbbb...rr....', '...bbb.....rr...', '....b.......rr..', '................', '.rr......o......', '........ooo.....', '...bbb...o......', '...bbb..........', '...............b', '...............b', '...............b', '...............b', '................'],
+  [ // THE VOID CHALICE (104): a red keep wall with a gap, rows and a block, bumpers and a spring
+    'rrrrrrrrrrrrrr..', 'r...............', 'r..bbbbbbbb.....', 'r...............', 'r.rrrrr..rrrrr..', 'r...............', 'r..bbbb.....u...', 'r..bbbb.........', 'r...............', 'r.....y.........', 'r..bbbbbb..ooo..', 'r..............b', 'r..u...........b', 'r..............b', 'r..............b', 'r...............'],
+  [ // THE TEAR CHALICE (108): a red room with a door, a block, a slab and a nest of drops
+    '................', '.rrrrrr.........', '.r....r..bbbb...', '.r.bb.r..bbbb...', '.r.bb.r.........', '.r....r.....u...', '.rrr.rr.........', '................', '...........ooo..', '...bbbbb...o....', '...bbbbb.......b', '...............b', '...............b', '...............b', '...............b', '................'],
+  [ // THE ROT CHALICE (128): bumpers, two blocks behind red fences, a wide slab, a spring
+    '................', '..u.....u.......', '................', '.bbbb..bbbb.....', '.bbbb..bbbb.....', '................', '.rrrr..rrrr.....', '...............b', '...y...........b', '...............b', '..bbbbbb.......b', '..bbbbbb........', '................', '...ooo....u.....', '................', '................'],
+  [ // THE BLACK CHALICE (120): red fence posts, a block, a red box with a door and a drop inside, a long row, bumpers
+    'r.r.r.r.r.r.r.r.', '................', 'r.bbbb..........', '..bbbb...rrrr...', 'r.bbbb...r..r...', '.........r.or...', 'r........rr.r...', '...............b', 'r..y...........b', '..bbbbbbbbb....b', 'r...............', '..u.......u.....', 'r.....bbbb......', '...............b', 'r..............b', '................']];
 /* each world has its own floor (light square, dark square) and sky, like each Blue Sphere stage */
 var SSFLOOR = [['#6a2a7a', '#1e0a26'], ['#a8701a', '#2a1806'], ['#2a7a8a', '#0a2028'], ['#7a3a9a', '#1a0a26'], ['#2a6aaa', '#081a30'], ['#2a8a40', '#0a2410'], ['#6a6a7a', '#141418']];
 var SSSKY = [['#0a0410', '#1e0a2a'], ['#100804', '#2a1806'], ['#040c10', '#0a2a30'], ['#08040e', '#24103a'], ['#040810', '#0e2440'], ['#040a06', '#0e2a14'], ['#050506', '#1e1e26']];
@@ -78,7 +78,8 @@ function stepSpecial(dt) {
   if (KIT.pressed('left')) S.turn = -1; else if (KIT.pressed('right')) S.turn = 1;
   if (S.rev && KIT.pressed('up')) { var D0 = SSDIR[S.d]; S.x -= D0[0]; S.y -= D0[1]; S.p = 1 - S.p; S.rev = false; }
   if (KIT.pressed('a') && S.air <= 0) { S.air = S.airT = 1.9 / S.spd; sfx.play('jump'); }
-  var spd = S.spd = Math.min(4.8, 3.0 + S.lv * 0.12 + Math.floor(S.t / 30) * 0.3); S.anim += spd * dt;
+  var lvUp = Math.floor(S.t / 15); if (lvUp > (S.lvUp || 0)) { S.lvUp = lvUp; S.fast = 1.4; sfx.play('dash'); } if (S.fast > 0) S.fast -= dt; // faster every 15 seconds (he said it needed to speed up)
+  var spd = S.spd = Math.min(7, 3.2 + S.lv * 0.15 + lvUp * 0.5); S.anim += spd * dt;
   S.p += spd * dt;
   if (S.air > 0) { S.air -= dt; if (S.air <= 0) S.air = 0; }
   while (S.p >= 1 && S.state === 'play') {
@@ -102,7 +103,7 @@ function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up:
   var vx = x, vy0 = y - SSCH, vz0 = z + SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH), vz = vz0 * cp - vy0 * sp, vy = vy0 * cp + vz0 * sp; // from the camera, tipped down
   if (vz < 0.25) return null;
   var bx = nx * SSR, by = ny * SSR - SSR, bz = nz * SSR; if (nx * (-bx) + ny * (SSCH - by) + nz * (-SSCD - bz) < 0) return null; // round the back of the ball: hidden
-  var F = Math.min(W * 0.135, H * 0.235) / SSK0.s; // a square under his feet is about a sixth of the screen wide (he said they were small)
+  var F = Math.min(W * 0.185, H * 0.33) / SSK0.s; // a square under his feet is about a sixth of the screen wide (he said they were small)
   return { x: W / 2 + vx * F / vz, y: H * 0.8 - (vy / vz - SSK0.k) * F, s: F / vz, d: vz };
 }
 function drawSpecial() {
@@ -151,9 +152,9 @@ function drawSpecial() {
   things = things.filter(function (o) { return !(Math.abs(o.l) < 0.45 && o.f > -0.7 && o.f < 0.35 && o.ch === 'R'); }); // the sphere he is standing on hides under him
   things.forEach(drawThing); // every sphere, far ones first; Cumhead goes on top of them all, like Sonic does
   // Cumhead from behind, hopping when he jumps
-  var jy = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 46 : 26) : 0;
-  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (1.1 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3, base.s * 0.1, 0, 0, 6.3); g.fill();
-  if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jy * base.s / 60, { sc: csc });
+  var jh = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 2.6 : 1.5) : 0; // jump height in squares (he said the jump was a mild float)
+  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (0.95 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3 / (1 + jh * 0.5), base.s * 0.1 / (1 + jh * 0.5), 0, 0, 6.3); g.fill();
+  if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jh * base.s, { sc: csc });
   // the count, Blue Sphere style: spheres left and drops
   KIT.panel(8, 6, 92, 34); g.fillStyle = '#12040a'; g.beginPath(); g.arc(28, 23, 11, 0, 6.3); g.fill(); g.fillStyle = '#c8a868'; g.beginPath(); g.arc(28, 23, 10, 0, 6.3); g.fill(); g.fillStyle = '#f1e0b0'; g.beginPath(); g.arc(26, 21, 7, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(22, 16, 3, 3);
   text(String(S.left), 46, 15, { size: 14, col: '#f1e7d0' });
@@ -161,6 +162,7 @@ function drawSpecial() {
   for (var c7 = 0; c7 < 7; c7++) spr('hog_chal' + c7, 112 + c7 * 18, 32, { alpha: SV.chal[c7] ? 1 : 0.22 });
   if (S.state === 'in') { var a = Math.min(1, S.st * 3); g.fillStyle = 'rgba(255,255,255,' + (1 - a).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
   if (S.state === 'in' || (S.state === 'play' && S.st < 2.5)) { text('GET ' + S.total + ' CREAM SPHERES', W / 2, H * 0.3, { size: 14, align: 'center', col: '#f1e7d0', font: 'title', outline: true }); text('AVOID THE RED ONES', W / 2, H * 0.3 + 22, { size: 8, align: 'center', col: '#ff2630', outline: true }); }
+  if (S.state === 'play' && S.fast > 0 && Math.floor(S.fast * 8) % 2) text('SPEED UP!', W / 2, H * 0.34, { size: 16, align: 'center', col: '#ffe36a', font: 'title', outline: true });
   if (S.state === 'win' || S.state === 'fail') {
     R('rgba(7,4,5,0.75)', 0, 0, W, H); var win = S.state === 'win';
     text(win ? 'CUMHEAD GOT' : 'NO CHALICE', W / 2, H * 0.24, { size: 20, align: 'center', col: '#f1e7d0', font: 'title', outline: true });
