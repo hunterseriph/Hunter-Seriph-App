@@ -43,6 +43,15 @@ function dsGo(i) {
   beginAct(s.done && DS.pick[i] != null && DS.pick[i] !== ACTS[s.ai].z ? Math.min(DS.pick[i], ZONES.length - 1) * 2 : s.ai); // a save goes back to the exact act you left (a cleared one too, unless you pick another zone)
 }
 function dsGeom() { var W = KIT.W, pw = 116, gap = 12, tot = dsPanels() * (pw + gap) - gap + 32; return { pw: pw, gap: gap, ph: 186, y: 58, tot: tot, x0: 16 }; }
+function dsZoneStep(i, d) { var s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null, mz = dsZones(i); if (mz <= 0) return false;
+  if (DS.pick[i] == null && s) DS.pick[i] = ACTS[s.ai].z; DS.pick[i] = ((DS.pick[i] || 0) + d + mz + 1) % (mz + 1); sfx.play('clink'); return true; }
+function dsCharStep(i, d) { DS.pick['c' + i] = ((DS.pick['c' + i] || 0) + d + HOGCHARS.length) % HOGCHARS.length; sfx.play('clink'); }
+/* on a touch screen there is no up/down (he spotted it): the picked panel shows arrow buttons either side of its zone
+   picture (and of the character on a new save when there is more than one) to tap through them */
+function dsArrows(i) { var Gm = dsGeom(), x = Math.round(Gm.x0 + i * (Gm.pw + Gm.gap) - DS.sx), s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null, out = [];
+  if (i <= NSLOT && dsZones(i) > 0 && (i === 0 || s)) { var by = Gm.y + 22; out.push({ x: x - 6, y: by + 12, w: 22, h: 38, d: -1, k: 'z' }, { x: x + Gm.pw - 16, y: by + 12, w: 22, h: 38, d: 1, k: 'z' }); }
+  if (i >= 1 && i <= NSLOT && !s && HOGCHARS.length > 1) out.push({ x: x - 6, y: Gm.y + 100, w: 22, h: 38, d: -1, k: 'c' }, { x: x + Gm.pw - 16, y: Gm.y + 100, w: 22, h: 38, d: 1, k: 'c' });
+  return out; }
 function stepData(dt) {
   DS.t += dt; if (KIT.menuOpen()) return;
   var n = dsPanels(), lo = DS.erase ? 1 : 0, hi = DS.erase ? NSLOT + 1 : n - 1;
@@ -51,11 +60,12 @@ function stepData(dt) {
   var i = DS.ci, s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null;
   if ((KIT.pressed('up') || KIT.pressed('down')) && !DS.erase) { var d = KIT.pressed('up') ? 1 : -1;
     if (i >= 1 && i <= NSLOT && !s && HOGCHARS.length > 1) { DS.pick['c' + i] = ((DS.pick['c' + i] || 0) + d + HOGCHARS.length) % HOGCHARS.length; sfx.play('clink'); }
-    else { var mz = dsZones(i); if (mz > 0) { if (DS.pick[i] == null && s) DS.pick[i] = ACTS[s.ai].z; DS.pick[i] = ((DS.pick[i] || 0) + d + mz + 1) % (mz + 1); sfx.play('clink'); } } }
+    else dsZoneStep(i, d); }
   if (KIT.pressed('a') || KIT.pressed('start')) dsGo(i);
   else if (KIT.pressed('b')) { if (DS.erase) DS.erase = false; else titleMenu(); }
   // taps: tap a panel to pick it, tap it again to open it
-  if (KIT.ptr.tap) { var G2 = dsGeom(); for (var k = 0; k < n; k++) { var px = G2.x0 + k * (G2.pw + G2.gap) - DS.sx; if (KIT.ptr.x >= px && KIT.ptr.x < px + G2.pw && KIT.ptr.y >= G2.y && KIT.ptr.y < G2.y + G2.ph) { if (k === DS.ci) dsGo(k); else if (!(DS.erase && k === 0)) { DS.ci = k; sfx.play('clink'); } } } }
+  var hitA = false; if (KIT.ptr.tap && !DS.erase) dsArrows(DS.ci).forEach(function (a) { if (!hitA && KIT.ptr.x >= a.x && KIT.ptr.x < a.x + a.w && KIT.ptr.y >= a.y && KIT.ptr.y < a.y + a.h) { hitA = true; if (a.k === 'z') dsZoneStep(DS.ci, a.d); else dsCharStep(DS.ci, a.d); } });
+  if (KIT.ptr.tap && !hitA) { var G2 = dsGeom(); for (var k = 0; k < n; k++) { var px = G2.x0 + k * (G2.pw + G2.gap) - DS.sx; if (KIT.ptr.x >= px && KIT.ptr.x < px + G2.pw && KIT.ptr.y >= G2.y && KIT.ptr.y < G2.y + G2.ph) { if (k === DS.ci) dsGo(k); else if (!(DS.erase && k === 0)) { DS.ci = k; sfx.play('clink'); } } } }
   var Gm = dsGeom(), want = Gm.x0 + DS.ci * (Gm.pw + Gm.gap) + Gm.pw / 2 - KIT.W / 2; want = Math.max(0, Math.min(Gm.tot - KIT.W, want)); DS.sx += (want - DS.sx) * Math.min(1, dt * 10);
 }
 function dsZonePic(g, zi, x, y, w, h) { // a little window onto the zone: its sky in bands and its painted far layer
@@ -88,15 +98,16 @@ function drawData() {
     else { dsZonePic(g, zi, bx, by, bw, bh); R('rgba(7,4,5,0.55)', bx, by + bh - 16, bw, 16); text(ZONES[zi].name, x + pw / 2, by + bh - 13, { size: 5, align: 'center', col: '#ffe36a' });
       if (!clear && i > 0) text('ACT ' + act, x + pw / 2, by + 4, { size: 6, align: 'center', col: '#f1e7d0', outline: true });
       if (clear) { var a2 = Math.floor(t * 3) % 2; text('CLEAR', x + pw / 2, by + 6, { size: 14, align: 'center', col: a2 ? '#ffe36a' : '#f1e7d0', font: 'title', outline: true }); }
-      if ((clear || (i === 0 && (SV.reached || 0) > 0)) && on) { text('^', x + pw / 2, by - 9, { size: 6, align: 'center', col: '#ffe36a' }); text('v', x + pw / 2, by + bh + 2, { size: 6, align: 'center', col: '#ffe36a' }); } }
+    }
     // the character, standing on the panel
     var C = charOf(s ? s.ch : HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id), fr = C.idle + (Math.floor((t + i * 0.3) * 6) % 7);
     spr(fr, x + pw / 2, y + 140, { anchor: 'b' });
     text(i === 0 ? 'ANY ZONE YOU HAVE REACHED' : C.name, x + pw / 2, y + 147, { size: i === 0 ? 4 : 6, align: 'center', col: '#f1e7d0' });
-    if (i >= 1 && !s && HOGCHARS.length > 1 && on) { text('^', x + pw / 2, y + 100, { size: 6, align: 'center', col: '#ffe36a' }); text('v', x + pw / 2, y + 150, { size: 6, align: 'center', col: '#ffe36a' }); }
+    if (on && !DS.erase) dsArrows(i).forEach(function (a) { var cx = a.x + a.w / 2, cy = a.y + a.h / 2, pulse = Math.floor(t * 3) % 2;
+      R('#12040a', a.x, a.y, a.w, a.h); R(pulse ? '#c4121c' : '#8a0a14', a.x + 1, a.y + 1, a.w - 2, a.h - 2); g.fillStyle = '#ffe36a'; g.beginPath(); g.moveTo(cx + a.d * 6, cy); g.lineTo(cx - a.d * 4, cy - 8); g.lineTo(cx - a.d * 4, cy + 8); g.fill(); });
     if (s) { spr(C.icon, x + 14, y + 168, { anchor: 'b', sc: 0.5 }); text('x' + s.lives, x + 22, y + 160, { size: 6, col: '#f1e7d0' });
       var ch = s.chal || []; for (var c = 0; c < 7; c++) spr('hog_chal' + c, x + 56 + c * 8, y + 168, { sc: 0.5, alpha: ch[c] ? 1 : 0.2, anchor: 'b' });
       text(String(s.score || 0), x + pw - 6, y + 174, { size: 5, align: 'right', col: '#a6968f' }); }
   }
-  text('TAP OR LEFT / RIGHT TO PICK   A START   B BACK' + (HOGCHARS.length > 1 ? '   UP / DOWN CHARACTER' : ''), W / 2, H - 14, { size: 5, align: 'center', col: '#a6968f' });
+  text('TAP OR LEFT / RIGHT TO PICK   ARROWS OR UP / DOWN: ZONE   A START   B BACK', W / 2, H - 14, { size: 5, align: 'center', col: '#a6968f' });
 }
