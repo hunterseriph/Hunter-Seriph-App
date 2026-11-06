@@ -15,10 +15,17 @@ function slotSaveAct() { // called at the start of every act (not when coming ba
   var s = SLOTS[G.slot]; if (G.slot < 0 || !s) return;
   s.ai = G.ai; s.lives = Math.max(0, G.lives); s.score = G.score; s.chal = SV.chal.slice(); saveSlots();
 }
+/* each special stage gateway works once per game (his ask: restarting the act to try again was an exploit); the used ones
+   are kept in the slot (s.gates) or, on NO SAVE, for the game being played (G.gates); key = act and the gateway's column */
+function gateList() { var s = G.slot >= 0 && SLOTS[G.slot]; if (s) return s.gates || (s.gates = []); return G.gates || (G.gates = []); }
+function gateKey(e) { return G.ai + ':' + Math.round(e.x0); }
+function gateUsed(e) { return gateList().indexOf(gateKey(e)) >= 0; }
+function useGate(e) { var l = gateList(), k = gateKey(e); if (l.indexOf(k) < 0) { l.push(k); saveSlots(); } }
 function charOf(id) { for (var i = 0; i < HOGCHARS.length; i++) if (HOGCHARS[i].id === id) return HOGCHARS[i]; return HOGCHARS[0]; }
 
 var DS = { ci: 1, sx: 0, t: 0, erase: false, pick: {} };
 function dataSelect() {
+  for (var pk in DS.pick) if (pk.charAt(0) !== 'c' && pk !== '0') delete DS.pick[pk]; // slots show where you left them
   KIT.closeMenu(); document.documentElement.classList.add('hs-menu'); G.mode = 'data'; DS.t = 0; // the touch pad hides: tap a panel to pick it, tap again to start DS.erase = false; music.play('hogtitle');
   if (DS.ci < 0 || DS.ci > NSLOT + 1) DS.ci = 1;
 }
@@ -28,12 +35,12 @@ function dsGo(i) {
   if (i === NSLOT + 1) { DS.erase = !DS.erase; if (DS.erase && DS.ci === NSLOT + 1) DS.ci = 1; sfx.play('clink'); return; }
   if (DS.erase) { var e = SLOTS[i - 1]; if (i < 1 || !e) { sfx.play('bump'); return; }
     KIT.confirm({ title: 'Erase save ' + i + '?', sub: 'It cannot be brought back.', yesLabel: 'Erase', noLabel: 'Keep', yes: function () { SLOTS[i - 1] = null; saveSlots(); KIT.closeMenu(); sfx.play('crumble'); DS.erase = false; }, no: function () { KIT.closeMenu(); } }); return; }
-  var z = DS.pick[i] || 0; sfx.play('check');
+  var z = DS.pick[i] || 0; sfx.play('check'); if (i >= 1 && SLOTS[i - 1]) SLOTS[i - 1].gates = SLOTS[i - 1].gates || [];
   if (i === 0) { G.slot = -1; newGame(Math.min(z, SV.reached || 0)); return; }
   var s = SLOTS[i - 1];
   if (!s) { s = SLOTS[i - 1] = { ch: HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id, ai: 0, lives: 3, score: 0, chal: [], done: 0 }; saveSlots(); }
   G.slot = i - 1; SV.chal = (s.chal || []).slice(); G.lives = s.lives > 0 ? s.lives : 3; G.score = s.score || 0; G.kills = 0; G.super = 0; G.ch = s.ch;
-  beginAct(s.done ? Math.min(z, ZONES.length - 1) * 2 : s.ai);
+  beginAct(s.done && DS.pick[i] != null && DS.pick[i] !== ACTS[s.ai].z ? Math.min(DS.pick[i], ZONES.length - 1) * 2 : s.ai); // a save goes back to the exact act you left (a cleared one too, unless you pick another zone)
 }
 function dsGeom() { var W = KIT.W, pw = 116, gap = 12, tot = dsPanels() * (pw + gap) - gap + 32; return { pw: pw, gap: gap, ph: 186, y: 58, tot: tot, x0: 16 }; }
 function stepData(dt) {
@@ -44,7 +51,7 @@ function stepData(dt) {
   var i = DS.ci, s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null;
   if ((KIT.pressed('up') || KIT.pressed('down')) && !DS.erase) { var d = KIT.pressed('up') ? 1 : -1;
     if (i >= 1 && i <= NSLOT && !s && HOGCHARS.length > 1) { DS.pick['c' + i] = ((DS.pick['c' + i] || 0) + d + HOGCHARS.length) % HOGCHARS.length; sfx.play('clink'); }
-    else { var mz = dsZones(i); if (mz > 0) { DS.pick[i] = ((DS.pick[i] || 0) + d + mz + 1) % (mz + 1); sfx.play('clink'); } } }
+    else { var mz = dsZones(i); if (mz > 0) { if (DS.pick[i] == null && s) DS.pick[i] = ACTS[s.ai].z; DS.pick[i] = ((DS.pick[i] || 0) + d + mz + 1) % (mz + 1); sfx.play('clink'); } } }
   if (KIT.pressed('a') || KIT.pressed('start')) dsGo(i);
   else if (KIT.pressed('b')) { if (DS.erase) DS.erase = false; else titleMenu(); }
   // taps: tap a panel to pick it, tap it again to open it
@@ -74,7 +81,7 @@ function drawData() {
       g.strokeStyle = '#ff2630'; g.lineWidth = 4; g.beginPath(); g.moveTo(bx + bw * 0.36, by + 16); g.lineTo(bx + bw * 0.64, by + bh - 16); g.moveTo(bx + bw * 0.64, by + 16); g.lineTo(bx + bw * 0.36, by + bh - 16); g.stroke();
       text(DS.erase ? 'PICK A SAVE, B: STOP' : 'A TO ERASE A SAVE', x + pw / 2, y + 100, { size: 6, align: 'center', col: '#a6968f' }); continue; }
     var zi = 0, act = 1, clear = s && s.done;
-    if (i === 0) zi = Math.min(DS.pick[0] || 0, SV.reached || 0); else if (s) { zi = clear ? Math.min(DS.pick[i] || 0, ZONES.length - 1) : ACTS[s.ai].z; act = clear ? 1 : ACTS[s.ai].act; }
+    if (i === 0) zi = Math.min(DS.pick[0] || 0, SV.reached || 0); else if (s) { var own = !clear || DS.pick[i] == null || DS.pick[i] === ACTS[s.ai].z; zi = own ? ACTS[s.ai].z : Math.min(DS.pick[i], ZONES.length - 1); act = own ? ACTS[s.ai].act : 1; }
     if (i >= 1 && !s) { // a new slot: static on the screen
       for (var ny = 0; ny < bh; ny += 2) for (var nx = 0; nx < bw; nx += 2) { var v = (Math.sin(nx * 12.9898 + ny * 78.233 + Math.floor(t * 20) * 3.1) * 43758.5) % 1; v = v < 0 ? -v : v; g.fillStyle = v < 0.5 ? '#1e0a10' : v < 0.85 ? '#3a1a22' : '#6a3a44'; g.fillRect(bx + nx, by + ny, 2, 2); }
       text('NEW', x + pw / 2, by + bh / 2 - 8, { size: 16, align: 'center', col: '#f1e7d0', font: 'title', outline: true }); }

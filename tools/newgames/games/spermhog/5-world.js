@@ -158,7 +158,7 @@ function touch(e, dt) {
   if (k === 'awning') { awningTouch(e, dt); return; }
   if (k === 'ramp') { rampTouch(e, dt); return; }
   if (k === 'portal') { // the giant ring into a special stage: 50 drops to open it, once per act
-    if (e.used || chalCount() >= 7) return; if (Math.abs(px - e.x) < 22 && py > e.y - 46 && py - PH < e.y + 6) { if (G.drops >= 50) { e.used = true; startSpecial(e); } else if (!e.told) { e.told = 1; G.banner = 1.6; G.bannerTxt = '50 DROPS TO ENTER'; } } else e.told = 0; return; }
+    if (e.used || gateUsed(e) || chalCount() >= 7) return; if (Math.abs(px - e.x) < 22 && py > e.y - 46 && py - PH < e.y + 6) { if (G.drops >= 50) { e.used = true; useGate(e); startSpecial(e); } else if (!e.told) { e.told = 1; G.banner = 1.6; G.bannerTxt = '50 DROPS TO ENTER'; } } else e.told = 0; return; }
   if (k === 'arena') { if (!G.lock && px > e.c0 * TS + 80) startBoss(e); return; }
   // hazards
   if (k === 'jet') { var c = (G.t + e.ph * 2) % 3, on = c > 2.0; e.on = on; e.warn = c > 1.6 && c <= 2.0; if (on && Math.abs(px - e.x) < 10 && py > e.y - 56) hurt(e.x); return; }

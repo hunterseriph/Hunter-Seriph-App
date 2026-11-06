@@ -32,7 +32,7 @@ var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, 
   sfx.add('life', function () { [523, 659, 784, 659, 784, 1047].forEach(function (f, i) { t('square', f, f, 0.12, 0.05, i * 0.11); }); });
 })();
 /* ---------- flow ---------- */
-function newGame(zone) { G.lives = 3; G.score = 0; G.kills = 0; SV.chal = []; G.super = 0; persist(); beginAct(zone * 2); } // a new game starts with no Cum Chalices, like Sonic's emeralds (his ask)
+function newGame(zone) { G.gates = []; G.lives = 3; G.score = 0; G.kills = 0; SV.chal = []; G.super = 0; persist(); beginAct(zone * 2); } // a new game starts with no Cum Chalices, like Sonic's emeralds (his ask)
 function beginAct(ai, fromCheck) {
   KIT.closeMenu(); var keep = fromCheck ? G.check : null;
   G.ai = ai; loadAct(ai); G.check = keep; var sx = keep ? keep.x : LV.sx, sy = keep ? keep.y : LV.sy;
