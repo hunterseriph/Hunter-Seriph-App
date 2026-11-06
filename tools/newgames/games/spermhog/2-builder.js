@@ -143,8 +143,8 @@ var SEC = {
   lanes: function (b, spec) {
     var H = b.h, Z = b.zone; b.ground(4); b.thing(-2, 'spring', 0, { pow: 1 }); b.drops(-2, 3, 5, null, 1);
     var s0 = b.col;
-    // the street, laid on the main builder
-    (spec.mid || []).forEach(function (p) { SEC[p[0]].apply(null, [b].concat(p.slice(1))); });
+    // the street, laid on the main builder (a clear stretch first, where the hole down to the low road goes)
+    b.ground(10); (spec.mid || []).forEach(function (p) { SEC[p[0]].apply(null, [b].concat(p.slice(1))); });
     // the low road and the high road, each on a builder of its own, merged in after
     var LF = H + 11, TF = H - 9, L = Builder(Z, b.seed + 77), Tp = Builder(Z, b.seed + 99);
     L.col = s0; L.h = LF; (spec.low || []).forEach(function (p) { SEC[p[0]].apply(null, [L].concat(p.slice(1))); });
@@ -163,9 +163,9 @@ var SEC = {
     Tp.ents.forEach(function (e) { if (e.c >= s0 + 3 && e.c < E - 5) b.ents.push(e); });
     // the ways between: a hole down after the spring, a spring back up halfway and at the end of the low road
     function hole(c) { for (var hx = -1; hx < 3; hx++) for (var hy = (b.top[c + hx] || H); hy < (b.top[c + hx] || H) + 3; hy++) b.set(c + hx, hy, '.'); b.ent('drop', c + 1, H - 2); b.ent('drop', c + 1, H + 2); }
-    function gimAt(c) { return b.ents.some(function (e) { return (e.k === 'gim' || e.k === 'gimh') && c >= e.c - 4 && c <= e.c + (e.w || 16) + 4 && Math.abs(e.row - H) < 3; }); } // never punch a hole through a gimmick on the street
+    function gimAt(c) { return b.ents.some(function (e) { if (e.k === 'drop' || e.k === 'foe' || Math.abs(e.row - H) >= 3) return false; var g = e.k === 'gim' || e.k === 'gimh'; return c >= e.c - 4 && c <= e.c + (g ? (e.w || 16) : 0) + 4; }); } // never punch a hole through a gimmick on the street
     hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { for (var tq = 0; tq < 40 && gimAt(xc); tq++) xc++; if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
-    var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#' || gimAt(ex))) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
+    var ex = E - 9; while (ex > E - 140 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#' || gimAt(ex))) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
     if (spec.portal) { // a second gateway on the other route, about half way along (he asked for a couple per level)
       var other = spec.portal === 'top' ? 'low' : 'top', mc = Math.floor(s0 + (E - s0) * 0.45);

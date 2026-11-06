@@ -23,13 +23,13 @@ function deckY(x) { return trackY(x) - FLCAR.h; }
 
 function startFlume(e) {
   var x0 = e.c0 * TS;
-  FL = { x0: x0, y0: e.y, tx: x0 + 520, v: 120, t: 0, st: 'intro', st2: 0, shots: [], fx: [], photo: null, flash: 0, done: false,
+  FL = { x0: x0, y0: e.y, tx: x0 + 520, v: 0, t: 0, st: 'board', ps: [], pcd: 0, st2: 0, shots: [], fx: [], photo: null, flash: 0, done: false,
     p: { x: 0, y: 0, vx: 0, vy: 0, air: false, face: 1, jumps: 0, inv: 0, dist: 0, atkT: 0 }, foes: [] };
-  var p = FL.p; p.x = carX(3) - FLCAR.L / 2; p.y = deckY(p.x);
+  var p = FL.p; FL.stX = carX(FLCAR.n - 1) - FLCAR.L - 8; FL.stY = FL.y0 - 22; p.x = FL.stX - 430; p.y = FL.stY; p.face = 1; /* he walks in through the ride's entrance and hops on the back boat */
   FL.foes.push({ id: 'pig', spr: 'f_pig_', sc: 0.62, car: 0, ox: 0.5, y: 0, vy: 0, air: false, hp: 6, hitT: 0, st: 'idle', t: 2.4, w: 30, h: 36, dir: -1, mi: 0 });
   FL.foes.push({ id: 'cow', spr: 'f_cowpig_', sc: 0.8, car: 1, ox: 0.5, y: 0, vy: 0, air: false, hp: 6, hitT: 0, st: 'idle', t: 3.2, w: 20, h: 44, dir: -1, mi: 0 });
   FL.foes.forEach(function (f) { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); });
-  G.mode = 'flume'; G.lock = null; G.bossName = BOSSES.pig.name; G.banner = 2.4; G.bannerTxt = BOSSES.pig.name; music.play('hogboss'); sfx.play('roar');
+  G.mode = 'flume'; G.lock = null; FL.foes.forEach(function (f) { f.hide = 1; });
 }
 function flHurt(srcx) {
   var p = FL.p; if (p.inv > 0 || G.star > 0 || G.super || FL.st !== 'fight') return;
@@ -42,8 +42,17 @@ function flHurt(srcx) {
 function stepFlume(dt) {
   var F = FL, p = F.p, W = KIT.W; F.t += dt; if (F.flash > 0) F.flash -= dt;
   // the boats: faster down the slopes
-  var g0 = trackG(F.tx - 200), tv = F.st === 'photo' || F.st === 'off' ? 0 : 120 + g0 * 260; F.v += (tv - F.v) * Math.min(1, dt * 1.5); var mv = F.v * dt; F.tx += mv;
+  var g0 = trackG(F.tx - 200), tv = F.st === 'photo' || F.st === 'off' || F.st === 'board' ? 0 : 120 + g0 * 260; F.v += (tv - F.v) * Math.min(1, dt * 1.5); var mv = F.v * dt; F.tx += mv;
   if (F.st === 'dead') { F.deadT += dt; p.vy += 900 * dt; p.y += p.vy * dt; p.x += mv; if (F.deadT > 1.6) { var a = G.arena; FL = null; G.mode = 'play'; PL.state = 'normal'; die(false); PL.deadT = 1.5; } return; }
+  if (F.st === 'board') { // in through the entrance, along the platform, a hop onto the back boat, then the ride sets off
+    var seat = carX(FLCAR.n - 2) - FLCAR.L / 2;
+    if (!F.hopB) { p.x += 110 * dt; p.dist += 110 * dt; p.y = F.stY; p.air = false; if (p.x >= F.stX - 6) { F.hopB = { x0: p.x, t: 0 }; p.vy = -420; p.air = true; sfx.play('jump'); } }
+    else { F.hopB.t += dt; var hk = Math.min(1, F.hopB.t / 0.75); p.x = F.hopB.x0 + (seat - F.hopB.x0) * hk; p.vy += 1000 * dt; p.y += p.vy * dt; var dk = deckY(p.x); if (hk >= 1 && p.y >= dk) { p.y = dk; p.air = false; p.vy = 0; p.jumps = 0; p.vx = 0; F.st = 'intro'; F.t = 0; F.foes.forEach(function (f) { f.hide = 0; }); G.bossName = BOSSES.pig.name; G.banner = 2.4; G.bannerTxt = BOSSES.pig.name; music.play('hogboss'); sfx.play('roar'); sfx.play('splash'); } }
+    var tgb = p.x - W * 0.4; F.cx = F.cx == null ? tgb : F.cx + (tgb - F.cx) * Math.min(1, dt * 4); F.cy = F.stY - KIT.H * 0.62; F.foes.forEach(function (f) { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); }); return; }
+  // the shot (B), same as on foot: it hurts the brothers too
+  F.pcd -= dt; var inpS = pIn(); if (inpS.at && F.pcd <= 0 && (F.st === 'fight' || F.st === 'intro')) { F.pcd = 0.32; p.atkT = 0.2; F.ps.push({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 360, life: 0.6 }); sfx.play('shoot'); }
+  if (p.atkT > 0) p.atkT -= dt;
+  F.ps = F.ps.filter(function (s) { s.life -= dt; s.x += (s.vx + F.v) * dt; if (F.st === 'fight') for (var i = 0; i < F.foes.length; i++) { var f = F.foes[i]; if (f.hp > 0 && f.hitT <= 0 && Math.abs(s.x - f.x) < f.w && s.y > f.y - f.h - 4 && s.y < f.y + 2) { f.hp--; f.hitT = 1; sfx.play('bosshit'); G.shake = 3; G.score += 100; if (f.hp <= 0) { f.vy = -300; sfx.play('boom'); G.score += 1000; } return false; } } return s.life > 0; });
   // the player (own simple physics, carried along by the boat he stands on)
   var inp = pIn(), K = G.super ? 1.35 : 1;
   if (F.st === 'fight' || F.st === 'intro' || F.st === 'won') {
@@ -91,7 +100,7 @@ function stepFlFoe(f, dt, mv) {
   if (f.hp <= 0) { if (!f.gone) { f.vy += 900 * dt; f.y += f.vy * dt; f.x += mv; if (f.y > trackY(f.x) + 30) { f.gone = 1; for (var k = 0; k < 16; k++) F.fx.push({ x: f.x, y: trackY(f.x), vx: (Math.random() - 0.5) * 220, vy: -200 - Math.random() * 200, t: 0.8, c: '#f1e0b0' }); sfx.play('splash'); } } return; }
   if (f.hitT > 0) f.hitT -= dt;
   var other = F.foes.filter(function (o) { return o !== f && o.hp > 0; })[0], fast = other ? 1 : 1.45; // the one left gets angry
-  if (F.st !== 'fight') { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); return; }
+  if (F.st !== 'fight') { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x) - (F.st === 'intro' ? Math.max(0, 1 - (F.t - 0.4 * (f.id === 'cow' ? 2 : 1)) / 0.6) * 220 : 0); return; } /* they drop in from the sky as the ride sets off */
   f.t -= dt * fast; f.dir = p.x < f.x ? -1 : 1;
   if (f.st === 'idle') { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x);
     if (f.t <= 0) { var mv2 = f.id === 'pig' ? ['hop', 'charge', 'hop'] : ['hop', 'mugs', 'mugs', 'hop']; f.st = mv2[f.mi++ % mv2.length]; f.s = 0; } }
@@ -130,20 +139,22 @@ function drawFlume() {
   // the boats
   for (var i = FLCAR.n - 1; i >= 0; i--) { var bx = carX(i) - FLCAR.L / 2, by = trackY(bx) + 3, a = Math.atan(trackG(bx));
     if (bx - cx < -80 || bx - cx > W + 80) continue; spr('p_logboat', bx - cx, by - cy, { sc: FLCAR.L / 60, rot: a }); }
+  drawFlEntrance(g, cx, cy, W, H);
+  F.ps.forEach(function (s) { spr('hog_shot', s.x - cx, s.y - cy, { anchor: 'c', flip: s.vx < 0 }); });
   // the station and the way into the Bone Pit (in front of the channel: the boats slide in under the dock)
   if (F.endX) drawFlStation(g, cx, cy, W, H);
   // a follower rides along in the back boat
   var C = CHR(); if (C.fol && F.st !== 'walk' && F.st !== 'photo' && F.st !== 'run') { var fb = carX(FLCAR.n - 1) - FLCAR.L * 0.7; spr(C.fol === 'cat' ? 'cat' : 'h_' + C.fol + '_adult_idle' + (Math.floor(G.t * 3) % 2), fb - cx, deckY(fb) - cy + 1, { sc: C.fol === 'cat' ? 1 : 0.8 }); }
   // Brothers Load
-  F.foes.forEach(function (f) { if (f.gone) return; var fr = f.spr + (Math.floor(F.t * 4) % 2) + (f.dir < 0 ? 'L' : ''), fl = f.hitT > 0 && Math.floor(f.hitT * 16) % 2;
+  F.foes.forEach(function (f) { if (f.gone || f.hide) return; var fr = f.spr + (Math.floor(F.t * 4) % 2) + (f.dir < 0 ? 'L' : ''), fl = f.hitT > 0 && Math.floor(f.hitT * 16) % 2;
     if (f.hp <= 0) fl = Math.floor(F.t * 12) % 2; if (!KIT.SPR[fr]) fr = f.spr + '0';
     if (f.st === 'hop' && f.hk < 0.15) R('#ff2630', f.x - cx - 2, f.y - f.h - cy - 14, 4, 8); // a tell before each hop
     spr(fr, f.x - cx, f.y - cy + 2, { sc: f.sc, flash: fl, rot: f.hp <= 0 ? F.t * 6 : 0 }); });
   F.shots.forEach(function (s) { var gx = KIT.ctx; gx.save(); gx.translate(s.x - cx, s.y - cy); gx.rotate(s.r); R('#12040a', -5, -6, 10, 12); R('#ffe36a', -4, -5, 7, 10); R('#fffbe8', -4, -5, 7, 3); R('#12040a', 3, -2, 3, 5); gx.restore(); });
   // the player
-  var p = F.p, sp = p.air ? 0 : Math.abs(p.vx) + (F.st === 'walk' ? 90 : F.st === 'run' ? 300 : 0);
-  if (!(p.inv > 0 && Math.floor(G.t * 20) % 2)) { var n = frameFor(CHR(), { state: F.st === 'dead' ? 'dead' : 'normal', air: p.air, vy: p.vy, dist: p.dist, atkT: 0, deadT: F.deadT || 0 }, sp);
-    var rot = !p.air && F.st !== 'walk' && F.st !== 'photo' && F.st !== 'run' ? Math.atan(trackG(p.x)) : 0, sc = CHR().sc || 1;
+  var p = F.p, sp = p.air ? 0 : Math.abs(p.vx) + (F.st === 'walk' ? 90 : F.st === 'run' ? 300 : F.st === 'board' ? 110 : 0);
+  if (!(p.inv > 0 && Math.floor(G.t * 20) % 2)) { var n = frameFor(CHR(), { state: F.st === 'dead' ? 'dead' : 'normal', air: p.air, vy: p.vy, dist: p.dist, atkT: p.atkT || 0, deadT: F.deadT || 0 }, sp);
+    var rot = !p.air && F.st !== 'walk' && F.st !== 'photo' && F.st !== 'run' && F.st !== 'board' ? Math.atan(trackG(p.x)) : 0, sc = CHR().sc || 1;
     if (G.super) { var gf = superImg(n); if (gf) { g.save(); g.translate(Math.round(p.x - cx), Math.round(p.y - cy) + 1); g.rotate(rot); if (p.face < 0) g.scale(-1, 1); g.drawImage(gf, -gf.width * sc / 2, -gf.height * sc, gf.width * sc, gf.height * sc); g.restore(); } }
     else spr(n, p.x - cx, p.y - cy + 1, { flip: p.face < 0, rot: rot, sc: sc }); }
   F.fx.forEach(function (q) { if (q.drop) spr('hog_drop', q.x - cx, q.y - cy, {}); else R(q.c, q.x - cx - 1, q.y - cy - 1, 3, 3); });
@@ -159,6 +170,19 @@ function drawFlume() {
     text('ON-RIDE PHOTO  #' + (1000 + (G.score % 9000)), 8, ph + 24, { size: 4, col: '#6a5a50' }); gy.restore(); } }
   if (F.st === 'run' && F.st2 > 0.9) { g.fillStyle = 'rgba(0,0,0,' + Math.min(1, (F.st2 - 0.9) * 1.6).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
   if (F.st === 'dead' && F.deadT > 0.8) { g.fillStyle = 'rgba(0,0,0,' + Math.min(1, (F.deadT - 0.8) * 1.4).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
+}
+function drawFlEntrance(g, cx, cy, W, H) { // where the ride starts: the platform you walk along, the LOAD FLUME gate with bulbs, queue rails, Steve's height sign
+  var F = FL, x1 = F.stX - cx, y = F.stY - cy, x0 = x1 - 520; if (x1 < -40 || x0 > W + 40) return;
+  R('#12040a', x0 - 2, y - 2, x1 - x0 + 4, 8); R('#7a1a14', x0, y, x1 - x0, 4); R('#c4121c', x0, y, x1 - x0, 1); for (var k = 0; k < x1 - x0; k += 14) R('#4a1410', x0 + k, y + 1, 1, 3);
+  for (var k2 = 10; k2 < x1 - x0; k2 += 60) { R('#12040a', x0 + k2 - 1, y + 6, 6, H - y); R('#3a1418', x0 + k2, y + 6, 4, H - y); }
+  var gx = x1 - 300;
+  [gx - 46, gx + 34].forEach(function (px) { R('#12040a', px, y - 110, 14, 110); R('#3a1418', px + 2, y - 108, 10, 108); for (var b = 0; b < 7; b++) R(Math.floor(G.t * 6 + b + px) % 2 ? '#ffe36a' : '#ff2630', px + 5, y - 102 + b * 15, 4, 4); });
+  R('#12040a', gx - 58, y - 140, 120, 32); R('#c4121c', gx - 56, y - 138, 116, 28); R('#12040a', gx - 53, y - 135, 110, 22); text('THE LOAD FLUME', gx + 2, y - 130, { size: 6, align: 'center', col: '#ffe36a' });
+  for (var b2 = 0; b2 < 12; b2++) R(Math.floor(G.t * 5 + b2) % 2 ? '#ffe36a' : '#ff2630', gx - 54 + b2 * 10, y - 144, 4, 4);
+  for (var q = 0; q < 5; q++) R('#12040a', gx + 70 + q * 28, y - 18, 2, 18); R('#12040a', gx + 70, y - 18, 114, 2); R('#c4121c', gx + 70, y - 17, 114, 1);
+  var sx = gx - 110; R('#12040a', sx - 1, y - 76, 3, 76); R('#12040a', sx - 22, y - 94, 44, 24); R('#f1e7d0', sx - 21, y - 93, 42, 22); text('MUST BE', sx, y - 90, { size: 4, align: 'center', col: '#12040a' }); text('THIS LOADED', sx, y - 82, { size: 4, align: 'center', col: '#c4121c' }); R('#c4121c', sx + 2, y - 58, 14, 2);
+  spr(Math.floor(G.t * 2) % 2 ? 'steve0' : 'steve1', sx + 34, y, { sc: 0.5 });
+  R('#12040a', x1 - 12, y - 4, 12, 6); R('#ffe36a', x1 - 10, y - 3, 8, 2);
 }
 function drawFlStation(g, cx, cy, W, H) {
   var F = FL, x0 = F.endX + 30 - cx, y = F.endY - 22 - cy;

@@ -17,7 +17,7 @@ function plank(g, x, y, w, L, kind) { // a platform drawn in the zone's own way
 
 /* ---------- floors that change how you move ---------- */
 gimDef('sticky', { h: 0, // the floor is glue: it drags at your feet and your jumps
-  lay: function (b) { b.ground(14); GT(b, -13, 'sticky', { w: 12 }); b.drops(-11, 6, 3, 'arc', 1.6); },
+  lay: function (b) { b.ground(28); GT(b, -27, 'sticky', { w: 26 }); b.drops(-25, 12, 3, 'arc', 2); },
   step: function (e, dt, p) { var inA = p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4 && !p.air && p.state === 'normal';
     if (inA && Math.abs(p.gsp) > 130) p.gsp = Math.sign(p.gsp) * 130; if (p.air && e.was && p.vy < -250) p.vy *= 0.72; e.was = inA; e.inA = inA; },
   draw: function (g, e, x, y, L) { var w = e.w * TS; R(OUT, x - 8, y - 4, w, 4); R(L.goo, x - 8, y - 3, w, 3); for (var i = 4; i < w; i += 14) { R(L.goo, x - 8 + i, y - 5 - (i % 3), 6, 3); R(L.lite, x - 6 + i, y - 4 - (i % 3), 2, 1); }
@@ -26,13 +26,13 @@ gimDef('sticky', { h: 0, // the floor is glue: it drags at your feet and your ju
 
 var SLICK = { city: 'wet neon', sewer: 'cream slick', park: 'dance floor', bone: 'polished marble', factory: 'oil', brain: 'slime' };
 gimDef('slick', { h: 0, // a slick stretch that throws you forward faster and faster
-  lay: function (b) { b.ground(16); GT(b, -15, 'slick', { w: 14 }); b.drops(-13, 9, 2, null, 1.4); },
+  lay: function (b) { b.ground(38); GT(b, -37, 'slick', { w: 36 }); b.drops(-35, 22, 2, null, 1.6); },
   step: function (e, dt, p) { var inA = p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4 && !p.air && p.state === 'normal'; if (inA && p.gsp > 0) { p.gsp = Math.min(640, p.gsp + 420 * dt); if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - 6, y: e.y - 2, vx: -80, vy: -30, t: 0.25, c: GL().lite, g: 200 }); } },
   draw: function (g, e, x, y, L) { var w = e.w * TS; R(OUT, x - 8, y - 2, w, 2); for (var i = 0; i < w; i += 16) { var on = L.k === 'park' ? (Math.floor(G.t * 3) + i / 16) % 2 : 0; R(on ? L.hot : L.mlite, x - 8 + i, y - 2, 15, 1); }
     var gl = (G.t * 260) % w; R('#ffffff', x - 8 + gl, y - 2, 10, 1); R(L.lite, x - 8 + (gl + w / 2) % w, y - 2, 6, 1); for (var c = 10; c < w - 10; c += 32) { R(L.hot, x + c, y - 9, 2, 2); R(L.hot, x + c + 2, y - 7, 2, 2); R(L.hot, x + c, y - 5, 2, 2); } } });
 
 gimDef('gust', { h: 6, // a big fan blows you on: jump into the wind and it carries you over the ditch
-  lay: function (b) { var e = GT(b, 0, 'gust', {}); b.ground(5); SEC.ditch(b, 7); b.ground(6); e.w = b.col - e.c; b.drops(-10, 8, 4, 'arc', 1.4); },
+  lay: function (b) { var e = GT(b, 0, 'gust', {}); b.ground(5); SEC.ditch(b, 7); b.ground(6); SEC.ditch(b, 9); b.ground(4); SEC.ditch(b, 11); b.ground(6); e.w = b.col - e.c; b.drops(-40, 24, 4, 'arc', 1.6); },
   step: function (e, dt, p) { if (p.x < e.x || p.x > e.x + e.w * TS || p.y < e.y - 150 || p.y > e.y + 60 || p.state !== 'normal') return; if (p.air) p.vx = Math.min(560, p.vx + 640 * dt); else if (p.gsp < 480) p.gsp += 320 * dt;
     if (Math.random() < 0.6) FX.push({ k: 'bit', x: e.x + 10, y: e.y - 10 - Math.random() * 100, vx: 320 + Math.random() * 120, vy: (Math.random() - 0.5) * 40, t: 0.6, c: [GL().lite, GL().main, GL().mlite][Math.floor(Math.random() * 3)], g: 0 }); },
   draw: function (g, e, x, y, L) { bx(x - 16, y - 70, 16, 70, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.arc(x - 6, y - 40, 26, 0, 6.3); g.fill(); g.fillStyle = L.dark; g.beginPath(); g.arc(x - 6, y - 40, 24, 0, 6.3); g.fill();
@@ -41,7 +41,7 @@ gimDef('gust', { h: 6, // a big fan blows you on: jump into the wind and it carr
 
 /* ---------- things that carry you ---------- */
 gimDef('magnet', { h: 7, // a magnet rail: jump up to it and it pulls you along over the spikes (A lets go)
-  lay: function (b) { var c0 = b.col; b.ground(4); SEC.ditch(b, 12); b.ground(4); GT(b, c0 + 2 - b.col, 'magnet', { c1: b.col - 3 }, 6, 'gimh'); },
+  lay: function (b) { var c0 = b.col; b.ground(4); SEC.ditch(b, 26); b.ground(4); GT(b, c0 + 2 - b.col, 'magnet', { c1: b.col - 3 }, 6, 'gimh'); },
   step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; var x1 = e.c1 * TS + 8; if (!p.gl && e.cd <= 0 && p.state === 'normal' && p.air && p.x > e.x && p.x < x1 - 12 && Math.abs((p.y - PH) - (e.y + 6)) < 16) { p.gl = { e: e }; sfx.play('clink'); } },
   ride: function (p, s, dt) { var e = s.e, x1 = e.c1 * TS + 8; p.y = e.y + 6 + PH; p.x += 300 * dt; p.vx = 300; p.vy = 0; p.air = true; p.face = 1; if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x, y: e.y + 4, vx: -60, vy: 40, t: 0.3, c: GL().hot, g: 300 });
     if (KIT.pressed('a') || p.x >= x1 - 6) { var j = KIT.pressed('a'); dropOff(p, 300, j ? -280 : -60); e.cd = 0.5; } relJ(p); },
@@ -50,8 +50,8 @@ gimDef('magnet', { h: 7, // a magnet rail: jump up to it and it pulls you along 
     if (PL && PL.gl && PL.gl.e === e) { var px = PL.x - cx; R(OUT, px - 8, y + 4, 16, 8); R(L.main, px - 7, y + 5, 14, 3); R(L.mlite, px - 7, y + 8, 3, 3); R(L.mlite, px + 4, y + 8, 3, 3); } } });
 
 gimDef('sinkers', { h: 2, // rafts that sink while you stand on them: keep moving
-  lay: function (b) { GT(b, 0, 'sinkers', { w: 14 }, 0, 'gimh'); safePit(b, 14); },
-  init: function (e) { for (var i = 0; i < 3; i++) gimPlat(e, e.x - 8 + 16 + i * 64, e.y, 48, { sink: 0, mv: function (q, dt) { q.sink = onPlat(q) ? Math.min(56, q.sink + 34 * dt) : Math.max(0, q.sink - 46 * dt); q.y = q.y0 + q.sink; if (q.sink > 4 && Math.random() < 0.2) bits(q.x + Math.random() * q.w, q.y + 6, 1, [GL().goo], 30, 100); },
+  lay: function (b) { GT(b, 0, 'sinkers', { w: 22 }, 0, 'gimh'); safePit(b, 22); },
+  init: function (e) { for (var i = 0; i < 5; i++) gimPlat(e, e.x - 8 + 16 + i * 64, e.y, 48, { sink: 0, mv: function (q, dt) { q.sink = onPlat(q) ? Math.min(56, q.sink + 34 * dt) : Math.max(0, q.sink - 46 * dt); q.y = q.y0 + q.sink; if (q.sink > 4 && Math.random() < 0.2) bits(q.x + Math.random() * q.w, q.y + 6, 1, [GL().goo], 30, 100); },
       draw: function (g, x, y, q) { var L = GL(); plank(g, x, y, q.w, L); if (q.sink > 30 && Math.floor(G.t * 10) % 2) R(L.hot, x + q.w / 2 - 1, y - 6, 2, 3); } }); },
   draw: function (g, e, x, y, L) { R(OUT, x - 8, y + 72, e.w * TS, 2); } });
 
@@ -75,7 +75,7 @@ gimDef('barrel', { h: 7, big: 1.6, // a barrel cannon: climb in, it aims, and fi
 function tubeP(e, u) { var x0 = e.x, y0 = e.y - 12, x3 = e.c1 * TS + 8, y3 = y0, x1 = x0 + 30, y1 = y0 - 120, x2 = x3 - 30, y2 = y1, v = 1 - u;
   return { x: v * v * v * x0 + 3 * v * v * u * x1 + 3 * v * u * u * x2 + u * u * u * x3, y: v * v * v * y0 + 3 * v * v * u * y1 + 3 * v * u * u * y2 + u * u * u * y3 }; }
 gimDef('tube', { h: 6, // a pipe: run into its mouth and it shoots you over the hazard and out the far end
-  lay: function (b) { var e = GT(b, 0, 'tube', {}); b.ground(3); SEC.ditch(b, 12); b.ground(2); e.c1 = b.col; b.ground(5); b.drops(-4, 3, 2); },
+  lay: function (b) { var e = GT(b, 0, 'tube', {}); b.ground(3); SEC.ditch(b, 22); b.ground(2); e.c1 = b.col; b.ground(5); b.drops(-4, 3, 2); },
   init: function (e) { var l = 0, a = tubeP(e, 0); for (var i = 1; i <= 20; i++) { var b2 = tubeP(e, i / 20); l += Math.hypot(b2.x - a.x, b2.y - a.y); a = b2; } e.len = l; },
   step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && p.state === 'normal' && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 10 && (p.air ? p.vx : p.gsp) >= 0) { p.gl = { e: e, u: 0 }; p.hide = 1; sfx.play('dash'); } },
   ride: function (p, s, dt) { var e = s.e; s.u += dt * 560 / e.len; relJ(p); if (s.u >= 1) { p.gl = null; p.hide = 0; p.x = e.c1 * TS + 18; p.y = e.y; p.air = false; p.gsp = 520; p.vx = 520; p.vy = 0; e.cd = 1; sfx.play('spring'); return; }
@@ -87,7 +87,7 @@ gimDef('tube', { h: 6, // a pipe: run into its mouth and it shoots you over the 
     if (PL && PL.gl && PL.gl.e === e) { var q2 = tubeP(e, PL.gl.u); g.fillStyle = OUT; g.beginPath(); g.arc(q2.x - cx, q2.y - cy, 12, 0, 6.3); g.fill(); g.fillStyle = L.lite; g.beginPath(); g.arc(q2.x - cx, q2.y - cy, 10, 0, 6.3); g.fill(); motif(g, q2.x - cx, q2.y - cy, L); } } });
 
 gimDef('grind', { h: 3, // a rail: land on it and you grind along it in sparks (A jumps off)
-  lay: function (b) { var e = GT(b, 0, 'grind', {}); b.ground(2); SEC.ditch(b, 14); b.ground(2); e.c1 = b.col; b.ground(3); b.drops(-20, 10, 4, null, 1.6); },
+  lay: function (b) { var e = GT(b, 0, 'grind', {}); b.ground(2); SEC.ditch(b, 28); b.ground(2); e.c1 = b.col; b.ground(3); b.drops(-34, 18, 4, null, 1.7); },
   step: function (e, dt, p) { var x1 = e.c1 * TS + 8, ry = e.y - 30; if (!p.gl && p.state === 'normal' && p.air && p.vy >= 0 && p.x > e.x && p.x < x1 - 8 && p.y >= ry - 3 && p.y - p.vy * dt <= ry + 6) { p.gl = { e: e, v: Math.max(380, Math.abs(p.vx)) }; sfx.play('clink'); } },
   ride: function (p, s, dt) { var e = s.e, x1 = e.c1 * TS + 8, ry = e.y - 30; p.y = ry; p.x += s.v * dt; p.vx = s.v; p.vy = 0; p.air = true; p.face = 1; p.grot = 0.12; p.dist = (p.dist || 0) + s.v * dt;
     if (Math.random() < 0.8) FX.push({ k: 'bit', x: p.x - 4, y: ry, vx: -100 - Math.random() * 80, vy: -40 - Math.random() * 60, t: 0.3, c: Math.random() < 0.5 ? '#ffe36a' : GL().hot, g: 400 });
@@ -95,15 +95,15 @@ gimDef('grind', { h: 3, // a rail: land on it and you grind along it in sparks (
   draw: function (g, e, x, y, L, cx) { var x1 = e.c1 * TS + 8 - cx; for (var px = x; px <= x1; px += 64) postD(px, y + 34, 64, L, 4); postD(x1, y + 34, 64, L, 4); bx(x - 2, y - 32, x1 - x + 4, 3, L.mlite, '#ffffff'); R(L.metal, x - 2, y - 29, x1 - x + 4, 1); motif(g, x, y - 36, L); } });
 
 gimDef('swingbar', { h: 5, // bars over the ditch: catch one, swing round it and be thrown high
-  lay: function (b) { GT(b, 0, 'swingbar', {}); b.ground(2); SEC.ditch(b, 12); b.ground(3); b.drops(-12, 6, 7, 'arc', 1.6); },
-  init: function (e) { e.bars = [[e.x + 5 * TS, e.y - 58], [e.x + 11 * TS, e.y - 58]]; },
+  lay: function (b) { GT(b, 0, 'swingbar', {}); b.ground(2); SEC.ditch(b, 26); b.ground(3); b.drops(-26, 14, 7, 'arc', 1.8); },
+  init: function (e) { e.bars = [5, 11, 17, 23, 29].map(function (c, i) { return [e.x + c * TS, e.y - 58 - (i % 2) * 16]; }); },
   step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (p.gl || e.cd > 0 || !p.air || p.state !== 'normal') return; e.bars.forEach(function (bb) { if (!p.gl && Math.hypot(p.x - bb[0], p.y - 20 - bb[1]) < 18) { var a = Math.atan2(p.y - 20 - bb[1], p.x - bb[0]); p.gl = { e: e, b: bb, a: a, a0: a }; sfx.play('clink'); } }); },
   ride: function (p, s, dt) { s.a += 12 * dt; p.x = s.b[0] + Math.cos(s.a) * 20; p.y = s.b[1] + Math.sin(s.a) * 20 + 20; p.grot = s.a - Math.PI / 2; p.vx = 0; p.vy = 0; p.air = true; relJ(p);
     if (s.a - s.a0 > 6.283 * 0.92) { dropOff(p, 380, -560); p.spring = 0.5; s.e.cd = 0.6; sfx.play('spring'); } },
   draw: function (g, e, x, y, L, cx, cy) { (e.bars || []).forEach(function (bb) { var bx2 = Math.round(bb[0] - cx), by = Math.round(bb[1] - cy); postD(bx2 - 10, y + 32, y + 32 - by, L, 3); postD(bx2 + 10, y + 32, y + 32 - by, L, 3); bx(bx2 - 11, by - 2, 22, 4, L.mlite, '#ffffff'); motif(g, bx2 - 10, by - 6, L); motif(g, bx2 + 10, by - 6, L); }); } });
 
 gimDef('trampoline', { h: 12, // trampolines: each bounce in a row goes higher
-  lay: function (b) { for (var i = 0; i < 3; i++) { b.ground(3); GT(b, 0, 'trampoline', { n: i }); b.ground(4); b.drops(-4, 3, 7 + i * 3, 'arc', 1); } b.ground(3); },
+  lay: function (b) { for (var i = 0; i < 6; i++) { b.ground(3); GT(b, 0, 'trampoline', { n: i }); b.ground(4); b.drops(-4, 3, 7 + Math.min(i, 2) * 3, 'arc', 1); } b.ground(3); },
   step: function (e, dt, p) { if (e.sq > 0) e.sq -= dt; var nc = e.x + 16, ny = e.y - 10; if (p.state !== 'normal' || Math.abs(p.x - nc) > 22) return;
     var hit = (p.air && p.vy > 0 && p.y >= ny - 3 && p.y - p.vy * dt <= ny + 4) || (!p.air && Math.abs(p.y - e.y) < 3);
     if (hit) { G.tch = G.t - (G.tram || -9) < 1.6 ? Math.min(2, (G.tch || 0) + 1) : 0; G.tram = G.t; p.vy = -[520, 640, 760][G.tch]; p.y = ny; p.air = true; p.jumps = 1; p.spring = 0.5; p.vx = Math.max(p.vx, p.gsp, 140); e.sq = 0.25; sfx.play('spring'); } },
@@ -122,31 +122,31 @@ function balloonD(g, x, y, L) { var k = BALLOON[L.k]; x = Math.round(x); y = Mat
   else R('#fffbe8', x - 7, y - 9, 4, 4);
   R(OUT, x - 2, y + 17, 4, 3); }
 gimDef('balloon', { h: 9, // grab the balloon and it floats you over the ditch until it pops
-  lay: function (b) { GT(b, 0, 'balloon', {}); b.ground(3); SEC.ditch(b, 18); b.ground(6); b.drops(-22, 10, 7, null, 2.2); },
+  lay: function (b) { GT(b, 0, 'balloon', {}); b.ground(3); SEC.ditch(b, 32); b.ground(6); b.drops(-36, 16, 7, null, 2.2); },
   step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && pCirc(e.x + 10, e.y - 34, 14)) { p.gl = { e: e, t: 0 }; sfx.play('clink'); } },
   ride: function (p, s, dt) { s.t += dt; p.x += 140 * dt; p.y = Math.max(s.e.y - 120, p.y - 52 * dt); p.vx = 140; p.vy = 0; p.air = true; p.face = 1;
-    if (s.t > 2.8 || KIT.pressed('a')) { var j = KIT.pressed('a'); dropOff(p, 140, j ? -200 : 0); s.e.cd = 4; sfx.play('pop'); bits(p.x, p.y - PH - 20, 12, [GL().main, GL().lite, GL().hot], 160); return; } relJ(p); },
+    if (s.t > 4.6 || KIT.pressed('a')) { var j = KIT.pressed('a'); dropOff(p, 140, j ? -200 : 0); s.e.cd = 4; sfx.play('pop'); bits(p.x, p.y - PH - 20, 12, [GL().main, GL().lite, GL().hot], 160); return; } relJ(p); },
   draw: function (g, e, x, y, L, cx, cy) { var held = PL && PL.gl && PL.gl.e === e; if (held) { var hx = PL.x - cx, hy = PL.y - PH - cy; R(L.lite, hx, hy - 22, 1, 22); balloonD(g, hx, hy - 40 + Math.sin(G.t * 3) * 2, L); return; }
     if (e.cd > 0) { R(OUT, x + 8, y - 4, 4, 4); return; } var by = y - 62 + Math.sin(G.t * 2 + e.x) * 3; R(OUT, x + 8, y - 4, 4, 4); R(L.lite, x + 10, by + 18, 1, y - 4 - by - 18); balloonD(g, x + 10, by, L); } });
 
 gimDef('flippers', { h: 7, // pinball flippers bat you forward
-  lay: function (b) { b.ground(2); GT(b, 0, 'flippers', {}); b.ground(12); b.drops(-10, 8, 6, 'arc', 1.3); },
-  step: function (e, dt, p) { [0, 1].forEach(function (i) { var fx = e.x + i * 88, k = 'f' + i; e[k] = (e[k] || 0) - dt; if (e[k] > 0 || p.state !== 'normal' || Math.abs(p.x - fx) > 12) return;
+  lay: function (b) { b.ground(2); GT(b, 0, 'flippers', {}); b.ground(34); b.drops(-32, 20, 6, 'arc', 1.4); },
+  step: function (e, dt, p) { [0, 1, 2, 3].forEach(function (i) { var fx = e.x + i * 88, k = 'f' + i; e[k] = (e[k] || 0) - dt; if (e[k] > 0 || p.state !== 'normal' || Math.abs(p.x - fx) > 12) return;
       if ((!p.air && Math.abs(p.y - e.y) < 4) || (p.air && p.vy > 0 && p.y >= e.y - 8 && p.y < e.y + 2)) { p.air = true; p.vy = -600; p.vx = Math.max(p.vx, p.gsp, 360); p.gsp = p.vx; p.jumps = 1; p.spring = 0.4; e[k] = 0.5; sfx.play('bump'); } }); },
-  draw: function (g, e, x, y, L) { [0, 1].forEach(function (i) { var fx = x + i * 88, up = (e['f' + i] || 0) > 0.2; g.fillStyle = OUT; g.beginPath(); g.arc(fx - 8, y - 6, 6, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(fx - 8, y - 6, 5, 0, 6.3); g.fill();
+  draw: function (g, e, x, y, L) { [0, 1, 2, 3].forEach(function (i) { var fx = x + i * 88, up = (e['f' + i] || 0) > 0.2; g.fillStyle = OUT; g.beginPath(); g.arc(fx - 8, y - 6, 6, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(fx - 8, y - 6, 5, 0, 6.3); g.fill();
       g.save(); g.translate(fx - 8, y - 6); g.rotate(up ? -0.55 : 0.3); bx(-2, -4, 28, 7, L.main, L.hot); R(L.lite, 0, -3, 22, 1); g.restore(); R(Math.floor(G.t * 6 + i) % 2 ? L.hot : L.dark, fx - 10, y - 8, 4, 4); }); } });
 
 gimDef('corkscrew', { h: 4, // a corkscrew: hit it fast and you roll right round it, faster still
-  lay: function (b) { b.ground(20); GT(b, -19, 'corkscrew', { w: 18 }); b.drops(-17, 10, 2, null, 1.6); },
+  lay: function (b) { b.ground(38); GT(b, -37, 'corkscrew', { w: 36 }); b.drops(-35, 20, 2, null, 1.7); },
   step: function (e, dt, p) { var x0 = e.x - 8, w = e.w * TS, inA = !p.air && p.state === 'normal' && p.x > x0 && p.x < x0 + w && Math.abs(p.y - e.y) < 4;
-    if (inA && p.gsp > 300) { p.grot = (p.x - x0) / w * 6.283; p.gsp = Math.min(700, p.gsp + 140 * dt); e.on = 1; } else if (e.on) { p.grot = 0; e.on = 0; } },
+    if (inA && p.gsp > 300) { p.grot = (p.x - x0) / 144 * 6.283; p.gsp = Math.min(700, p.gsp + 140 * dt); e.on = 1; } else if (e.on) { p.grot = 0; e.on = 0; } },
   draw: function (g, e, x, y, L) { cork(g, e, x, y, L, false); }, over: function (g, e, x, y, L) { cork(g, e, x, y, L, true); } });
 function cork(g, e, x, y, L, front) { var w = e.w * TS, x0 = x - 8; if (!front) { postD(x0, y, 60, L, 6); postD(x0 + w, y, 60, L, 6); motif(g, x0, y - 62, L); motif(g, x0 + w, y - 62, L); }
-  for (var s = 0; s < w; s += 3) { var ph = s / w * 6.283 * 2, c = Math.cos(ph); if ((c >= 0) !== front) continue; var yy = y - 30 + Math.sin(ph) * 26; R(OUT, x0 + s, yy - 5, 4, 10); R(front ? L.main : L.metal, x0 + s, yy - 4, 3, 8); R(front ? L.hot : L.mlite, x0 + s, yy - 4, 3, 2); if (Math.floor(s / 12) % 2) R(L.dark, x0 + s, yy, 3, 2); } }
+  for (var s = 0; s < w; s += 3) { var ph = s / 144 * 6.283, c = Math.cos(ph); if ((c >= 0) !== front) continue; var yy = y - 30 + Math.sin(ph) * 26; R(OUT, x0 + s, yy - 5, 4, 10); R(front ? L.main : L.metal, x0 + s, yy - 4, 3, 8); R(front ? L.hot : L.mlite, x0 + s, yy - 4, 3, 2); if (Math.floor(s / 12) % 2) R(L.dark, x0 + s, yy, 3, 2); } }
 
 var HOOP = { city: 'neon', sewer: 'cream', park: 'fire', bone: 'bone', factory: 'fire', brain: 'pulse' };
 gimDef('hoops', { h: 5, // big hoops: go through one and it throws you on faster
-  lay: function (b) { b.ground(20); GT(b, -17, 'hoops', { up: 2 }, 2, 'gimh'); GT(b, -11, 'hoops', { up: 4 }, 4, 'gimh'); GT(b, -5, 'hoops', { up: 2 }, 2, 'gimh'); b.drops(-18, 4, 2, null, 1); },
+  lay: function (b) { b.ground(40); for (var i = 0; i < 6; i++) GT(b, -37 + i * 6, 'hoops', { up: i % 2 ? 4 : 2 }, i % 2 ? 4 : 2, 'gimh'); b.drops(-38, 4, 2, null, 1); },
   step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (e.fl > 0) e.fl -= dt; if (e.cd <= 0 && p.state === 'normal' && Math.hypot(p.x - e.x, p.y - 20 - e.y) < 15) { e.cd = 1; e.fl = 0.3; if (p.air) p.vx = Math.max(p.vx, 460); else p.gsp = Math.max(p.gsp, 520); G.score += 50; gotDrop(); sfx.play('dash'); } },
   draw: function (g, e, x, y, L) { var k = HOOP[L.k], fy = y + e.up * TS; postD(x, fy, fy - y - 18, L, 4); var r = 18 + (e.fl > 0 ? 2 : 0);
     g.lineWidth = 6; g.strokeStyle = OUT; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.stroke(); g.lineWidth = 4; g.strokeStyle = k === 'cream' ? '#e8d4a0' : k === 'bone' ? L.main : k === 'pulse' && Math.floor(G.t * 4) % 2 ? L.hot : L.main; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.stroke();
@@ -187,8 +187,8 @@ gimDef('escalator', { h: 7, // moving stairs carry you up the bank and down the 
 
 var RAPID = { city: ['#8a0a14', '#c4121c'], sewer: ['#d8c490', '#f1e0b0'], park: ['#c43a8a', '#ff6ad0'], bone: ['#4a3a5a', '#6a5a8a'], factory: ['#c42a08', '#ff6a10'], brain: ['#8a0a10', '#ff2630'] };
 gimDef('rapids', { h: 2, // a fast stream runs along the floor: it carries you, and what floats in it gets in the way
-  lay: function (b) { b.ground(20); GT(b, -19, 'rapids', { w: 18 }); b.drops(-17, 8, 4, 'arc', 2); },
-  init: function (e) { e.fl = [70, 160, 240].map(function (o, i) { return { x: e.x + o, ph: i * 1.7 }; }); },
+  lay: function (b) { b.ground(40); GT(b, -39, 'rapids', { w: 38 }); b.drops(-37, 16, 4, 'arc', 2.2); },
+  init: function (e) { e.fl = [70, 150, 230, 310, 390, 470, 550].map(function (o, i) { return { x: e.x + o, ph: i * 1.7 }; }); },
   step: function (e, dt, p) { var inA = !p.air && p.state === 'normal' && p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4; if (inA) { if (p.gsp >= 0) p.gsp = Math.min(560, p.gsp + 380 * dt); }
     e.fl.forEach(function (q) { q.by = Math.sin(G.t * 3 + q.ph) * 2; if (pCirc(q.x, e.y - 8 + q.by, 9)) hurt(q.x); }); },
   draw: function (g, e, x, y, L, cx) { var w = e.w * TS, c = RAPID[L.k]; R(OUT, x - 8, y - 7, w, 7); R(c[0], x - 8, y - 6, w, 6); for (var s = 0; s < w; s += 12) { var o = (s + G.t * 220) % w; R(c[1], x - 8 + o, y - 6 + (s / 12) % 3 * 2, 8, 1); }
@@ -197,26 +197,25 @@ gimDef('rapids', { h: 2, // a fast stream runs along the floor: it carries you, 
       else { bx(qx - 8, qy - 8, 16, 14, L.k === 'park' ? L.wood : L.metal, L.mlite); R(OUT, qx - 8, qy - 3, 16, 1); R(OUT, qx - 8, qy + 2, 16, 1); } R(c[1], qx - 10, y - 7, 20, 1); }); } });
 
 gimDef('bubbles', { h: 9, // bubbles rise out of the pit: ride them across before they pop
-  lay: function (b) { GT(b, 0, 'bubbles', { w: 16 }, 0, 'gimh'); safePit(b, 16); },
-  init: function (e) { for (var i = 0; i < 4; i++) gimPlat(e, e.x - 8 + 12 + i * 56, e.y + 70 - i * 37, 32, { mv: function (q, dt) { q.y -= 46 * dt; if (q.y < q.e.y - 84) { bits(q.x + 16, q.y + 12, 10, [GL().goo, GL().lite], 120); sfx.play('pop', 0.3); q.y = q.e.y + 76; } },
+  lay: function (b) { GT(b, 0, 'bubbles', { w: 26 }, 0, 'gimh'); safePit(b, 26); },
+  init: function (e) { for (var i = 0; i < 7; i++) gimPlat(e, e.x - 8 + 12 + i * 56, e.y + 70 - (i * 37) % 150, 32, { mv: function (q, dt) { q.y -= 46 * dt; if (q.y < q.e.y - 84) { bits(q.x + 16, q.y + 12, 10, [GL().goo, GL().lite], 120); sfx.play('pop', 0.3); q.y = q.e.y + 76; } },
       draw: function (g, x, y, q) { var L = GL(), c = L.k === 'sewer' ? '#e8d4a0' : L.goo; g.fillStyle = OUT; g.beginPath(); g.arc(x + 16, y + 13, 17, 0, 6.3); g.fill(); g.fillStyle = c; g.beginPath(); g.arc(x + 16, y + 13, 15, 0, 6.3); g.fill(); R('#ffffff', x + 8, y + 5, 4, 4); R(L.lite, x + 22, y + 18, 3, 3); } }); },
   draw: function (g, e, x, y, L) { } });
 
-gimDef('vine', { h: 8, // a rope over the ditch: catch it, swing and let it throw you on
-  lay: function (b) { GT(b, 0, 'vine', {}); b.ground(3); SEC.ditch(b, 14); b.ground(3); b.drops(-14, 6, 4, 'arc', 1.4); },
-  init: function (e) { e.px = e.x + 13 * TS; e.py = e.y - 128; e.L = 84; },
-  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; e.th = Math.sin(G.t * 1.6) * 0.6; var ex = e.px + Math.sin(e.th) * e.L, ey = e.py + Math.cos(e.th) * e.L;
-    if (!p.gl && e.cd <= 0 && p.air && p.state === 'normal' && Math.hypot(p.x - ex, p.y - 26 - ey) < 22) { p.gl = { e: e, th: e.th, w: Math.max(2.2, p.vx / e.L), t: 0 }; sfx.play('clink'); } },
-  ride: function (p, s, dt) { var e = s.e; s.t += dt; s.w += -(990 / e.L) * Math.sin(s.th) * dt; s.th += s.w * dt; p.x = e.px + Math.sin(s.th) * e.L; p.y = e.py + Math.cos(s.th) * e.L + 26; p.grot = -s.th * 0.8; p.face = s.w >= 0 ? 1 : -1; p.vx = 0; p.vy = 0; p.air = true;
-    if (KIT.pressed('a') || (s.th > 0.5 && s.w > 0) || s.t > 3) { dropOff(p, e.L * Math.cos(s.th) * s.w * 1.15 + 60, -e.L * Math.sin(s.th) * s.w * 1.1 - 140); p.spring = 0.3; e.cd = 0.8; sfx.play('jump'); return; } relJ(p); },
-  draw: function (g, e, x, y, L, cx, cy) { var px = Math.round(e.px - cx), py = Math.round(e.py - cy); postD(x + 4 * TS, y, y - py, L, 6); postD(x + 22 * TS, y, y - py, L, 6); bx(x + 4 * TS - 4, py - 4, 18 * TS + 8, 6, L.wood, L.mlite); motif(g, px, py - 8, L);
-    var held = PL && PL.gl && PL.gl.e === e, th = held ? PL.gl.th : (e.th || 0), ex = px + Math.sin(th) * e.L, ey = py + Math.cos(th) * e.L;
-    g.strokeStyle = OUT; g.lineWidth = 3; g.beginPath(); g.moveTo(px, py); g.lineTo(ex, ey); g.stroke(); g.strokeStyle = L.k === 'brain' ? L.goo : L.k === 'factory' || L.k === 'city' ? L.mlite : L.lite; g.lineWidth = 1; g.stroke(); if (!held) R(OUT, ex - 3, ey - 2, 6, 6); } });
-
+gimDef('vine', { h: 8, // ropes over a long ditch: catch one, swing, and let it throw you to the next
+  lay: function (b) { GT(b, 0, 'vine', {}); b.ground(3); SEC.ditch(b, 30); b.ground(3); b.drops(-30, 12, 4, 'arc', 2.2); },
+  init: function (e) { e.L = 84; e.pv = [10, 21, 31].map(function (c) { return { x: e.x + c * TS, y: e.y - 128, ph: c * 0.4 }; }); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; e.pv.forEach(function (v) { v.th = Math.sin(G.t * 1.6 + v.ph) * 0.6; var ex = v.x + Math.sin(v.th) * e.L, ey = v.y + Math.cos(v.th) * e.L;
+      if (!p.gl && e.cd <= 0 && p.air && p.state === 'normal' && Math.hypot(p.x - ex, p.y - 26 - ey) < 22) { p.gl = { e: e, v: v, th: v.th, w: Math.max(2.2, p.vx / e.L), t: 0 }; sfx.play('clink'); } }); },
+  ride: function (p, s, dt) { var e = s.e, v = s.v; s.t += dt; s.w += -(990 / e.L) * Math.sin(s.th) * dt; s.th += s.w * dt; p.x = v.x + Math.sin(s.th) * e.L; p.y = v.y + Math.cos(s.th) * e.L + 26; p.grot = -s.th * 0.8; p.face = s.w >= 0 ? 1 : -1; p.vx = 0; p.vy = 0; p.air = true;
+    if (KIT.pressed('a') || (s.th > 0.5 && s.w > 0) || s.t > 3) { dropOff(p, e.L * Math.cos(s.th) * s.w * 1.15 + 60, -e.L * Math.sin(s.th) * s.w * 1.1 - 140); p.spring = 0.3; e.cd = 0.5; sfx.play('jump'); return; } relJ(p); },
+  draw: function (g, e, x, y, L, cx, cy) { if (!e.pv) return; var py = Math.round(e.pv[0].y - cy); postD(x + 4 * TS, y, y - py, L, 6); postD(x + 38 * TS, y, y - py, L, 6); bx(x + 4 * TS - 4, py - 4, 34 * TS + 8, 6, L.wood, L.mlite);
+    e.pv.forEach(function (v) { var px = Math.round(v.x - cx), held = PL && PL.gl && PL.gl.v === v, th = held ? PL.gl.th : (v.th || 0), ex = px + Math.sin(th) * e.L, ey = py + Math.cos(th) * e.L; motif(g, px, py - 8, L);
+      g.strokeStyle = OUT; g.lineWidth = 3; g.beginPath(); g.moveTo(px, py); g.lineTo(ex, ey); g.stroke(); g.strokeStyle = L.k === 'brain' ? L.goo : L.k === 'factory' || L.k === 'city' ? L.mlite : L.lite; g.lineWidth = 1; g.stroke(); if (!held) R(OUT, ex - 3, ey - 2, 6, 6); }); } });
 var SMASH = { city: 'glass', sewer: 'brick', park: 'paper', bone: 'bones', factory: 'crates', brain: 'membrane' };
 gimDef('smashwalls', { h: 6, // thin walls in a row: hit them fast (or jump into them) and smash straight through
   lay: function (b) { b.ground(2); b.thing(0, 'dash', 0, { dir: 1 }); b.ground(5); var e = GT(b, 0, 'smashwalls', {}); e.cols = [];
-    for (var i = 0; i < 4; i++) { b.ground(4); for (var y = 1; y <= 6; y++) b.set(b.col, b.h - y, 'X'); e.cols.push(b.col); b.ground(1); b.drops(-4, 2, 2); } b.ground(5); },
+    for (var i = 0; i < 7; i++) { b.ground(4); for (var y = 1; y <= 6; y++) b.set(b.col, b.h - y, 'X'); e.cols.push(b.col); b.ground(1); b.drops(-4, 2, 2); } b.ground(5); },
   step: function (e, dt, p) { var r0 = Math.floor(e.y / TS), v = p.air ? p.vx : p.gsp; if (p.state !== 'normal') return; /* smash it at speed or by jumping into it, whatever height you hit it at */
     e.cols.forEach(function (c) { if (T(c, r0 - 1) !== 'X') return; var wx = c * TS; if (p.x + PHW + 4 + Math.max(0, v) * dt * 2 >= wx && p.x < wx + 8 && p.y > (r0 - 5) * TS && (Math.abs(v) >= 140 || p.air || G.super)) { breakWall(c, r0 - 1); p.gsp = Math.max(p.gsp, p.air ? p.gsp : 260); } }); },
   draw: function (g, e, x, y, L, cx) { var k = SMASH[L.k], r0 = Math.floor(e.y / TS); (e.cols || []).forEach(function (c) { if (T(c, r0 - 1) !== 'X') return; var wx = c * TS - cx;
@@ -228,19 +227,25 @@ gimDef('smashwalls', { h: 6, // thin walls in a row: hit them fast (or jump into
       else { bx(wx, y - 96, 16, 96, L.stone, L.slite); for (var r = 0; r < 12; r++) R(OUT, wx, y - 96 + r * 8, 16, 1); R("#e8d4a0", wx + 6, y - 40, 3, 40); } }); } });
 
 gimDef('beatblocks', { h: 3, // blocks that come and go on the beat (PulsarOctopus on the decks)
-  lay: function (b) { GT(b, 0, 'beatblocks', { w: 18 }, 0, 'gimh'); safePit(b, 18); },
-  init: function (e) { for (var i = 0; i < 6; i++) gimPlat(e, e.x - 8 + 6 + i * 48, e.y - (i % 3 === 1 ? 16 : 0), 32, { i: i, mv: function (q) { var beat = Math.floor(G.t / 0.9) % 2; q.gone = (q.i % 2) !== beat; q.warn = (G.t % 0.9) > 0.62; },
+  lay: function (b) { GT(b, 0, 'beatblocks', { w: 30 }, 0, 'gimh'); safePit(b, 30); },
+  init: function (e) { for (var i = 0; i < 10; i++) gimPlat(e, e.x - 8 + 6 + i * 48, e.y - (i % 3 === 1 ? 16 : 0), 32, { i: i, mv: function (q) { var beat = Math.floor(G.t / 0.9) % 2; q.gone = (q.i % 2) !== beat; q.warn = (G.t % 0.9) > 0.62; },
       draw: function (g, x, y, q) { var L = GL(); if (q.gone) { for (var d = 0; d < q.w; d += 4) { R(L.mlite, x + d, y, 2, 1); R(L.mlite, x + d, y + 9, 2, 1); } return; }
         bx(x, y, q.w, 10, L.main, L.hot); if (q.warn && Math.floor(G.t * 20) % 2) R('#ffffff', x, y, q.w, 2); R(OUT, x + 13, y + 3, 2, 4); R(OUT, x + 13, y + 3, 5, 1); } }); },
   draw: function (g, e, x, y, L) { var pulse = (G.t % 0.9) < 0.12 ? 2 : 0; bx(x - 30, y - 34, 22, 34, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.arc(x - 19, y - 22, 7 + pulse, 0, 6.3); g.fill(); g.fillStyle = L.dark; g.beginPath(); g.arc(x - 19, y - 22, 5 + pulse, 0, 6.3); g.fill(); R(L.hot, x - 21, y - 9, 4, 4); motif(g, x - 19, y - 38, L); } });
 
-gimDef('lowgrav', { h: 8, // the air goes thin: everything floats, and a wall you could not jump is easy
-  lay: function (b) { GT(b, 0, 'lowgrav', { w: 22 }); b.ground(8); for (var x = 0; x < 2; x++) for (var y = 1; y <= 5; y++) b.set(b.col + x, b.h - y, '#'); b.ground(2); b.drops(-1, 4, 9, 'arc', 1.2); b.ground(12); b.drops(-10, 6, 6, 'arc', 1.6); },
-  step: function (e, dt, p) { if (p.x < e.x - 8 || p.x > e.x + e.w * TS || p.y < e.y - 240 || p.state !== 'normal') return; if (p.air) p.vy -= 990 * 0.55 * dt; if (Math.random() < 0.3) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 40, y: p.y - Math.random() * 40, vx: 0, vy: -20, t: 0.8, c: GL().glow, g: 0 }); },
-  draw: function (g, e, x, y, L) { var w = e.w * TS; [x - 8, x - 8 + w].forEach(function (cxx) { for (var d = 0; d < 160; d += 6) if ((Math.floor(G.t * 10) + d / 6) % 3 === 0) R(L.glow, cxx, y - d, 1, 3); });
-    for (var r = 0; r < 4; r++) { var rx = x + 20 + r * 80, ry = y - 70 - r % 2 * 30 + Math.sin(G.t * 1.2 + r) * 8; bx(rx, ry, 10 + r % 2 * 4, 8, L.stone, L.slite); }
-    for (var s = 0; s < 10; s++) { var sx = x + (s * 37) % w, sy = y - 20 - ((G.t * 18 + s * 23) % 150); R(L.lite, sx, sy, 1, 1); } } });
-
+gimDef('lowgrav', { h: 12, // the air goes thin for a long stretch: you float, walls you could never jump are easy, rocks drift, mines hang in the air
+  lay: function (b) { var e = GT(b, 0, 'lowgrav', {}); b.ground(8);
+    function wall(n) { for (var x = 0; x < 2; x++) for (var y = 1; y <= n; y++) b.set(b.col + x, b.h - y, '#'); b.ground(2); b.drops(-1, 4, n + 3, 'arc', 1.2); }
+    wall(5); b.ground(10); SEC.ditch(b, 10); b.ground(6); wall(8); b.ground(12); b.drops(-10, 6, 9, 'arc', 1.6); SEC.ditch(b, 12); b.ground(8); wall(11); b.ground(14); b.drops(-12, 7, 6, 'arc', 1.6); e.w = b.col - e.c; },
+  init: function (e) { var w = e.w * TS; e.rk = []; for (var i = 0; i < 6; i++) e.rk.push(gimPlat(e, e.x + 60 + i * (w - 120) / 6, e.y - 112 - (i % 3) * 36, 40, { ph: i * 1.3, mv: function (q) { q.x = q.x0 + Math.sin(G.t * 0.5 + q.ph) * 28; q.y = q.y0 + Math.sin(G.t * 0.8 + q.ph) * 14; },
+      draw: function (g, x, y, q) { var L = GL(); bx(x, y, q.w, 8, L.stone, L.slite); R(L.slite, x + 4, y + 8, q.w - 8, 4); R(L.stone, x + 10, y + 12, q.w - 20, 3); if (Math.floor(G.t * 3 + q.ph) % 4 === 0) R(L.glow, x + q.w / 2, y + 16, 1, 1); } }));
+    e.mn = []; for (var k = 0; k < 4; k++) e.mn.push({ x0: e.x + 140 + k * (w - 240) / 4, y0: e.y - 70 - (k % 2) * 60, ph: k * 1.7 }); },
+  step: function (e, dt, p) { (e.mn || []).forEach(function (m) { m.x = m.x0 + Math.sin(G.t * 0.6 + m.ph) * 40; m.y = m.y0 + Math.cos(G.t * 0.9 + m.ph) * 22; if (pCirc(m.x, m.y, 9)) hurt(m.x); });
+    if (p.x < e.x - 8 || p.x > e.x + e.w * TS || p.y < e.y - 420 || p.state !== 'normal') return; if (p.air) p.vy -= 990 * 0.58 * dt; if (Math.random() < 0.4) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 40, y: p.y - Math.random() * 40, vx: 0, vy: -20, t: 0.8, c: GL().glow, g: 0 }); },
+  draw: function (g, e, x, y, L, cx, cy) { var w = e.w * TS; [x - 8, x - 8 + w].forEach(function (cxx) { for (var d = 0; d < 260; d += 6) if ((Math.floor(G.t * 10) + d / 6) % 3 === 0) R(L.glow, cxx, y - d, 1, 3); text('LOW GRAVITY', cxx, y - 270, { size: 4, align: 'center', col: L.glow }); });
+    for (var s = 0; s < 40; s++) { var sx = x + (s * 53) % w, sy = y - 10 - ((G.t * 14 + s * 31) % 250); R(s % 3 ? L.lite : L.glow, sx, sy, 1, s % 5 ? 1 : 2); }
+    for (var r = 0; r < 10; r++) { var rx = x + 30 + r * (w - 60) / 10, ry = y - 40 - (r * 29) % 160 + Math.sin(G.t * 1.2 + r) * 8; g.save(); g.translate(rx, ry); g.rotate(G.t * 0.4 + r); bx(-4, -3, 8 + r % 3 * 3, 6, L.stone, L.slite); g.restore(); }
+    (e.mn || []).forEach(function (m) { spikeBall(g, m.x - cx, m.y - cy, 7, L); R(L.hot, m.x - cx - 1, m.y - cy - 1, 2, 2); }); } });
 var DOOR = { city: 'red', sewer: 'hatch', park: 'mirror', bone: 'crypt', factory: 'blast', brain: 'iris' };
 function doorD(g, x, y, L, open) { var k = DOOR[L.k]; x = Math.round(x); y = Math.round(y); bx(x - 12, y - 42, 24, 42, L.stone, L.slite); var w = Math.round(18 * (1 - open));
   if (k === 'iris') { g.fillStyle = OUT; g.beginPath(); g.arc(x, y - 21, 11, 0, 6.3); g.fill(); g.fillStyle = open > 0.3 ? L.glow : L.metal; g.beginPath(); g.arc(x, y - 21, 9 * (1 - open * 0.7), 0, 6.3); g.fill(); return; }
@@ -266,12 +271,12 @@ gimDef('ferris', { h: 10, // a little wheel of platforms turns you up to a ledge
 
 var HOOK = { city: 'crane', sewer: 'bucket', park: 'chair', bone: 'hand', factory: 'meat', brain: 'claw' };
 gimDef('hooks', { h: 7, // hooks run along an overhead track: jump up and hang on over the spikes
-  lay: function (b) { var e = GT(b, 0, 'hooks', {}); b.ground(3); SEC.ditch(b, 16); b.ground(3); e.c1 = b.col; b.ground(2); },
-  hk: function (e, i) { var len = e.c1 * TS - e.x; return { x: e.x + ((G.t * 140 + i * len / 3) % len), y: e.y - 66 }; },
-  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (p.gl || e.cd > 0 || !p.air || p.state !== 'normal') return; for (var i = 0; i < 3; i++) { var h = GIM.hooks.hk(e, i); if (h.x < e.c1 * TS - 30 && Math.hypot(p.x - h.x, p.y - PH - h.y) < 18) { p.gl = { e: e, i: i }; sfx.play('clink'); return; } } },
+  lay: function (b) { var e = GT(b, 0, 'hooks', {}); b.ground(3); SEC.ditch(b, 30); b.ground(3); e.c1 = b.col; b.ground(2); },
+  hk: function (e, i) { var len = e.c1 * TS - e.x; return { x: e.x + ((G.t * 140 + i * len / 5) % len), y: e.y - 66 }; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (p.gl || e.cd > 0 || !p.air || p.state !== 'normal') return; for (var i = 0; i < 5; i++) { var h = GIM.hooks.hk(e, i); if (h.x < e.c1 * TS - 30 && Math.hypot(p.x - h.x, p.y - PH - h.y) < 18) { p.gl = { e: e, i: i }; sfx.play('clink'); return; } } },
   ride: function (p, s, dt) { var e = s.e, h = GIM.hooks.hk(e, s.i); p.x = h.x; p.y = h.y + PH + 2; p.vx = 140; p.vy = 0; p.air = true; p.face = 1; if (KIT.pressed('a') || h.x > e.c1 * TS - 12) { dropOff(p, 200, KIT.pressed('a') ? -300 : -100); e.cd = 0.5; return; } relJ(p); },
   draw: function (g, e, x, y, L, cx, cy) { var x1 = e.c1 * TS - cx, ty = y - 96; postD(x, y, 96, L, 6); postD(x1, y, 96, L, 6); bx(x - 4, ty - 4, x1 - x + 8, 8, L.metal, L.mlite); R(OUT, x - 4, ty, x1 - x + 8, 1); var k = HOOK[L.k];
-    for (var i = 0; i < 3; i++) { var h = GIM.hooks.hk(e, i), hx = Math.round(h.x - cx), hy = Math.round(h.y - cy); R(OUT, hx - 4, ty + 3, 8, 4); R(OUT, hx - 1, ty + 6, 2, hy - ty - 6); R(L.mlite, hx, ty + 6, 1, hy - ty - 6);
+    for (var i = 0; i < 5; i++) { var h = GIM.hooks.hk(e, i), hx = Math.round(h.x - cx), hy = Math.round(h.y - cy); R(OUT, hx - 4, ty + 3, 8, 4); R(OUT, hx - 1, ty + 6, 2, hy - ty - 6); R(L.mlite, hx, ty + 6, 1, hy - ty - 6);
       if (k === 'chair') { bx(hx - 10, hy, 20, 4, L.main, L.hot); R(OUT, hx - 10, hy - 8, 2, 8); }
       else if (k === 'bucket') { bx(hx - 6, hy, 12, 10, L.metal, L.mlite); R('#e8d4a0', hx - 5, hy + 1, 10, 2); }
       else if (k === 'hand') { bx(hx - 5, hy, 10, 6, L.main, L.lite); for (var f = 0; f < 4; f++) R(L.main, hx - 5 + f * 3, hy + 6, 2, 5); }
@@ -279,14 +284,14 @@ gimDef('hooks', { h: 7, // hooks run along an overhead track: jump up and hang o
       else { g.strokeStyle = OUT; g.lineWidth = 4; g.beginPath(); g.arc(hx + 3, hy + 6, 6, Math.PI * 0.9, Math.PI * 2.4); g.stroke(); g.strokeStyle = k === 'meat' ? L.mlite : L.main; g.lineWidth = 2; g.stroke(); } } } });
 
 gimDef('swingplats', { h: 8, // platforms on chains swing over the pit
-  lay: function (b) { GT(b, 0, 'swingplats', { w: 16 }, 0, 'gimh'); safePit(b, 16); },
-  init: function (e) { for (var i = 0; i < 3; i++) gimPlat(e, 0, 0, 40, { i: i, ax: e.x - 8 + 40 + i * 72, ay: e.y - 128, mv: function (q) { var th = Math.sin(G.t * 1.4 + q.i * 1.3) * 0.45; q.th = th; q.x = q.ax + Math.sin(th) * 112 - 20; q.y = q.ay + Math.cos(th) * 112; },
+  lay: function (b) { GT(b, 0, 'swingplats', { w: 26 }, 0, 'gimh'); safePit(b, 26); },
+  init: function (e) { for (var i = 0; i < 5; i++) gimPlat(e, 0, 0, 40, { i: i, ax: e.x - 8 + 40 + i * 72, ay: e.y - 128, mv: function (q) { var th = Math.sin(G.t * 1.4 + q.i * 1.3) * 0.45; q.th = th; q.x = q.ax + Math.sin(th) * 112 - 20; q.y = q.ay + Math.cos(th) * 112; },
       draw: function (g, x, y, q) { var L = GL(), ax = Math.round(q.ax - CAM.x), ay = Math.round(q.ay - CAM.y); g.strokeStyle = OUT; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(x + 4, y); g.moveTo(ax, ay); g.lineTo(x + q.w - 4, y); g.stroke();
         if (L.k === 'city') { bx(x, y, q.w, 5, L.metal, L.mlite); for (var c = 4; c < q.w; c += 9) { R(L.lite, c + x, y - 6, 2, 6); R(L.hot, c + x, y - 8, 2, 2); } } else plank(g, x, y, q.w, L); } }); },
   draw: function (g, e, x, y, L) { var w = e.w * TS; postD(x - 8, y, 132, L, 6); postD(x - 8 + w, y, 132, L, 6); bx(x - 10, y - 134, w + 4, 6, L.metal, L.mlite); motif(g, x - 8, y - 138, L); motif(g, x - 8 + w, y - 138, L); } });
 
 gimDef('seesaw', { h: 3, // a seesaw over the pit: your weight tips it
-  lay: function (b) { GT(b, 0, 'seesaw', { w: 14 }, 0, 'gimh'); safePit(b, 14); },
+  lay: function (b) { for (var i = 0; i < 2; i++) { GT(b, 0, 'seesaw', { w: 14 }, 0, 'gimh'); safePit(b, 14); b.ground(4); b.drops(-3, 2, 2); } },
   init: function (e) { e.k2 = 0; var px = e.x - 8 + 7 * TS; e.pvx = px; var A = gimPlat(e, px - 92, e.y, 48, { side: 1, mv: function (q, dt) { var on = onPlat(q) ? 1 : onPlat(q.other) ? -1 : 0; q.e.k2 += ((on || 0) - q.e.k2) * Math.min(1, dt * (on ? 2.2 : 0.8)); q.y = q.y0 + q.e.k2 * 22; } });
     var B = gimPlat(e, px + 44, e.y, 48, { side: -1, mv: function (q) { q.y = q.y0 - q.e.k2 * 22; } }); A.other = B; A.draw = B.draw = function (g, x, y, q) { plank(g, x, y, q.w, GL()); }; },
   draw: function (g, e, x, y, L, cx, cy) { var px = Math.round(e.pvx - cx), k = e.k2 || 0; bx(px - 3, y + 6, 6, 70, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.moveTo(px - 10, y + 10); g.lineTo(px, y - 2); g.lineTo(px + 10, y + 10); g.fill(); g.fillStyle = L.stone; g.beginPath(); g.moveTo(px - 8, y + 9); g.lineTo(px, y); g.lineTo(px + 8, y + 9); g.fill();

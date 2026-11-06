@@ -29,7 +29,7 @@ function uniqAct(a) {
   // the pool of gimmicks: every new one, then the act's own old pieces, shuffled for this act
   var pool = shuf(Object.keys(GIM).filter(function (n) { return SEC[n] && GIM[n].lay; }).map(function (n) { return { p: [n], h: GIM[n].h, pit: !!PITG[n] }; }))
     .concat(shuf(OLDP.map(function (q) { return { p: q[0], h: q[1], pit: !!q[2] }; })));
-  function maxH(ctx) { return ctx === 'top' ? 9 : ctx === 'mid' || ctx === 'low' ? 6 : ctx === 'deep' ? 10 : 99; }
+  function maxH(ctx) { return ctx === 'top' ? 9 : ctx === 'mid' || ctx === 'low' ? 6 : ctx === 'deep' ? 12 : 99; }
   function take(ctx) { var mh = maxH(ctx); for (var i = 0; i < pool.length; i++) { var q = pool[i], k = pieceKey(q.p); if (used[k] || q.h > mh || (q.pit && (ctx === 'mid' || ctx === 'top'))) continue; used[k] = 1; return q.p.slice(); } return null; }
   // the tightest places first (lanes), then the open street
   fill.sort(function (x, y) { return maxH(x.ctx) - maxH(y.ctx); }).forEach(function (f) { var q = take(f.ctx); f.list[f.i] = q || ['run', 8]; });
