@@ -67,7 +67,9 @@ function drawBack(g, Z, cx, cy, W, H) {
     if (imgOk(HOGIM.clouds)) tile(g, HOGIM.clouds, cx * 0.1 + G.t * 6, vy + 6, 64, 1);
     if (imgOk(HOGIM.skyline)) { var SL = imgLayer('skyl', HOGIM.skyline, 130, 0.5), sw = SL.lw, sx = -(((cx * 0.12) % sw) + sw) % sw; for (; sx < W; sx += sw) KIT.blit(SL, sx, vy + H - 200); }
     drawPar(g, 'far', 'city', cx, vy, W, H);
-    if (LV.dists && LV.dists.length) { drawDistrictBack(g, cx, D, W, H); drawZL(g, 'city', 'near', cx, D, W, H); drawAir(g, 'city', cx, cy, W, H); return; }
+    if (LV.dists && LV.dists.length) { // the far black towers, then each district's own painted street (tools/spermhog/backs/citydist.py: real rooflines, so no flat band under the sky), then the railing
+      var far = cityMid('citymid0', 0.12), fx = -(((cx * 0.12) % 960) + 960) % 960, fy = Math.round(D * 0.8) + H - 250; for (; fx < W; fx += 960) KIT.blit(far, fx, fy); downBand(g, far, cx * 0.12, fy, W, H, 36);
+      drawDistMid(g, cx, D, W, H); drawZL(g, 'city', 'near', cx, D, W, H); drawAir(g, 'city', cx, cy, W, H); return; }
     [[0.22, 'citymid0', 30], [0.4, 'citymid1', 0]].forEach(function (L) { var mid = cityMid(L[1]), mw = 960, mx = -(((cx * L[0]) % mw) + mw) % mw, my = Math.round(D * (1 + L[0])) + H - 300 + L[2]; for (; mx < W; mx += mw) KIT.blit(mid, mx, my); downBand(g, mid, cx * L[0], my, W, H, 36); });
     return;
   }
