@@ -318,3 +318,55 @@ ART.update({'hog_' + k: f for k, f in FURN.items()})
 ART.update({'hog_' + k: f for k, f in FURN2.items()})
 import chibi
 ART.update({k: v for k, v in chibi.frames().items() if k.startswith('chb_u')})  # Cumhead from behind, for the special stage
+
+# ---------- every character seen from behind, for the special stages (he said only Cumhead was in them) ----------
+def _backs():
+    import json, os
+    from PIL import Image
+    T = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
+    hom = Image.open(os.path.join(T, 'homunculus', 'hom.png')).convert('RGBA'); HJ = json.load(open(os.path.join(T, 'homunculus', 'hom.json'))); HJ = HJ.get('frames', HJ)
+    ll = Image.open(os.path.join(T, 'load-legacy', 'sprites.png')).convert('RGBA'); LJ = json.load(open(os.path.join(T, 'load-legacy', 'sprites.json'))); LJ = LJ.get('frames', LJ)
+    def crop(im, J, k): v = J[k]; return im.crop((v[0], v[1], v[0] + v[2], v[1] + v[3]))
+    def lum(c): return (c[0] * 0.3 + c[1] * 0.55 + c[2] * 0.15) / 255
+    def back(src, keep_top=0.0):
+        w, h = src.size; s = src.load(); m = src.transpose(Image.FLIP_LEFT_RIGHT).load()
+        cols = {}
+        for y in range(h):
+            for x in range(w):
+                c = s[x, y]
+                if c[3] > 128 and 0.14 < lum(c) < 0.8: cols[c[:3]] = cols.get(c[:3], 0) + 1
+        body = max(cols, key=cols.get) if cols else (120, 80, 80)
+        dark = tuple(int(v * 0.62) for v in body); lit = tuple(min(255, int(v * 1.18 + 12)) for v in body)
+        A = [[(s[x, y][3] > 128 or m[x, y][3] > 128) for x in range(w)] for y in range(h)]
+        out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); o = out.load()
+        for y in range(h):
+            for x in range(w):
+                if not A[y][x]: continue
+                edge = any(not (0 <= x + dx < w and 0 <= y + dy < h and A[y + dy][x + dx]) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+                if edge: o[x, y] = (18, 4, 10, 255); continue
+                a, b = s[x, y], m[x, y]; c = a if a[3] > 128 else b
+                if y < h * keep_top and c[3] > 128: o[x, y] = c; continue # hats and horns keep their colours
+                # keep features that stick out in their own colour (horns, flames, spines, plates): strongly coloured and not skin-like
+                cc = c[:3]; sat = max(cc) - min(cc)
+                if c[3] > 128 and sat > 70 and abs(cc[0] - body[0]) + abs(cc[1] - body[1]) + abs(cc[2] - body[2]) > 160 and lum(c) < 0.75: o[x, y] = c; continue
+                o[x, y] = (lit if x < w * 0.42 else dark if x > w * 0.62 else body) + (255,)
+        # a spine line down the back
+        for y in range(int(h * 0.3), int(h * 0.8)):
+            x = w // 2
+            if A[y][x] and o[x, y][:3] != (18, 4, 10): o[x, y] = dark + (255,)
+        return out
+    def run(img):
+        fr = []
+        w, h = img.size
+        for k in range(4):
+            f = Image.new('RGBA', (w + 2, h + 1), (0, 0, 0, 0)); bob = 1 if k % 2 else 0
+            top = img.crop((0, 0, w, int(h * 0.72))); legs = img.crop((0, int(h * 0.72), w, h))
+            f.alpha_composite(top, (1, bob)); f.alpha_composite(legs, (1 + (1 if k == 1 else -1 if k == 3 else 0), int(h * 0.72) + bob))
+            fr.append(f)
+        return fr
+    out = {}
+    for b in ['gloop', 'guard', 'ember', 'frost', 'volt', 'medic', 'leech', 'scout', 'goldie', 'titan', 'blood']:
+        for i, f in enumerate(run(back(crop(hom, HJ, 'h_%s_adult_idle0' % b))) ): out['bk_%s%d' % (b, i)] = f
+    for i, f in enumerate(run(back(crop(ll, LJ, 'npc_greebo'), keep_top=0.42))): out['bk_greebo%d' % i] = f
+    return out
+for _k, _v in _backs().items(): ART[_k] = (lambda v: (lambda: v))(_v)

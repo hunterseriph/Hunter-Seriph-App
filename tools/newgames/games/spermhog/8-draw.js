@@ -27,7 +27,7 @@ function drawWorld() {
     else if (ch === 'D') { if (TRAPOPEN[c + ',' + r]) continue; }
     else if (ch === '_' || ch === '-') key = ch + (Math.floor(G.t * 10) % 4);
     var TSET = tilesFor(c, r);
-    if (ch !== 'k' && !isSolid(ch, c, r) && (T(c, r - 1) === 'k' || T(c - 1, r) === 'k' || T(c + 1, r) === 'k')) g.drawImage(TSET, TILEKEYS.k * 16, 0, 16, 16, x, y, 16, 16);
+    if (ch !== 'k' && ch !== 'K' && !isSolid(ch, c, r)) { var bk = T(c, r - 1) === 'K' || T(c - 1, r) === 'K' || T(c + 1, r) === 'K' ? 'K' : T(c, r - 1) === 'k' || T(c - 1, r) === 'k' || T(c + 1, r) === 'k' ? 'k' : null; if (bk) g.drawImage(TSET, TILEKEYS[bk] * 16, 0, 16, 16, x, y, 16, 16); }
     var ti = TILEKEYS[key]; if (ti === undefined) continue;
     g.drawImage(TSET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }

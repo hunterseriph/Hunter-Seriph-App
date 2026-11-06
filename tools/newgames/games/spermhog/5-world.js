@@ -4,7 +4,7 @@
    ===================================================================================================== */
 var LV = null, ENTS = [], PLATS = [], SHOTS = [], FX = [], SCAT = [], TRAPOPEN = {};
 function T(cx, cy) { if (!LV || cx < 0 || cx >= LV.w) return 'W'; if (cy < 0) return '.'; if (cy >= LV.h) return '.'; return LV.t[cy * LV.w + cx]; }
-function isSolid(ch, cx, cy) { if (ch === 'D') return !TRAPOPEN[cx + ',' + cy]; return ch === '#' || ch === 'X' || ch === 'W' || ch === '_' || ch === '-' || ch === 'Q'; }
+function isSolid(ch, cx, cy) { if (ch === 'D') return !TRAPOPEN[cx + ',' + cy]; return ch === '#' || ch === 'X' || ch === 'Z' || ch === 'W' || ch === '_' || ch === '-' || ch === 'Q'; }
 function wallAt(px, py) { var cx = Math.floor(px / TS), cy = Math.floor(py / TS), ch = T(cx, cy); if (isSolid(ch, cx, cy)) return true; if (surf(ch, 0) >= 0) return py - cy * TS >= Math.max(surf(ch, 0), surf(ch, 15)) + 1; return false; }
 /* the highest floor between y0 and y1 at x (tiles, slopes, platforms you can stand on); oneway: whether thin platforms count */
 var STANDS = { box: 1, spring: 1, check: 1, dash: 1, vent: 1, jet: 1, goal: 1, zap: 1, ramp: 1, portal: 1, trap: 0 };

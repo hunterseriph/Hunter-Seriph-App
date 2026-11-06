@@ -70,7 +70,7 @@ function surf(ch, lx) {
 }
 /* paint every tile kind once for this zone into one canvas strip */
 function buildTileset(Z) {
-  var kinds = ['k', '#', '#t', 'W', 'Wt', 'X', '/', '\\', 'a', 'b', 'c', 'd', '=', '^', 'v', 'Q', 'Q1', 'D', '_0', '_1', '_2', '_3', '-0', '-1', '-2', '-3'];
+  var kinds = ['k', '#', '#t', 'W', 'Wt', 'X', 'K', 'Z', '/', '\\', 'a', 'b', 'c', 'd', '=', '^', 'v', 'Q', 'Q1', 'D', '_0', '_1', '_2', '_3', '-0', '-1', '-2', '-3'];
   var c = document.createElement('canvas'); c.width = kinds.length * 16; c.height = 16; var g = c.getContext('2d'), im = g.createImageData(c.width, 16), d = im.data;
   function put(x, y, col, a) { if (!col) return; var i = (y * c.width + x) * 4; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = a === undefined ? 255 : a; }
   kinds.forEach(function (k, ti) {
@@ -80,6 +80,11 @@ function buildTileset(Z) {
       if (k === 'k') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.55 | 0; }); if (y === 0 || x === 0) col = col.map(function (v) { return v * 0.78 | 0; }); } // underground: the back wall
       else if (k === '#') col = fillPix(Z, x, y + 16);
       else if (k === '#t') col = edgePix(Z, x, y) || fillPix(Z, x, y + 16);
+      else if (k === 'K') { // the deep: rough cave rock, darker than the zone's ground, lumpy stones
+        var hh = ((x >> 2) * 73 + (y >> 2) * 151 + ((x + y) >> 3) * 19) % 7; col = fillPix(Z, (x * 3 + 5) % 16, (y * 5 + 3) % 16 + 16).map(function (v) { return v * (0.58 + hh * 0.035) | 0; });
+        if ((x % 8 === 0 && y % 6 < 4) || (y % 8 === 0 && (x + 3) % 7 < 5)) col = col.map(function (v) { return v * 0.6 | 0; }); }
+      else if (k === 'Z') { // a portcullis: iron bars over the dark
+        col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.22 | 0; }); if (x % 5 === 1 || x % 5 === 2) col = x % 5 === 1 ? [106, 90, 96] : [58, 46, 52]; if (y % 8 === 0) col = [74, 62, 68]; if (y % 8 === 0 && x % 5 === 0) col = OUTL; if (y === 15 && x % 5 < 3) col = [200, 190, 196]; }
       else if (k === 'X') { // a cracked wall: the zone's fill, a hard rim, cracks and a lit chip (breaks if you hit it fast)
         col = fillPix(Z, x, y + 16).map(function (v) { return Math.min(255, v * 1.15 + 10) | 0; });
         if (x === 0 || y === 0) col = col.map(function (v) { return Math.min(255, v + 40); }); if (x === 15 || y === 15) col = OUTL;

@@ -9,7 +9,7 @@
    ===================================================================================================== */
 var HMIN = 22, HMAX = 136; // the rows an act's ground can rise and fall between (it starts at 80; widened for more height, his ask)
 function Builder(zone, seed) {
-  var ROWS = 160, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [], caves: [] };
+  var ROWS = 230, b = { zone: zone, cols: [], top: [], col: 0, h: 80, ents: [], ROWS: ROWS, seed: seed || 1, dists: [], bands: [], caves: [] };
   var r = seed || 1; b.rnd = function () { r = (r * 16807) % 2147483647; return (r - 1) / 2147483646; };
   function colAt(c) { while (b.cols.length <= c) { var a = []; for (var i = 0; i < ROWS; i++) a.push('.'); b.cols.push(a); b.top.push(null); } return b.cols[c]; }
   b.set = function (c, row, ch) { if (row < 0 || row >= ROWS || c < 0) return; colAt(c)[row] = ch; };

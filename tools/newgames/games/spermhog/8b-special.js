@@ -154,7 +154,10 @@ function drawSpecial() {
   // Cumhead from behind, hopping when he jumps
   var jh = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 2.6 : 1.5) : 0; // jump height in squares (he said the jump was a mild float)
   var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (0.72 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3 / (1 + jh * 0.5), base.s * 0.1 / (1 + jh * 0.5), 0, 0, 6.3); g.fill();
-  if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jh * base.s, { sc: csc });
+  if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) { var bn = ssBack(Math.floor(S.anim * 2.5) % 4), bsz = KIT.size(bn), bsc = Math.max(1, (0.72 * base.s) / Math.max(1, bsz.h)); // whoever is being played, from behind
+    if (G.super) { var gf = superImg(bn); if (gf) g.drawImage(gf, Math.round(base.x - gf.width * bsc / 2), Math.round(base.y - jh * base.s - gf.height * bsc), gf.width * bsc, gf.height * bsc); }
+    else spr(bn, base.x, base.y - jh * base.s, { sc: bsc });
+    var C = CHR(); if (C.fol && C.kind !== 'hom') { var fn = C.fol === 'cat' ? 'cat' : 'bk_' + C.fol + (Math.floor(S.anim * 2.5 + 2) % 4), fsz = KIT.size(fn); spr(fn, base.x - base.s * 0.42, base.y - base.s * 0.12 - jh * base.s * 0.8, { sc: Math.max(1, ((C.fol === 'cat' ? 0.3 : 0.5) * base.s) / Math.max(1, fsz.h)) }); } } // the follower runs alongside
   // the count, Blue Sphere style: spheres left and drops
   KIT.panel(8, 6, 92, 34); g.fillStyle = '#12040a'; g.beginPath(); g.arc(28, 23, 11, 0, 6.3); g.fill(); g.fillStyle = '#c8a868'; g.beginPath(); g.arc(28, 23, 10, 0, 6.3); g.fill(); g.fillStyle = '#f1e0b0'; g.beginPath(); g.arc(26, 21, 7, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(22, 16, 3, 3);
   text(String(S.left), 46, 15, { size: 14, col: '#f1e7d0' });

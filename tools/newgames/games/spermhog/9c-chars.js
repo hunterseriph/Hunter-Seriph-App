@@ -30,6 +30,7 @@ charOf = function (id) { return charDef(id); };
 function CHR() { var id = G.mode === 'title' || !G.ch ? 'cumhead' : G.ch; if (CHR.id !== id) { CHR.id = id; CHR.c = charDef(id); } return CHR.c; }
 function superName() { var C = CHR(); return C.kind === 'hom' && C.breed === 'blood' ? 'THE ULTIMATE LIFEFORM!' : C.kind === 'hom' ? 'SUPER ' + C.name + '!' : C.kind === 'gs' ? 'SUPER GREEBO & SIR JOHNATHAN!' : 'SUPER CUMHEAD!'; }
 function shortName() { var C = CHR(); return C.kind === 'gs' ? 'GREEBO' : C.kind === 'hom' ? C.name : 'CUMHEAD'; }
+function ssBack(i) { var C = CHR(); return C.kind === 'hom' ? 'bk_' + C.breed + i : C.kind === 'gs' ? 'bk_greebo' + i : 'chb_u' + i; }
 function refreshChars() { HOGCHARS = mkChars(); CHR.id = null; }
 
 /* the frame for the player, by character */
