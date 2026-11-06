@@ -119,7 +119,7 @@ function drawSpecial() {
   var N = 16;
   for (var ty = Math.floor(py) - N; ty <= Math.floor(py) + N + 1; ty++) for (var tx = Math.floor(px) - N; tx <= Math.floor(px) + N + 1; tx++) {
     var cc = local(tx, ty); if (cc.f < -3.2 || Math.abs(cc.l) > 13 || cc.f > 17) continue;
-    var cs = [local(tx - 0.5, ty - 0.5), local(tx + 0.5, ty - 0.5), local(tx + 0.5, ty + 0.5), local(tx - 0.5, ty + 0.5)].map(function (c) { return ssP(c.l, c.f, 0, W, H); });
+    var cs = [local(tx, ty), local(tx + 1, ty), local(tx + 1, ty + 1), local(tx, ty + 1)].map(function (c) { return ssP(c.l, c.f, 0, W, H); });
     if (cs.some(function (p) { return !p; })) continue;
     var d = cs[0].d + cs[1].d + cs[2].d + cs[3].d, far = Math.min(1, Math.max(0, (Math.hypot(cc.l, cc.f) - 3) / 13));
     tiles.push({ d: d, q: cs, dark: ((tx + ty) % 2 + 2) % 2, far: far });
@@ -132,7 +132,7 @@ function drawSpecial() {
   things.forEach(function (o) { o.p = ssP(o.l, o.f, 0, W, H); }); things = things.filter(function (o) { return o.p; }).sort(function (a, b) { return b.p.d - a.p.d; });
   function drawThing(o) {
     var ch = o.ch, base = o.p;
-    var rr = ch === 'o' ? 0.17 : 0.34, P = ssP(o.l, o.f, rr, W, H); if (!P) return; var r = Math.max(1.5, rr * P.s);
+    var rr = ch === 'o' ? 0.11 : 0.16, /* smaller next to the squares, as in Sonic 3 */ P = ssP(o.l, o.f, rr, W, H); if (!P) return; var r = Math.max(1.5, rr * P.s);
     g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, r * 0.95, r * 0.32, 0, 0, 6.3); g.fill(); // its shadow on the square
     if (ch === 'o') { // a cream drop, point up
       g.fillStyle = '#12040a'; g.beginPath(); g.arc(P.x, P.y, r + 1, 0, 6.3); g.fill(); g.beginPath(); g.moveTo(P.x - r * 0.7, P.y - r * 0.5); g.lineTo(P.x, P.y - r * 2.1); g.lineTo(P.x + r * 0.7, P.y - r * 0.5); g.fill();
@@ -153,7 +153,7 @@ function drawSpecial() {
   things.forEach(drawThing); // every sphere, far ones first; Cumhead goes on top of them all, like Sonic does
   // Cumhead from behind, hopping when he jumps
   var jh = S.air > 0 ? Math.sin((1 - S.air / S.airT) * Math.PI) * (S.airT * S.spd > 3 ? 2.6 : 1.5) : 0; // jump height in squares (he said the jump was a mild float)
-  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (0.95 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3 / (1 + jh * 0.5), base.s * 0.1 / (1 + jh * 0.5), 0, 0, 6.3); g.fill();
+  var base = ssP(0, 0, 0, W, H), sz = KIT.size('chb_u0'), csc = Math.max(1, (0.72 * base.s) / Math.max(1, sz.h)); g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(base.x, base.y, base.s * 0.3 / (1 + jh * 0.5), base.s * 0.1 / (1 + jh * 0.5), 0, 0, 6.3); g.fill();
   if (S.state !== 'fail' || Math.floor(S.st * 12) % 2) spr('chb_u' + (Math.floor(S.anim * 2.5) % 4), base.x, base.y - jh * base.s, { sc: csc });
   // the count, Blue Sphere style: spheres left and drops
   KIT.panel(8, 6, 92, 34); g.fillStyle = '#12040a'; g.beginPath(); g.arc(28, 23, 11, 0, 6.3); g.fill(); g.fillStyle = '#c8a868'; g.beginPath(); g.arc(28, 23, 10, 0, 6.3); g.fill(); g.fillStyle = '#f1e0b0'; g.beginPath(); g.arc(26, 21, 7, 0, 6.3); g.fill(); g.fillStyle = '#fffbe8'; g.fillRect(22, 16, 3, 3);
