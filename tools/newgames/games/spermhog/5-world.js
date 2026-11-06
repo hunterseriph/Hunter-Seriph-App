@@ -63,6 +63,7 @@ function stepWorld(dt) {
       if (q.fall) { q.vy = (q.vy || 0) + 900 * dt; q.y += q.vy * dt; q.fallT += dt; if (q.fallT > 4.5) { q.fall = false; q.gone = false; q.y = q.y0; q.vy = 0; q.touch = 0; } else if (q.fallT > 1.2) q.gone = true; }
       else if (q.touch > 0) { q.touch += dt; if (q.touch > 0.45) { q.fall = true; q.fallT = 0; sfx.play('crumble'); } }
     }
+    else if (q.mv) q.mv(q, dt);
     q.dx = q.x - ox; q.dy = q.y - oy;
   });
   // trapdoors, electric floors and the rest of the hazards run on their own clocks
@@ -219,7 +220,7 @@ function distProps() {
     for (var c = d.c + 8; c < c1 - 8; c++) { var r = null; for (var y = 1; y < LV.h; y++) if (surfAt(c, y)) { r = y; break; } if (r === null || bandAt(c, r) !== 'mid') continue;
       var f = KIT.SPR[D.shops[0]], w = f ? Math.ceil(f[2] * shopSc(f) / TS) : 7, ok = true; for (var k = 0; k < w; k++) if (!surfAt(c + k, r) || !deep(c + k, r) || hard[c + k]) { ok = false; break; } if (ok) spots.push([c, r]); }
     var n = D.shops.length, used = [];
-    D.shops.forEach(function (id, j) { var want = d.c + (c1 - d.c) * (j + 0.5) / n, best = null; spots.forEach(function (s) { if (used.some(function (u) { return Math.abs(u - s[0]) < 14; })) return; if (!best || Math.abs(s[0] - want) < Math.abs(best[0] - want)) best = s; });
+    D.shops.forEach(function (id, j) { var want = d.c + (c1 - d.c) * (j + 0.5) / n, best = null, f0 = KIT.SPR[id], w0 = f0 ? Math.ceil(f0[2] * shopSc(f0) / TS) : 7; spots.forEach(function (s) { if (used.some(function (u) { return Math.abs(u - s[0]) < 14; })) return; for (var k = 0; k < w0; k++) if (!surfAt(s[0] + k, s[1]) || !deep(s[0] + k, s[1]) || hard[s[0] + k]) return; /* this shop's own width, not the first one's */ if (!best || Math.abs(s[0] - want) < Math.abs(best[0] - want)) best = s; });
       if (!best) return; used.push(best[0]); var f = KIT.SPR[id]; if (!f) return; var sc = shopSc(f), wc = Math.ceil(f[2] * sc / TS);
       out.push({ shop: id, sc: sc, x: best[0] * TS + wc * TS / 2, y: best[1] * TS }); for (var k = -2; k <= wc + 2; k++) busy[best[0] + k] = 1; });
   });

@@ -37,7 +37,7 @@ function drawWorld() {
       for (var k = 0; k < 40; k += 2) for (var j = -k; j <= k; j += 4) if (((j + k) / 2) % 2 === 0) R('#3a1a0a', x + j, y0 - 6 + k * 0.9, 1, 1);
       var ch = q.c0 * 7 + c; if (ch % 2) { for (var cl = 0; cl < 5 + ch % 4; cl++) R(cl % 2 ? '#3a343c' : '#22202a', x + 36, y0 - 60 + cl * 6, 3, 5); } } });
   // platforms
-  PLATS.forEach(function (q) { if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
+  PLATS.forEach(function (q) { if (q.draw) { var xq = Math.round(q.x - cx); if (xq < W + 40 && xq + q.w > -40) q.draw(g, xq, Math.round(q.y - cy), q); return; } if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
     if (q.log) { if (distAt(Math.floor(q.x / TS))) spr('hog_barge', x + q.w / 2, y + 16, { sc: q.w / 64 }); else spr('p_logboat', x + q.w / 2, y + 14, { sc: q.w / 60 }); return; }
     if (q.k === 'line') { spr('hog_washline', x + q.w / 2, y + 18, {}); R('#12040a', x - 2, y - 2, 3, 120); R('#12040a', x + q.w, y - 2, 3, 120); return; }
     var dq = distAt(Math.floor(q.x / TS));
@@ -168,7 +168,7 @@ function drawPlayer(p, cx, cy) {
   var x = Math.round(p.x - cx), y = Math.round(p.y - cy), sp = Math.abs(p.air ? p.vx : p.gsp), n;
   n = pName(p, sp); // the frame comes from the character being played (9c-chars.js)
   var ground = !p.air && p.state === 'normal', skid = ground && sp > 140 && ((KIT.held('left') && p.gsp > 0) || (KIT.held('right') && p.gsp < 0));
-  var rot = p.loop ? p.rot : !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
+  var rot = p.loop ? p.rot : p.grot ? p.grot : !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
   if (ground && sp >= 115 && !skid) rot += p.face * Math.min(0.12, (sp - 115) / 1400); // leans into it as he speeds up
   if (skid) { rot -= p.face * 0.16; n = pName(p, 60); if (Math.random() < 0.6) FX.push({ k: 'bit', x: p.x + p.face * 6, y: p.y - 2, vx: -p.gsp * 0.2, vy: -30 - Math.random() * 40, t: 0.35, c: '#a6968f' }); }
   // after-images at full pelt (dash pads, springs, shoes)

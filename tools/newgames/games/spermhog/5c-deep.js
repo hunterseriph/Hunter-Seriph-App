@@ -49,7 +49,7 @@ function underRoutes(b, a) {
      come up out of): from just after the start to just before the sign or the arena. Its roof follows the lowest open
      space of each column above it (street, low roads, tunnels, caves) plus a crust; gaps in the street simply open into it.
      The level down there is laid with the same builder and kept at least 15 rows under the roof by climbs and drops. */
-  var W = b.cols.length, Z = b.zone, ROWS = b.ROWS, plan = DEEPPLAN[Z.id] || DEEPPLAN.city;
+  var W = b.cols.length, Z = b.zone, ROWS = b.ROWS, plan = a.deep && a.deep.length ? a.deep : (DEEPPLAN[Z.id] || DEEPPLAN.city); // the director (5h) hands each act its own list, nothing the street had
   var st = 30, en = W - 60; b.ents.forEach(function (e) { if (e.k === 'start') st = Math.max(st, e.c + 30); if (e.k === 'goal') en = Math.min(en, e.c - 16); if (e.k === 'arena') en = Math.min(en, e.c0 - 26); });
   var c0 = st, c1 = en, n = c1 - c0; if (n < 200) { b.unders = []; return; }
   var open = new Array(W); for (var c = c0 - 8; c < c1 + 8; c++) { var col = b.cols[c], r = ROWS - 1; while (r >= 0 && col[r] === '#') r--; open[c] = r >= ROWS - 1 ? null : r; } // the lowest non-ground cell; null = a gap all the way down
@@ -58,7 +58,7 @@ function underRoutes(b, a) {
   for (var k2 = 0; k2 < n; k2++) req.push(ceil[k2] + 15);
   function need(c, w) { var q = 0; for (var i = Math.max(0, c - c0); i < Math.min(n, c - c0 + w); i++) q = Math.max(q, req[i]); return q; }
   var L = Builder(Z, (a.seed || 1) * 31 + 7); L.col = c0; L.h = need(c0, 40); SEC.run(L, 10);
-  var pi = (a.seed || 0) % plan.length, guard = 0;
+  var pi = a.deep && a.deep.length ? 0 : (a.seed || 0) % plan.length, guard = 0;
   while (L.col < c1 - 90 && guard++ < 80) {
     var nd = need(L.col, 120); if (L.h < nd) SEC.drop(L, nd - L.h + 1); else if (L.h > nd + 22) SEC.climb(L, Math.min(6, L.h - nd - 14));
     var p = plan[pi++ % plan.length]; if (p[0] === 'climb' && L.h - p[1] - 1 < need(L.col, 120)) p = ['run', 8]; // never climb into the roof
@@ -73,7 +73,7 @@ function underRoutes(b, a) {
   L.ents.forEach(function (e) { if (e.c >= c0 && e.c < c1) b.ents.push(e); });
   function floorRow(c) { for (var y5 = ceil[c - c0]; y5 < ROWS; y5++) { var ch5 = b.cols[c][y5]; if (ch5 !== 'K' && ch5 !== '.') return ch5 === '#' ? y5 : null; } return null; }
   var busy = {}; L.ents.forEach(function (e) { for (var d = -4; d <= 6; d++) busy[e.c + d] = 1; });
-  b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3; d2++) busy[e.c + d2] = 1; });
+  b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3 + (e.k === 'gim' || e.k === 'gimh' ? (e.w || 16) : 0); d2++) busy[e.c + d2] = 1; }); // a gimmick keeps its whole width clear of shafts
   b.bands.forEach(function (q) { for (var cb = q.c0 - 2; cb < q.c1 + 2; cb++) busy[cb] = 1; });
   function solidTo(c) { var t = b.top[c]; if (t === null || t === undefined) return false; for (var y = t + 1; y < ceil[c - c0]; y++) if (b.cols[c][y] !== '#') return false; return true; }
   function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 30) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || floorRow(cA + w) !== f || !solidTo(cA + w) || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
@@ -118,9 +118,9 @@ function tohexS(h, k) { var v = [1, 3, 5].map(function (i) { return Math.round(p
 STANDS.cart = 1; STANDS.switch = 1; STANDS.buffer = 1; STANDS.deco = 1;
 function isBreak(ch) { return ch === 'X'; }
 function breakWall(cx, cy, ch) { // the whole block goes (cracked wall or a lifted gate), with rubble
-  ch = ch || 'X'; var todo = [[cx, cy]], seen = {}, n = 0;
+  ch = ch || 'X'; var todo = [[cx, cy]], seen = {}, n = 0, lx = cx, rx = cx; while (T(lx, cy) === ch && lx > cx - 6) lx--; while (T(rx, cy) === ch && rx < cx + 6) rx++; var nl = T(lx, cy), nr = T(rx, cy), rep = nl === '.' || nr === '.' ? '.' : nl === 'k' || nr === 'k' ? 'k' : 'K'; /* what was round it: sky, a low road or the deep */
   while (todo.length && n < 80) { var q = todo.pop(), k = q[0] + ',' + q[1]; if (seen[k]) continue; seen[k] = 1; if (T(q[0], q[1]) !== ch) continue;
-    LV.t[q[1] * LV.w + q[0]] = 'K'; n++; for (var i = 0; i < 3; i++) FX.push({ k: 'bit', x: q[0] * TS + 8, y: q[1] * TS + 8, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, t: 0.6, c: ch === 'Z' ? '#4a3a40' : i % 2 ? LV.zone.pal[0] : LV.zone.pal[1] });
+    LV.t[q[1] * LV.w + q[0]] = rep; n++; for (var i = 0; i < 3; i++) FX.push({ k: 'bit', x: q[0] * TS + 8, y: q[1] * TS + 8, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, t: 0.6, c: ch === 'Z' ? '#4a3a40' : i % 2 ? LV.zone.pal[0] : LV.zone.pal[1] });
     todo.push([q[0] + 1, q[1]], [q[0] - 1, q[1]], [q[0], q[1] + 1], [q[0], q[1] - 1]); }
   if (n) { sfx.play('crumble'); sfx.play('thud'); G.shake = 4; if (ch === 'X') G.score += 50; }
   return n;
@@ -154,7 +154,7 @@ function stepDeep(dt) { // returns true when the player is on a zipline (his own
     else if (e.k === 'switch') { if (!e.on && p.state === 'normal' && Math.abs(p.x - e.x) < 14 && Math.abs(p.y - e.y) < 30) { e.on = 1; sfx.play('check'); var c0 = Math.floor(e.x / TS);
         for (var c = c0; c < c0 + 30; c++) for (var r = 0; r < LV.h; r++) if (T(c, r) === 'Z') { breakWall(c, r, 'Z'); } G.banner = 1.2; G.bannerTxt = 'THE GATE IS UP'; } }
     else if (e.k === 'updraft') { var top = e.y + (e.toprow - e.row) * TS; e.top = top;
-      if (Math.abs(p.x - e.x) < 26 && p.y <= e.y + 2 && p.y > top - 10 && p.state === 'normal') { p.air = true; p.vy = Math.max(-760, Math.min(p.vy, 0) - 3200 * dt); if (p.y < top + 40) p.vx += p.face * 600 * dt; e.blow = 0.3; }
+      if (Math.abs(p.x - e.x) < 26 && p.y <= e.y + 2 && p.y > top - 10 && p.state === 'normal') { p.air = true; p.spring = Math.max(p.spring, 0.15); p.vy = Math.max(-760, Math.min(p.vy, 0) - 3200 * dt); if (p.y < top + 40) p.vx += p.face * 600 * dt; e.blow = 0.3; }
       if (Math.random() < 0.5) FX.push({ k: 'bit', x: e.x + (Math.random() - 0.5) * 40, y: e.y - Math.random() * 40, vx: 0, vy: -320 - Math.random() * 200, t: 0.9, c: (DEEPLOOK[LV.zone.id] || DEEPLOOK.city).air }); }
   });
   return false;

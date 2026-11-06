@@ -1006,8 +1006,9 @@ var SEC = {
     Tp.ents.forEach(function (e) { if (e.c >= s0 + 3 && e.c < E - 5) b.ents.push(e); });
     // the ways between: a hole down after the spring, a spring back up halfway and at the end of the low road
     function hole(c) { for (var hx = -1; hx < 3; hx++) for (var hy = (b.top[c + hx] || H); hy < (b.top[c + hx] || H) + 3; hy++) b.set(c + hx, hy, '.'); b.ent('drop', c + 1, H - 2); b.ent('drop', c + 1, H + 2); }
-    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
-    var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#')) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
+    function gimAt(c) { return b.ents.some(function (e) { return (e.k === 'gim' || e.k === 'gimh') && c >= e.c - 4 && c <= e.c + (e.w || 16) + 4 && Math.abs(e.row - H) < 3; }); } // never punch a hole through a gimmick on the street
+    hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { for (var tq = 0; tq < 40 && gimAt(xc); tq++) xc++; if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
+    var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#' || gimAt(ex))) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
     if (spec.portal) { // a second gateway on the other route, about half way along (he asked for a couple per level)
       var other = spec.portal === 'top' ? 'low' : 'top', mc = Math.floor(s0 + (E - s0) * 0.45);
@@ -1749,6 +1750,7 @@ function stepWorld(dt) {
       if (q.fall) { q.vy = (q.vy || 0) + 900 * dt; q.y += q.vy * dt; q.fallT += dt; if (q.fallT > 4.5) { q.fall = false; q.gone = false; q.y = q.y0; q.vy = 0; q.touch = 0; } else if (q.fallT > 1.2) q.gone = true; }
       else if (q.touch > 0) { q.touch += dt; if (q.touch > 0.45) { q.fall = true; q.fallT = 0; sfx.play('crumble'); } }
     }
+    else if (q.mv) q.mv(q, dt);
     q.dx = q.x - ox; q.dy = q.y - oy;
   });
   // trapdoors, electric floors and the rest of the hazards run on their own clocks
@@ -1905,7 +1907,7 @@ function distProps() {
     for (var c = d.c + 8; c < c1 - 8; c++) { var r = null; for (var y = 1; y < LV.h; y++) if (surfAt(c, y)) { r = y; break; } if (r === null || bandAt(c, r) !== 'mid') continue;
       var f = KIT.SPR[D.shops[0]], w = f ? Math.ceil(f[2] * shopSc(f) / TS) : 7, ok = true; for (var k = 0; k < w; k++) if (!surfAt(c + k, r) || !deep(c + k, r) || hard[c + k]) { ok = false; break; } if (ok) spots.push([c, r]); }
     var n = D.shops.length, used = [];
-    D.shops.forEach(function (id, j) { var want = d.c + (c1 - d.c) * (j + 0.5) / n, best = null; spots.forEach(function (s) { if (used.some(function (u) { return Math.abs(u - s[0]) < 14; })) return; if (!best || Math.abs(s[0] - want) < Math.abs(best[0] - want)) best = s; });
+    D.shops.forEach(function (id, j) { var want = d.c + (c1 - d.c) * (j + 0.5) / n, best = null, f0 = KIT.SPR[id], w0 = f0 ? Math.ceil(f0[2] * shopSc(f0) / TS) : 7; spots.forEach(function (s) { if (used.some(function (u) { return Math.abs(u - s[0]) < 14; })) return; for (var k = 0; k < w0; k++) if (!surfAt(s[0] + k, s[1]) || !deep(s[0] + k, s[1]) || hard[s[0] + k]) return; /* this shop's own width, not the first one's */ if (!best || Math.abs(s[0] - want) < Math.abs(best[0] - want)) best = s; });
       if (!best) return; used.push(best[0]); var f = KIT.SPR[id]; if (!f) return; var sc = shopSc(f), wc = Math.ceil(f[2] * sc / TS);
       out.push({ shop: id, sc: sc, x: best[0] * TS + wc * TS / 2, y: best[1] * TS }); for (var k = -2; k <= wc + 2; k++) busy[best[0] + k] = 1; });
   });
@@ -2122,7 +2124,7 @@ function underRoutes(b, a) {
      come up out of): from just after the start to just before the sign or the arena. Its roof follows the lowest open
      space of each column above it (street, low roads, tunnels, caves) plus a crust; gaps in the street simply open into it.
      The level down there is laid with the same builder and kept at least 15 rows under the roof by climbs and drops. */
-  var W = b.cols.length, Z = b.zone, ROWS = b.ROWS, plan = DEEPPLAN[Z.id] || DEEPPLAN.city;
+  var W = b.cols.length, Z = b.zone, ROWS = b.ROWS, plan = a.deep && a.deep.length ? a.deep : (DEEPPLAN[Z.id] || DEEPPLAN.city); // the director (5h) hands each act its own list, nothing the street had
   var st = 30, en = W - 60; b.ents.forEach(function (e) { if (e.k === 'start') st = Math.max(st, e.c + 30); if (e.k === 'goal') en = Math.min(en, e.c - 16); if (e.k === 'arena') en = Math.min(en, e.c0 - 26); });
   var c0 = st, c1 = en, n = c1 - c0; if (n < 200) { b.unders = []; return; }
   var open = new Array(W); for (var c = c0 - 8; c < c1 + 8; c++) { var col = b.cols[c], r = ROWS - 1; while (r >= 0 && col[r] === '#') r--; open[c] = r >= ROWS - 1 ? null : r; } // the lowest non-ground cell; null = a gap all the way down
@@ -2131,7 +2133,7 @@ function underRoutes(b, a) {
   for (var k2 = 0; k2 < n; k2++) req.push(ceil[k2] + 15);
   function need(c, w) { var q = 0; for (var i = Math.max(0, c - c0); i < Math.min(n, c - c0 + w); i++) q = Math.max(q, req[i]); return q; }
   var L = Builder(Z, (a.seed || 1) * 31 + 7); L.col = c0; L.h = need(c0, 40); SEC.run(L, 10);
-  var pi = (a.seed || 0) % plan.length, guard = 0;
+  var pi = a.deep && a.deep.length ? 0 : (a.seed || 0) % plan.length, guard = 0;
   while (L.col < c1 - 90 && guard++ < 80) {
     var nd = need(L.col, 120); if (L.h < nd) SEC.drop(L, nd - L.h + 1); else if (L.h > nd + 22) SEC.climb(L, Math.min(6, L.h - nd - 14));
     var p = plan[pi++ % plan.length]; if (p[0] === 'climb' && L.h - p[1] - 1 < need(L.col, 120)) p = ['run', 8]; // never climb into the roof
@@ -2146,7 +2148,7 @@ function underRoutes(b, a) {
   L.ents.forEach(function (e) { if (e.c >= c0 && e.c < c1) b.ents.push(e); });
   function floorRow(c) { for (var y5 = ceil[c - c0]; y5 < ROWS; y5++) { var ch5 = b.cols[c][y5]; if (ch5 !== 'K' && ch5 !== '.') return ch5 === '#' ? y5 : null; } return null; }
   var busy = {}; L.ents.forEach(function (e) { for (var d = -4; d <= 6; d++) busy[e.c + d] = 1; });
-  b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3; d2++) busy[e.c + d2] = 1; });
+  b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3 + (e.k === 'gim' || e.k === 'gimh' ? (e.w || 16) : 0); d2++) busy[e.c + d2] = 1; }); // a gimmick keeps its whole width clear of shafts
   b.bands.forEach(function (q) { for (var cb = q.c0 - 2; cb < q.c1 + 2; cb++) busy[cb] = 1; });
   function solidTo(c) { var t = b.top[c]; if (t === null || t === undefined) return false; for (var y = t + 1; y < ceil[c - c0]; y++) if (b.cols[c][y] !== '#') return false; return true; }
   function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 30) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || floorRow(cA + w) !== f || !solidTo(cA + w) || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
@@ -2191,9 +2193,9 @@ function tohexS(h, k) { var v = [1, 3, 5].map(function (i) { return Math.round(p
 STANDS.cart = 1; STANDS.switch = 1; STANDS.buffer = 1; STANDS.deco = 1;
 function isBreak(ch) { return ch === 'X'; }
 function breakWall(cx, cy, ch) { // the whole block goes (cracked wall or a lifted gate), with rubble
-  ch = ch || 'X'; var todo = [[cx, cy]], seen = {}, n = 0;
+  ch = ch || 'X'; var todo = [[cx, cy]], seen = {}, n = 0, lx = cx, rx = cx; while (T(lx, cy) === ch && lx > cx - 6) lx--; while (T(rx, cy) === ch && rx < cx + 6) rx++; var nl = T(lx, cy), nr = T(rx, cy), rep = nl === '.' || nr === '.' ? '.' : nl === 'k' || nr === 'k' ? 'k' : 'K'; /* what was round it: sky, a low road or the deep */
   while (todo.length && n < 80) { var q = todo.pop(), k = q[0] + ',' + q[1]; if (seen[k]) continue; seen[k] = 1; if (T(q[0], q[1]) !== ch) continue;
-    LV.t[q[1] * LV.w + q[0]] = 'K'; n++; for (var i = 0; i < 3; i++) FX.push({ k: 'bit', x: q[0] * TS + 8, y: q[1] * TS + 8, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, t: 0.6, c: ch === 'Z' ? '#4a3a40' : i % 2 ? LV.zone.pal[0] : LV.zone.pal[1] });
+    LV.t[q[1] * LV.w + q[0]] = rep; n++; for (var i = 0; i < 3; i++) FX.push({ k: 'bit', x: q[0] * TS + 8, y: q[1] * TS + 8, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, t: 0.6, c: ch === 'Z' ? '#4a3a40' : i % 2 ? LV.zone.pal[0] : LV.zone.pal[1] });
     todo.push([q[0] + 1, q[1]], [q[0] - 1, q[1]], [q[0], q[1] + 1], [q[0], q[1] - 1]); }
   if (n) { sfx.play('crumble'); sfx.play('thud'); G.shake = 4; if (ch === 'X') G.score += 50; }
   return n;
@@ -2227,7 +2229,7 @@ function stepDeep(dt) { // returns true when the player is on a zipline (his own
     else if (e.k === 'switch') { if (!e.on && p.state === 'normal' && Math.abs(p.x - e.x) < 14 && Math.abs(p.y - e.y) < 30) { e.on = 1; sfx.play('check'); var c0 = Math.floor(e.x / TS);
         for (var c = c0; c < c0 + 30; c++) for (var r = 0; r < LV.h; r++) if (T(c, r) === 'Z') { breakWall(c, r, 'Z'); } G.banner = 1.2; G.bannerTxt = 'THE GATE IS UP'; } }
     else if (e.k === 'updraft') { var top = e.y + (e.toprow - e.row) * TS; e.top = top;
-      if (Math.abs(p.x - e.x) < 26 && p.y <= e.y + 2 && p.y > top - 10 && p.state === 'normal') { p.air = true; p.vy = Math.max(-760, Math.min(p.vy, 0) - 3200 * dt); if (p.y < top + 40) p.vx += p.face * 600 * dt; e.blow = 0.3; }
+      if (Math.abs(p.x - e.x) < 26 && p.y <= e.y + 2 && p.y > top - 10 && p.state === 'normal') { p.air = true; p.spring = Math.max(p.spring, 0.15); p.vy = Math.max(-760, Math.min(p.vy, 0) - 3200 * dt); if (p.y < top + 40) p.vx += p.face * 600 * dt; e.blow = 0.3; }
       if (Math.random() < 0.5) FX.push({ k: 'bit', x: e.x + (Math.random() - 0.5) * 40, y: e.y - Math.random() * 40, vx: 0, vy: -320 - Math.random() * 200, t: 0.9, c: (DEEPLOOK[LV.zone.id] || DEEPLOOK.city).air }); }
   });
   return false;
@@ -2280,6 +2282,818 @@ function drawDeepDark() {
   var dW = drawWorld; drawWorld = function () { dW(); drawDeepDark(); };
   var bA = beginAct; beginAct = function (ai, fc) { if (PL) { PL.zip = null; PL.cart = 0; } bA(ai, fc); if (PL) { PL.zip = null; PL.cart = 0; } };
 })();
+
+/* =====================================================================================================
+   GIMMICKS (his ask: both paths felt like the same thing over and over; a big update with 100 new obstacles, traps,
+   mechanics and decorations, no two parts of a level alike and nothing repeating).
+   Every gimmick is a set piece SEC[name] that lays its own ground, and a thing 'gim' (standing) or 'gimh' (hanging in
+   the air) that it steps and draws. Every zone dresses them its own way (GLOOK): Clubhouse Row black and red, the sewers
+   slime and cream, Ejaculand bulbs and stripes, the Bone Pit bone and ghost fire, the factory rust and fire, Spunk Brain
+   flesh and steel. 5d: the framework and the traps. 5e: things you ride and use. 5f: new ground shapes. 5g: landmarks.
+   5h: the director that makes sure nothing repeats in an act (street, three lanes and the deep).
+   GIM[name] = { h: rows it needs above the floor, lay(b), init(e), step(e, dt, p), draw(g, e, x, y, L), over(...), ride(p, s, dt) }
+   ===================================================================================================== */
+var GIM = {};
+var GLOOK = {
+  city: { k: 'city', main: '#c4121c', hot: '#ff2630', lite: '#f1d8a8', glow: '#ff2630', metal: '#3a2a2e', mlite: '#6a4a50', dark: '#1a0a0e', wood: '#4a1a1c', fire: ['#ff2630', '#ff6a5a', '#f1d8a8'], goo: '#8a0a14', stone: '#2e1a1e', slite: '#5a3036' },
+  sewer: { k: 'sewer', main: '#4a6a4a', hot: '#c8ff9a', lite: '#f1e0b0', glow: '#f1e0b0', metal: '#3a4a3a', mlite: '#6a7a6a', dark: '#0e1a12', wood: '#3a3a28', fire: ['#c8ff9a', '#f1e0b0', '#fffbe8'], goo: '#e8d4a0', stone: '#2c3a2e', slite: '#4a5a4a' },
+  park: { k: 'park', main: '#c4121c', hot: '#ffe36a', lite: '#fff6c0', glow: '#ffe36a', metal: '#4a2a3a', mlite: '#7a4a5a', dark: '#1e060c', wood: '#6a3a28', fire: ['#ff2630', '#ffe36a', '#fff6c0'], goo: '#ff6ad0', stone: '#3a1a24', slite: '#6a3444' },
+  bone: { k: 'bone', main: '#d8ccb0', hot: '#d8b0ff', lite: '#fff8e8', glow: '#e8dcc0', metal: '#5a4a3a', mlite: '#8a7a64', dark: '#1a120c', wood: '#4a3a2a', fire: ['#a070ff', '#d8b0ff', '#fff8e8'], goo: '#6a5a8a', stone: '#3a2e24', slite: '#5a4a3a' },
+  factory: { k: 'factory', main: '#a04a10', hot: '#ff8a2a', lite: '#ffd080', glow: '#ff6a10', metal: '#5a3a30', mlite: '#8a5a48', dark: '#1a0a06', wood: '#4a2a1a', fire: ['#ff6a10', '#ffb040', '#ffe0a0'], goo: '#c42a08', stone: '#3a2420', slite: '#5a3a30' },
+  brain: { k: 'brain', main: '#8a0a10', hot: '#ff2630', lite: '#ffb0b0', glow: '#ff2630', metal: '#4a3a50', mlite: '#7a6a80', dark: '#140e18', wood: '#2e2434', fire: ['#ff2630', '#ff8a8a', '#ffe0e0'], goo: '#d86a8a', stone: '#2e2434', slite: '#4a3a50' }
+};
+function GL() { return GLOOK[LV && LV.zone ? LV.zone.id : 'city'] || GLOOK.city; }
+var OUT = '#12040a';
+function bx(x, y, w, h, c, lt) { R(OUT, x - 1, y - 1, w + 2, h + 2); R(c, x, y, w, h); if (lt) R(lt, x, y, w, 1); }
+function postD(x, y, h, L, w) { w = w || 4; bx(x - w / 2, y - h, w, h, L.metal, L.mlite); }
+function motif(g, x, y, L) { // a little emblem of the zone on caps, hubs and faces
+  x = Math.round(x); y = Math.round(y); var k = L.k;
+  if (k === 'city') { R(OUT, x - 4, y - 3, 9, 8); R(L.hot, x - 3, y - 2, 3, 3); R(L.hot, x + 1, y - 2, 3, 3); R(L.hot, x - 2, y + 1, 5, 2); R(L.hot, x - 1, y + 3, 3, 1); }
+  else if (k === 'sewer') { bx(x - 3, y - 3, 6, 6, L.metal, L.mlite); R(L.hot, x - 1, y - 1, 2, 2); }
+  else if (k === 'park') { R(OUT, x - 3, y - 3, 7, 7); R(Math.floor(G.t * 4 + x) % 2 ? L.hot : L.main, x - 2, y - 2, 5, 5); R('#ffffff', x - 1, y - 1, 1, 1); }
+  else if (k === 'bone') { R(OUT, x - 4, y - 4, 9, 9); R(L.main, x - 3, y - 3, 7, 6); R(OUT, x - 2, y - 1, 2, 2); R(OUT, x + 1, y - 1, 2, 2); R(L.main, x - 2, y + 3, 5, 1); }
+  else if (k === 'factory') { R(OUT, x - 4, y - 3, 9, 7); R(L.mlite, x - 3, y - 2, 7, 5); R(L.dark, x - 1, y - 1, 3, 3); }
+  else { R(OUT, x - 4, y - 3, 9, 7); R('#e8d8d8', x - 3, y - 2, 7, 5); R(L.hot, x - 1, y - 2, 3, 5); R(OUT, x, y - 1, 1, 3); }
+}
+function flame(x, y, r, L, k) { var f = Math.floor(G.t * 14 + (k || 0)) % 3; R(OUT, x - r - 1, y - r - 1, r * 2 + 2, r * 2 + 2); R(L.fire[0], x - r, y - r, r * 2, r * 2); R(L.fire[1], x - r + 1 + f % 2, y - r + 1, r * 2 - 3, r * 2 - 3); R(L.fire[2], x - 1, y - 1 - f, 2, 2); }
+function spikeBall(g, x, y, r, L) { for (var i = 0; i < 8; i++) { var a = i / 8 * 6.283 + G.t * 0.5; R(OUT, x + Math.cos(a) * (r + 2) - 2, y + Math.sin(a) * (r + 2) - 2, 4, 4); R(L.lite, x + Math.cos(a) * (r + 2) - 1, y + Math.sin(a) * (r + 2) - 1, 2, 2); }
+  g.fillStyle = OUT; g.beginPath(); g.arc(x, y, r + 1, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.fill(); R(L.mlite, x - r * 0.5, y - r * 0.5, 3, 2); }
+/* the player's hurt box (a little inside the sprite, his rule) against a box or a circle */
+function pRect(x0, y0, x1, y1) { var p = PL; return !!p && p.state === 'normal' && p.x + PHW - 1 > x0 && p.x - PHW + 1 < x1 && p.y - 2 > y0 && p.y - PH + 6 < y1; }
+function pCirc(x, y, r) { var p = PL; if (!p || p.state !== 'normal') return false; var qx = Math.max(p.x - PHW + 1, Math.min(x, p.x + PHW - 1)), qy = Math.max(p.y - PH + 6, Math.min(y, p.y - 2)); return Math.hypot(qx - x, qy - y) < r; }
+function onFloor(p, e, x0, x1) { return !!p && p.state === 'normal' && !p.air && p.x >= x0 && p.x <= x1 && Math.abs(p.y - e.y) < 6; }
+function bits(x, y, n, c, sp, g) { for (var i = 0; i < n; i++) { var a = Math.random() * 6.283, s = (sp || 120) * (0.4 + Math.random() * 0.6); FX.push({ k: 'bit', x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, t: 0.4 + Math.random() * 0.3, c: c[i % c.length], g: g === undefined ? 300 : g }); } }
+function gimDef(name, d) { GIM[name] = d; if (d.lay) SEC[name] = function (b) { var a = [].slice.call(arguments, 1); b.ground(3); d.lay.apply(null, [b].concat(a)); b.ground(2); return b; }; }
+function GT(b, dx, g, o, up, k) { o = o || {}; o.g = g; return b.thing(dx, k || 'gim', up || 0, o); }
+function gimNear(e, pad) { var x0 = e.x - 90, x1 = e.x + (e.w || 4) * TS + 90; pad = pad || 0.5; return x1 > CAM.x - KIT.W * pad && x0 < CAM.x + KIT.W * (1 + pad); }
+function safePit(b, n) { // a pit you can not die in: a spiked floor five rows down and a spring out every nine columns
+  var c0 = b.col; for (var i = 0; i < n; i++) { var c = b.col; b.h += 5; b.ground(1); b.h -= 5; b.set(c, b.h + 4, '^'); }
+  for (var sc = c0 + 4; sc < b.col - 2; sc += 9) { b.set(sc, b.h + 4, '.'); b.ent('spring', sc, b.h + 5, { pow: 1 }); } return c0; }
+function fallIn(list, e, dt, gr, onLand) { // simple falling pieces shared by the rain traps
+  list.forEach(function (q) { if (q.warn > 0) { q.warn -= dt; return; } q.vy += gr * dt; q.y += q.vy * dt; if (q.y >= q.gy) { q.dead = 1; onLand(q); } }); return list.filter(function (q) { return !q.dead; }); }
+function ceilAbove(x, y, rows) { var c = Math.floor(x / TS), r0 = Math.floor(y / TS) - 1; for (var r = r0; r > r0 - rows; r--) if (isSolid(T(c, r), c, r)) return (r + 1) * TS; return null; }
+
+/* ====================================== THE TRAPS ====================================== */
+gimDef('flamebar', { h: 6, // a bar of fireballs turning round a hub on a post: run under it or jump it
+  lay: function (b) { b.ground(12); GT(b, -6, 'flamebar', { sp: (b.col % 2 ? 1 : -1) * 1.7 }); },
+  step: function (e) { e.a = G.t * e.sp; for (var i = 1; i <= 5; i++) { var x = e.x + Math.cos(e.a) * i * 9, y = e.y - 46 + Math.sin(e.a) * i * 9; if (pCirc(x, y, 6)) { hurt(x); return; } } },
+  draw: function (g, e, x, y, L) { postD(x, y, 46, L, 6); motif(g, x, y - 46, L); var a = e.a || 0; for (var i = 1; i <= 5; i++) flame(x + Math.cos(a) * i * 9, y - 46 + Math.sin(a) * i * 9, 4, L, i); } });
+
+gimDef('popspikes', { h: 1, // a wave of spikes ripples along the floor: time your run through the troughs
+  lay: function (b) { b.ground(14); GT(b, -13, 'popspikes', { w: 12 }); },
+  step: function (e, dt, p) { e.hs = e.hs || []; for (var i = 0; i < e.w; i++) e.hs[i] = Math.max(0, Math.min(1, (Math.sin(G.t * 2.6 - i * 0.55) - 0.15) * 1.8)) * 14;
+    var ci = Math.floor((p.x - (e.x - 8)) / TS); if (ci >= 0 && ci < e.w && e.hs[ci] > 5 && p.y > e.y - e.hs[ci] - 1 && Math.abs(p.y - e.y) < 20) hurt(p.x); },
+  draw: function (g, e, x, y, L) { for (var i = 0; i < e.w; i++) { var sx = x - 8 + i * TS, hh = Math.round((e.hs || [])[i] || 0); R(OUT, sx + 1, y - 3, 14, 3); R(L.metal, sx + 2, y - 2, 12, 1);
+      if (hh > 0) for (var s = 0; s < 3; s++) { g.fillStyle = OUT; g.beginPath(); g.moveTo(sx + 2 + s * 4, y - 2); g.lineTo(sx + 4 + s * 4, y - 3 - hh); g.lineTo(sx + 6 + s * 4, y - 2); g.fill(); g.fillStyle = L.lite; g.beginPath(); g.moveTo(sx + 3 + s * 4, y - 2); g.lineTo(sx + 4 + s * 4, y - 2 - hh); g.lineTo(sx + 5 + s * 4, y - 2); g.fill(); R(L.hot, sx + 4 + s * 4, y - 3 - hh, 1, 1); } } } });
+
+var DEBRIS = { city: 'brick', sewer: 'chunk', park: 'bulb', bone: 'bone', factory: 'bolt', brain: 'shard' };
+function drawPiece(g, kind, x, y, L) { x = Math.round(x); y = Math.round(y);
+  if (kind === 'brick') { bx(x - 7, y - 5, 14, 8, L.main, L.hot); R(L.dark, x - 7, y - 1, 14, 1); }
+  else if (kind === 'chunk') { bx(x - 6, y - 6, 12, 10, L.stone, L.slite); R(L.hot, x - 3, y + 3, 2, 4); }
+  else if (kind === 'bulb') { R(OUT, x - 5, y - 6, 10, 11); R(L.hot, x - 4, y - 5, 8, 8); R('#ffffff', x - 2, y - 4, 2, 2); R(L.metal, x - 2, y - 9, 4, 4); }
+  else if (kind === 'bone') { R(OUT, x - 2, y - 9, 5, 18); R(L.main, x - 1, y - 8, 3, 16); R(OUT, x - 4, y + 6, 9, 4); R(L.main, x - 3, y + 7, 7, 2); }
+  else if (kind === 'bolt') { R(OUT, x - 5, y - 8, 10, 6); R(L.mlite, x - 4, y - 7, 8, 4); R(OUT, x - 2, y - 2, 5, 10); R(L.metal, x - 1, y - 2, 3, 9); }
+  else { g.fillStyle = OUT; g.beginPath(); g.moveTo(x - 5, y - 8); g.lineTo(x + 5, y - 8); g.lineTo(x, y + 8); g.fill(); g.fillStyle = L.lite; g.beginPath(); g.moveTo(x - 3, y - 7); g.lineTo(x + 3, y - 7); g.lineTo(x, y + 5); g.fill(); } }
+gimDef('debris', { h: 0, // bits of the roof come down where you are about to be: watch the shadows
+  lay: function (b) { b.ground(16); b.drops(-12, 6, 2, null, 1.6); GT(b, -15, 'debris', { w: 14 }); },
+  step: function (e, dt, p) { e.list = e.list || []; e.cd = (e.cd || 0) - dt; var x0 = e.x, x1 = e.x + e.w * TS;
+    if (e.cd <= 0 && p.x > x0 - 120 && p.x < x1 && Math.abs(p.y - e.y) < 120) { e.cd = 0.5; var tx = Math.max(x0, Math.min(x1, p.x + p.gsp * 0.55 + (Math.random() - 0.5) * 70)), top = ceilAbove(tx, e.y, 14);
+      e.list.push({ x: tx, y: top === null ? CAM.y - 20 : top + 6, vy: 0, warn: 0.6, gy: e.y, r: Math.random() * 6 }); }
+    e.list = fallIn(e.list, e, dt, 1500, function (q) { bits(q.x, e.y - 4, 6, [GL().main, GL().lite, '#3a2a2a']); sfx.play('crumble', 0.4); });
+    e.list.forEach(function (q) { if (q.warn <= 0 && pCirc(q.x, q.y, 8)) { hurt(q.x); q.dead = 1; } }); },
+  draw: function (g, e, x, y, L, cx, cy) { (e.list || []).forEach(function (q) { var sx = q.x - cx, w = q.warn > 0 ? 4 + (0.6 - q.warn) * 14 : 12; g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(Math.round(sx - w / 2), y - 2, Math.round(w), 2);
+      if (q.warn > 0) { if (Math.floor(G.t * 16) % 2) R(L.hot, sx - 1, y - 3, 2, 1); bits(q.x, q.y, Math.random() < 0.2 ? 1 : 0, ['#5a4a4a']); } else drawPiece(g, DEBRIS[L.k], sx, q.y - cy, L); }); } });
+
+gimDef('lasers', { h: 3, // beams that switch between the floor (jump) and head height (stay down)
+  lay: function (b) { b.ground(12); GT(b, -11, 'lasers', { w: 10 }); },
+  step: function (e) { var c = (G.t + e.c * 0.1) % 3.2; e.low = c < 0.9; e.high = c >= 1.6 && c < 2.5; e.warn = (c > 1.25 && c < 1.6) ? 'h' : c > 2.85 ? 'l' : ''; var x1 = e.x + e.w * TS;
+    if (e.low && pRect(e.x, e.y - 12, x1, e.y - 8)) hurt(PL.x); if (e.high && pRect(e.x, e.y - 52, x1, e.y - 48)) hurt(PL.x); },
+  draw: function (g, e, x, y, L) { var x1 = x + e.w * TS; [x, x1].forEach(function (px) { bx(px - 4, y - 62, 8, 62, L.metal, L.mlite); motif(g, px, y - 66, L); R(L.dark, px - 2, y - 12, 4, 4); R(L.dark, px - 2, y - 52, 4, 4); });
+    [[e.low, 'l', y - 10], [e.high, 'h', y - 50]].forEach(function (q) { if (q[0]) { R(L.hot, x + 4, q[2] - 1, x1 - x - 8, 3); R('#ffffff', x + 4, q[2], x1 - x - 8, 1); for (var s = x + 8; s < x1 - 6; s += 13) if ((Math.floor(G.t * 30) + s) % 3 === 0) R(L.lite, s, q[2] - 2, 2, 5); }
+      else if (e.warn === q[1] && Math.floor(G.t * 20) % 2) for (var d = x + 6; d < x1 - 6; d += 8) R(L.hot, d, q[2], 3, 1); }); } });
+
+gimDef('searchlight', { h: 6, // a lamp on a tower sweeps the floor; if it finds you, shells come down on that spot
+  lay: function (b) { b.ground(17); b.drops(-14, 5, 2, null, 2); GT(b, -2, 'searchlight', { w: 2 }); },
+  step: function (e, dt, p) { e.a = 1.85 + Math.sin(G.t * 0.9 + e.c) * 0.5; e.cd = (e.cd || 0) - dt; e.shells = e.shells || [];
+    var lx = e.x, ly = e.y - 84, ang = Math.atan2(p.y - 20 - ly, p.x - lx), d = Math.abs(((ang - e.a + 9.42) % 6.283) - 3.14);
+    if (e.cd <= 0 && d < 0.1 && p.x < lx && lx - p.x < 340 && p.state === 'normal') { e.cd = 2.6; e.alarm = 0.7; e.mk = p.x + p.gsp * 0.3; sfx.play('horn', 0.4); }
+    if (e.alarm > 0) { e.alarm -= dt; if (e.alarm <= 0) [-22, 0, 22].forEach(function (o, i) { e.shells.push({ x: e.mk + o, y: CAM.y - 10 - i * 30, vy: 200, warn: 0, gy: e.y }); }); }
+    e.shells = fallIn(e.shells, e, dt, 900, function (q) { bits(q.x, e.y - 6, 10, [GL().fire[0], GL().fire[1], '#3a2a2a'], 160); sfx.play('thud', 0.5); if (pCirc(q.x, e.y - 10, 22)) hurt(q.x); }); },
+  draw: function (g, e, x, y, L, cx, cy) { R(OUT, x - 9, y - 84, 18, 84); for (var t = 0; t < 84; t += 12) { R(L.metal, x - 8, y - 84 + t, 2, 12); R(L.metal, x + 6, y - 84 + t, 2, 12); R(L.mlite, x - 8, y - 84 + t, 16, 2); }
+    var a = e.a || 2, lx = x, ly = y - 84, far = 340; g.fillStyle = e.alarm > 0 ? 'rgba(255,38,48,0.22)' : 'rgba(255,246,200,0.16)'; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + Math.cos(a - 0.1) * far, ly + Math.sin(a - 0.1) * far); g.lineTo(lx + Math.cos(a + 0.1) * far, ly + Math.sin(a + 0.1) * far); g.fill();
+    bx(x - 8, y - 94, 16, 10, L.metal, L.mlite); R(e.alarm > 0 && Math.floor(G.t * 12) % 2 ? L.hot : L.lite, x - 6, y - 90, 12, 4); motif(g, x, y - 100, L);
+    if (e.alarm > 0) { var mx = e.mk - cx; R(L.hot, mx - 8, y - 2, 16, 2); if (Math.floor(G.t * 10) % 2) text('!', mx, y - 30, { size: 8, align: 'center', col: L.hot }); }
+    (e.shells || []).forEach(function (q) { var sx = q.x - cx, sy = q.y - cy; g.fillStyle = OUT; g.beginPath(); g.arc(sx, sy, 6, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(sx, sy, 5, 0, 6.3); g.fill(); R(L.fire[1], sx - 1, sy - 9, 2, 3); R('rgba(0,0,0,0.5)', sx - 5, y - 2, 10, 2); }); } });
+
+gimDef('mines', { h: 0, // mines in the floor: step on one and you have a breath to get off it
+  lay: function (b) { b.ground(17); b.drops(-14, 6, 3, 'arc', 2); GT(b, -15, 'mines', { w: 14 }); },
+  init: function (e) { e.m = [0, 1, 2, 3].map(function (i) { return { x: e.x + 24 + i * 52, st: 0, t: 0 }; }); },
+  step: function (e, dt, p) { e.m.forEach(function (m) {
+      if (m.st === 0) { if (!p.air && p.state === 'normal' && Math.abs(p.x - m.x) < 9 && Math.abs(p.y - e.y) < 5) { m.st = 1; m.t = 0.32; sfx.play('clink'); } }
+      else if (m.st === 1) { m.t -= dt; if (m.t <= 0) { m.st = 2; m.t = 4; bits(m.x, e.y - 8, 14, GL().fire.concat(['#3a2a2a']), 200); sfx.play('thud'); G.shake = Math.max(G.shake, 3); if (pCirc(m.x, e.y - 8, 26)) hurt(m.x); } }
+      else { m.t -= dt; if (m.t <= 0) m.st = 0; } }); },
+  draw: function (g, e, x, y, L, cx) { (e.m || []).forEach(function (m) { if (m.st === 2) { R(OUT, m.x - cx - 6, y - 2, 12, 2); return; } var mx = Math.round(m.x - cx);
+      R(OUT, mx - 7, y - 6, 14, 6); R(L.metal, mx - 6, y - 5, 12, 5); R(L.mlite, mx - 6, y - 5, 12, 1); R(OUT, mx - 3, y - 8, 6, 2);
+      var on = m.st === 1 ? Math.floor(G.t * 24) % 2 : Math.floor(G.t * 2 + m.x) % 2; R(on ? L.hot : L.dark, mx - 1, y - 9, 2, 2); }); } });
+
+gimDef('bomber', { h: 2, // a mortar lobs bombs to where you are going
+  lay: function (b) { b.ground(19); b.drops(-15, 5, 2, null, 2); GT(b, -2, 'bomber', { w: 2 }); },
+  step: function (e, dt, p) { e.bombs = e.bombs || []; e.cd = (e.cd === undefined ? 1 : e.cd) - dt;
+    if (e.cd <= 0 && p.x < e.x - 30 && e.x - p.x < 330 && Math.abs(p.y - e.y) < 120) { e.cd = 2.0; var T1 = 1.05, tx = p.x + p.gsp * 0.6; e.bombs.push({ x: e.x - 6, y: e.y - 22, vx: (tx - e.x) / T1, vy: (22 - 0.5 * 900 * T1 * T1) / T1, fuse: -1 }); e.kick = 0.2; sfx.play('thud', 0.5); }
+    if (e.kick > 0) e.kick -= dt;
+    e.bombs.forEach(function (q) { if (q.fuse < 0) { q.vy += 900 * dt; q.x += q.vx * dt; q.y += q.vy * dt; var f = floorAt(q.x, q.y - 6, q.y + 6, true); if (q.vy > 0 && f !== null) { q.y = f; q.fuse = 0.5; } if (q.y > e.y + 200) q.dead = 1; }
+      else { q.fuse -= dt; if (q.fuse <= 0) { q.dead = 1; bits(q.x, q.y - 6, 14, GL().fire.concat(['#3a2a2a']), 200); sfx.play('thud'); if (pCirc(q.x, q.y - 8, 26)) hurt(q.x); } } });
+    e.bombs = e.bombs.filter(function (q) { return !q.dead; }); },
+  draw: function (g, e, x, y, L, cx, cy) { bx(x - 10, y - 10, 20, 10, L.stone, L.slite); g.save(); g.translate(x, y - 10); g.rotate(-0.6 - (e.kick > 0 ? 0.15 : 0)); bx(-16, -6, 18, 12, L.metal, L.mlite); R(OUT, -18, -4, 3, 8); g.restore(); motif(g, x + 4, y - 5, L);
+    (e.bombs || []).forEach(function (q) { var sx = q.x - cx, sy = q.y - cy - 6; g.fillStyle = OUT; g.beginPath(); g.arc(sx, sy, 6, 0, 6.3); g.fill(); g.fillStyle = q.fuse >= 0 && Math.floor(G.t * 20) % 2 ? L.hot : L.metal; g.beginPath(); g.arc(sx, sy, 5, 0, 6.3); g.fill(); R(L.fire[1], sx + 2, sy - 8, 2, 3); }); } });
+
+gimDef('cannons', { h: 4, // a squat tower fires balls at your feet (jump) and over your head (stay down), then you climb it
+  lay: function (b) { b.ground(16); for (var x = 0; x < 3; x++) for (var y = 1; y <= 3; y++) b.set(b.col + x, b.h - y, '#'); GT(b, 0, 'cannons', { w: 3 }, 0, 'gimh'); b.ground(3); b.drops(-2, 2, 5); },
+  step: function (e, dt, p) { e.balls = e.balls || []; e.cd = (e.cd === undefined ? 1 : e.cd) - dt; e.warn = e.cd < 0.4;
+    if (e.cd <= 0 && p.x < e.x && e.x - p.x < 300 && Math.abs(p.y - e.y) < 90) { e.cd = 1.3; e.hi = !e.hi; e.balls.push({ x: e.x - 12, y: e.y - (e.hi ? 44 : 10), sx: e.x }); sfx.play('thud', 0.5); bits(e.x - 12, e.y - (e.hi ? 44 : 10), 5, ['#5a4a4a', '#8a7a7a'], 80, 0); }
+    e.balls.forEach(function (q) { q.x -= 240 * dt; if (q.x < q.sx - 280) q.dead = 1; if (pCirc(q.x, q.y, 7)) { hurt(q.x); q.dead = 1; } }); e.balls = e.balls.filter(function (q) { return !q.dead; }); },
+  draw: function (g, e, x, y, L, cx) { [10, 44].forEach(function (hh, i) { bx(x - 20, y - hh - 6, 14, 12, L.metal, L.mlite); R(OUT, x - 22, y - hh - 4, 3, 8); if (e.warn && (i === 1) === !e.hi) R(L.hot, x - 21, y - hh - 2, 2, 4); }); motif(g, x + 8, y - 30, L);
+    (e.balls || []).forEach(function (q) { var sx = q.x - cx; g.fillStyle = OUT; g.beginPath(); g.arc(sx, q.y - (e.y - y), 7, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(sx, q.y - (e.y - y), 6, 0, 6.3); g.fill(); R(L.mlite, sx - 3, q.y - (e.y - y) - 3, 2, 2); }); } });
+
+gimDef('spikesled', { h: 2, // a spiked block slides up and down the track
+  lay: function (b) { b.ground(14); GT(b, -13, 'spikesled', { w: 12 }); },
+  step: function (e) { var u = Math.sin(G.t * 1.3 + e.c) * 0.5 + 0.5; e.sx = e.x + 16 + u * (e.w * TS - 48); if (pRect(e.sx - 13, e.y - 24, e.sx + 13, e.y)) hurt(e.sx); },
+  draw: function (g, e, x, y, L, cx) { R(OUT, x, y - 3, e.w * TS, 3); R(L.mlite, x, y - 3, e.w * TS, 1); var sx = Math.round((e.sx || e.x) - cx);
+    bx(sx - 11, y - 22, 22, 19, L.metal, L.mlite); motif(g, sx, y - 13, L); for (var s = 0; s < 4; s++) { R(OUT, sx - 15, y - 21 + s * 5, 4, 3); R(L.lite, sx - 14, y - 20 + s * 5, 3, 1); R(OUT, sx + 11, y - 21 + s * 5, 4, 3); R(L.lite, sx + 11, y - 20 + s * 5, 3, 1); }
+    for (var t = 0; t < 4; t++) { R(OUT, sx - 9 + t * 5, y - 26, 3, 4); R(L.lite, sx - 8 + t * 5, y - 25, 1, 3); } } });
+
+gimDef('gear', { h: 2, // a giant gear turns half sunk in the floor: its teeth bite
+  lay: function (b) { b.ground(12); GT(b, -6, 'gear', {}); },
+  step: function (e) { e.a = G.t * 1.3; if (pCirc(e.x, e.y + 8, 36)) hurt(e.x); },
+  draw: function (g, e, x, y, L) { g.save(); g.beginPath(); g.rect(x - 60, y - 60, 120, 60); g.clip(); var a = e.a || 0, cy2 = y + 8;
+    for (var i = 0; i < 12; i++) { var t = a + i / 12 * 6.283; g.save(); g.translate(x + Math.cos(t) * 32, cy2 + Math.sin(t) * 32); g.rotate(t); R(OUT, -1, -5, 10, 10); R(L.metal, 0, -4, 8, 8); R(L.mlite, 0, -4, 8, 1); g.restore(); }
+    g.fillStyle = OUT; g.beginPath(); g.arc(x, cy2, 33, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(x, cy2, 31, 0, 6.3); g.fill(); g.fillStyle = L.dark; g.beginPath(); g.arc(x, cy2, 20, 0, 6.3); g.fill();
+    for (var s = 0; s < 4; s++) { var t2 = a + s * 1.571; R(L.mlite, x + Math.cos(t2) * 12 - 2, cy2 + Math.sin(t2) * 12 - 2, 4, 4); } motif(g, x, cy2 - 2, L); g.restore(); R(OUT, x - 40, y - 1, 80, 2); } });
+
+gimDef('dripline', { h: 4, // a leaking pipe overhead: each nozzle swells, then drops something that burns
+  lay: function (b) { b.ground(14); GT(b, -13, 'dripline', { w: 12 }); },
+  init: function (e) { e.d = []; for (var i = 0; i < 4; i++) e.d.push({ x: e.x + 24 + i * 46, ph: i * 0.37, y: null }); },
+  step: function (e, dt) { e.d.forEach(function (q) { var c = (G.t * 0.7 + q.ph) % 1; if (q.y === null && c > 0.85 && !q.f) { q.y = e.y - 60; q.vy = 0; q.f = 1; } if (c < 0.5) q.f = 0;
+      if (q.y !== null) { q.vy += 900 * dt; q.y += q.vy * dt; if (pCirc(q.x, q.y, 5)) { hurt(q.x); q.y = null; } else if (q.y >= e.y - 2) { bits(q.x, e.y - 3, 5, [GL().goo, GL().fire[0]], 90); q.y = null; } } q.sw = c; }); },
+  draw: function (g, e, x, y, L, cx, cy) { var x1 = x + e.w * TS; postD(x + 4, y, 66, L); postD(x1 - 4, y, 66, L); bx(x, y - 68, x1 - x, 8, L.metal, L.mlite); for (var s = x + 6; s < x1; s += 24) R(OUT, s, y - 68, 2, 8);
+    (e.d || []).forEach(function (q) { var qx = Math.round(q.x - cx); R(OUT, qx - 3, y - 61, 6, 4); var sw = Math.max(0, (q.sw - 0.5) * 2); if (q.y === null) { R(L.goo, qx - 1, y - 57, 2, Math.round(1 + sw * 3)); } else { R(OUT, qx - 3, q.y - cy - 4, 6, 8); R(L.goo, qx - 2, q.y - cy - 3, 4, 6); }
+      R(L.goo, qx - 5, y - 2, 10, 2); }); } });
+
+gimDef('tesla', { h: 4, // a coil charges while you are near, marks where you stand and strikes there: keep moving
+  lay: function (b) { b.ground(15); b.drops(-12, 6, 2, null, 1.6); GT(b, -7, 'tesla', {}); },
+  step: function (e, dt, p) { var near = Math.abs(p.x - e.x) < 130 && Math.abs(p.y - e.y) < 90; e.ch = Math.max(0, Math.min(1.1, (e.ch || 0) + (near ? dt : -dt)));
+    if (e.ch >= 1 && !e.mk) { e.mk = { x: p.x, t: 0.55 }; sfx.play('clink'); }
+    if (e.mk) { e.mk.t -= dt; if (e.mk.t <= 0) { e.bolt = { x: e.mk.x, t: 0.16 }; if (Math.abs(p.x - e.mk.x) < 16 && p.y > e.y - 44 && p.state === 'normal') hurt(e.mk.x); bits(e.mk.x, e.y - 3, 8, [GL().hot, '#ffffff'], 140); sfx.play('thud', 0.5); e.mk = null; e.ch = 0; } }
+    if (e.bolt) { e.bolt.t -= dt; if (e.bolt.t <= 0) e.bolt = null; } },
+  draw: function (g, e, x, y, L, cx) { bx(x - 6, y - 12, 12, 12, L.stone, L.slite); for (var r = 0; r < 5; r++) bx(x - 8 + (r % 2), y - 20 - r * 8, 16 - (r % 2) * 2, 5, r % 2 ? L.metal : L.mlite); var ch = e.ch || 0;
+    g.fillStyle = OUT; g.beginPath(); g.arc(x, y - 62, 8, 0, 6.3); g.fill(); g.fillStyle = ch > 0.6 && Math.floor(G.t * 20) % 2 ? '#ffffff' : L.hot; g.beginPath(); g.arc(x, y - 62, 6 + ch * 2, 0, 6.3); g.fill();
+    if (ch > 0.2) for (var k = 0; k < 3; k++) { var a = G.t * 9 + k * 2.1; R(L.hot, x + Math.cos(a) * (10 + ch * 6), y - 62 + Math.sin(a) * (10 + ch * 6), 2, 2); }
+    if (e.mk) { var mx = e.mk.x - cx; R(L.hot, mx - 10, y - 2, 20, 2); if (Math.floor(G.t * 16) % 2) { R(L.hot, mx - 1, y - 12, 2, 8); R(L.hot, mx - 5, y - 9, 10, 2); } }
+    if (e.bolt) { var bx2 = e.bolt.x - cx; g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 62); for (var q = 1; q <= 6; q++) g.lineTo(x + (bx2 - x) * q / 6 + (q < 6 ? (Math.random() - 0.5) * 14 : 0), y - 62 + 60 * q / 6); g.stroke(); g.strokeStyle = L.hot; g.lineWidth = 1; g.stroke(); } } });
+
+gimDef('beartrap', { h: 0, // jaws in the floor: step in one and they hold you a moment
+  lay: function (b) { b.ground(16); b.drops(-13, 5, 3, 'arc', 2.5); GT(b, -14, 'beartrap', { w: 12 }); },
+  init: function (e) { e.j = [0, 1, 2].map(function (i) { return { x: e.x + 30 + i * 62, shut: 0 }; }); },
+  step: function (e, dt, p) { e.j.forEach(function (q) { if (q.shut > 0) { q.shut -= dt; return; }
+      if (!p.air && p.state === 'normal' && Math.abs(p.x - q.x) < 8 && Math.abs(p.y - e.y) < 5) { q.shut = 2.4; p.lock = 0.7; p.gsp = 0; p.vx = 0; p.x = q.x; sfx.play('clink'); sfx.play('thud', 0.5); G.shake = Math.max(G.shake, 2); bits(q.x, e.y - 4, 6, [GL().metal, GL().mlite], 90); } }); },
+  draw: function (g, e, x, y, L, cx) { (e.j || []).forEach(function (q) { var qx = Math.round(q.x - cx); R(OUT, qx - 10, y - 3, 20, 3); R(L.metal, qx - 9, y - 2, 18, 1); R(OUT, qx - 1, y - 4, 3, 3);
+      if (q.shut > 0) { for (var t = 0; t < 5; t++) { R(OUT, qx - 6 + t * 3, y - 10, 2, 8); R(L.lite, qx - 6 + t * 3, y - 9, 1, 5); } R(L.mlite, qx - 7, y - 12, 14, 2); }
+      else for (var s = -1; s <= 1; s += 2) { R(OUT, qx + s * 5 - 4, y - 4, 9, 2); for (var t2 = 0; t2 < 3; t2++) R(L.lite, qx + s * 5 - 3 + t2 * 3, y - 6, 1, 2); } }); } });
+
+gimDef('pistons', { h: 3, // pistons in the wall behind punch out across the path
+  lay: function (b) { b.ground(16); GT(b, -15, 'pistons', { w: 14 }); },
+  init: function (e) { e.p = [0, 1, 2].map(function (i) { return { x: e.x + 56 + i * 70, ph: i * 0.6, ext: 0 }; }); },
+  step: function (e) { e.p.forEach(function (q) { var c = (G.t + q.ph) % 1.8; q.ext = c < 1.0 ? 0 : c < 1.15 ? (c - 1.0) / 0.15 : c < 1.5 ? 1 : 1 - (c - 1.5) / 0.3; q.warn = c > 0.75 && c < 1.0;
+      var hx = q.x - q.ext * 40; if (q.ext > 0.3 && pRect(hx - 6, e.y - 26, q.x, e.y - 8)) hurt(q.x + 20); }); },
+  draw: function (g, e, x, y, L, cx) { (e.p || []).forEach(function (q) { var qx = Math.round(q.x - cx), hx = Math.round(qx - q.ext * 40); bx(qx, y - 52, 14, 52, L.stone, L.slite); R(OUT, qx + 2, y - 44, 10, 2); motif(g, qx + 7, y - 42, L);
+      R(OUT, hx, y - 19, qx - hx, 6); R(L.mlite, hx, y - 18, qx - hx, 2); bx(hx - 6, y - 25, 8, 18, L.metal, q.warn && Math.floor(G.t * 16) % 2 ? L.hot : L.mlite); }); } });
+
+gimDef('orbiters', { h: 5, // two maces swing round a long oval
+  lay: function (b) { b.ground(13); b.drops(-10, 5, 2, null, 1.5); GT(b, -6, 'orbiters', {}); },
+  step: function (e) { e.a = G.t * 1.6; for (var k = 0; k < 2; k++) { var a = e.a + k * Math.PI, mx = e.x + Math.cos(a) * 58, my = e.y - 36 + Math.sin(a) * 26; if (pCirc(mx, my, 9)) { hurt(mx); return; } } },
+  draw: function (g, e, x, y, L) { postD(x, y, 36, L, 6); motif(g, x, y - 38, L); for (var i = 0; i < 24; i++) { var t = i / 24 * 6.283; if (i % 2) R(L.mlite, x + Math.cos(t) * 58, y - 36 + Math.sin(t) * 26, 1, 1); }
+    var a = e.a || 0; for (var k = 0; k < 2; k++) { var t2 = a + k * Math.PI, mx = x + Math.cos(t2) * 58, my = y - 36 + Math.sin(t2) * 26; for (var c = 1; c < 6; c++) R(L.mlite, x + (mx - x) * c / 6 - 1, y - 36 + (my - y + 36) * c / 6 - 1, 2, 2); spikeBall(g, mx, my, 7, L); } } });
+
+var CHASER = { city: 'iron', sewer: 'cream', park: 'bowl', bone: 'skull', factory: 'slag', brain: 'eye' };
+gimDef('chase', { h: 4, // something huge comes rolling from behind: run!
+  lay: function (b) { b.ground(2); b.thing(0, 'dash', 0, { dir: 1 }); b.ground(46); b.drops(-40, 14, 2, null, 2.6); GT(b, -46, 'chase', { w: 44 }); },
+  step: function (e, dt, p) { var x1 = e.x + e.w * TS;
+    if (!e.go && p.x > e.x + 30 && p.x < e.x + 120) { e.go = 1; e.bx = Math.min(p.x - 150, CAM.x - 40); e.by = e.y; e.rot = 0; G.banner = 1; G.bannerTxt = 'RUN!'; sfx.play('rumble'); }
+    if (e.go === 1) { e.bx += 380 * dt; e.rot += 380 * dt / 30; var f = floorAt(e.bx, e.by - 30, e.by + 30, false); if (f !== null) e.by = f; G.shake = Math.max(G.shake, 1.5);
+      if (pCirc(e.bx, e.by - 30, 27)) hurt(e.bx + 40); if (e.bx > x1 - 20) { e.go = 2; bits(e.bx, e.by - 30, 24, [GL().main, GL().lite, GL().metal], 260); sfx.play('crumble'); sfx.play('thud'); G.shake = 6; } }
+    if (e.go === 2 && (p.x < e.x - 300 || p.x > x1 + 500)) e.go = 0; },
+  draw: function (g, e, x, y, L, cx, cy) { var x1 = x + e.w * TS; bx(x1 - 10, y - 40, 12, 40, L.stone, L.slite); bx(x1 + 2, y - 26, 10, 26, L.stone, L.slite);
+    if (e.go !== 1) return; var X = e.bx - cx, Y = e.by - cy - 30, k = CHASER[L.k]; g.save(); g.translate(X, Y); g.rotate(e.rot);
+    g.fillStyle = OUT; g.beginPath(); g.arc(0, 0, 30, 0, 6.3); g.fill(); g.fillStyle = k === 'cream' ? '#e8d4a0' : k === 'skull' ? L.main : k === 'slag' ? L.fire[0] : k === 'eye' ? '#f0e0e0' : k === 'bowl' ? L.main : L.metal; g.beginPath(); g.arc(0, 0, 28, 0, 6.3); g.fill();
+    if (k === 'iron') for (var s = 0; s < 8; s++) { var a = s / 8 * 6.283; R(OUT, Math.cos(a) * 30 - 3, Math.sin(a) * 30 - 3, 6, 6); R(L.mlite, Math.cos(a) * 30 - 2, Math.sin(a) * 30 - 2, 3, 3); }
+    else if (k === 'skull') { R(OUT, -14, -8, 10, 10); R(OUT, 4, -8, 10, 10); R(OUT, -2, 4, 4, 6); for (var t = -10; t < 12; t += 4) R(OUT, t, 14, 2, 6); }
+    else if (k === 'eye') { g.fillStyle = L.main; g.beginPath(); g.arc(8, 0, 12, 0, 6.3); g.fill(); g.fillStyle = OUT; g.beginPath(); g.arc(10, 0, 6, 0, 6.3); g.fill(); R('#ff8a8a', -20, -10, 12, 2); R('#ff8a8a', -18, 8, 10, 2); }
+    else if (k === 'bowl') { R(OUT, -6, -14, 6, 6); R(OUT, 4, -12, 6, 6); R(OUT, -2, -2, 6, 6); R(L.hot, -28, -2, 56, 4); }
+    else if (k === 'slag') { R(L.fire[1], -14, -10, 10, 6); R(L.fire[2], 4, 6, 8, 4); R(OUT, -4, 10, 14, 3); }
+    else { R('#fffbe8', -16, -16, 12, 6); R('#c8b480', 4, 8, 14, 4); }
+    g.restore(); if (Math.random() < 0.6) FX.push({ k: 'bit', x: e.bx - 24, y: e.by - 2, vx: -60 - Math.random() * 80, vy: -60 - Math.random() * 60, t: 0.4, c: L.metal }); } });
+
+gimDef('hammers', { h: 3, // great mallets swing over and slam the floor
+  lay: function (b) { b.ground(16); GT(b, -15, 'hammers', { w: 14 }); },
+  init: function (e) { e.hm = [0, 1, 2].map(function (i) { return { x: e.x + 64 + i * 68, ph: i * 0.8, a: -Math.PI / 2 }; }); },
+  step: function (e) { e.hm.forEach(function (q) { var c = (G.t + q.ph) % 2.4, u = c < 1.2 ? 0 : c < 1.32 ? (c - 1.2) / 0.12 : c < 1.8 ? 1 : 1 - (c - 1.8) / 0.6; q.u = u; q.warn = c > 0.9 && c < 1.2; q.a = -Math.PI / 2 - u * Math.PI / 2;
+      if (u > 0.7) { var hx = q.x + Math.cos(q.a) * 38, hy = e.y - 4 + Math.sin(q.a) * 38; if (pCirc(hx, hy, 12)) hurt(hx); }
+      if (c > 1.3 && c < 1.34 && !q.bang) { q.bang = 1; sfx.play('thud', 0.6); G.shake = Math.max(G.shake, 2); bits(q.x - 38, e.y - 2, 6, [GL().stone, GL().slite], 100); } if (c < 1.2) q.bang = 0; }); },
+  draw: function (g, e, x, y, L, cx) { (e.hm || []).forEach(function (q) { var qx = Math.round(q.x - cx), sh = q.warn ? Math.round(Math.sin(G.t * 60)) : 0; bx(qx - 6, y - 10, 12, 10, L.stone, L.slite);
+      g.save(); g.translate(qx, y - 4); g.rotate(q.a + Math.PI / 2 + sh * 0.03); R(OUT, -2, -40, 5, 40); R(L.wood, -1, -39, 3, 38); bx(-10, -50, 20, 14, L.metal, L.mlite); R(L.hot, -10, -44, 20, 2); g.restore(); motif(g, qx, y - 6, L); }); } });
+
+gimDef('snare', { h: 6, // a rope loop in the dirt: step in it and you are hauled up by the ankle
+  lay: function (b) { b.ground(13); b.drops(-6, 3, 6); GT(b, -7, 'snare', {}); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && !p.air && p.state === 'normal' && Math.abs(p.x - e.x) < 8 && Math.abs(p.y - e.y) < 5) { p.gl = { e: e, t: 0 }; sfx.play('clink'); sfx.play('jump'); } },
+  ride: function (p, s, dt) { var e = s.e; s.t += dt; var u = ease(Math.min(1, s.t / 0.25)); p.x = e.x + Math.sin(s.t * 6) * 3 * (s.t > 0.25 ? 1 : 0); p.y = e.y - 4 - u * 44; p.grot = Math.PI * u; p.vx = 0; p.vy = 0; p.gsp = 0; p.air = true;
+    if (s.t > 1.0) { p.gl = null; p.grot = 0; p.vy = 0; p.vx = 90; p.y = e.y - 30; e.cd = 2.5; } },
+  draw: function (g, e, x, y, L, cx, cy) { var px = x + 26; bx(px - 3, y - 92, 6, 92, L.wood, L.metal); bx(x - 4, y - 94, px - x + 8, 5, L.wood, L.metal); motif(g, px, y - 98, L);
+    var held = PL && PL.gl && PL.gl.e === e, ey = held ? PL.y - cy : y - 2, ex = held ? PL.x - cx : x; R(OUT, x - 1, y - 90, 2, Math.max(2, ey - (y - 90))); R(L.lite, x, y - 90, 1, Math.max(1, ey - (y - 90)));
+    if (!held) { g.strokeStyle = L.lite; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y - 2, 9, 2, 0, 0, 6.3); g.stroke(); } } });
+
+var DOMINO = { city: 'slab', sewer: 'slab', park: 'card', bone: 'grave', factory: 'plate', brain: 'cabinet' };
+gimDef('dominoes', { h: 3, // a row of great slabs topples towards you one after another
+  lay: function (b) { b.ground(17); b.drops(-6, 3, 4); GT(b, -16, 'dominoes', { w: 15 }); },
+  init: function (e) { e.s = [0, 1, 2, 3, 4].map(function (i) { return { x: e.x + 60 + i * 34, a: 0, v: 0, go: -1 }; }); },
+  step: function (e, dt, p) { var x1 = e.x + e.w * TS; if (!e.go && p.x > e.x - 80 && p.x < x1) { e.go = 1; e.s.forEach(function (q, i) { q.go = (4 - i) * 0.32; }); sfx.play('rumble', 0.5); }
+    e.s.forEach(function (q) { if (q.go < 0) return; if (q.go > 0) { q.go = Math.max(0, q.go - dt); if (q.go > 0) return; } if (q.a > -1.57) { q.v += 7 * dt; q.a = Math.max(-1.57, q.a - q.v * dt * 3); if (q.a <= -1.57) { sfx.play('thud', 0.5); bits(q.x - 30, e.y - 2, 5, [GL().stone, GL().slite], 80); } }
+      if (q.a > -1.5) for (var k = 1; k <= 3; k++) { var px = q.x + Math.sin(q.a) * 15 * k, py = e.y - Math.cos(q.a) * 15 * k; if (pCirc(px, py, 6)) { hurt(px); break; } } });
+    if (e.go && (p.x < e.x - 400 || p.x > x1 + 500)) { e.go = 0; e.s.forEach(function (q) { q.a = 0; q.v = 0; q.go = -1; }); } },
+  draw: function (g, e, x, y, L, cx) { var k = DOMINO[L.k]; (e.s || []).forEach(function (q) { g.save(); g.translate(q.x - cx, y); g.rotate(q.a);
+      if (k === 'card') { bx(-6, -46, 12, 46, '#fff6e8', '#ffffff'); R(L.main, -3, -40, 6, 6); R(L.main, -3, -12, 6, 6); }
+      else if (k === 'grave') { bx(-7, -42, 14, 42, L.stone, L.slite); R(L.main, -6, -46, 12, 4); R(L.slite, -1, -36, 2, 10); R(L.slite, -4, -32, 8, 2); }
+      else if (k === 'cabinet') { bx(-7, -46, 14, 46, L.metal, L.mlite); for (var i = 0; i < 4; i++) R(Math.floor(G.t * 3 + i) % 2 ? L.hot : L.dark, -4 + (i % 2) * 6, -40 + i * 6, 2, 2); }
+      else if (k === 'plate') { bx(-6, -46, 12, 46, L.metal, L.mlite); R(L.hot, -6, -24, 12, 3); }
+      else { bx(-6, -46, 12, 46, '#1a0a0e', L.slite); R(L.hot, -2, -40, 4, 4); R(L.hot, -2, -14, 4, 4); R(L.slite, -6, -24, 12, 1); }
+      g.restore(); }); } });
+
+var HEAD = { city: 'gargoyle', sewer: 'pipe', park: 'clown', bone: 'dragon', factory: 'furnace', brain: 'bust' };
+gimDef('firebreath', { h: 3, // stone heads breathe fire across the path in turn
+  lay: function (b) { b.ground(18); GT(b, -16, 'firebreath', { w: 16 }); },
+  init: function (e) { e.hd = [0, 1].map(function (i) { return { x: e.x + 110 + i * 120, ph: i * 1.2 }; }); },
+  step: function (e) { e.hd.forEach(function (q) { var c = (G.t + q.ph) % 2.4; q.on = c > 1.5; q.warn = c > 1.1 && c <= 1.5; if (q.on && pRect(q.x - 84, e.y - 26, q.x - 8, e.y - 10)) hurt(q.x - 40); }); },
+  draw: function (g, e, x, y, L, cx) { var k = HEAD[L.k]; (e.hd || []).forEach(function (q) { var qx = Math.round(q.x - cx); bx(qx - 8, y - 12, 18, 12, L.stone, L.slite); var hy = y - 30;
+      if (k === 'clown') { bx(qx - 9, hy - 2, 18, 18, '#fff6e8', '#ffffff'); R(L.main, qx - 13, hy + 2, 4, 6); R(L.main, qx + 9, hy + 2, 4, 6); R(L.main, qx - 11, hy + 7, 4, 4); R(OUT, qx - 4, hy + 3, 2, 2); }
+      else if (k === 'dragon') { bx(qx - 10, hy - 2, 20, 16, L.main, L.lite); R(OUT, qx - 6, hy + 2, 4, 4); R(L.main, qx + 4, hy - 8, 3, 6); R(L.main, qx + 8, hy - 6, 3, 4); for (var t = 0; t < 4; t++) R(OUT, qx - 10 + t * 3, hy + 11, 1, 3); }
+      else if (k === 'furnace') { bx(qx - 9, hy - 4, 18, 18, L.metal, L.mlite); R(q.on ? L.fire[1] : L.dark, qx - 9, hy + 4, 6, 6); R(OUT, qx - 4, hy - 8, 6, 4); }
+      else if (k === 'bust') { bx(qx - 9, hy - 2, 18, 18, L.goo, L.lite); R(L.hot, qx - 5, hy + 3, 3, 3); R(L.hot, qx + 2, hy + 3, 3, 3); R(L.main, qx - 9, hy - 4, 18, 3); }
+      else if (k === 'pipe') { bx(qx - 8, hy, 18, 14, L.metal, L.mlite); R(OUT, qx - 11, hy + 3, 4, 8); R(L.mlite, qx - 11, hy + 3, 4, 2); }
+      else { bx(qx - 9, hy - 2, 18, 18, L.stone, L.slite); R(L.hot, qx - 4, hy + 2, 3, 3); R(L.stone, qx + 4, hy - 8, 4, 6); R(L.stone, qx - 9, hy - 6, 4, 4); R(OUT, qx - 9, hy + 9, 8, 3); }
+      if (q.warn) bits(q.x - 12, e.y - 20, Math.random() < 0.4 ? 1 : 0, ['#5a4a4a', '#8a7a7a'], 40, -40);
+      if (q.on) for (var f = 0; f < 7; f++) { var fx = qx - 14 - f * 10, fr = 3 + Math.min(f, 4); flame(fx, y - 18 + Math.sin(G.t * 20 + f) * 2, fr, L, f); } }); } });
+
+gimDef('tentacles', { h: 4, // things in the floor rise, sway and slap down towards you
+  lay: function (b) { b.ground(16); b.drops(-13, 5, 4, 'arc', 2.5); GT(b, -15, 'tentacles', { w: 14 }); },
+  init: function (e) { e.tn = [0, 1, 2].map(function (i) { return { x: e.x + 50 + i * 64, ph: i * 1.0 }; }); },
+  step: function (e) { e.tn.forEach(function (q) { var c = (G.t * 0.9 + q.ph) % 3; q.c = c; q.up = c < 0.6 ? 0 : c < 1.0 ? (c - 0.6) / 0.4 : c < 2.4 ? 1 : 1 - (c - 2.4) / 0.6; q.a = c > 1.6 && c < 2.4 ? -Math.min(1, (c - 1.6) / 0.25) * 1.45 : Math.sin(G.t * 3 + q.ph) * 0.15;
+      if (q.up > 0.5) for (var k = 1; k <= 4; k++) { var px = q.x + Math.sin(q.a) * 13 * k * q.up, py = e.y - Math.cos(q.a) * 13 * k * q.up; if (pCirc(px, py, 7 - k * 0.6)) { hurt(px); break; } } }); },
+  draw: function (g, e, x, y, L, cx) { (e.tn || []).forEach(function (q) { var qx = Math.round(q.x - cx); R(OUT, qx - 10, y - 2, 20, 2); R(L.goo, qx - 9, y - 2, 18, 1);
+      if (q.c < 0.6 && Math.random() < 0.3) bits(q.x + (Math.random() - 0.5) * 14, e.y - 2, 1, [L.goo], 40, 100);
+      for (var k = 0; k <= 5; k++) { var px = qx + Math.sin(q.a) * 11 * k * q.up, py = y - Math.cos(q.a) * 11 * k * q.up, r = 7 - k; if (q.up <= 0) break; g.fillStyle = OUT; g.beginPath(); g.arc(px, py, r + 1, 0, 6.3); g.fill(); g.fillStyle = k % 2 ? L.goo : L.main; g.beginPath(); g.arc(px, py, r, 0, 6.3); g.fill(); if (r > 3) R(L.lite, px - 1, py - 1, 2, 2); } }); } });
+
+gimDef('quicksand', { h: 0, // the floor swallows you if you stand still: keep jumping out
+  lay: function (b) { b.ground(14); GT(b, -13, 'quicksand', { w: 12 }); b.drops(-10, 6, 4, 'arc', 1.4); },
+  step: function (e, dt, p) { var inA = p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4 && !p.air && p.state === 'normal';
+    e.sink = Math.max(0, Math.min(1, (e.sink || 0) + (inA ? dt * 0.7 : -dt * 2.5))); if (inA) { var cap = 120 * (1 - e.sink * 0.6); if (Math.abs(p.gsp) > cap) p.gsp = Math.sign(p.gsp) * cap; if (Math.random() < 0.3) bits(p.x, e.y - 2, 1, [GL().stone], 40, 200); }
+    if (e.sink >= 1) { hurt(p.x); p.vy = -420; p.air = true; e.sink = 0; } },
+  draw: function (g, e, x, y, L) { var w = e.w * TS; R(OUT, x - 8, y - 3, w, 3); for (var i = 0; i < w; i += 6) R((Math.floor(G.t * 3 + i / 6)) % 3 ? L.stone : L.slite, x - 8 + i, y - 3, 5, 2); for (var s = 0; s < 3; s++) { var sx = x + 30 + s * 60; R(L.slite, sx + Math.cos(G.t * 2 + s) * 6, y - 2, 4, 1); } },
+  over: function (g, e, x, y, L, cx, cy) { if (!(e.sink > 0)) return; var p = PL, hh = Math.round(e.sink * 24); R(OUT, p.x - cx - 11, y - hh - 1, 22, hh + 1); R(L.stone, p.x - cx - 10, y - hh, 20, hh); R(L.slite, p.x - cx - 10, y - hh, 20, 1); } });
+
+gimDef('cage', { h: 6, // a cage hangs from a gallows and drops on you: be quick under it
+  lay: function (b) { b.ground(12); b.drops(-6, 3, 2); GT(b, -6, 'cage', {}); },
+  step: function (e, dt, p) { e.st = e.st || 'up'; e.cy = e.cy === undefined ? e.y - 70 : e.cy;
+    if (e.st === 'up' && Math.abs(p.x - e.x) < 34 && p.y <= e.y + 4 && p.y > e.y - 70 && p.state === 'normal') { e.st = 'shake'; e.t = 0.28; sfx.play('clink'); }
+    else if (e.st === 'shake') { e.t -= dt; if (e.t <= 0) { e.st = 'fall'; e.vy = 0; } }
+    else if (e.st === 'fall') { e.vy += 1600 * dt; e.cy += e.vy * dt; if (e.cy >= e.y - 42) { e.cy = e.y - 42; e.st = 'down'; e.t = 0.7; sfx.play('thud'); G.shake = Math.max(G.shake, 3); if (!p.gl && Math.abs(p.x - e.x) < 15 && !p.air && p.state === 'normal') { p.gl = { e: e, t: 0 }; e.t = 1.2; } } }
+    else if (e.st === 'down') { e.t -= dt; if (e.t <= 0) e.st = 'lift'; }
+    else if (e.st === 'lift') { e.cy -= 60 * dt; if (e.cy <= e.y - 70) { e.cy = e.y - 70; e.st = 'rest'; e.t = 2; } }
+    else if (e.st === 'rest') { e.t -= dt; if (e.t <= 0 && Math.abs(p.x - e.x) > 50) e.st = 'up'; } },
+  ride: function (p, s, dt) { s.t += dt; p.x = s.e.x + Math.sin(s.t * 30) * (s.t < 0.9 ? 1 : 0); p.gsp = 0; p.vx = 0; p.air = false; p.y = s.e.y; if (s.t > 1.1) p.gl = null; },
+  draw: function (g, e, x, y, L, cx, cy) { var cyy = Math.round((e.cy === undefined ? e.y - 70 : e.cy) - cy), sh = e.st === 'shake' ? Math.round(Math.sin(G.t * 60)) : 0; bx(x + 26, y - 108, 6, 108, L.wood, L.metal); bx(x - 4, y - 110, 36, 5, L.wood, L.metal); motif(g, x + 29, y - 114, L);
+    R(OUT, x - 1, y - 105, 2, cyy - (y - 105)); R(L.mlite, x, y - 105, 1, cyy - (y - 105));
+    R(OUT, x - 15 + sh, cyy, 30, 3); R(OUT, x - 15 + sh, cyy + 40, 30, 3); for (var b2 = -14; b2 <= 14; b2 += 4) { R(OUT, x + b2 - 1 + sh, cyy, 3, 42); R(L.mlite, x + b2 + sh, cyy + 1, 1, 40); } R(L.mlite, x - 15 + sh, cyy, 30, 1); } });
+
+var DRONE = { city: 'cam', sewer: 'fly', park: 'plane', bone: 'batskull', factory: 'rotor', brain: 'eye' };
+gimDef('drones', { h: 6, // drones hover overhead and drop things on you; shoot them or stomp them
+  lay: function (b) { b.ground(20); GT(b, -18, 'drones', { w: 18 }); b.drops(-16, 8, 2, null, 2); },
+  init: function (e) { e.dr = [0, 1].map(function (i) { return { x0: e.x + 80 + i * 120, x: 0, y: e.y - 76, ph: i * 2, cd: 1 + i, dead: 0 }; }); },
+  step: function (e, dt, p) { e.dr.forEach(function (q) { if (q.dead > 0) { q.dead -= dt; return; } q.x = q.x0 + Math.sin(G.t * 0.8 + q.ph) * 70; q.y = e.y - 76 + Math.sin(G.t * 2.2 + q.ph) * 6; q.cd -= dt;
+      if (q.cd <= 0 && Math.abs(p.x - q.x) < 60 && p.y > q.y) { q.cd = 1.4; SHOTS.push({ x: q.x, y: q.y + 8, vx: 0, vy: 40, g: 500, life: 1.6, k: 'ember' }); sfx.play('shoot', 0.4); }
+      SHOTS.forEach(function (s) { if (s.mine && s.life > 0 && Math.abs(s.x - q.x) < 12 && Math.abs(s.y - q.y) < 12) { s.life = 0; q.dead = 5; G.score += 100; bits(q.x, q.y, 12, [GL().metal, GL().hot, GL().mlite], 160); sfx.play('pop'); } });
+      if (p.state === 'normal' && p.vy > 0 && Math.abs(p.x - q.x) < 14 && p.y > q.y - 10 && p.y < q.y + 6) { q.dead = 5; p.vy = -420; G.score += 100; bits(q.x, q.y, 12, [GL().metal, GL().hot], 160); sfx.play('pop'); } }); },
+  draw: function (g, e, x, y, L, cx, cy) { var k = DRONE[L.k]; (e.dr || []).forEach(function (q) { if (q.dead > 0) return; var qx = Math.round(q.x - cx), qy = Math.round(q.y - cy), fl = Math.floor(G.t * 30) % 2;
+      if (k === 'eye') { g.fillStyle = OUT; g.beginPath(); g.arc(qx, qy, 9, 0, 6.3); g.fill(); g.fillStyle = '#f0e0e0'; g.beginPath(); g.arc(qx, qy, 8, 0, 6.3); g.fill(); R(L.hot, qx - 3, qy, 6, 5); R(OUT, qx - 1, qy + 1, 2, 3); R(L.main, qx - 12, qy - 2 + fl * 2, 4, 2); R(L.main, qx + 8, qy - 2 + fl * 2, 4, 2); }
+      else if (k === 'batskull') { bx(qx - 6, qy - 5, 12, 10, L.main, L.lite); R(OUT, qx - 4, qy - 2, 3, 3); R(OUT, qx + 1, qy - 2, 3, 3); R(OUT, qx - 16, qy - 4 + fl * 3, 10, 3); R(OUT, qx + 6, qy - 4 + fl * 3, 10, 3); }
+      else if (k === 'fly') { bx(qx - 6, qy - 4, 12, 9, L.metal, L.mlite); R(L.hot, qx + 3, qy - 2, 3, 3); R('rgba(241,224,176,0.6)', qx - 8, qy - 9 + fl, 7, 4); R('rgba(241,224,176,0.6)', qx + 1, qy - 9 + fl, 7, 4); }
+      else if (k === 'plane') { bx(qx - 9, qy - 3, 18, 6, L.main, L.lite); R(L.hot, qx - 2, qy - 8, 4, 16); R(OUT, qx + 9, qy - 4 + fl * 4, 2, 4); }
+      else { bx(qx - 8, qy - 4, 16, 8, L.metal, L.mlite); R(L.hot, qx - 2, qy + 1, 4, 2); R(L.mlite, qx - 14 + fl * 4, qy - 8, 10, 1); R(L.mlite, qx + 4 - fl * 4, qy - 8, 10, 1); R(OUT, qx - 1, qy - 8, 2, 4); }
+      R('rgba(0,0,0,0.35)', qx - 6, y - 2, 12, 2); }); } });
+
+gimDef('arrowtrap', { h: 3, // pressure plates: step on one and an arrow flies out of the wall at head height
+  lay: function (b) { b.ground(18); GT(b, -17, 'arrowtrap', { w: 16 }); },
+  init: function (e) { e.pl = [e.x + 30, e.x + 120]; e.ar = []; e.wx = e.x + 16 * TS - 6; },
+  step: function (e, dt, p) { e.pl.forEach(function (px, i) { if (!p.air && p.state === 'normal' && Math.abs(p.x - px) < 10 && Math.abs(p.y - e.y) < 5) { if (!e['d' + i]) { e['d' + i] = 1; e.fire = 0.25; sfx.play('clink'); } } else e['d' + i] = 0; });
+    if (e.fire > 0) { e.fire -= dt; if (e.fire <= 0) { e.ar.push({ x: e.wx - 8, y: e.y - 24 }); sfx.play('shoot', 0.5); } }
+    e.ar.forEach(function (q) { q.x -= 420 * dt; if (q.x < e.x - 60) q.dead = 1; if (pRect(q.x - 10, q.y - 2, q.x + 10, q.y + 2)) { hurt(q.x); q.dead = 1; } }); e.ar = e.ar.filter(function (q) { return !q.dead; }); },
+  draw: function (g, e, x, y, L, cx, cy) { (e.pl || []).forEach(function (px, i) { var qx = Math.round(px - cx); R(OUT, qx - 9, y - 3, 18, 3); R(e['d' + i] ? L.hot : L.mlite, qx - 8, y - (e['d' + i] ? 1 : 2), 16, 1); });
+    var wx = Math.round(e.wx - cx); bx(wx - 8, y - 56, 16, 56, L.stone, L.slite); R(OUT, wx - 9, y - 26, 6, 4); motif(g, wx, y - 44, L);
+    (e.ar || []).forEach(function (q) { var ax = Math.round(q.x - cx), ay = Math.round(q.y - cy); R(OUT, ax - 10, ay - 1, 20, 3); R(L.wood, ax - 9, ay, 18, 1); R(L.lite, ax - 12, ay - 1, 3, 3); R(L.main, ax + 8, ay - 2, 3, 5); }); } });
+
+gimDef('pogo', { h: 5, // spiked balls bounce in place on springs: run under them when they are up
+  lay: function (b) { b.ground(14); GT(b, -13, 'pogo', { w: 12 }); b.drops(-11, 6, 2, null, 1.8); },
+  init: function (e) { e.pg = [0, 1, 2].map(function (i) { return { x: e.x + 40 + i * 56, ph: i * 1.1 }; }); },
+  step: function (e) { e.pg.forEach(function (q) { q.hh = Math.abs(Math.sin(G.t * 2.2 + q.ph)) * 72; if (pCirc(q.x, e.y - 12 - q.hh, 10)) hurt(q.x); }); },
+  draw: function (g, e, x, y, L, cx) { (e.pg || []).forEach(function (q) { var qx = Math.round(q.x - cx), by = y - 12 - (q.hh || 0); g.strokeStyle = OUT; g.lineWidth = 3; g.beginPath(); g.moveTo(qx, y); for (var s = 1; s <= 8; s++) g.lineTo(qx + (s % 2 ? -4 : 4), y + (by - y) * s / 8); g.stroke(); g.strokeStyle = L.mlite; g.lineWidth = 1; g.stroke();
+      R(OUT, qx - 6, y - 3, 12, 3); spikeBall(g, qx, by, 8, L); }); } });
+
+/* ---------- the plumbing: stepping, drawing, riding, loading ---------- */
+STANDS.gim = 1;
+(function () {
+  var sW = stepWorld; stepWorld = function (dt) { sW(dt); if (!PL || !LV || (G.mode !== 'play' && G.mode !== 'card')) return;
+    for (var i = 0; i < ENTS.length; i++) { var e = ENTS[i]; if ((e.k === 'gim' || e.k === 'gimh') && gimNear(e)) { var d = GIM[e.g]; if (d && d.step) d.step(e, dt, PL); } } };
+  var dE = drawEnt; drawEnt = function (g, e, cx, cy, W, H) { if (e.k === 'gim' || e.k === 'gimh') { var d = GIM[e.g]; if (d && d.draw && gimNear(e, 0.15)) { var X = Math.round(e.x - cx), Y = Math.round(e.y - cy); if (d.big) { g.save(); g.translate(X, Y); g.scale(d.big, d.big); g.translate(-X, -Y); } d.draw(g, e, X, Y, GL(), cx, cy); if (d.big) g.restore(); } return; } dE(g, e, cx, cy, W, H); };
+  var dW = drawWorld; drawWorld = function () { dW(); if (!LV || !PL) return; var g = KIT.ctx, cx = Math.round(CAM.x), cy = Math.round(CAM.y);
+    ENTS.forEach(function (e) { if ((e.k === 'gim' || e.k === 'gimh') && GIM[e.g] && GIM[e.g].over && gimNear(e, 0.15)) GIM[e.g].over(g, e, Math.round(e.x - cx), Math.round(e.y - cy), GL(), cx, cy); }); };
+  var sP = stepPlayer; stepPlayer = function (dt) { var p = PL;
+    if (p && p.gl) { if (p.state !== 'normal' || G.mode !== 'play') { p.gl = null; p.hide = 0; p.grot = 0; } else { var d = GIM[p.gl.e.g]; d.ride(p, p.gl, dt); p.anim += dt * 8; if (p.state === 'normal' && p.y > LV.h * TS + 30) die(true); return; } }
+    sP(dt); if (PL && PL.state === 'normal' && T(Math.floor(PL.x / TS), Math.floor((PL.y - PH + 4) / TS)) === 'v') hurt(PL.x, true); }; // fangs under a rock roof
+  var dP = drawPlayer; drawPlayer = function (p, cx, cy) { if (p.hide) return; dP(p, cx, cy); };
+  var lA = loadAct; loadAct = function (ai) { lA(ai); ENTS.forEach(function (e) { if ((e.k === 'gim' || e.k === 'gimh') && GIM[e.g] && GIM[e.g].init) GIM[e.g].init(e); }); };
+  var bA = beginAct; beginAct = function (ai, fc) { if (PL) { PL.gl = null; PL.hide = 0; PL.grot = 0; } bA(ai, fc); if (PL) { PL.gl = null; PL.hide = 0; PL.grot = 0; } };
+})();
+
+/* =====================================================================================================
+   GIMMICKS II: things you ride and use (5d-gim.js has the framework). Every one carries you somewhere, throws you,
+   slows you or speeds you, and every one is dressed for the zone it is in.
+   ===================================================================================================== */
+function gimPlat(e, x, y, w, o) { var q = { x: x, y: y, w: w, x0: x, y0: y, k: 'gimp', t: 0, dx: 0, dy: 0, ph: 0, range: 0, e: e }; for (var k in o) q[k] = o[k]; PLATS.push(q); if (!x && !y && q.mv) { q.mv(q, 0); q.x0 = q.x; q.y0 = q.y; } return q; } /* placed where it really starts, so it never jumps there on the first frame */
+function onPlat(q) { var p = PL; return !!p && p.state === 'normal' && !p.air && p.x >= q.x - 2 && p.x <= q.x + q.w + 2 && Math.abs(p.y - q.y) < 2; }
+function relJ(p) { p.prevJ = KIT.held('a'); }
+function dropOff(p, vx, vy) { p.gl = null; p.hide = 0; p.grot = 0; p.air = true; p.vx = vx; p.vy = vy; p.gsp = vx; p.jumps = 1; relJ(p); }
+function plank(g, x, y, w, L, kind) { // a platform drawn in the zone's own way
+  var k = kind || L.k; x = Math.round(x); y = Math.round(y);
+  if (k === 'city') { bx(x, y, w, 7, L.wood, L.main); for (var i = 6; i < w; i += 10) R(OUT, x + i, y + 1, 1, 6); }
+  else if (k === 'sewer') { bx(x, y, w, 6, L.metal, L.mlite); R(L.goo, x + 2, y + 6, w - 4, 2); for (var j = 4; j < w; j += 9) R(L.goo, x + j, y + 7, 2, 3 + (j % 3)); }
+  else if (k === 'park') { bx(x, y, w, 7, L.main, L.hot); for (var s = 0; s < w; s += 8) R(L.lite, x + s, y + 2, 4, 3); }
+  else if (k === 'bone') { bx(x, y, w, 6, L.main, L.lite); for (var b2 = 3; b2 < w; b2 += 12) R(L.mlite, x + b2, y + 2, 6, 2); }
+  else if (k === 'factory') { bx(x, y, w, 7, L.metal, L.mlite); for (var r = 3; r < w; r += 8) R(L.dark, x + r, y + 3, 2, 2); R(L.hot, x, y + 6, w, 1); }
+  else { bx(x, y, w, 7, L.goo, L.lite); R(L.main, x + 3, y + 3, w - 6, 1); for (var v = 5; v < w; v += 11) R(L.main, x + v, y + 1, 1, 5); } }
+
+/* ---------- floors that change how you move ---------- */
+gimDef('sticky', { h: 0, // the floor is glue: it drags at your feet and your jumps
+  lay: function (b) { b.ground(14); GT(b, -13, 'sticky', { w: 12 }); b.drops(-11, 6, 3, 'arc', 1.6); },
+  step: function (e, dt, p) { var inA = p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4 && !p.air && p.state === 'normal';
+    if (inA && Math.abs(p.gsp) > 130) p.gsp = Math.sign(p.gsp) * 130; if (p.air && e.was && p.vy < -250) p.vy *= 0.72; e.was = inA; e.inA = inA; },
+  draw: function (g, e, x, y, L) { var w = e.w * TS; R(OUT, x - 8, y - 4, w, 4); R(L.goo, x - 8, y - 3, w, 3); for (var i = 4; i < w; i += 14) { R(L.goo, x - 8 + i, y - 5 - (i % 3), 6, 3); R(L.lite, x - 6 + i, y - 4 - (i % 3), 2, 1); }
+    for (var s = 0; s < 3; s++) { var t = (G.t * 0.5 + s * 0.33) % 1, bx2 = x + 20 + s * 60; R(L.goo, bx2, y - 3 - t * 6, 3, 3); } },
+  over: function (g, e, x, y, L, cx) { if (!e.inA) return; var p = PL, px = p.x - cx; for (var s = -1; s <= 1; s += 2) { R(L.goo, px + s * 4, y - 10, 2, 10); R(L.goo, px + s * 7, y - 5, 2, 5); } } });
+
+var SLICK = { city: 'wet neon', sewer: 'cream slick', park: 'dance floor', bone: 'polished marble', factory: 'oil', brain: 'slime' };
+gimDef('slick', { h: 0, // a slick stretch that throws you forward faster and faster
+  lay: function (b) { b.ground(16); GT(b, -15, 'slick', { w: 14 }); b.drops(-13, 9, 2, null, 1.4); },
+  step: function (e, dt, p) { var inA = p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4 && !p.air && p.state === 'normal'; if (inA && p.gsp > 0) { p.gsp = Math.min(640, p.gsp + 420 * dt); if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - 6, y: e.y - 2, vx: -80, vy: -30, t: 0.25, c: GL().lite, g: 200 }); } },
+  draw: function (g, e, x, y, L) { var w = e.w * TS; R(OUT, x - 8, y - 2, w, 2); for (var i = 0; i < w; i += 16) { var on = L.k === 'park' ? (Math.floor(G.t * 3) + i / 16) % 2 : 0; R(on ? L.hot : L.mlite, x - 8 + i, y - 2, 15, 1); }
+    var gl = (G.t * 260) % w; R('#ffffff', x - 8 + gl, y - 2, 10, 1); R(L.lite, x - 8 + (gl + w / 2) % w, y - 2, 6, 1); for (var c = 10; c < w - 10; c += 32) { R(L.hot, x + c, y - 9, 2, 2); R(L.hot, x + c + 2, y - 7, 2, 2); R(L.hot, x + c, y - 5, 2, 2); } } });
+
+gimDef('gust', { h: 6, // a big fan blows you on: jump into the wind and it carries you over the ditch
+  lay: function (b) { var e = GT(b, 0, 'gust', {}); b.ground(5); SEC.ditch(b, 7); b.ground(6); e.w = b.col - e.c; b.drops(-10, 8, 4, 'arc', 1.4); },
+  step: function (e, dt, p) { if (p.x < e.x || p.x > e.x + e.w * TS || p.y < e.y - 150 || p.y > e.y + 60 || p.state !== 'normal') return; if (p.air) p.vx = Math.min(560, p.vx + 640 * dt); else if (p.gsp < 480) p.gsp += 320 * dt;
+    if (Math.random() < 0.6) FX.push({ k: 'bit', x: e.x + 10, y: e.y - 10 - Math.random() * 100, vx: 320 + Math.random() * 120, vy: (Math.random() - 0.5) * 40, t: 0.6, c: [GL().lite, GL().main, GL().mlite][Math.floor(Math.random() * 3)], g: 0 }); },
+  draw: function (g, e, x, y, L) { bx(x - 16, y - 70, 16, 70, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.arc(x - 6, y - 40, 26, 0, 6.3); g.fill(); g.fillStyle = L.dark; g.beginPath(); g.arc(x - 6, y - 40, 24, 0, 6.3); g.fill();
+    for (var i = 0; i < 4; i++) { var a = G.t * 14 + i * 1.571; g.save(); g.translate(x - 6, y - 40); g.rotate(a); R(OUT, -3, -22, 7, 20); R(L.mlite, -2, -21, 5, 18); g.restore(); } motif(g, x - 6, y - 40, L);
+    for (var s = 0; s < 6; s++) { var sx = x + ((G.t * 300 + s * 47) % (e.w * TS)), sy = y - 14 - (s * 19) % 90; R(L.lite, sx, sy, 8, 1); } } });
+
+/* ---------- things that carry you ---------- */
+gimDef('magnet', { h: 7, // a magnet rail: jump up to it and it pulls you along over the spikes (A lets go)
+  lay: function (b) { var c0 = b.col; b.ground(4); SEC.ditch(b, 12); b.ground(4); GT(b, c0 + 2 - b.col, 'magnet', { c1: b.col - 3 }, 6, 'gimh'); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; var x1 = e.c1 * TS + 8; if (!p.gl && e.cd <= 0 && p.state === 'normal' && p.air && p.x > e.x && p.x < x1 - 12 && Math.abs((p.y - PH) - (e.y + 6)) < 16) { p.gl = { e: e }; sfx.play('clink'); } },
+  ride: function (p, s, dt) { var e = s.e, x1 = e.c1 * TS + 8; p.y = e.y + 6 + PH; p.x += 300 * dt; p.vx = 300; p.vy = 0; p.air = true; p.face = 1; if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x, y: e.y + 4, vx: -60, vy: 40, t: 0.3, c: GL().hot, g: 300 });
+    if (KIT.pressed('a') || p.x >= x1 - 6) { var j = KIT.pressed('a'); dropOff(p, 300, j ? -280 : -60); e.cd = 0.5; } relJ(p); },
+  draw: function (g, e, x, y, L, cx, cy) { var x1 = e.c1 * TS + 8 - cx; postD(x - 6, y + 96, 100, L, 6); postD(x1 + 6, y + 96, 100, L, 6); bx(x - 8, y - 4, x1 - x + 16, 8, L.metal, L.mlite);
+    for (var m = x; m < x1; m += 32) { R(L.main, m, y + 4, 10, 3); R(L.hot, m, y + 4, 3, 3); R(L.mlite, m + 7, y + 4, 3, 3); } motif(g, x - 6, y - 8, L); motif(g, x1 + 6, y - 8, L);
+    if (PL && PL.gl && PL.gl.e === e) { var px = PL.x - cx; R(OUT, px - 8, y + 4, 16, 8); R(L.main, px - 7, y + 5, 14, 3); R(L.mlite, px - 7, y + 8, 3, 3); R(L.mlite, px + 4, y + 8, 3, 3); } } });
+
+gimDef('sinkers', { h: 2, // rafts that sink while you stand on them: keep moving
+  lay: function (b) { GT(b, 0, 'sinkers', { w: 14 }, 0, 'gimh'); safePit(b, 14); },
+  init: function (e) { for (var i = 0; i < 3; i++) gimPlat(e, e.x - 8 + 16 + i * 64, e.y, 48, { sink: 0, mv: function (q, dt) { q.sink = onPlat(q) ? Math.min(56, q.sink + 34 * dt) : Math.max(0, q.sink - 46 * dt); q.y = q.y0 + q.sink; if (q.sink > 4 && Math.random() < 0.2) bits(q.x + Math.random() * q.w, q.y + 6, 1, [GL().goo], 30, 100); },
+      draw: function (g, x, y, q) { var L = GL(); plank(g, x, y, q.w, L); if (q.sink > 30 && Math.floor(G.t * 10) % 2) R(L.hot, x + q.w / 2 - 1, y - 6, 2, 3); } }); },
+  draw: function (g, e, x, y, L) { R(OUT, x - 8, y + 72, e.w * TS, 2); } });
+
+gimDef('catapult', { h: 13, big: 1.4, // step on the end of the plank and the weight drops on the other: up you go to the ledge
+  lay: function (b) { GT(b, 0, 'catapult', {}); b.ground(6); b.ledge(6, 9, 12, '='); b.drops(7, 8, 11, null, 1.3); b.thing(13, 'box', 9, { item: 'drops' }); b.ground(20); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (e.flip > 0) e.flip -= dt;
+    if (e.cd <= 0 && !p.air && p.state === 'normal' && p.x > e.x - 12 && p.x < e.x + 8 && Math.abs(p.y - e.y) < 6) { p.air = true; p.vy = -660; p.vx = 200; p.gsp = 200; p.jumps = 1; p.spring = 0.7; e.flip = 0.6; e.cd = 1.2; sfx.play('spring'); sfx.play('thud', 0.5); G.shake = Math.max(G.shake, 2); } },
+  draw: function (g, e, x, y, L) { var px = x + 16; g.fillStyle = OUT; g.beginPath(); g.moveTo(px - 9, y); g.lineTo(px, y - 12); g.lineTo(px + 9, y); g.fill(); g.fillStyle = L.stone; g.beginPath(); g.moveTo(px - 7, y - 1); g.lineTo(px, y - 10); g.lineTo(px + 7, y - 1); g.fill();
+    var a = e.flip > 0 ? -0.36 : 0.36; g.save(); g.translate(px, y - 12); g.rotate(a); bx(-28, -3, 56, 5, L.wood, L.mlite); R(L.hot, -28, -3, 6, 1); g.restore();
+    var wy = e.flip > 0 ? y - 12 - Math.sin(-a) * 28 - 14 : y - 12 - Math.sin(-a) * 28 - 14 - 40; bx(px + 18, wy, 16, 14, L.metal, L.mlite); motif(g, px + 26, wy + 7, L); if (e.flip <= 0) R(OUT, px + 25, wy - 40, 2, 40); } });
+
+gimDef('barrel', { h: 7, big: 1.6, // a barrel cannon: climb in, it aims, and fires you over the ditch
+  lay: function (b) { GT(b, 0, 'barrel', {}); b.ground(3); SEC.ditch(b, 16); b.ground(6); b.drops(-24, 10, 7, 'arc', 2); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (e.kick > 0) e.kick -= dt; if (!p.gl && e.cd <= 0 && p.state === 'normal' && Math.abs(p.x - e.x) < 12 && Math.abs(p.y - e.y) < 20) { p.gl = { e: e, t: 0 }; p.hide = 1; sfx.play('clink'); } },
+  ride: function (p, s, dt) { var e = s.e; s.t += dt; p.x = e.x; p.y = e.y - 6; p.vx = 0; p.vy = 0; p.air = true; relJ(p);
+    if (s.t > 0.75) { dropOff(p, 430, -470); p.spring = 0.7; e.cd = 1.2; e.kick = 0.3; sfx.play('dash'); sfx.play('thud'); G.shake = Math.max(G.shake, 3); bits(e.x + 16, e.y - 30, 12, ['#5a4a4a', '#8a7a7a', GL().fire[1]], 140, -20); } },
+  draw: function (g, e, x, y, L) { bx(x - 12, y - 8, 24, 8, L.stone, L.slite); var held = PL && PL.gl && PL.gl.e === e, a = -0.8 + (held ? Math.sin(G.t * 8) * 0.12 : 0) - (e.kick > 0 ? 0.1 : 0);
+    g.save(); g.translate(x, y - 14); g.rotate(a); bx(-12, -10, 30, 20, L.wood, L.mlite); R(L.metal, -6, -10, 3, 20); R(L.metal, 8, -10, 3, 20); R(OUT, 17, -8, 3, 16); g.restore(); motif(g, x - 8, y - 16, L);
+    if (held && Math.random() < 0.5) FX.push({ k: 'bit', x: e.x - 10, y: e.y - 22, vx: -20, vy: -60, t: 0.3, c: GL().fire[1], g: 0 }); } });
+
+function tubeP(e, u) { var x0 = e.x, y0 = e.y - 12, x3 = e.c1 * TS + 8, y3 = y0, x1 = x0 + 30, y1 = y0 - 120, x2 = x3 - 30, y2 = y1, v = 1 - u;
+  return { x: v * v * v * x0 + 3 * v * v * u * x1 + 3 * v * u * u * x2 + u * u * u * x3, y: v * v * v * y0 + 3 * v * v * u * y1 + 3 * v * u * u * y2 + u * u * u * y3 }; }
+gimDef('tube', { h: 6, // a pipe: run into its mouth and it shoots you over the hazard and out the far end
+  lay: function (b) { var e = GT(b, 0, 'tube', {}); b.ground(3); SEC.ditch(b, 12); b.ground(2); e.c1 = b.col; b.ground(5); b.drops(-4, 3, 2); },
+  init: function (e) { var l = 0, a = tubeP(e, 0); for (var i = 1; i <= 20; i++) { var b2 = tubeP(e, i / 20); l += Math.hypot(b2.x - a.x, b2.y - a.y); a = b2; } e.len = l; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && p.state === 'normal' && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 10 && (p.air ? p.vx : p.gsp) >= 0) { p.gl = { e: e, u: 0 }; p.hide = 1; sfx.play('dash'); } },
+  ride: function (p, s, dt) { var e = s.e; s.u += dt * 560 / e.len; relJ(p); if (s.u >= 1) { p.gl = null; p.hide = 0; p.x = e.c1 * TS + 18; p.y = e.y; p.air = false; p.gsp = 520; p.vx = 520; p.vy = 0; e.cd = 1; sfx.play('spring'); return; }
+    var q = tubeP(e, s.u); p.x = q.x; p.y = q.y + 18; p.vx = 0; p.vy = 0; p.air = true; },
+  draw: function (g, e, x, y, L, cx, cy) { var pts = []; for (var i = 0; i <= 24; i++) { var q = tubeP(e, i / 24); pts.push([q.x - cx, q.y - cy]); }
+    [[22, OUT], [18, L.metal], [6, L.mlite]].forEach(function (s, k) { g.strokeStyle = s[1]; g.lineWidth = s[0]; g.beginPath(); pts.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1] - (k === 2 ? 5 : 0)); else g.moveTo(q[0], q[1] - (k === 2 ? 5 : 0)); }); g.stroke(); });
+    for (var j = 2; j < 24; j += 4) R(L.dark, pts[j][0] - 1, pts[j][1] - 9, 2, 18);
+    [pts[0], pts[24]].forEach(function (q) { R(OUT, q[0] - 4, q[1] - 14, 8, 28); R(L.mlite, q[0] - 3, q[1] - 13, 6, 26); R(OUT, q[0] - 1, q[1] - 10, 2, 20); });
+    if (PL && PL.gl && PL.gl.e === e) { var q2 = tubeP(e, PL.gl.u); g.fillStyle = OUT; g.beginPath(); g.arc(q2.x - cx, q2.y - cy, 12, 0, 6.3); g.fill(); g.fillStyle = L.lite; g.beginPath(); g.arc(q2.x - cx, q2.y - cy, 10, 0, 6.3); g.fill(); motif(g, q2.x - cx, q2.y - cy, L); } } });
+
+gimDef('grind', { h: 3, // a rail: land on it and you grind along it in sparks (A jumps off)
+  lay: function (b) { var e = GT(b, 0, 'grind', {}); b.ground(2); SEC.ditch(b, 14); b.ground(2); e.c1 = b.col; b.ground(3); b.drops(-20, 10, 4, null, 1.6); },
+  step: function (e, dt, p) { var x1 = e.c1 * TS + 8, ry = e.y - 30; if (!p.gl && p.state === 'normal' && p.air && p.vy >= 0 && p.x > e.x && p.x < x1 - 8 && p.y >= ry - 3 && p.y - p.vy * dt <= ry + 6) { p.gl = { e: e, v: Math.max(380, Math.abs(p.vx)) }; sfx.play('clink'); } },
+  ride: function (p, s, dt) { var e = s.e, x1 = e.c1 * TS + 8, ry = e.y - 30; p.y = ry; p.x += s.v * dt; p.vx = s.v; p.vy = 0; p.air = true; p.face = 1; p.grot = 0.12; p.dist = (p.dist || 0) + s.v * dt;
+    if (Math.random() < 0.8) FX.push({ k: 'bit', x: p.x - 4, y: ry, vx: -100 - Math.random() * 80, vy: -40 - Math.random() * 60, t: 0.3, c: Math.random() < 0.5 ? '#ffe36a' : GL().hot, g: 400 });
+    if (KIT.pressed('a')) { dropOff(p, s.v, -PHYS.jumpv * 1.15); sfx.play('jump'); return; } if (p.x >= x1) { dropOff(p, s.v + 60, -200); return; } relJ(p); },
+  draw: function (g, e, x, y, L, cx) { var x1 = e.c1 * TS + 8 - cx; for (var px = x; px <= x1; px += 64) postD(px, y + 34, 64, L, 4); postD(x1, y + 34, 64, L, 4); bx(x - 2, y - 32, x1 - x + 4, 3, L.mlite, '#ffffff'); R(L.metal, x - 2, y - 29, x1 - x + 4, 1); motif(g, x, y - 36, L); } });
+
+gimDef('swingbar', { h: 5, // bars over the ditch: catch one, swing round it and be thrown high
+  lay: function (b) { GT(b, 0, 'swingbar', {}); b.ground(2); SEC.ditch(b, 12); b.ground(3); b.drops(-12, 6, 7, 'arc', 1.6); },
+  init: function (e) { e.bars = [[e.x + 5 * TS, e.y - 58], [e.x + 11 * TS, e.y - 58]]; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (p.gl || e.cd > 0 || !p.air || p.state !== 'normal') return; e.bars.forEach(function (bb) { if (!p.gl && Math.hypot(p.x - bb[0], p.y - 20 - bb[1]) < 18) { var a = Math.atan2(p.y - 20 - bb[1], p.x - bb[0]); p.gl = { e: e, b: bb, a: a, a0: a }; sfx.play('clink'); } }); },
+  ride: function (p, s, dt) { s.a += 12 * dt; p.x = s.b[0] + Math.cos(s.a) * 20; p.y = s.b[1] + Math.sin(s.a) * 20 + 20; p.grot = s.a - Math.PI / 2; p.vx = 0; p.vy = 0; p.air = true; relJ(p);
+    if (s.a - s.a0 > 6.283 * 0.92) { dropOff(p, 380, -560); p.spring = 0.5; s.e.cd = 0.6; sfx.play('spring'); } },
+  draw: function (g, e, x, y, L, cx, cy) { (e.bars || []).forEach(function (bb) { var bx2 = Math.round(bb[0] - cx), by = Math.round(bb[1] - cy); postD(bx2 - 10, y + 32, y + 32 - by, L, 3); postD(bx2 + 10, y + 32, y + 32 - by, L, 3); bx(bx2 - 11, by - 2, 22, 4, L.mlite, '#ffffff'); motif(g, bx2 - 10, by - 6, L); motif(g, bx2 + 10, by - 6, L); }); } });
+
+gimDef('trampoline', { h: 12, // trampolines: each bounce in a row goes higher
+  lay: function (b) { for (var i = 0; i < 3; i++) { b.ground(3); GT(b, 0, 'trampoline', { n: i }); b.ground(4); b.drops(-4, 3, 7 + i * 3, 'arc', 1); } b.ground(3); },
+  step: function (e, dt, p) { if (e.sq > 0) e.sq -= dt; var nc = e.x + 16, ny = e.y - 10; if (p.state !== 'normal' || Math.abs(p.x - nc) > 22) return;
+    var hit = (p.air && p.vy > 0 && p.y >= ny - 3 && p.y - p.vy * dt <= ny + 4) || (!p.air && Math.abs(p.y - e.y) < 3);
+    if (hit) { G.tch = G.t - (G.tram || -9) < 1.6 ? Math.min(2, (G.tch || 0) + 1) : 0; G.tram = G.t; p.vy = -[520, 640, 760][G.tch]; p.y = ny; p.air = true; p.jumps = 1; p.spring = 0.5; p.vx = Math.max(p.vx, p.gsp, 140); e.sq = 0.25; sfx.play('spring'); } },
+  draw: function (g, e, x, y, L) { var nx = x - 6, sq = e.sq > 0 ? 5 : 0; bx(nx - 2, y - 12, 4, 12, L.metal, L.mlite); bx(nx + 42, y - 12, 4, 12, L.metal, L.mlite);
+    R(OUT, nx, y - 12 + sq, 44, 4); for (var s = 0; s < 44; s += 6) R(s % 12 ? L.main : L.hot, nx + s, y - 11 + sq, 5, 2); for (var z = 0; z < 3; z++) { R(L.mlite, nx + 2 + z * 2, y - 8 + sq, 1, 2); R(L.mlite, nx + 38 + z * 2, y - 8 + sq, 1, 2); } motif(g, nx + 22, y - 4, L); } });
+
+var BALLOON = { city: 'heart', sewer: 'bubble', park: 'steve', bone: 'ghost', factory: 'patch', brain: 'brain' };
+function balloonD(g, x, y, L) { var k = BALLOON[L.k]; x = Math.round(x); y = Math.round(y);
+  g.fillStyle = OUT; g.beginPath(); g.ellipse(x, y, 15, 18, 0, 0, 6.3); g.fill();
+  g.fillStyle = k === 'steve' ? '#12040a' : k === 'bubble' ? '#e8d4a0' : k === 'ghost' ? '#f4ecdc' : k === 'patch' ? L.main : k === 'brain' ? L.goo : L.main; g.beginPath(); g.ellipse(x, y, 13, 16, 0, 0, 6.3); g.fill();
+  if (k === 'steve') { R(L.main, x - 13, y - 1, 1, 2); R('#ff2630', x - 6, y - 5, 4, 4); R('#ff2630', x + 2, y - 5, 4, 4); R('#ffffff', x - 7, y + 3, 14, 3); R(OUT, x - 5, y + 4, 10, 1); }
+  else if (k === 'heart') { R(L.hot, x - 8, y - 8, 6, 6); R(L.hot, x + 2, y - 8, 6, 6); R(L.lite, x - 6, y - 7, 2, 2); }
+  else if (k === 'ghost') { R(OUT, x - 6, y - 4, 4, 5); R(OUT, x + 2, y - 4, 4, 5); R(OUT, x - 3, y + 4, 6, 3); }
+  else if (k === 'patch') { R(L.lite, x - 7, y - 6, 6, 6); R(L.dark, x + 3, y + 2, 5, 5); R(L.hot, x - 13, y + 6, 26, 2); }
+  else if (k === 'brain') { R(L.main, x - 1, y - 14, 2, 28); R(L.main, x - 10, y - 4, 7, 1); R(L.main, x + 3, y + 4, 7, 1); }
+  else R('#fffbe8', x - 7, y - 9, 4, 4);
+  R(OUT, x - 2, y + 17, 4, 3); }
+gimDef('balloon', { h: 9, // grab the balloon and it floats you over the ditch until it pops
+  lay: function (b) { GT(b, 0, 'balloon', {}); b.ground(3); SEC.ditch(b, 18); b.ground(6); b.drops(-22, 10, 7, null, 2.2); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && pCirc(e.x + 10, e.y - 34, 14)) { p.gl = { e: e, t: 0 }; sfx.play('clink'); } },
+  ride: function (p, s, dt) { s.t += dt; p.x += 140 * dt; p.y = Math.max(s.e.y - 120, p.y - 52 * dt); p.vx = 140; p.vy = 0; p.air = true; p.face = 1;
+    if (s.t > 2.8 || KIT.pressed('a')) { var j = KIT.pressed('a'); dropOff(p, 140, j ? -200 : 0); s.e.cd = 4; sfx.play('pop'); bits(p.x, p.y - PH - 20, 12, [GL().main, GL().lite, GL().hot], 160); return; } relJ(p); },
+  draw: function (g, e, x, y, L, cx, cy) { var held = PL && PL.gl && PL.gl.e === e; if (held) { var hx = PL.x - cx, hy = PL.y - PH - cy; R(L.lite, hx, hy - 22, 1, 22); balloonD(g, hx, hy - 40 + Math.sin(G.t * 3) * 2, L); return; }
+    if (e.cd > 0) { R(OUT, x + 8, y - 4, 4, 4); return; } var by = y - 62 + Math.sin(G.t * 2 + e.x) * 3; R(OUT, x + 8, y - 4, 4, 4); R(L.lite, x + 10, by + 18, 1, y - 4 - by - 18); balloonD(g, x + 10, by, L); } });
+
+gimDef('flippers', { h: 7, // pinball flippers bat you forward
+  lay: function (b) { b.ground(2); GT(b, 0, 'flippers', {}); b.ground(12); b.drops(-10, 8, 6, 'arc', 1.3); },
+  step: function (e, dt, p) { [0, 1].forEach(function (i) { var fx = e.x + i * 88, k = 'f' + i; e[k] = (e[k] || 0) - dt; if (e[k] > 0 || p.state !== 'normal' || Math.abs(p.x - fx) > 12) return;
+      if ((!p.air && Math.abs(p.y - e.y) < 4) || (p.air && p.vy > 0 && p.y >= e.y - 8 && p.y < e.y + 2)) { p.air = true; p.vy = -600; p.vx = Math.max(p.vx, p.gsp, 360); p.gsp = p.vx; p.jumps = 1; p.spring = 0.4; e[k] = 0.5; sfx.play('bump'); } }); },
+  draw: function (g, e, x, y, L) { [0, 1].forEach(function (i) { var fx = x + i * 88, up = (e['f' + i] || 0) > 0.2; g.fillStyle = OUT; g.beginPath(); g.arc(fx - 8, y - 6, 6, 0, 6.3); g.fill(); g.fillStyle = L.metal; g.beginPath(); g.arc(fx - 8, y - 6, 5, 0, 6.3); g.fill();
+      g.save(); g.translate(fx - 8, y - 6); g.rotate(up ? -0.55 : 0.3); bx(-2, -4, 28, 7, L.main, L.hot); R(L.lite, 0, -3, 22, 1); g.restore(); R(Math.floor(G.t * 6 + i) % 2 ? L.hot : L.dark, fx - 10, y - 8, 4, 4); }); } });
+
+gimDef('corkscrew', { h: 4, // a corkscrew: hit it fast and you roll right round it, faster still
+  lay: function (b) { b.ground(20); GT(b, -19, 'corkscrew', { w: 18 }); b.drops(-17, 10, 2, null, 1.6); },
+  step: function (e, dt, p) { var x0 = e.x - 8, w = e.w * TS, inA = !p.air && p.state === 'normal' && p.x > x0 && p.x < x0 + w && Math.abs(p.y - e.y) < 4;
+    if (inA && p.gsp > 300) { p.grot = (p.x - x0) / w * 6.283; p.gsp = Math.min(700, p.gsp + 140 * dt); e.on = 1; } else if (e.on) { p.grot = 0; e.on = 0; } },
+  draw: function (g, e, x, y, L) { cork(g, e, x, y, L, false); }, over: function (g, e, x, y, L) { cork(g, e, x, y, L, true); } });
+function cork(g, e, x, y, L, front) { var w = e.w * TS, x0 = x - 8; if (!front) { postD(x0, y, 60, L, 6); postD(x0 + w, y, 60, L, 6); motif(g, x0, y - 62, L); motif(g, x0 + w, y - 62, L); }
+  for (var s = 0; s < w; s += 3) { var ph = s / w * 6.283 * 2, c = Math.cos(ph); if ((c >= 0) !== front) continue; var yy = y - 30 + Math.sin(ph) * 26; R(OUT, x0 + s, yy - 5, 4, 10); R(front ? L.main : L.metal, x0 + s, yy - 4, 3, 8); R(front ? L.hot : L.mlite, x0 + s, yy - 4, 3, 2); if (Math.floor(s / 12) % 2) R(L.dark, x0 + s, yy, 3, 2); } }
+
+var HOOP = { city: 'neon', sewer: 'cream', park: 'fire', bone: 'bone', factory: 'fire', brain: 'pulse' };
+gimDef('hoops', { h: 5, // big hoops: go through one and it throws you on faster
+  lay: function (b) { b.ground(20); GT(b, -17, 'hoops', { up: 2 }, 2, 'gimh'); GT(b, -11, 'hoops', { up: 4 }, 4, 'gimh'); GT(b, -5, 'hoops', { up: 2 }, 2, 'gimh'); b.drops(-18, 4, 2, null, 1); },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (e.fl > 0) e.fl -= dt; if (e.cd <= 0 && p.state === 'normal' && Math.hypot(p.x - e.x, p.y - 20 - e.y) < 15) { e.cd = 1; e.fl = 0.3; if (p.air) p.vx = Math.max(p.vx, 460); else p.gsp = Math.max(p.gsp, 520); G.score += 50; gotDrop(); sfx.play('dash'); } },
+  draw: function (g, e, x, y, L) { var k = HOOP[L.k], fy = y + e.up * TS; postD(x, fy, fy - y - 18, L, 4); var r = 18 + (e.fl > 0 ? 2 : 0);
+    g.lineWidth = 6; g.strokeStyle = OUT; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.stroke(); g.lineWidth = 4; g.strokeStyle = k === 'cream' ? '#e8d4a0' : k === 'bone' ? L.main : k === 'pulse' && Math.floor(G.t * 4) % 2 ? L.hot : L.main; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.stroke();
+    if (k === 'fire') for (var f = 0; f < 10; f++) { var a = f / 10 * 6.283 + G.t * 2; flame(x + Math.cos(a) * r, y + Math.sin(a) * r, 2, L, f); }
+    else if (k === 'neon') { g.lineWidth = 1; g.strokeStyle = '#ffd0d0'; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.stroke(); } else if (k === 'bone') for (var b2 = 0; b2 < 6; b2++) { var a2 = b2 / 6 * 6.283; R(L.lite, x + Math.cos(a2) * r - 2, y + Math.sin(a2) * r - 2, 4, 4); } } });
+
+/* ---------- places to reach ---------- */
+gimDef('timedgate', { h: 6, // step on the plate: the vault's gate lifts for seven seconds. Get in before it drops
+  lay: function (b) { GT(b, 0, 'timedgate', {}); b.ground(14); var v0 = b.col; b.ground(10);
+    for (var c = v0; c < v0 + 8; c++) for (var r = 1; r <= 2; r++) b.set(c, b.h - r, '#');
+    for (var r2 = 3; r2 <= 5; r2++) { b.set(v0 + 2, b.h - r2, 'Z'); b.set(v0 + 7, b.h - r2, 'X'); } /* a cracked back wall: you can always smash your way out */ for (var c2 = v0 + 2; c2 < v0 + 8; c2++) b.set(c2, b.h - 6, '#');
+    b.ent('box', v0 + 5, b.h - 2, { item: 'life' }); for (var d = 3; d < 7; d++) b.ent('drop', v0 + d, b.h - 4); b.ground(6); },
+  init: function (e) { e.zs = []; var c0 = Math.floor(e.x / TS); for (var c = c0; c < c0 + 30; c++) for (var r = 0; r < LV.h; r++) if (T(c, r) === 'Z') e.zs.push([c, r]); e.open = 0; e.vx = e.zs.length ? e.zs[0][0] * TS + 40 : e.x + 300; },
+  step: function (e, dt, p) { var was = e.open > 0; if (!p.air && p.state === 'normal' && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 5 && e.open < 6.5) { e.open = 7; if (!was) { sfx.play('check'); G.banner = 1; G.bannerTxt = 'THE VAULT IS OPEN'; } }
+    if (e.open > 0) { var s0 = Math.ceil(e.open); e.open -= dt; if (Math.ceil(e.open) !== s0) sfx.play('clink'); }
+    var open = e.open > 0; e.zs.forEach(function (z) { var i = z[1] * LV.w + z[0]; if (open) LV.t[i] = '.'; else if (LV.t[i] !== 'Z') { var px = z[0] * TS + 8, py = z[1] * TS + 8; if (!(Math.abs(p.x - px) < 14 && py > p.y - PH && py < p.y + 4)) LV.t[i] = 'Z'; } }); },
+  draw: function (g, e, x, y, L, cx) { R(OUT, x - 9, y - 3, 18, 3); R(e.open > 0 ? L.hot : L.mlite, x - 8, y - (e.open > 0 ? 1 : 2), 16, 1); motif(g, x, y - 8, L);
+    if (e.open > 0) { var vx = Math.round(e.vx - cx); bx(vx - 12, y - 128, 24, 16, L.dark, L.mlite); text(String(Math.ceil(e.open)), vx, y - 124, { size: 8, align: 'center', col: e.open < 3 ? L.hot : L.lite }); } } });
+
+gimDef('lift', { h: 10, // a lift: stand on it and it takes you up to the ledge
+  lay: function (b) { GT(b, 0, 'lift', {}); b.ground(4); b.ledge(0, 9, 9, '#'); b.drops(1, 6, 11, null, 1.3); b.thing(6, 'box', 9, { item: 'shield' }); b.ground(12); },
+  init: function (e) { e.q = gimPlat(e, e.x - 8, e.y, 48, { st: 'rest', tt: 0, mv: function (q, dt) { var top = q.y0 - 144;
+      if (q.st === 'rest') { if (onPlat(q)) { q.tt += dt; if (q.tt > 0.25) { q.st = 'up'; sfx.play('rumble', 0.4); } } else q.tt = 0; }
+      else if (q.st === 'up') { q.y = Math.max(top, q.y - 90 * dt); if (q.y <= top) { q.st = 'top'; q.tt = 1.6; sfx.play('thud', 0.4); } }
+      else if (q.st === 'top') { q.tt -= dt; if (q.tt <= 0) q.st = 'down'; }
+      else { q.y = Math.min(q.y0, q.y + 90 * dt); if (q.y >= q.y0) { q.st = 'rest'; q.tt = 0; } } },
+    draw: function (g, x, y, q) { var L = GL(); bx(x, y, q.w, 6, L.metal, L.mlite); R(L.hot, x, y + 5, q.w, 1); for (var b2 = 4; b2 < q.w; b2 += 10) R(L.dark, x + b2, y + 2, 4, 2); } }); },
+  draw: function (g, e, x, y, L, cx, cy) { postD(x - 12, y, 170, L, 6); postD(x + 44, y, 170, L, 6); bx(x - 14, y - 172, 60, 6, L.metal, L.mlite); var py = e.q ? Math.round(e.q.y - cy) : y;
+    g.fillStyle = OUT; g.beginPath(); g.arc(x + 16, y - 176, 9, 0, 6.3); g.fill(); g.fillStyle = L.mlite; g.beginPath(); g.arc(x + 16, y - 176, 7, 0, 6.3); g.fill(); motif(g, x + 16, y - 176, L);
+    R(OUT, x - 1, y - 172, 2, py - (y - 172)); R(OUT, x + 33, y - 172, 2, py - (y - 172)); var cw = y - 172 + (y - py) * 0.6 + 20; bx(x + 50, Math.round(cw), 10, 16, L.stone, L.slite); } });
+
+gimDef('escalator', { h: 7, // moving stairs carry you up the bank and down the other side
+  lay: function (b) { GT(b, 0, 'escalator', {}); b.up(5, true); b.ground(6); b.down(5, true); b.ground(2); },
+  step: function (e, dt, p) { if (p.air || p.state !== 'normal') return; var a0 = e.x - 8, a1 = a0 + 5 * TS, d0 = a0 + 11 * TS, d1 = d0 + 5 * TS;
+    if ((p.x > a0 && p.x < a1 && Math.abs(p.y - (e.y - (p.x - a0))) < 20) || (p.x > d0 && p.x < d1)) p.gsp = Math.min(460, p.gsp + 600 * dt); },
+  draw: function (g, e, x, y, L) { var a0 = x - 8; [[a0, -1], [a0 + 11 * TS, 1]].forEach(function (s) { for (var i = 0; i < 6; i++) { var u = ((G.t * 0.8 + i / 6) % 1) * 5 * TS, sx = s[0] + u, sy = s[1] < 0 ? y - u - 2 : y - 5 * TS + u - 2; R(OUT, sx - 4, sy - 2, 8, 3); R(L.mlite, sx - 3, sy - 1, 6, 1); }
+      var hy0 = s[1] < 0 ? y - 30 : y - 5 * TS - 30, hy1 = s[1] < 0 ? y - 5 * TS - 30 : y - 30; g.strokeStyle = OUT; g.lineWidth = 4; g.beginPath(); g.moveTo(s[0], hy0); g.lineTo(s[0] + 5 * TS, hy1); g.stroke(); g.strokeStyle = L.main; g.lineWidth = 2; g.stroke(); postD(s[0], hy0 + 30, 30, L, 3); postD(s[0] + 5 * TS, hy1 + 30, 30, L, 3); }); } });
+
+var RAPID = { city: ['#8a0a14', '#c4121c'], sewer: ['#d8c490', '#f1e0b0'], park: ['#c43a8a', '#ff6ad0'], bone: ['#4a3a5a', '#6a5a8a'], factory: ['#c42a08', '#ff6a10'], brain: ['#8a0a10', '#ff2630'] };
+gimDef('rapids', { h: 2, // a fast stream runs along the floor: it carries you, and what floats in it gets in the way
+  lay: function (b) { b.ground(20); GT(b, -19, 'rapids', { w: 18 }); b.drops(-17, 8, 4, 'arc', 2); },
+  init: function (e) { e.fl = [70, 160, 240].map(function (o, i) { return { x: e.x + o, ph: i * 1.7 }; }); },
+  step: function (e, dt, p) { var inA = !p.air && p.state === 'normal' && p.x > e.x - 8 && p.x < e.x + e.w * TS - 8 && Math.abs(p.y - e.y) < 4; if (inA) { if (p.gsp >= 0) p.gsp = Math.min(560, p.gsp + 380 * dt); }
+    e.fl.forEach(function (q) { q.by = Math.sin(G.t * 3 + q.ph) * 2; if (pCirc(q.x, e.y - 8 + q.by, 9)) hurt(q.x); }); },
+  draw: function (g, e, x, y, L, cx) { var w = e.w * TS, c = RAPID[L.k]; R(OUT, x - 8, y - 7, w, 7); R(c[0], x - 8, y - 6, w, 6); for (var s = 0; s < w; s += 12) { var o = (s + G.t * 220) % w; R(c[1], x - 8 + o, y - 6 + (s / 12) % 3 * 2, 8, 1); }
+    (e.fl || []).forEach(function (q) { var qx = Math.round(q.x - cx), qy = Math.round(y - 8 + (q.by || 0)); if (L.k === 'bone') { bx(qx - 7, qy - 7, 14, 12, L.main, L.lite); R(OUT, qx - 4, qy - 4, 3, 3); R(OUT, qx + 1, qy - 4, 3, 3); }
+      else if (L.k === 'brain') { g.fillStyle = OUT; g.beginPath(); g.arc(qx, qy, 8, 0, 6.3); g.fill(); g.fillStyle = '#f0e0e0'; g.beginPath(); g.arc(qx, qy, 7, 0, 6.3); g.fill(); R(L.hot, qx - 2, qy - 2, 4, 4); }
+      else { bx(qx - 8, qy - 8, 16, 14, L.k === 'park' ? L.wood : L.metal, L.mlite); R(OUT, qx - 8, qy - 3, 16, 1); R(OUT, qx - 8, qy + 2, 16, 1); } R(c[1], qx - 10, y - 7, 20, 1); }); } });
+
+gimDef('bubbles', { h: 9, // bubbles rise out of the pit: ride them across before they pop
+  lay: function (b) { GT(b, 0, 'bubbles', { w: 16 }, 0, 'gimh'); safePit(b, 16); },
+  init: function (e) { for (var i = 0; i < 4; i++) gimPlat(e, e.x - 8 + 12 + i * 56, e.y + 70 - i * 37, 32, { mv: function (q, dt) { q.y -= 46 * dt; if (q.y < q.e.y - 84) { bits(q.x + 16, q.y + 12, 10, [GL().goo, GL().lite], 120); sfx.play('pop', 0.3); q.y = q.e.y + 76; } },
+      draw: function (g, x, y, q) { var L = GL(), c = L.k === 'sewer' ? '#e8d4a0' : L.goo; g.fillStyle = OUT; g.beginPath(); g.arc(x + 16, y + 13, 17, 0, 6.3); g.fill(); g.fillStyle = c; g.beginPath(); g.arc(x + 16, y + 13, 15, 0, 6.3); g.fill(); R('#ffffff', x + 8, y + 5, 4, 4); R(L.lite, x + 22, y + 18, 3, 3); } }); },
+  draw: function (g, e, x, y, L) { } });
+
+gimDef('vine', { h: 8, // a rope over the ditch: catch it, swing and let it throw you on
+  lay: function (b) { GT(b, 0, 'vine', {}); b.ground(3); SEC.ditch(b, 14); b.ground(3); b.drops(-14, 6, 4, 'arc', 1.4); },
+  init: function (e) { e.px = e.x + 13 * TS; e.py = e.y - 128; e.L = 84; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; e.th = Math.sin(G.t * 1.6) * 0.6; var ex = e.px + Math.sin(e.th) * e.L, ey = e.py + Math.cos(e.th) * e.L;
+    if (!p.gl && e.cd <= 0 && p.air && p.state === 'normal' && Math.hypot(p.x - ex, p.y - 26 - ey) < 22) { p.gl = { e: e, th: e.th, w: Math.max(2.2, p.vx / e.L), t: 0 }; sfx.play('clink'); } },
+  ride: function (p, s, dt) { var e = s.e; s.t += dt; s.w += -(990 / e.L) * Math.sin(s.th) * dt; s.th += s.w * dt; p.x = e.px + Math.sin(s.th) * e.L; p.y = e.py + Math.cos(s.th) * e.L + 26; p.grot = -s.th * 0.8; p.face = s.w >= 0 ? 1 : -1; p.vx = 0; p.vy = 0; p.air = true;
+    if (KIT.pressed('a') || (s.th > 0.5 && s.w > 0) || s.t > 3) { dropOff(p, e.L * Math.cos(s.th) * s.w * 1.15 + 60, -e.L * Math.sin(s.th) * s.w * 1.1 - 140); p.spring = 0.3; e.cd = 0.8; sfx.play('jump'); return; } relJ(p); },
+  draw: function (g, e, x, y, L, cx, cy) { var px = Math.round(e.px - cx), py = Math.round(e.py - cy); postD(x + 4 * TS, y, y - py, L, 6); postD(x + 22 * TS, y, y - py, L, 6); bx(x + 4 * TS - 4, py - 4, 18 * TS + 8, 6, L.wood, L.mlite); motif(g, px, py - 8, L);
+    var held = PL && PL.gl && PL.gl.e === e, th = held ? PL.gl.th : (e.th || 0), ex = px + Math.sin(th) * e.L, ey = py + Math.cos(th) * e.L;
+    g.strokeStyle = OUT; g.lineWidth = 3; g.beginPath(); g.moveTo(px, py); g.lineTo(ex, ey); g.stroke(); g.strokeStyle = L.k === 'brain' ? L.goo : L.k === 'factory' || L.k === 'city' ? L.mlite : L.lite; g.lineWidth = 1; g.stroke(); if (!held) R(OUT, ex - 3, ey - 2, 6, 6); } });
+
+var SMASH = { city: 'glass', sewer: 'brick', park: 'paper', bone: 'bones', factory: 'crates', brain: 'membrane' };
+gimDef('smashwalls', { h: 6, // thin walls in a row: hit them fast (or jump into them) and smash straight through
+  lay: function (b) { b.ground(2); b.thing(0, 'dash', 0, { dir: 1 }); b.ground(5); var e = GT(b, 0, 'smashwalls', {}); e.cols = [];
+    for (var i = 0; i < 4; i++) { b.ground(4); for (var y = 1; y <= 6; y++) b.set(b.col, b.h - y, 'X'); e.cols.push(b.col); b.ground(1); b.drops(-4, 2, 2); } b.ground(5); },
+  step: function (e, dt, p) { var r0 = Math.floor(e.y / TS), v = p.air ? p.vx : p.gsp; if (p.state !== 'normal') return; /* smash it at speed or by jumping into it, whatever height you hit it at */
+    e.cols.forEach(function (c) { if (T(c, r0 - 1) !== 'X') return; var wx = c * TS; if (p.x + PHW + 4 + Math.max(0, v) * dt * 2 >= wx && p.x < wx + 8 && p.y > (r0 - 5) * TS && (Math.abs(v) >= 140 || p.air || G.super)) { breakWall(c, r0 - 1); p.gsp = Math.max(p.gsp, p.air ? p.gsp : 260); } }); },
+  draw: function (g, e, x, y, L, cx) { var k = SMASH[L.k], r0 = Math.floor(e.y / TS); (e.cols || []).forEach(function (c) { if (T(c, r0 - 1) !== 'X') return; var wx = c * TS - cx;
+      if (k === 'glass') { bx(wx, y - 96, 16, 96, '#2a0c12', L.slite); R(L.hot, wx + 2, y - 60, 1, 56); R(L.hot, wx + 4, y - 40, 8, 1); R('#ffd0d0', wx + 10, y - 54, 2, 10); }
+      else if (k === 'paper') { bx(wx, y - 96, 16, 96, '#fff6e8', '#ffffff'); for (var s = 0; s < 6; s++) R(s % 2 ? L.main : L.hot, wx + 4, y - 90 + s * 14, 8, 8); }
+      else if (k === 'bones') { bx(wx, y - 96, 16, 96, L.stone, L.slite); for (var b2 = 0; b2 < 12; b2++) R(L.main, wx + 2 + (b2 % 2) * 6, y - 94 + b2 * 8, 6, 3); }
+      else if (k === 'crates') { for (var c2 = 0; c2 < 6; c2++) { bx(wx, y - 96 + c2 * 16, 16, 15, L.wood, L.mlite); R(L.dark, wx + 7, y - 95 + c2 * 16, 2, 14); } }
+      else if (k === 'membrane') { bx(wx, y - 96, 16, 96, L.goo, L.lite); for (var v = 0; v < 8; v++) R(L.main, wx + 3 + (v * 5) % 10, y - 92 + v * 12, 1, 10); }
+      else { bx(wx, y - 96, 16, 96, L.stone, L.slite); for (var r = 0; r < 12; r++) R(OUT, wx, y - 96 + r * 8, 16, 1); R("#e8d4a0", wx + 6, y - 40, 3, 40); } }); } });
+
+gimDef('beatblocks', { h: 3, // blocks that come and go on the beat (PulsarOctopus on the decks)
+  lay: function (b) { GT(b, 0, 'beatblocks', { w: 18 }, 0, 'gimh'); safePit(b, 18); },
+  init: function (e) { for (var i = 0; i < 6; i++) gimPlat(e, e.x - 8 + 6 + i * 48, e.y - (i % 3 === 1 ? 16 : 0), 32, { i: i, mv: function (q) { var beat = Math.floor(G.t / 0.9) % 2; q.gone = (q.i % 2) !== beat; q.warn = (G.t % 0.9) > 0.62; },
+      draw: function (g, x, y, q) { var L = GL(); if (q.gone) { for (var d = 0; d < q.w; d += 4) { R(L.mlite, x + d, y, 2, 1); R(L.mlite, x + d, y + 9, 2, 1); } return; }
+        bx(x, y, q.w, 10, L.main, L.hot); if (q.warn && Math.floor(G.t * 20) % 2) R('#ffffff', x, y, q.w, 2); R(OUT, x + 13, y + 3, 2, 4); R(OUT, x + 13, y + 3, 5, 1); } }); },
+  draw: function (g, e, x, y, L) { var pulse = (G.t % 0.9) < 0.12 ? 2 : 0; bx(x - 30, y - 34, 22, 34, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.arc(x - 19, y - 22, 7 + pulse, 0, 6.3); g.fill(); g.fillStyle = L.dark; g.beginPath(); g.arc(x - 19, y - 22, 5 + pulse, 0, 6.3); g.fill(); R(L.hot, x - 21, y - 9, 4, 4); motif(g, x - 19, y - 38, L); } });
+
+gimDef('lowgrav', { h: 8, // the air goes thin: everything floats, and a wall you could not jump is easy
+  lay: function (b) { GT(b, 0, 'lowgrav', { w: 22 }); b.ground(8); for (var x = 0; x < 2; x++) for (var y = 1; y <= 5; y++) b.set(b.col + x, b.h - y, '#'); b.ground(2); b.drops(-1, 4, 9, 'arc', 1.2); b.ground(12); b.drops(-10, 6, 6, 'arc', 1.6); },
+  step: function (e, dt, p) { if (p.x < e.x - 8 || p.x > e.x + e.w * TS || p.y < e.y - 240 || p.state !== 'normal') return; if (p.air) p.vy -= 990 * 0.55 * dt; if (Math.random() < 0.3) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 40, y: p.y - Math.random() * 40, vx: 0, vy: -20, t: 0.8, c: GL().glow, g: 0 }); },
+  draw: function (g, e, x, y, L) { var w = e.w * TS; [x - 8, x - 8 + w].forEach(function (cxx) { for (var d = 0; d < 160; d += 6) if ((Math.floor(G.t * 10) + d / 6) % 3 === 0) R(L.glow, cxx, y - d, 1, 3); });
+    for (var r = 0; r < 4; r++) { var rx = x + 20 + r * 80, ry = y - 70 - r % 2 * 30 + Math.sin(G.t * 1.2 + r) * 8; bx(rx, ry, 10 + r % 2 * 4, 8, L.stone, L.slite); }
+    for (var s = 0; s < 10; s++) { var sx = x + (s * 37) % w, sy = y - 20 - ((G.t * 18 + s * 23) % 150); R(L.lite, sx, sy, 1, 1); } } });
+
+var DOOR = { city: 'red', sewer: 'hatch', park: 'mirror', bone: 'crypt', factory: 'blast', brain: 'iris' };
+function doorD(g, x, y, L, open) { var k = DOOR[L.k]; x = Math.round(x); y = Math.round(y); bx(x - 12, y - 42, 24, 42, L.stone, L.slite); var w = Math.round(18 * (1 - open));
+  if (k === 'iris') { g.fillStyle = OUT; g.beginPath(); g.arc(x, y - 21, 11, 0, 6.3); g.fill(); g.fillStyle = open > 0.3 ? L.glow : L.metal; g.beginPath(); g.arc(x, y - 21, 9 * (1 - open * 0.7), 0, 6.3); g.fill(); return; }
+  R(OUT, x - 9, y - 38, 18, 38); R(open > 0 ? L.glow : L.dark, x - 8, y - 37, 16, 37);
+  if (w > 0) { var c = k === 'mirror' ? '#c8c0d8' : k === 'red' ? L.main : k === 'crypt' ? L.wood : L.metal; R(c, x - 8, y - 37, w, 37); R(OUT, x - 8 + w - 1, y - 37, 1, 37);
+    if (k === 'mirror') R('#ffffff', x - 6, y - 34, 2, 12); else if (k === 'red') R(L.lite, x - 8 + w - 4, y - 20, 2, 2); else if (k === 'blast') { for (var s = 0; s < 37; s += 8) R(L.hot, x - 8, y - 37 + s, w, 2); } else if (k === 'hatch') R(L.mlite, x - 6, y - 24, w - 4, 3); else R(L.mlite, x - 6, y - 30, 2, 20); }
+  motif(g, x, y - 46, L); }
+gimDef('doors', { h: 8, // a door: walk in, and you come out of the other one up on the ledge (over the spikes)
+  lay: function (b) { var e = GT(b, 0, 'doors', {}); var c0 = b.col; b.ground(24); b.spikes(c0 + 4 - b.col, 3); b.spikes(c0 + 12 - b.col, 3); b.ledge(c0 + 8 - b.col, 7, 12, '#'); e.c2 = c0 + 10; e.r2 = b.h - 7; b.drops(c0 + 12 - b.col, 6, 9, null, 1.2); b.thing(c0 + 17 - b.col, 'box', 7, { item: 'drops' }); b.ground(2); },
+  init: function (e) { e.bx = e.c2 * TS + 8; e.by = e.y - (e.row - e.r2) * TS; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (!p.gl && e.cd <= 0 && !p.air && p.state === 'normal' && Math.abs(p.x - e.x) < 8 && Math.abs(p.y - e.y) < 5) { p.gl = { e: e, t: 0 }; sfx.play('check'); } },
+  ride: function (p, s, dt) { var e = s.e; s.t += dt; p.gsp = 0; p.vx = 0; p.vy = 0; relJ(p); if (s.t < 0.3) { p.x = e.x; p.y = e.y; p.hide = s.t > 0.15 ? 1 : 0; p.air = false; return; }
+    p.x = e.bx; p.y = e.by; p.air = false; p.hide = s.t < 0.45 ? 1 : 0; if (s.t > 0.6) { p.gl = null; p.hide = 0; p.gsp = 140; e.cd = 1.5; } },
+  draw: function (g, e, x, y, L, cx, cy) { var t = PL && PL.gl && PL.gl.e === e ? PL.gl.t : 9; doorD(g, x, y, L, t < 0.3 ? Math.min(1, t / 0.12) : 0); if (e.bx !== undefined) doorD(g, e.bx - cx, e.by - cy, L, t >= 0.3 && t < 0.6 ? 1 : 0); } });
+
+gimDef('ferris', { h: 10, // a little wheel of platforms turns you up to a ledge
+  lay: function (b) { GT(b, 0, 'ferris', {}); b.ground(10); b.ledge(0, 8, 7, '#'); b.drops(1, 5, 10, null, 1.2); b.thing(4, 'box', 8, { item: 'drops' }); b.ground(14); },
+  init: function (e) { e.hx = e.x + 5 * TS; e.hy = e.y - 72; for (var i = 0; i < 4; i++) gimPlat(e, 0, 0, 40, { i: i, mv: function (q) { var a = G.t * 0.55 + q.i * 1.5708; q.x = q.e.hx + Math.cos(a) * 56 - 20; q.y = q.e.hy + Math.sin(a) * 56; },
+      draw: function (g, x, y, q) { var L = GL(); plank(g, x, y, q.w, L); bx(x + 8, y + 7, q.w - 16, 10, L.k === 'park' ? L.hot : L.metal, L.mlite); } }); },
+  draw: function (g, e, x, y, L, cx, cy) { var hx = Math.round(e.hx - cx), hy = Math.round(e.hy - cy); g.strokeStyle = OUT; g.lineWidth = 4; g.beginPath(); g.moveTo(hx - 30, y); g.lineTo(hx, hy); g.lineTo(hx + 30, y); g.stroke(); g.strokeStyle = L.metal; g.lineWidth = 2; g.stroke();
+    g.strokeStyle = OUT; g.lineWidth = 3; g.beginPath(); g.arc(hx, hy, 56, 0, 6.3); g.stroke(); g.strokeStyle = L.main; g.lineWidth = 1; g.stroke();
+    for (var i = 0; i < 8; i++) { var a = G.t * 0.55 + i * 0.785; R(L.mlite, hx + Math.cos(a) * 28 - 1, hy + Math.sin(a) * 28 - 1, 2, 2); R(Math.floor(G.t * 4 + i) % 2 ? L.hot : L.lite, hx + Math.cos(a) * 56 - 1, hy + Math.sin(a) * 56 - 1, 3, 3); } motif(g, hx, hy, L); } });
+
+var HOOK = { city: 'crane', sewer: 'bucket', park: 'chair', bone: 'hand', factory: 'meat', brain: 'claw' };
+gimDef('hooks', { h: 7, // hooks run along an overhead track: jump up and hang on over the spikes
+  lay: function (b) { var e = GT(b, 0, 'hooks', {}); b.ground(3); SEC.ditch(b, 16); b.ground(3); e.c1 = b.col; b.ground(2); },
+  hk: function (e, i) { var len = e.c1 * TS - e.x; return { x: e.x + ((G.t * 140 + i * len / 3) % len), y: e.y - 66 }; },
+  step: function (e, dt, p) { e.cd = (e.cd || 0) - dt; if (p.gl || e.cd > 0 || !p.air || p.state !== 'normal') return; for (var i = 0; i < 3; i++) { var h = GIM.hooks.hk(e, i); if (h.x < e.c1 * TS - 30 && Math.hypot(p.x - h.x, p.y - PH - h.y) < 18) { p.gl = { e: e, i: i }; sfx.play('clink'); return; } } },
+  ride: function (p, s, dt) { var e = s.e, h = GIM.hooks.hk(e, s.i); p.x = h.x; p.y = h.y + PH + 2; p.vx = 140; p.vy = 0; p.air = true; p.face = 1; if (KIT.pressed('a') || h.x > e.c1 * TS - 12) { dropOff(p, 200, KIT.pressed('a') ? -300 : -100); e.cd = 0.5; return; } relJ(p); },
+  draw: function (g, e, x, y, L, cx, cy) { var x1 = e.c1 * TS - cx, ty = y - 96; postD(x, y, 96, L, 6); postD(x1, y, 96, L, 6); bx(x - 4, ty - 4, x1 - x + 8, 8, L.metal, L.mlite); R(OUT, x - 4, ty, x1 - x + 8, 1); var k = HOOK[L.k];
+    for (var i = 0; i < 3; i++) { var h = GIM.hooks.hk(e, i), hx = Math.round(h.x - cx), hy = Math.round(h.y - cy); R(OUT, hx - 4, ty + 3, 8, 4); R(OUT, hx - 1, ty + 6, 2, hy - ty - 6); R(L.mlite, hx, ty + 6, 1, hy - ty - 6);
+      if (k === 'chair') { bx(hx - 10, hy, 20, 4, L.main, L.hot); R(OUT, hx - 10, hy - 8, 2, 8); }
+      else if (k === 'bucket') { bx(hx - 6, hy, 12, 10, L.metal, L.mlite); R('#e8d4a0', hx - 5, hy + 1, 10, 2); }
+      else if (k === 'hand') { bx(hx - 5, hy, 10, 6, L.main, L.lite); for (var f = 0; f < 4; f++) R(L.main, hx - 5 + f * 3, hy + 6, 2, 5); }
+      else if (k === 'claw') { R(OUT, hx - 7, hy, 14, 4); R(L.mlite, hx - 7, hy + 3, 2, 7); R(L.mlite, hx + 5, hy + 3, 2, 7); R(L.hot, hx - 1, hy + 1, 2, 2); }
+      else { g.strokeStyle = OUT; g.lineWidth = 4; g.beginPath(); g.arc(hx + 3, hy + 6, 6, Math.PI * 0.9, Math.PI * 2.4); g.stroke(); g.strokeStyle = k === 'meat' ? L.mlite : L.main; g.lineWidth = 2; g.stroke(); } } } });
+
+gimDef('swingplats', { h: 8, // platforms on chains swing over the pit
+  lay: function (b) { GT(b, 0, 'swingplats', { w: 16 }, 0, 'gimh'); safePit(b, 16); },
+  init: function (e) { for (var i = 0; i < 3; i++) gimPlat(e, 0, 0, 40, { i: i, ax: e.x - 8 + 40 + i * 72, ay: e.y - 128, mv: function (q) { var th = Math.sin(G.t * 1.4 + q.i * 1.3) * 0.45; q.th = th; q.x = q.ax + Math.sin(th) * 112 - 20; q.y = q.ay + Math.cos(th) * 112; },
+      draw: function (g, x, y, q) { var L = GL(), ax = Math.round(q.ax - CAM.x), ay = Math.round(q.ay - CAM.y); g.strokeStyle = OUT; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(x + 4, y); g.moveTo(ax, ay); g.lineTo(x + q.w - 4, y); g.stroke();
+        if (L.k === 'city') { bx(x, y, q.w, 5, L.metal, L.mlite); for (var c = 4; c < q.w; c += 9) { R(L.lite, c + x, y - 6, 2, 6); R(L.hot, c + x, y - 8, 2, 2); } } else plank(g, x, y, q.w, L); } }); },
+  draw: function (g, e, x, y, L) { var w = e.w * TS; postD(x - 8, y, 132, L, 6); postD(x - 8 + w, y, 132, L, 6); bx(x - 10, y - 134, w + 4, 6, L.metal, L.mlite); motif(g, x - 8, y - 138, L); motif(g, x - 8 + w, y - 138, L); } });
+
+gimDef('seesaw', { h: 3, // a seesaw over the pit: your weight tips it
+  lay: function (b) { GT(b, 0, 'seesaw', { w: 14 }, 0, 'gimh'); safePit(b, 14); },
+  init: function (e) { e.k2 = 0; var px = e.x - 8 + 7 * TS; e.pvx = px; var A = gimPlat(e, px - 92, e.y, 48, { side: 1, mv: function (q, dt) { var on = onPlat(q) ? 1 : onPlat(q.other) ? -1 : 0; q.e.k2 += ((on || 0) - q.e.k2) * Math.min(1, dt * (on ? 2.2 : 0.8)); q.y = q.y0 + q.e.k2 * 22; } });
+    var B = gimPlat(e, px + 44, e.y, 48, { side: -1, mv: function (q) { q.y = q.y0 - q.e.k2 * 22; } }); A.other = B; A.draw = B.draw = function (g, x, y, q) { plank(g, x, y, q.w, GL()); }; },
+  draw: function (g, e, x, y, L, cx, cy) { var px = Math.round(e.pvx - cx), k = e.k2 || 0; bx(px - 3, y + 6, 6, 70, L.metal, L.mlite); g.fillStyle = OUT; g.beginPath(); g.moveTo(px - 10, y + 10); g.lineTo(px, y - 2); g.lineTo(px + 10, y + 10); g.fill(); g.fillStyle = L.stone; g.beginPath(); g.moveTo(px - 8, y + 9); g.lineTo(px, y); g.lineTo(px + 8, y + 9); g.fill();
+    g.strokeStyle = OUT; g.lineWidth = 5; g.beginPath(); g.moveTo(px - 68, y + 4 + k * 22); g.lineTo(px + 68, y + 4 - k * 22); g.stroke(); g.strokeStyle = L.wood; g.lineWidth = 3; g.stroke(); motif(g, px, y + 2, L); } });
+
+/* =====================================================================================================
+   NEW GROUND SHAPES (part of the big update): four ways up, four ways down and four that stay level, so climbs and
+   falls stop looking alike. Each swaps for its twin when the act is already near the top or bottom of its space.
+   up: pillars, terraces, bluff, rampup   down: slide, skijump, chute, ledgedrop   level: dunes, halfpipe, canyon, overhang
+   ===================================================================================================== */
+var TWIN = { pillars: 'slide', terraces: 'ledgedrop', bluff: 'chute', rampup: 'skijump', slide: 'pillars', ledgedrop: 'terraces', chute: 'bluff', skijump: 'rampup' };
+function upOK(b, r) { return b.h - r >= HMIN; } function dnOK(b, r) { return b.h + r <= HMAX; }
+SEC.pillars = function (b) { // stone pillars, each two rows taller than the last, spikes between
+  if (!upOK(b, 9)) return SEC.slide(b); var h0 = b.h; b.ground(4);
+  for (var i = 0; i < 4; i++) { b.h = h0; for (var k = 0; k < 2; k++) { b.ground(1); b.set(b.col - 1, h0 - 1, '^'); } b.h = h0 - 2 * (i + 1); b.ground(2); b.drops(-2, 2, 2, null, 1); }
+  b.ground(6); b.drops(-5, 3, 2); return b; };
+SEC.terraces = function (b) { // broad terraces up a hillside, a spring at the last wall
+  if (!upOK(b, 10)) return SEC.ledgedrop(b); b.ground(3); b.up(2); b.ground(7); b.drops(-6, 4, 2, 'arc', 1.3); b.up(3); b.ground(7); b.drops(-6, 4, 2, 'arc', 1.3); b.thing(-2, 'spring', 0, { pow: 1 }); b.step(-4); b.ground(8); b.drops(-7, 5, 2, null, 1.3); return b; };
+SEC.bluff = function (b) { // a wall, a steep bank, another wall
+  if (!upOK(b, 9)) return SEC.chute(b); b.ground(4); b.drops(-2, 2, 5); b.step(-3); b.ground(5); b.up(2, true); b.ground(4); b.drops(-3, 2, 5); b.step(-3); b.ground(6); b.drops(-5, 3, 2); return b; };
+SEC.rampup = function (b) { // a dash pad and a long steep bank straight up
+  if (!upOK(b, 7)) return SEC.skijump(b); b.ground(3); b.thing(-1, 'dash', 0, { dir: 1 }); b.ground(4); var c = b.col; b.up(6, true); for (var i = 0; i < 6; i++) b.ent('drop', c + i, b.h + 6 - i - 2); b.ground(10); b.drops(-8, 5, 2, null, 1.4); return b; };
+SEC.slide = function (b) { // one long slide down, drops all the way
+  if (!dnOK(b, 11)) return SEC.pillars(b); b.ground(3); var c = b.col, h0 = b.h; b.down(10, true); for (var i = 0; i < 10; i++) b.ent('drop', c + i, h0 + i - 1.5); b.ground(6); return b; };
+SEC.skijump = function (b) { // down the bank, a kicker, over a pit and onto lower ground
+  if (!dnOK(b, 8)) return SEC.rampup(b); b.ground(3); b.down(6, true); b.ground(2); b.up(2, true); b.drops(0, 4, 4, 'arc', 1.4); safePit(b, 6); b.step(3); b.ground(8); b.drops(-6, 3, 2); return b; };
+SEC.chute = function (b) { // off the edge into a narrow shaft, out under the hanging rock into a low cave
+  if (!dnOK(b, 10)) return SEC.bluff(b); var h0 = b.h; b.ground(4); var c0 = b.col; b.step(9); b.ground(14); var lo = b.h;
+  for (var c = c0 + 3; c <= c0 + 4; c++) for (var r = h0 - 6; r <= lo - 5; r++) b.set(c, r, 'W');
+  for (var c2 = c0 + 5; c2 <= c0 + 10; c2++) for (var r2 = lo - 5; r2 <= lo - 4; r2++) b.set(c2, r2, 'W');
+  for (var d = 0; d < 6; d++) b.ent('drop', c0 + 1, h0 + d * 1.6); b.drops(-8, 5, 2, null, 1.2); return b; };
+SEC.ledgedrop = function (b) { // the floor falls away; thin ledges step down to it
+  if (!dnOK(b, 11)) return SEC.terraces(b); b.ground(4); b.step(10); b.ground(14); b.ledge(-13, 7, 4, '='); b.drops(-12, 3, 9, null, 1); b.ledge(-8, 4, 4, '='); b.drops(-7, 3, 6, null, 1); b.drops(-3, 2, 2); return b; };
+SEC.dunes = function (b) { for (var i = 0; i < 6; i++) { b.ground(2); b.up(1); b.ground(1); b.drops(-1, 2, 3, 'arc', 1); b.down(1); } b.ground(3); return b; }; // little humps one after another
+SEC.halfpipe = function (b) { // a U to swing through (an arch over the top if there is no room below)
+  b.ground(3); if (dnOK(b, 5)) { b.down(4, true); b.ground(5); b.drops(-5, 4, 2, 'arc', 1.2); b.up(4, true); } else { b.up(4, true); b.ground(5); b.drops(-5, 4, 2, 'arc', 1.2); b.down(4, true); } b.ground(3); return b; };
+SEC.canyon = function (b) { // a deep gully with a thin bridge over it: two ways across
+  if (!dnOK(b, 8)) return SEC.dunes(b); var h0 = b.h; b.ground(3); var s0 = b.col; b.down(7, true); b.ground(6); b.drops(-5, 4, 2, null, 1.2); b.foe(-3, 'm'); b.up(7, true); b.ground(3);
+  for (var c = s0; c < b.col - 3; c++) if (b.get(c, h0) === '.') b.set(c, h0, '='); b.drops(s0 + 2 - b.col, 8, 2, null, 1.6); return b; };
+SEC.overhang = function (b) { b.ground(16); b.ceil(-14, 13, 5, 2); for (var c = b.col - 12; c < b.col - 3; c += 3) b.set(c, b.h - 4, 'v'); b.drops(-13, 8, 2, null, 1.5); return b; }; // a rock roof with fangs: do not jump into it
+
+/* =====================================================================================================
+   LANDMARKS (part of the big update): one big piece of scenery standing in each part of every district, and more
+   along the deep, so you can tell where you are. 33 of them, each dressed in the zone's colours; no act uses one
+   twice. They stand on flat ground clear of everything else and are drawn behind the action.
+   LMK[name] = { w: columns, h: rows, z: zones it suits (or none = all), d(g, x, y, L, e) with x, y the bottom centre }
+   ===================================================================================================== */
+function arcF(g, x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.fill(); }
+function triF(g, ax, ay, bx2, by, cx2, cy2, c) { g.fillStyle = c; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx2, by); g.lineTo(cx2, cy2); g.fill(); }
+var LMKMSG = { city: ['BLUMHEAD IS WATCHING', "CUM CAFE - CUMPUCCINO 2 DROPS", "AMY'S WILLY CHILLI: MILD HOT DYNAMITE"], sewer: ['FLOOD WARNING', 'DO NOT DRINK THE CREAM'], park: ['EJACULAND - RIDE THE LOAD FLUME', 'STEVE LOVES YOU'], bone: ['ABANDON HOPE', 'MIND THE BONES'], factory: ['SHIFT 666 - NO BREAKS', 'BLOOD QUOTA: 100%'], brain: ['OBEY BLUMHEAD', 'THINK NOTHING'] };
+var LMK = {
+  statue: { w: 4, h: 5, d: function (g, x, y, L) { bx(x - 22, y - 16, 44, 16, L.stone, L.slite); R(L.slite, x - 18, y - 12, 36, 1); var sc = L.k === 'city' ? '#5a3036' : '#a89a8a';
+      g.fillStyle = OUT; g.beginPath(); g.moveTo(x, y - 74); g.quadraticCurveTo(x + 18, y - 44, x + 13, y - 30); g.lineTo(x - 13, y - 30); g.quadraticCurveTo(x - 18, y - 44, x, y - 74); g.fill(); g.fillStyle = sc; g.beginPath(); g.moveTo(x, y - 71); g.quadraticCurveTo(x + 16, y - 44, x + 11, y - 31); g.lineTo(x - 11, y - 31); g.quadraticCurveTo(x - 16, y - 44, x, y - 71); g.fill();
+      R(OUT, x - 6, y - 48, 4, 4); R(OUT, x + 2, y - 48, 4, 4); bx(x - 12, y - 30, 24, 14, L.stone, L.slite); R(L.main, x - 12, y - 30, 24, 2); [-20, 20].forEach(function (o) { bx(x + o - 2, y - 24, 4, 8, L.lite); flame(x + o, y - 28, 2, L, o); }); } },
+  fountain: { w: 5, h: 5, d: function (g, x, y, L) { var c = L.k === 'sewer' || L.k === 'city' ? '#e8d4a0' : L.goo; bx(x - 32, y - 14, 64, 14, L.stone, L.slite); R(c, x - 29, y - 12, 58, 4); bx(x - 4, y - 50, 8, 36, L.stone, L.slite); bx(x - 16, y - 54, 32, 6, L.stone, L.slite); motif(g, x, y - 58, L);
+      for (var s = 0; s < 2; s++) for (var i = 0; i < 8; i++) { var u = ((G.t * 1.5 + i / 8) % 1), dir = s ? 1 : -1, px = x + dir * (16 + u * 14), py = y - 52 + u * u * 40; R(c, px, py, 2, 3); } if (Math.random() < 0.3) bits(CAM.x + x + (Math.random() - 0.5) * 50, CAM.y + y - 12, 1, [c, '#ffffff'], 40, 200); } },
+  gearwall: { w: 5, h: 4, d: function (g, x, y, L) { bx(x - 36, y - 58, 72, 58, L.dark, L.slite); [[x - 14, y - 30, 18, 1], [x + 16, y - 40, 12, -1.5], [x + 18, y - 14, 9, 2]].forEach(function (q) { for (var i = 0; i < 10; i++) { var a = G.t * q[3] + i * 0.628; R(OUT, q[0] + Math.cos(a) * (q[2] + 2) - 2, q[1] + Math.sin(a) * (q[2] + 2) - 2, 5, 5); R(L.mlite, q[0] + Math.cos(a) * (q[2] + 2) - 1, q[1] + Math.sin(a) * (q[2] + 2) - 1, 3, 3); }
+      arcF(g, q[0], q[1], q[2] + 1, OUT); arcF(g, q[0], q[1], q[2], L.metal); arcF(g, q[0], q[1], q[2] * 0.4, L.dark); R(L.mlite, q[0] - 1, q[1] - 1, 2, 2); }); } },
+  clocktower: { w: 3, h: 8, d: function (g, x, y, L) { bx(x - 14, y - 112, 28, 112, L.stone, L.slite); for (var r = 0; r < 112; r += 8) R(L.dark, x - 14, y - 112 + r, 28, 1); triF(g, x - 18, y - 112, x, y - 140, x + 18, y - 112, OUT); triF(g, x - 15, y - 113, x, y - 136, x + 15, y - 113, L.main);
+      arcF(g, x, y - 88, 11, OUT); arcF(g, x, y - 88, 10, L.lite); var a = G.t * 0.5, b2 = G.t * 6; g.strokeStyle = OUT; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 88); g.lineTo(x + Math.cos(a) * 6, y - 88 + Math.sin(a) * 6); g.moveTo(x, y - 88); g.lineTo(x + Math.cos(b2) * 9, y - 88 + Math.sin(b2) * 9); g.stroke();
+      R(OUT, x - 6, y - 64, 12, 16); R(Math.floor(G.t * 2) % 2 ? L.glow : L.main, x - 5, y - 63, 10, 14); R(OUT, x - 5, y - 24, 10, 24); } },
+  chandelier: { w: 4, h: 8, d: function (g, x, y, L) { bx(x - 26, y - 124, 6, 124, L.metal, L.mlite); bx(x - 26, y - 126, 40, 5, L.metal, L.mlite); var sw = Math.sin(G.t * 1.2) * 3; R(OUT, x + 8 + sw * 0.3, y - 121, 2, 40);
+      var cx2 = x + 9 + sw, cy2 = y - 80; bx(cx2 - 24, cy2, 48, 4, L.metal, L.mlite); bx(cx2 - 14, cy2 - 10, 28, 4, L.metal, L.mlite); [-22, -11, 0, 11, 22].forEach(function (o, i) { bx(cx2 + o - 1, cy2 - 6, 3, 6, L.lite); flame(cx2 + o, cy2 - 9, 2, L, i); }); for (var c = -20; c <= 20; c += 10) R(L.hot, cx2 + c, cy2 + 5, 2, 5); } },
+  waterfall: { w: 4, h: 7, d: function (g, x, y, L) { var c = L.k === 'factory' ? L.fire[0] : L.k === 'brain' ? L.goo : L.k === 'bone' ? L.goo : '#e8d4a0', c2 = L.k === 'factory' ? L.fire[2] : '#fffbe8'; bx(x - 30, y - 112, 60, 18, L.stone, L.slite); triF(g, x - 30, y - 94, x - 10, y - 86, x - 22, y - 94, L.stone);
+      R(c, x - 12, y - 96, 24, 90); for (var s = 0; s < 6; s++) R(c2, x - 10 + s * 4, y - 96 + ((G.t * 160 + s * 23) % 90), 2, 10); bx(x - 30, y - 8, 60, 8, L.stone, L.slite); R(c, x - 28, y - 7, 56, 3); if (Math.random() < 0.5) bits(CAM.x + x + (Math.random() - 0.5) * 24, CAM.y + y - 8, 1, [c2, c], 80, 300); } },
+  bigscreen: { w: 6, h: 7, d: function (g, x, y, L, e) { postD(x - 26, y, 60, L, 6); postD(x + 26, y, 60, L, 6); bx(x - 44, y - 106, 88, 48, L.metal, L.mlite); R(OUT, x - 40, y - 102, 80, 40); var ms = LMKMSG[L.k] || LMKMSG.city, m = ms[(e.c >> 3) % ms.length];
+      g.save(); g.beginPath(); g.rect(x - 40, y - 102, 80, 40); g.clip(); R(L.dark, x - 40, y - 102, 80, 40); var tw2 = m.length * 8, ox = ((G.t * 30) % (tw2 + 80)); text(m, x + 40 - ox, y - 88, { size: 8, col: L.hot, shadow: false }); for (var s = 0; s < 40; s += 2) R('rgba(0,0,0,0.3)', x - 40, y - 102 + s, 80, 1); g.restore(); motif(g, x, y - 110, L); } },
+  skulltotem: { w: 2, h: 7, d: function (g, x, y, L) { bx(x - 3, y - 100, 6, 100, L.wood, L.mlite); for (var i = 0; i < 5; i++) { var sy = y - 18 - i * 18; bx(x - 8, sy - 10, 16, 13, L.k === 'city' ? '#c8b8a8' : L.main, '#ffffff'); R(OUT, x - 5, sy - 6, 3, 4); R(OUT, x + 2, sy - 6, 3, 4); R(OUT, x - 3, sy + 1, 6, 2); }
+      R(L.main, x - 14, y - 110, 4, 12); R(L.main, x + 10, y - 110, 4, 12); flame(x, y - 104, 3, L, 1); } },
+  ribarch: { w: 7, h: 6, d: function (g, x, y, L) { var c = L.k === 'bone' ? L.main : '#c8b8a0'; bx(x - 4, y - 98, 8, 98, c, '#ffffff'); for (var i = 0; i < 4; i++) { var r = 30 + i * 8; g.strokeStyle = OUT; g.lineWidth = 6; g.beginPath(); g.arc(x, y - 52 + i * 6, r, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); g.strokeStyle = c; g.lineWidth = 4; g.stroke(); }
+      bx(x - 8, y - 104, 16, 12, c, '#ffffff'); R(OUT, x - 5, y - 100, 3, 3); R(OUT, x + 2, y - 100, 3, 3); } },
+  organ: { w: 5, h: 7, d: function (g, x, y, L) { bx(x - 36, y - 24, 72, 24, L.wood, L.mlite); for (var i = 0; i < 9; i++) { var hh = 40 + Math.abs(4 - i) * -6 + 60, px = x - 34 + i * 8; bx(px, y - 24 - hh, 6, hh, L.k === 'city' ? '#5a3036' : L.mlite, L.lite); R(OUT, px + 1, y - 30 - hh * 0.2, 4, 2); }
+      for (var k = 0; k < 8; k++) R(k % 2 ? OUT : L.lite, x - 30 + k * 8, y - 18, 6, 6); motif(g, x, y - 112, L); } },
+  neonheart: { z: ['city', 'park'], w: 3, h: 7, d: function (g, x, y, L) { postD(x, y, 70, L, 4); var on = Math.floor(G.t * 3) % 7 !== 0, c = on ? L.hot : L.dark;
+      g.lineWidth = 3; g.strokeStyle = OUT; g.beginPath(); g.moveTo(x, y - 76); g.bezierCurveTo(x - 26, y - 96, x - 18, y - 122, x, y - 106); g.bezierCurveTo(x + 18, y - 122, x + 26, y - 96, x, y - 76); g.stroke(); g.lineWidth = 2; g.strokeStyle = c; g.stroke(); if (on) text('OPEN', x, y - 70, { size: 6, align: 'center', col: L.hot }); } },
+  carousel: { z: ['park'], w: 3, h: 6, d: function (g, x, y, L) { var bob = Math.sin(G.t * 2) * 6; bx(x - 2, y - 96, 4, 96, L.hot, '#ffffff'); bx(x - 18, y - 100, 36, 6, L.main, L.hot); var hy = y - 52 + bob;
+      bx(x - 16, hy - 8, 30, 12, '#fff6e8', '#ffffff'); bx(x + 10, hy - 22, 9, 16, '#fff6e8', '#ffffff'); R(OUT, x + 15, hy - 18, 2, 2); R(L.main, x + 8, hy - 24, 4, 10); for (var l = 0; l < 4; l++) R('#fff6e8', x - 14 + l * 8, hy + 4, 3, 10 + (l % 2) * 2); R(L.main, x - 8, hy - 10, 10, 3); } },
+  teacup: { z: ['park', 'city', 'bone'], w: 4, h: 4, d: function (g, x, y, L) { bx(x - 30, y - 6, 60, 6, '#fff6e8', '#ffffff'); g.fillStyle = OUT; g.beginPath(); g.moveTo(x - 24, y - 46); g.lineTo(x + 24, y - 46); g.lineTo(x + 18, y - 6); g.lineTo(x - 18, y - 6); g.fill(); g.fillStyle = '#fff6e8'; g.beginPath(); g.moveTo(x - 22, y - 45); g.lineTo(x + 22, y - 45); g.lineTo(x + 17, y - 7); g.lineTo(x - 17, y - 7); g.fill();
+      R('#ffe36a', x - 22, y - 40, 44, 3); R('#8a4a2a', x - 21, y - 46, 42, 3); g.strokeStyle = OUT; g.lineWidth = 4; g.beginPath(); g.arc(x + 26, y - 30, 8, -1.3, 1.3); g.stroke(); g.strokeStyle = '#fff6e8'; g.lineWidth = 2; g.stroke(); for (var s = 0; s < 3; s++) R('#d8d0c8', x - 10 + s * 10 + Math.sin(G.t * 2 + s) * 3, y - 58 - ((G.t * 20 + s * 8) % 20), 2, 3); } },
+  airship: { w: 7, h: 5, d: function (g, x, y, L) { g.save(); g.translate(x, y - 44); g.rotate(-0.22); g.fillStyle = OUT; g.beginPath(); g.ellipse(0, 0, 54, 22, 0, 0, 6.3); g.fill(); g.fillStyle = L.main; g.beginPath(); g.ellipse(0, 0, 52, 20, 0, 0, 6.3); g.fill(); for (var r = -40; r <= 40; r += 16) R(OUT, r, -20, 2, 40); R(OUT, 20, -20, 30, 40); R(L.dark, 22, -18, 26, 36); for (var r2 = 26; r2 < 48; r2 += 7) R(L.mlite, r2, -18, 1, 36); g.restore();
+      bx(x - 22, y - 12, 34, 12, L.wood, L.mlite); R(L.glow, x - 16, y - 8, 4, 4); R(L.glow, x - 6, y - 8, 4, 4); triF(g, x + 40, y - 48, x + 56, y - 66, x + 54, y - 40, L.metal); } },
+  cauldron: { w: 4, h: 4, d: function (g, x, y, L) { flame(x - 10, y - 6, 4, L, 1); flame(x, y - 5, 5, L, 2); flame(x + 10, y - 6, 4, L, 3); arcF(g, x, y - 28, 24, OUT); arcF(g, x, y - 28, 22, L.dark); R(OUT, x - 26, y - 46, 52, 6); R(L.metal, x - 25, y - 45, 50, 4); R(L.goo, x - 22, y - 48, 44, 3);
+      for (var b2 = 0; b2 < 4; b2++) { var u = (G.t * 0.8 + b2 * 0.25) % 1; arcF(g, x - 15 + b2 * 10, y - 50 - u * 10, 3 * (1 - u) + 1, L.goo); } R(OUT, x - 18, y - 8, 4, 8); R(OUT, x + 14, y - 8, 4, 8); } },
+  archgate: { w: 6, h: 7, d: function (g, x, y, L) { bx(x - 46, y - 92, 16, 92, L.stone, L.slite); bx(x + 30, y - 92, 16, 92, L.stone, L.slite); g.strokeStyle = OUT; g.lineWidth = 16; g.beginPath(); g.arc(x, y - 92, 38, Math.PI, 0); g.stroke(); g.strokeStyle = L.stone; g.lineWidth = 13; g.stroke();
+      for (var i = 0; i < 9; i++) { var a = Math.PI + i / 8 * Math.PI; R(OUT, x + Math.cos(a) * 38 - 1, y - 92 + Math.sin(a) * 38 - 6, 2, 10); } bx(x - 8, y - 140, 16, 14, L.main, L.hot); motif(g, x, y - 133, L); [-38, 38].forEach(function (o) { R(L.main, x + o - 5, y - 80, 10, 30); triF(g, x + o - 5, y - 50, x + o, y - 44, x + o + 5, y - 50, L.main); }); } },
+  crane: { z: ['city', 'factory', 'sewer'], w: 4, h: 9, d: function (g, x, y, L) { for (var r = 0; r < 140; r += 10) { R(OUT, x - 9, y - r - 10, 2, 10); R(OUT, x + 7, y - r - 10, 2, 10); R(L.main, x - 9, y - r - 10, 18, 1); R(L.main, x - 7 + (r / 10 % 2) * 6, y - r - 8, 8, 1); }
+      bx(x - 60, y - 152, 110, 6, L.main, L.hot); bx(x - 54, y - 148, 14, 12, L.stone, L.slite); var hx = x + 36 + Math.sin(G.t * 0.7) * 6; R(OUT, hx, y - 146, 1, 70); R(L.metal, hx - 4, y - 76, 8, 6); R(L.mlite, hx - 1, y - 70, 3, 6); R(Math.floor(G.t * 2) % 2 ? L.hot : L.dark, x - 1, y - 162, 3, 3); } },
+  smokestack: { z: ['factory', 'city', 'brain'], w: 2, h: 9, d: function (g, x, y, L) { bx(x - 12, y - 140, 24, 140, L.stone, L.slite); for (var b2 = 0; b2 < 140; b2 += 30) R(L.main, x - 12, y - 140 + b2, 24, 4); bx(x - 15, y - 146, 30, 8, L.metal, L.mlite);
+      for (var s = 0; s < 5; s++) { var u = (G.t * 0.3 + s / 5) % 1; arcF(g, x + u * 40, y - 150 - u * 70, 6 + u * 10, u > 0.6 ? L.stone : L.slite); } } },
+  brainjar: { z: ['brain', 'factory'], w: 3, h: 5, d: function (g, x, y, L) { bx(x - 22, y - 12, 44, 12, L.metal, L.mlite); R(OUT, x - 19, y - 68, 38, 56); R('#2a1a24', x - 18, y - 67, 36, 54); var p = 1 + Math.sin(G.t * 3) * 0.05; g.fillStyle = L.goo; g.beginPath(); g.ellipse(x, y - 42, 14 * p, 11 * p, 0, 0, 6.3); g.fill(); R(L.main, x - 1, y - 52, 2, 20); R(L.main, x - 10, y - 44, 6, 1); R(L.main, x + 4, y - 40, 6, 1);
+      bx(x - 21, y - 72, 42, 6, L.metal, L.mlite); for (var b2 = 0; b2 < 3; b2++) R(L.lite, x - 12 + b2 * 10, y - 20 - ((G.t * 25 + b2 * 13) % 44), 2, 2); R('rgba(255,255,255,0.25)', x - 16, y - 64, 3, 46); } },
+  coffinpile: { z: ['bone', 'city', 'brain'], w: 4, h: 4, d: function (g, x, y, L) { [[-16, 0, -0.2], [12, 0, 0.15], [-2, -22, -0.05]].forEach(function (c, i) { g.save(); g.translate(x + c[0], y + c[1]); g.rotate(c[2]); g.fillStyle = OUT; g.beginPath(); g.moveTo(-7, 0); g.lineTo(-10, -30); g.lineTo(-5, -40); g.lineTo(5, -40); g.lineTo(10, -30); g.lineTo(7, 0); g.fill(); g.fillStyle = L.wood; g.beginPath(); g.moveTo(-6, -1); g.lineTo(-9, -30); g.lineTo(-4, -39); g.lineTo(4, -39); g.lineTo(9, -30); g.lineTo(6, -1); g.fill(); R(L.main, -1, -34, 2, 12); R(L.main, -4, -30, 8, 2);
+      if (i === 1) { R(OUT, -5, -28, 10, 16); if (Math.floor(G.t * 0.7) % 4) { R(L.hot, -3, -24, 2, 2); R(L.hot, 1, -24, 2, 2); } } g.restore(); }); } },
+  candles: { z: ['bone', 'city', 'brain', 'sewer'], w: 4, h: 4, d: function (g, x, y, L) { [[-24, 30], [-14, 46], [-4, 26], [6, 54], [16, 36], [26, 22]].forEach(function (c, i) { bx(x + c[0] - 4, y - c[1], 8, c[1], '#f4ecdc', '#ffffff'); R('#d8d0c8', x + c[0] - 4, y - c[1] + 3 + (i % 3) * 3, 2, 6 + i % 3 * 3); flame(x + c[0], y - c[1] - 4, 3, L, i); });
+      R('#d8d0c8', x - 30, y - 3, 60, 3); } },
+  flags: { w: 6, h: 7, d: function (g, x, y, L) { [-36, 0, 36].forEach(function (o, i) { postD(x + o, y, 104, L, 3); var c = i % 2 ? L.hot : L.main; for (var s = 0; s < 8; s++) { var wv = Math.sin(G.t * 4 - s * 0.6 + i) * 2; R(OUT, x + o + 2 + s * 3, y - 102 + wv, 4, 36); R(c, x + o + 2 + s * 3, y - 101 + wv, 3, 34); } motif(g, x + o + 14, y - 84 + Math.sin(G.t * 4 - 2 + i) * 2, L); }); } },
+  ruins: { w: 6, h: 5, d: function (g, x, y, L) { bx(x - 40, y - 70, 14, 70, L.stone, L.slite); bx(x - 43, y - 76, 20, 6, L.stone, L.slite); bx(x - 6, y - 44, 14, 44, L.stone, L.slite); triF(g, x - 6, y - 44, x + 2, y - 52, x + 8, y - 44, L.stone); bx(x + 26, y - 20, 14, 20, L.stone, L.slite);
+      g.save(); g.translate(x + 22, y - 6); g.rotate(0.4); bx(-14, -6, 28, 10, L.stone, L.slite); g.restore(); for (var v = 0; v < 6; v++) R(L.main, x - 38 + (v * 3) % 10, y - 64 + v * 10, 2, 6); } },
+  stainedglass: { w: 4, h: 7, d: function (g, x, y, L) { bx(x - 26, y - 108, 52, 108, L.stone, L.slite); g.fillStyle = OUT; g.beginPath(); g.moveTo(x - 18, y - 14); g.lineTo(x - 18, y - 76); g.quadraticCurveTo(x, y - 110, x + 18, y - 76); g.lineTo(x + 18, y - 14); g.fill();
+      var cs = [L.main, L.hot, L.glow, L.lite]; for (var r = 0; r < 6; r++) for (var c = 0; c < 3; c++) { var px = x - 16 + c * 11, py = y - 74 + r * 10; R(cs[(r + c + Math.floor(G.t)) % 4], px + 1, py + 1, 9, 8); }
+      for (var d = 0; d < 30; d += 3) for (var k = -d; k <= d; k += 6) if ((k + d) % 6 === 0) R(L.glow, x + k * 0.8, y - 12 + d * 0.3, 1, 1); motif(g, x, y - 88, L); } },
+  throne: { w: 4, h: 6, d: function (g, x, y, L) { bx(x - 24, y - 10, 48, 10, L.stone, L.slite); bx(x - 18, y - 88, 36, 78, L.metal, L.mlite); for (var s = 0; s < 5; s++) triF(g, x - 18 + s * 9, y - 88, x - 14 + s * 9, y - 104 - (s % 2) * 8, x - 10 + s * 9, y - 88, L.metal);
+      bx(x - 14, y - 40, 28, 12, L.main, L.hot); bx(x - 26, y - 50, 8, 40, L.metal, L.mlite); bx(x + 18, y - 50, 8, 40, L.metal, L.mlite); motif(g, x, y - 72, L); [-22, 22].forEach(function (o) { bx(x + o - 4, y - 58, 9, 8, L.main, L.lite); }); } },
+  obelisk: { w: 2, h: 8, d: function (g, x, y, L) { g.fillStyle = OUT; g.beginPath(); g.moveTo(x - 13, y); g.lineTo(x - 9, y - 110); g.lineTo(x, y - 124); g.lineTo(x + 9, y - 110); g.lineTo(x + 13, y); g.fill(); g.fillStyle = L.stone; g.beginPath(); g.moveTo(x - 11, y - 1); g.lineTo(x - 7, y - 109); g.lineTo(x, y - 121); g.lineTo(x + 7, y - 109); g.lineTo(x + 11, y - 1); g.fill();
+      for (var r = 0; r < 8; r++) { var on = (Math.floor(G.t * 3) + r) % 8 < 3; R(on ? L.glow : L.slite, x - 4 + (r % 2) * 4, y - 100 + r * 11, 4, 5); } } },
+  cages: { w: 4, h: 8, d: function (g, x, y, L) { bx(x - 30, y - 126, 6, 126, L.wood, L.mlite); bx(x - 30, y - 128, 60, 6, L.wood, L.mlite); [[-6, 40, 0], [20, 60, 1]].forEach(function (c) { var sw = Math.sin(G.t * 1.3 + c[2] * 2) * 3, cx2 = x + c[0] + sw, cy2 = y - 122 + c[1]; R(OUT, x + c[0], y - 122, 1, c[1] - 20);
+      R(OUT, cx2 - 10, cy2 - 20, 20, 2); R(OUT, cx2 - 10, cy2 + 10, 20, 2); for (var b2 = -9; b2 <= 9; b2 += 4) R(L.mlite, cx2 + b2, cy2 - 18, 1, 28); if (c[2]) { bx(cx2 - 3, cy2 - 12, 6, 6, '#d8ccb0', '#ffffff'); R('#d8ccb0', cx2 - 1, cy2 - 6, 2, 12); } }); } },
+  mushrooms: { z: ['sewer', 'bone', 'park', 'brain'], w: 5, h: 5, d: function (g, x, y, L) { [[-20, 54, 18], [8, 72, 24], [30, 34, 12]].forEach(function (m, i) { bx(x + m[0] - 4, y - m[1], 8, m[1], '#e8dcc0', '#ffffff'); g.fillStyle = OUT; g.beginPath(); g.ellipse(x + m[0], y - m[1], m[2] + 1, m[2] * 0.6 + 1, 0, Math.PI, 0); g.fill(); g.fillStyle = L.main; g.beginPath(); g.ellipse(x + m[0], y - m[1], m[2], m[2] * 0.6, 0, Math.PI, 0); g.fill();
+      for (var s = 0; s < 3; s++) R((Math.floor(G.t * 2) + s + i) % 3 ? L.glow : L.lite, x + m[0] - m[2] * 0.5 + s * m[2] * 0.4, y - m[1] - m[2] * 0.35, 3, 3); }); } },
+  deadtree: { w: 5, h: 8, d: function (g, x, y, L) { g.strokeStyle = OUT; g.lineWidth = 9; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 2, y - 70); g.stroke(); [[x - 2, y - 70, x - 34, y - 104], [x - 2, y - 60, x + 30, y - 96], [x - 2, y - 80, x + 8, y - 124], [x - 20, y - 88, x - 40, y - 86]].forEach(function (b2) { g.lineWidth = 5; g.beginPath(); g.moveTo(b2[0], b2[1]); g.lineTo(b2[2], b2[3]); g.stroke(); });
+      g.strokeStyle = L.wood; g.lineWidth = 6; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 2, y - 70); g.stroke(); [[-34, -104], [30, -96]].forEach(function (l, i) { var sw = Math.sin(G.t * 1.5 + i) * 2; R(OUT, x + l[0] + sw, y + l[1], 1, 12); bx(x + l[0] - 3 + sw, y + l[1] + 12, 7, 9, L.metal, L.mlite); R(L.glow, x + l[0] - 1 + sw, y + l[1] + 14, 3, 5); }); } },
+  well: { w: 3, h: 5, d: function (g, x, y, L) { bx(x - 20, y - 24, 40, 24, L.stone, L.slite); for (var r = 0; r < 24; r += 6) R(L.dark, x - 20, y - 24 + r, 40, 1); postD(x - 16, y - 24, 40, L, 4); postD(x + 16, y - 24, 40, L, 4); triF(g, x - 26, y - 64, x, y - 82, x + 26, y - 64, OUT); triF(g, x - 23, y - 65, x, y - 79, x + 23, y - 65, L.main);
+      var by = y - 46 + Math.sin(G.t) * 6; R(OUT, x, y - 64, 1, by - (y - 64)); bx(x - 5, by, 10, 8, L.wood, L.mlite); R(L.goo, x - 18, y - 24, 36, 2); } },
+  tank: { z: ['brain', 'factory'], w: 3, h: 6, d: function (g, x, y, L) { bx(x - 20, y - 14, 40, 14, L.metal, L.mlite); bx(x - 20, y - 96, 40, 10, L.metal, L.mlite); R(OUT, x - 17, y - 86, 34, 72); R('#3a1a2a', x - 16, y - 85, 32, 70); var bob = Math.sin(G.t * 1.5) * 3;
+      g.fillStyle = 'rgba(18,4,10,0.8)'; g.beginPath(); g.ellipse(x, y - 54 + bob, 9, 11, 0, 0, 6.3); g.fill(); R('rgba(18,4,10,0.8)', x - 4, y - 44 + bob, 8, 18); R(L.hot, x - 4, y - 58 + bob, 2, 2); for (var b2 = 0; b2 < 4; b2++) R(L.lite, x - 12 + b2 * 8, y - 18 - ((G.t * 30 + b2 * 17) % 66), 2, 2); R('rgba(255,255,255,0.2)', x - 14, y - 82, 3, 62); } },
+  bell: { w: 4, h: 6, d: function (g, x, y, L) { bx(x - 30, y - 96, 6, 96, L.wood, L.mlite); bx(x + 24, y - 96, 6, 96, L.wood, L.mlite); bx(x - 32, y - 100, 64, 6, L.wood, L.mlite); var a = Math.sin(G.t * 1.8) * 0.4; g.save(); g.translate(x, y - 94); g.rotate(a);
+      g.fillStyle = OUT; g.beginPath(); g.moveTo(-6, 4); g.quadraticCurveTo(-8, 22, -20, 40); g.lineTo(20, 40); g.quadraticCurveTo(8, 22, 6, 4); g.fill(); g.fillStyle = L.k === 'city' ? '#5a3036' : L.mlite; g.beginPath(); g.moveTo(-5, 5); g.quadraticCurveTo(-7, 22, -18, 39); g.lineTo(18, 39); g.quadraticCurveTo(7, 22, 5, 5); g.fill(); R(L.lite, -12, 30, 3, 6); R(OUT, -2, 38, 4, 6); g.restore(); } },
+  anchor: { z: ['sewer', 'city'], w: 4, h: 5, d: function (g, x, y, L) { g.save(); g.translate(x, y - 6); g.rotate(0.25); bx(-3, -70, 6, 64, L.metal, L.mlite); bx(-14, -64, 28, 5, L.metal, L.mlite); g.strokeStyle = OUT; g.lineWidth = 7; g.beginPath(); g.arc(0, -16, 18, 0.2, Math.PI - 0.2); g.stroke(); g.strokeStyle = L.metal; g.lineWidth = 4; g.stroke(); g.lineWidth = 3; g.strokeStyle = OUT; g.beginPath(); g.arc(0, -76, 6, 0, 6.3); g.stroke(); g.restore();
+      for (var c = 0; c < 8; c++) { R(OUT, x - 30 - c * 6, y - 3 - (c % 2), 6, 4); R(L.mlite, x - 29 - c * 6, y - 2 - (c % 2), 4, 2); } R(L.goo, x - 6, y - 24, 4, 3); R(L.goo, x + 6, y - 40, 3, 3); } }
+};
+STANDS.lmk = 1;
+function placeLandmarks(b, a) { // two per district (a quarter and two thirds along), and one every ~170 columns of the deep, never the same twice in an act
+  var Z = b.zone.id, names = Object.keys(LMK).filter(function (n) { return !LMK[n].z || LMK[n].z.indexOf(Z) >= 0; }), r = (a.seed || 1) * 7919 + 13;
+  for (var i = names.length - 1; i > 0; i--) { r = (r * 16807) % 2147483647; var j = r % (i + 1), t = names[i]; names[i] = names[j]; names[j] = t; }
+  var ni = 0, W = b.cols.length, bad = {}; b.bands.forEach(function (q) { for (var c = q.c0 - 2; c < q.c1 + 2; c++) bad[c] = 1; }); b.caves.forEach(function (q) { for (var c = q.c0 - 2; c < q.c1 + 2; c++) bad[c] = 1; });
+  b.ents.forEach(function (e) { if (e.k === 'drop' || e.k === 'foe' || e.k === 'deco' || e.k === 'glow' || e.k === 'dsign') return; var w = e.k === 'gim' || e.k === 'gimh' ? (e.w || 6) + 3 : 3; for (var c = Math.floor(e.c) - 3; c < e.c + w; c++) bad[c] = 1; });
+  function fits(c, row, w, h, air) { for (var x = c; x < c + w; x++) { if (bad[x] || x >= W) return false; if (b.cols[x][row] !== '#') return false; for (var y = row - h; y < row; y++) if (b.cols[x][y] !== air) return false; } return true; }
+  function put(c, row, n) { b.ents.unshift({ k: 'lmk', c: c, row: row, l: n }); for (var x = Math.floor(c) - LMK[n].w; x < c + LMK[n].w + 2; x++) bad[x] = 1; }
+  function seek(c0, c1, air, floorF) { if (ni >= names.length) return; var n = names[ni], L = LMK[n]; for (var c = c0; c < c1; c++) { var row = floorF(c); if (row === null) continue; if (fits(c, row, L.w, L.h, air)) { put(c + L.w / 2 - 0.5, row, n); ni++; return; } } }
+  var ds = b.dists.length ? b.dists : [{ c: 0 }];
+  ds.forEach(function (d, k) { var c0 = d.c, c1 = k + 1 < ds.length ? ds[k + 1].c : W - 60, span = c1 - c0; if (span < 40) return;
+    [0.22, 0.62].forEach(function (f) { var s = Math.floor(c0 + span * f); seek(s, Math.min(c1 - 10, s + 160), '.', function (c) { var t = b.top[c]; return t === null || t === undefined ? null : t; }); }); });
+  (b.unders || []).forEach(function (u) { for (var s = u.c0 + 40; s < u.c1 - 60; s += 170) seek(s, s + 150, 'K', function (c) { var cl = b.cols[c], ce = u.ceil[c - u.c0]; if (ce === undefined) return null; for (var y = ce; y < b.ROWS; y++) { if (cl[y] === '#') return cl[y - 1] === 'K' ? y : null; if (cl[y] !== 'K') return null; } return null; }); });
+}
+(function () {
+  var uR = underRoutes; underRoutes = function (b, a) { uR(b, a); placeLandmarks(b, a); };
+  var dE = drawEnt; drawEnt = function (g, e, cx, cy, W, H) { if (e.k === 'lmk') { var x = Math.round(e.x - cx), y = Math.round(e.y - cy), L = LMK[e.l]; if (L && x > -L.w * TS - 40 && x < W + L.w * TS + 40) L.d(g, x, y, GL(), e); return; } dE(g, e, cx, cy, W, H); };
+})();
+
+/* =====================================================================================================
+   THE DIRECTOR (his ask: no mechanic, trap or obstacle repeats in a level, on any path). Before an act is first laid,
+   every set piece is checked against what the act has already used: the street, each of the three lanes and the deep
+   share one list. A repeat is swapped for a gimmick the act has not had yet that fits where it is (the lanes have a
+   roof over them, so only low ones go there; pits stay off the street lane, which has the low road under it).
+   Ground shapes are swapped the same way for an unused shape going the same way (up, down or level).
+   The deep gets its own list from what is left, so it never shows what the street had.
+   ===================================================================================================== */
+var STRUCTP = { run: 1, check: 1, district: 1, cave: 1, start: 1, goal: 1, arena: 1, box: 1, dash: 1, lanes: 1, pocket: 1 };
+var TERRP = { ascent: 'u', springShaft: 'u', climb: 'u', pillars: 'u', terraces: 'u', bluff: 'u', rampup: 'u', descent: 'd', plunge: 'd', drop: 'd', slide: 'd', skijump: 'd', chute: 'd', ledgedrop: 'd', bigHill: 'n', ridge: 'n', rollers: 'n', valley: 'n', dunes: 'n', halfpipe: 'n', canyon: 'n', overhang: 'n', stairs: 's' };
+var TERRPOOL = { u: [['ascent', 16], ['springShaft', 16], ['pillars'], ['terraces'], ['bluff'], ['rampup'], ['stairs', 3, 'up'], ['climb', 9]],
+  d: [['descent', 18], ['plunge', 18], ['slide'], ['skijump'], ['chute'], ['ledgedrop'], ['stairs', 3, 'down']],
+  n: [['bigHill', 12], ['ridge'], ['dunes'], ['halfpipe'], ['canyon'], ['overhang'], ['rollers', 3], ['valley', 4]] };
+// the act's own pieces that may stand in for a repeat too (h = rows it needs, pit = digs a pit)
+var OLDP = [[['swings', 2], 6], [['vents', 2], 3], [['fallers', 3], 5], [['rollers2', 2], 2], [['wires', 2], 3], [['ditch', 4], 1], [['crumbleBridge', 8], 1], [['spikeRun', 2], 5], [['jets', 3], 4],
+  [['crushers', 3], 9], [['electric', 3], 1], [['saws', 2], 3], [['saws', 2, 1], 4], [['conveyor', 16, 1], 1], [['platPit', 4, '=', null, 1], 4, 1], [['platPit', 4, 'F', null, 1], 4, 1], [['platPit', 4, 'M', null, 1], 4, 1],
+  [['platPit', 4, 'N', null, 1], 6, 1], [['platPit', 4, 'O', null, 1], 6, 1], [['loop'], 15], [['bumpers'], 6, 1], [['springTower', 'm'], 11], [['zipline', 30], 10], [['cart', 44], 2], [['gateway'], 8]];
+var PITG = { sinkers: 1, bubbles: 1, beatblocks: 1, swingplats: 1, seesaw: 1 };
+function pieceKey(p) { var k = p[0]; if (k === 'platPit') return k + ':' + p[2]; if (k === 'saws') return k + ':' + (p[2] ? 1 : 0); if (k === 'awnings' || k === 'subway') return k + ':' + (p[2] || ''); if (k === 'traffic') return k + ':' + (p[3] || ''); if (k === 'stairs') return k + ':' + (p[2] || 'up'); return k; }
+function terrDir(p) { var d = TERRP[p[0]]; return d === 's' ? (p[2] === 'down' ? 'd' : 'u') : d; }
+function uniqAct(a) {
+  var r = (a.seed || 1) * 48271 + 11; function rnd(n) { r = (r * 16807) % 2147483647; return r % n; }
+  function shuf(L) { L = L.slice(); for (var i = L.length - 1; i > 0; i--) { var j = rnd(i + 1), t = L[i]; L[i] = L[j]; L[j] = t; } return L; }
+  var used = {}, fill = [], tfill = [];
+  function walk(list, ctx) { for (var i = 0; i < list.length; i++) { var p = list[i]; if (p[0] === 'lanes') { var s = p[1]; walk(s.top, 'top'); walk(s.mid, 'mid'); walk(s.low, 'low'); continue; } if (STRUCTP[p[0]]) continue;
+      var k = pieceKey(p); if (TERRP[p[0]]) { if (ctx !== 'single') continue; if (used[k]) tfill.push({ list: list, i: i, d: terrDir(p) }); used[k] = 1; continue; }
+      if (used[k]) fill.push({ list: list, i: i, ctx: ctx }); used[k] = 1; } }
+  walk(a.plan, 'single');
+  // the pool of gimmicks: every new one, then the act's own old pieces, shuffled for this act
+  var pool = shuf(Object.keys(GIM).filter(function (n) { return SEC[n] && GIM[n].lay; }).map(function (n) { return { p: [n], h: GIM[n].h, pit: !!PITG[n] }; }))
+    .concat(shuf(OLDP.map(function (q) { return { p: q[0], h: q[1], pit: !!q[2] }; })));
+  function maxH(ctx) { return ctx === 'top' ? 9 : ctx === 'mid' || ctx === 'low' ? 6 : ctx === 'deep' ? 10 : 99; }
+  function take(ctx) { var mh = maxH(ctx); for (var i = 0; i < pool.length; i++) { var q = pool[i], k = pieceKey(q.p); if (used[k] || q.h > mh || (q.pit && (ctx === 'mid' || ctx === 'top'))) continue; used[k] = 1; return q.p.slice(); } return null; }
+  // the tightest places first (lanes), then the open street
+  fill.sort(function (x, y) { return maxH(x.ctx) - maxH(y.ctx); }).forEach(function (f) { var q = take(f.ctx); f.list[f.i] = q || ['run', 8]; });
+  tfill.forEach(function (f) { var free = function (L) { return shuf(L).filter(function (q) { return !used[pieceKey(q)]; }); }, opts = free(TERRPOOL[f.d]);
+    if (!opts.length) opts = free(TERRPOOL.n.concat(TERRPOOL[f.d === 'u' ? 'd' : 'u'])); /* that way is used up: any shape not seen yet */
+    if (opts.length) { used[pieceKey(opts[0])] = 1; f.list[f.i] = opts[0].slice(); } else { var g = take('single'); if (g) f.list[f.i] = g; } });
+  // the deep: what is left, in its own order
+  var deep = []; for (var n = 0; n < 40; n++) { var q2 = take('deep'); if (!q2) break; deep.push(q2); }
+  var tn = shuf(TERRPOOL.n); while (deep.length < 40) deep.push(tn[deep.length % tn.length].slice());
+  a.deep = deep; a.gimDone = 1;
+}
+(function () { var bA = buildAct; buildAct = function (a) { if (!a.gimDone) uniqAct(a); return bA(a); }; })();
 
 /* =====================================================================================================
    CUMHEAD: momentum along the ground (slopes speed you up going down and slow you going up), a jump and a
@@ -2672,7 +3486,7 @@ function drawWorld() {
       for (var k = 0; k < 40; k += 2) for (var j = -k; j <= k; j += 4) if (((j + k) / 2) % 2 === 0) R('#3a1a0a', x + j, y0 - 6 + k * 0.9, 1, 1);
       var ch = q.c0 * 7 + c; if (ch % 2) { for (var cl = 0; cl < 5 + ch % 4; cl++) R(cl % 2 ? '#3a343c' : '#22202a', x + 36, y0 - 60 + cl * 6, 3, 5); } } });
   // platforms
-  PLATS.forEach(function (q) { if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
+  PLATS.forEach(function (q) { if (q.draw) { var xq = Math.round(q.x - cx); if (xq < W + 40 && xq + q.w > -40) q.draw(g, xq, Math.round(q.y - cy), q); return; } if (q.gone) return; var x = Math.round(q.x - cx), y = Math.round(q.y - cy); if (x > W || x + q.w < 0) return;
     if (q.log) { if (distAt(Math.floor(q.x / TS))) spr('hog_barge', x + q.w / 2, y + 16, { sc: q.w / 64 }); else spr('p_logboat', x + q.w / 2, y + 14, { sc: q.w / 60 }); return; }
     if (q.k === 'line') { spr('hog_washline', x + q.w / 2, y + 18, {}); R('#12040a', x - 2, y - 2, 3, 120); R('#12040a', x + q.w, y - 2, 3, 120); return; }
     var dq = distAt(Math.floor(q.x / TS));
@@ -2803,7 +3617,7 @@ function drawPlayer(p, cx, cy) {
   var x = Math.round(p.x - cx), y = Math.round(p.y - cy), sp = Math.abs(p.air ? p.vx : p.gsp), n;
   n = pName(p, sp); // the frame comes from the character being played (9c-chars.js)
   var ground = !p.air && p.state === 'normal', skid = ground && sp > 140 && ((KIT.held('left') && p.gsp > 0) || (KIT.held('right') && p.gsp < 0));
-  var rot = p.loop ? p.rot : !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
+  var rot = p.loop ? p.rot : p.grot ? p.grot : !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
   if (ground && sp >= 115 && !skid) rot += p.face * Math.min(0.12, (sp - 115) / 1400); // leans into it as he speeds up
   if (skid) { rot -= p.face * 0.16; n = pName(p, 60); if (Math.random() < 0.6) FX.push({ k: 'bit', x: p.x + p.face * 6, y: p.y - 2, vx: -p.gsp * 0.2, vy: -30 - Math.random() * 40, t: 0.35, c: '#a6968f' }); }
   // after-images at full pelt (dash pads, springs, shoes)
