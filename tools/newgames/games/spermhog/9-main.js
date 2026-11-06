@@ -24,6 +24,8 @@ var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, 
   sfx.add('horn', function () { t('sawtooth', 311, 311, 0.32, 0.05); t('sawtooth', 392, 392, 0.32, 0.04); t('sawtooth', 311, 311, 0.32, 0.05, 0.42); t('sawtooth', 392, 392, 0.32, 0.04, 0.42); });
   sfx.add('rumble', function () { n(0.9, 0.12, 120); t('sine', 55, 45, 0.9, 0.12); });
   sfx.add('roar', function () { n(0.5, 0.12, 220); t('sawtooth', 90, 60, 0.45, 0.06); });
+  sfx.add('splash', function () { n(0.35, 0.3, 900); t('sine', 300, 80, 0.3, 0.1); });
+  sfx.add('shutter', function () { n(0.05, 0.3, 4000); t('square', 1800, 1800, 0.04, 0.06); n(0.06, 0.25, 3000, 0.09); });
   sfx.add('pop', function () { n(0.1, 0.15, 1500); t('square', 600, 200, 0.1, 0.05); });
   sfx.add('bosshit', function () { n(0.2, 0.25, 700); t('sawtooth', 300, 80, 0.2, 0.08); });
   sfx.add('super', function () { [392, 523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) { t('square', f, f, 0.09, 0.05, i * 0.05); t('triangle', f / 2, f / 2, 0.12, 0.04, i * 0.05); }); n(0.4, 0.08, 3000); });
@@ -100,6 +102,8 @@ function update(dt) {
   if (G.mode === 'data') { stepData(dt); return; }
   if (G.mode === 'title') { CAM.x += 30 * dt; if (CAM.x > LV.w * TS - KIT.W) CAM.x = 0; G.cam = CAM.x; return; }
   if (G.mode === 'special') { if (!KIT.menuOpen()) stepSpecial(dt); return; }
+  if (G.mode === 'cut') { document.documentElement.classList.add('hs-menu'); stepCut(dt); if (G.mode !== 'cut') document.documentElement.classList.remove('hs-menu'); return; }
+  if (G.mode === 'flume') { if (!KIT.menuOpen()) stepFlume(dt); return; }
   if (G.mode === 'card') { G.cardT += dt; if (G.cardT > 2.4) { G.mode = 'play'; } stepWorld(dt); camera(dt); return; }
   if (G.mode === 'play' || G.mode === 'clear') {
     if (G.mode === 'play') { G.time += dt; if (G.time >= 600 && PL.state !== 'dead') die(false); }
@@ -114,7 +118,9 @@ function draw() {
   var g = KIT.ctx; g.clearRect(0, 0, KIT.W, KIT.H);
   if (G.mode === 'special' && SS) { drawSpecial(); return; }
   if (G.mode === 'data') { drawData(); return; }
+  if (G.mode === 'cut' && CUT) { drawCut(); return; }
   if (!LV || !TILESET) return;
+  if (FL && (G.mode === 'flume' || FL.done)) { drawFlume(); drawHud(); if (G.mode === 'clear' && G.clearT > 1) drawTally(); return; }
   drawWorld();
   if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') return;
   drawHud();
@@ -132,7 +138,7 @@ function drawCard(t) { // the zone title card, slides in and out
 }
 function drawTally() {
   var W = KIT.W, cx = W / 2, y = 70, k = Math.min(1, (G.clearT - 1) * 3);
-  text('CUMHEAD GOT', cx - (1 - k) * W, y, { size: 16, align: 'center', col: '#f1e7d0', font: 'title', outline: true });
+  text(shortName() + ' GOT', cx - (1 - k) * W, y, { size: 16, align: 'center', col: '#f1e7d0', font: 'title', outline: true });
   text(G.clearBoss ? 'THROUGH ' + LV.zone.name : 'THROUGH ACT ' + ACTS[G.ai].act, cx + (1 - k) * W, y + 26, { size: 16, align: 'center', col: '#ff2630', font: 'title', outline: true });
   if (G.clearT > 1.8) { text('TIME BONUS', cx - 110, y + 70, { size: 8, col: '#ffe36a', outline: true }); text(String(Math.round(G.tb)), cx + 110, y + 70, { size: 8, align: 'right', outline: true });
     text('DROP BONUS', cx - 110, y + 90, { size: 8, col: '#ffe36a', outline: true }); text(String(Math.round(G.db)), cx + 110, y + 90, { size: 8, align: 'right', outline: true });

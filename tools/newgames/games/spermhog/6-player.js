@@ -92,9 +92,9 @@ function knock(srcx, k) { var p = PL; p.state = 'hurt'; p.hurtT = 0.5; p.air = t
 function die(fell) { var p = PL; if (p.state === 'dead') return; p.state = 'dead'; p.deadT = 0; p.vy = fell ? 0 : -420; p.shield = 0; G.shoes = 0; G.star = 0; sfx.play('die'); music.stop(0.4); }
 
 /* ---------- Super Cumhead ---------- */
-var SUPERK = (function () { var k = {}; for (var q in PHYS) k[q] = PHYS[q]; k.acc *= 1.7; k.top *= 1.4; k.maxg *= 1.2; k.jumpv *= 1.12; k.jump2 *= 1.12; k.airacc *= 1.5; return k; })();
+var SUPERK = (function () { var k = {}; for (var q in PHYS) k[q] = PHYS[q]; k.acc *= 1.9; k.top *= 1.62; k.maxg *= 1.36; k.jumpv *= 1.12; k.jump2 *= 1.12; k.airacc *= 1.5; return k; })();
 function canSuper() { return chalCount() >= 7 && G.drops >= 50; }
-function goSuper() { G.super = 1; G.superT = 0; PL.vy = Math.min(PL.vy, -120); sfx.play('super'); G.shake = 5; G.banner = 1.6; G.bannerTxt = 'SUPER CUMHEAD!'; for (var i = 0; i < 16; i++) FX.push({ k: 'bit', x: PL.x, y: PL.y - 24, vx: Math.cos(i / 16 * 6.28) * 200, vy: Math.sin(i / 16 * 6.28) * 200, t: 0.5, c: i % 2 ? '#ffe36a' : '#fffbe8' }); }
+function goSuper() { G.super = 1; G.superT = 0; PL.vy = Math.min(PL.vy, -120); sfx.play('super'); G.shake = 5; G.banner = 1.6; G.bannerTxt = typeof superName === 'function' ? superName() : 'SUPER CUMHEAD!'; for (var i = 0; i < 16; i++) FX.push({ k: 'bit', x: PL.x, y: PL.y - 24, vx: Math.cos(i / 16 * 6.28) * 200, vy: Math.sin(i / 16 * 6.28) * 200, t: 0.5, c: i % 2 ? '#ffe36a' : '#fffbe8' }); }
 function stepSuper(dt) {
   if (!G.super) return; if (PL.state === 'dead' || G.mode !== 'play') { G.super = 0; return; }
   G.star = Math.max(G.star, 0.1); G.superT += dt; if (G.superT >= 1) { G.superT -= 1; G.drops--; if (G.drops <= 0) { G.drops = 0; G.super = 0; G.star = 0; G.banner = 1; G.bannerTxt = 'OUT OF DROPS'; } }

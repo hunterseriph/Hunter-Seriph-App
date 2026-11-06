@@ -205,6 +205,7 @@ ACTS.forEach(function (a) { var first = true; a.plan = a.plan.map(function (p) {
 function buildAct(a) {
   var Z = ZONES[a.z], b = Builder(Z, a.seed);
   a.plan.forEach(function (p) { var f = SEC[p[0]]; if (!f) throw new Error('no piece ' + p[0]); f.apply(null, [b].concat(p.slice(1))); });
+  underRoutes(b, a); // the second route under the act, the holes and springs between them, cracked walls (2c-under.js)
   // crop to what is used: a little sky above the highest thing, a few rows under the lowest ground
   var lo = b.ROWS, hi = 0; b.top.forEach(function (t) { if (t !== null && t !== undefined) { lo = Math.min(lo, t); hi = Math.max(hi, t); } });
   b.ents.forEach(function (e) { lo = Math.min(lo, e.row); hi = Math.max(hi, e.row); });
@@ -215,5 +216,5 @@ function buildAct(a) {
   for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) t[y * W + x] = b.cols[x][y + y0];
   b.ents.forEach(function (e) { e.x = e.c * TS + TS / 2; e.y = (e.row - y0) * TS; }); // y: the top of that tile row (where a thing standing there has its feet)
   var dc = null; if (b.dists.length) { dc = new Array(W); var di = 0, cur = b.dists[0].id; for (var cx = 0; cx < W; cx++) { while (di < b.dists.length && b.dists[di].c <= cx) { cur = b.dists[di].id; di++; } dc[cx] = cur; } }
-  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, caves: b.caves, bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
+  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, caves: b.caves, unders: b.unders, bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
 }

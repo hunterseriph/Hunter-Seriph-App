@@ -70,7 +70,7 @@ function surf(ch, lx) {
 }
 /* paint every tile kind once for this zone into one canvas strip */
 function buildTileset(Z) {
-  var kinds = ['k', '#', '#t', 'W', 'Wt', '/', '\\', 'a', 'b', 'c', 'd', '=', '^', 'v', 'Q', 'Q1', 'D', '_0', '_1', '_2', '_3', '-0', '-1', '-2', '-3'];
+  var kinds = ['k', '#', '#t', 'W', 'Wt', 'X', '/', '\\', 'a', 'b', 'c', 'd', '=', '^', 'v', 'Q', 'Q1', 'D', '_0', '_1', '_2', '_3', '-0', '-1', '-2', '-3'];
   var c = document.createElement('canvas'); c.width = kinds.length * 16; c.height = 16; var g = c.getContext('2d'), im = g.createImageData(c.width, 16), d = im.data;
   function put(x, y, col, a) { if (!col) return; var i = (y * c.width + x) * 4; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = a === undefined ? 255 : a; }
   kinds.forEach(function (k, ti) {
@@ -80,6 +80,10 @@ function buildTileset(Z) {
       if (k === 'k') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.55 | 0; }); if (y === 0 || x === 0) col = col.map(function (v) { return v * 0.78 | 0; }); } // underground: the back wall
       else if (k === '#') col = fillPix(Z, x, y + 16);
       else if (k === '#t') col = edgePix(Z, x, y) || fillPix(Z, x, y + 16);
+      else if (k === 'X') { // a cracked wall: the zone's fill, a hard rim, cracks and a lit chip (breaks if you hit it fast)
+        col = fillPix(Z, x, y + 16).map(function (v) { return Math.min(255, v * 1.15 + 10) | 0; });
+        if (x === 0 || y === 0) col = col.map(function (v) { return Math.min(255, v + 40); }); if (x === 15 || y === 15) col = OUTL;
+        var cr = (x + y === 11) || (x - y === 3 && x > 6) || (y === 8 && x > 3 && x < 9) || (x === 5 && y > 8 && y < 14); if (cr) col = OUTL; if (cr && (x + 1 + y) % 4 === 0) col = [255, 227, 106]; }
       else if (k === 'W' || k === 'Wt') { col = fillPix(Z, x, y + 16).map(function (v) { return v * 0.55 | 0; }); if (k === 'Wt' && y < 2) col = y === 0 ? OUTL : hexc(Z.edge[2]); }
       else if ('/\\abcd'.indexOf(k) >= 0) { var s = surf(k, x); if (y >= s) col = edgePix(Z, x, y - s) || fillPix(Z, x, y + 16); }
       else if (k === '=') { if (y < 6) col = y === 0 || y === 5 ? OUTL : y === 1 ? hexc(Z.edge[0]) : (x % 8 === 0 ? OUTL : hexc(Z.edge[1])); if (y === 6 && x % 8 === 3) col = OUTL; }

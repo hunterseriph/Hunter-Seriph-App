@@ -3,12 +3,13 @@
    of every act), lives, score and the Cum Chalices of that game. A cleared slot (and NO SAVE once a zone is reached) picks
    any zone with up/down; a new slot picks the character with up/down. Saves: 'hog-slots'. */
 var HOGCHARS = [{ id: 'cumhead', name: 'CUMHEAD', idle: 'ch_idle', icon: 'ch_icon0' }]; // more characters go here
-var NSLOT = 6, SLOTS = KIT.load('hog-slots', null);
+var NSLOT = 16, SLOTS = KIT.load('hog-slots', null); // 16 saves (he asked for way more: there are lots of homunculi to play through)
 if (!SLOTS) { // the old single save becomes save 1
   SLOTS = []; for (var si0 = 0; si0 < NSLOT; si0++) SLOTS.push(null);
   if (SV.reached > 0 || chalCount() || SV.done) SLOTS[0] = { ch: 'cumhead', ai: Math.min(ACTS.length - 1, (SV.reached || 0) * 2), lives: 3, score: 0, chal: SV.chal.slice(), done: SV.done ? 1 : 0, zone: 0 };
   KIT.save('hog-slots', SLOTS);
 }
+if (SLOTS.length < NSLOT) { while (SLOTS.length < NSLOT) SLOTS.push(null); KIT.save('hog-slots', SLOTS); }
 G.slot = -1;
 function saveSlots() { KIT.save('hog-slots', SLOTS); }
 function slotSaveAct() { // called at the start of every act (not when coming back from a checkpoint)
@@ -36,7 +37,7 @@ function dsGo(i) {
   if (DS.erase) { var e = SLOTS[i - 1]; if (i < 1 || !e) { sfx.play('bump'); return; }
     KIT.confirm({ title: 'Erase save ' + i + '?', sub: 'It cannot be brought back.', yesLabel: 'Erase', noLabel: 'Keep', yes: function () { SLOTS[i - 1] = null; saveSlots(); KIT.closeMenu(); sfx.play('crumble'); DS.erase = false; }, no: function () { KIT.closeMenu(); } }); return; }
   var z = DS.pick[i] || 0; sfx.play('check'); if (i >= 1 && SLOTS[i - 1]) SLOTS[i - 1].gates = SLOTS[i - 1].gates || [];
-  if (i === 0) { G.slot = -1; newGame(Math.min(z, SV.reached || 0)); return; }
+  if (i === 0) { G.slot = -1; G.ch = 'cumhead'; newGame(Math.min(z, SV.reached || 0)); return; }
   var s = SLOTS[i - 1];
   if (!s) { s = SLOTS[i - 1] = { ch: HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id, ai: 0, lives: 3, score: 0, chal: [], done: 0 }; saveSlots(); }
   G.slot = i - 1; SV.chal = (s.chal || []).slice(); G.lives = s.lives > 0 ? s.lives : 3; G.score = s.score || 0; G.kills = 0; G.super = 0; G.ch = s.ch;
@@ -100,14 +101,14 @@ function drawData() {
       if (clear) { var a2 = Math.floor(t * 3) % 2; text('CLEAR', x + pw / 2, by + 6, { size: 14, align: 'center', col: a2 ? '#ffe36a' : '#f1e7d0', font: 'title', outline: true }); }
     }
     // the character, standing on the panel
-    var C = charOf(s ? s.ch : HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id), fr = C.idle + (Math.floor((t + i * 0.3) * 6) % 7);
-    spr(fr, x + pw / 2, y + 140, { anchor: 'b' });
-    text(i === 0 ? 'ANY ZONE YOU HAVE REACHED' : C.name, x + pw / 2, y + 147, { size: i === 0 ? 4 : 6, align: 'center', col: '#f1e7d0' });
+    var C = i === 0 ? charDef('cumhead') : charOf(s ? s.ch : HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id);
+    drawCharStand(C, x + pw / 2, y + 140, t + i * 0.3);
+    text(i === 0 ? 'ANY ZONE YOU HAVE REACHED' : C.name, x + pw / 2, y + 147, { size: i === 0 || C.name.length > 15 ? 4 : 6, align: 'center', col: '#f1e7d0' });
     if (on && !DS.erase) dsArrows(i).forEach(function (a) { var cx = a.x + a.w / 2, cy = a.y + a.h / 2, pulse = Math.floor(t * 3) % 2;
       R('#12040a', a.x, a.y, a.w, a.h); R(pulse ? '#c4121c' : '#8a0a14', a.x + 1, a.y + 1, a.w - 2, a.h - 2); g.fillStyle = '#ffe36a'; g.beginPath(); g.moveTo(cx + a.d * 6, cy); g.lineTo(cx - a.d * 4, cy - 8); g.lineTo(cx - a.d * 4, cy + 8); g.fill(); });
-    if (s) { spr(C.icon, x + 14, y + 168, { anchor: 'b', sc: 0.5 }); text('x' + s.lives, x + 22, y + 160, { size: 6, col: '#f1e7d0' });
+    if (s) { drawCharIcon(C, x + 14, y + 168); text('x' + s.lives, x + 22, y + 160, { size: 6, col: '#f1e7d0' });
       var ch = s.chal || []; for (var c = 0; c < 7; c++) spr('hog_chal' + c, x + 56 + c * 8, y + 168, { sc: 0.5, alpha: ch[c] ? 1 : 0.2, anchor: 'b' });
       text(String(s.score || 0), x + pw - 6, y + 174, { size: 5, align: 'right', col: '#a6968f' }); }
   }
-  text('TAP OR LEFT / RIGHT TO PICK   ARROWS OR UP / DOWN: ZONE   A START   B BACK', W / 2, H - 14, { size: 5, align: 'center', col: '#a6968f' });
+  text('TAP OR LEFT / RIGHT TO PICK   ARROWS OR UP / DOWN: ZONE OR CHARACTER   A START   B BACK', W / 2, H - 14, { size: 5, align: 'center', col: '#a6968f' });
 }

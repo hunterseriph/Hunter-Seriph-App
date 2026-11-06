@@ -166,26 +166,20 @@ function drawShot(g, s, x, y) {
 function drawPlayer(p, cx, cy) {
   if (p.inv > 0 && p.state !== 'dead' && Math.floor(G.t * 20) % 2 === 0) return;
   var x = Math.round(p.x - cx), y = Math.round(p.y - cy), sp = Math.abs(p.air ? p.vx : p.gsp), n;
-  if (p.state === 'dead') n = 'ch_death' + (Math.floor(p.deadT * 4) % 2);
-  else if (p.state === 'hurt') n = 'ch_hurt0';
-  else if (p.atkT > 0) n = 'ch_attack';
-  else if (p.air) n = 'ch_jump' + Math.min(3, p.vy < -150 ? 0 : p.vy < 0 ? 1 : p.vy < 200 ? 2 : 3);
-  else if (sp < 8) n = 'ch_idle' + (Math.floor(G.t * 6) % 7);
-  else if (sp < 115) n = 'ch_walk' + (Math.floor((p.dist || 0) / 5.5) % 9);
-  else n = 'ch_rn' + (Math.floor((p.dist || 0) / 7.5) % 8); // his 8-frame run, one stride every 60 px
+  n = pName(p, sp); // the frame comes from the character being played (9c-chars.js)
   var ground = !p.air && p.state === 'normal', skid = ground && sp > 140 && ((KIT.held('left') && p.gsp > 0) || (KIT.held('right') && p.gsp < 0));
   var rot = p.loop ? p.rot : !p.air && Math.abs(p.slope) > 0.2 ? Math.atan(p.slope) * 0.6 : 0;
   if (ground && sp >= 115 && !skid) rot += p.face * Math.min(0.12, (sp - 115) / 1400); // leans into it as he speeds up
-  if (skid) { rot -= p.face * 0.16; n = 'ch_walk0'; if (Math.random() < 0.6) FX.push({ k: 'bit', x: p.x + p.face * 6, y: p.y - 2, vx: -p.gsp * 0.2, vy: -30 - Math.random() * 40, t: 0.35, c: '#a6968f' }); }
+  if (skid) { rot -= p.face * 0.16; n = pName(p, 60); if (Math.random() < 0.6) FX.push({ k: 'bit', x: p.x + p.face * 6, y: p.y - 2, vx: -p.gsp * 0.2, vy: -30 - Math.random() * 40, t: 0.35, c: '#a6968f' }); }
   // after-images at full pelt (dash pads, springs, shoes)
   p.trail = p.trail || []; if (sp > 300 && p.state === 'normal') { p.trail.unshift({ x: p.x, y: p.y, n: n, r: rot }); if (p.trail.length > 6) p.trail.pop(); } else if (p.trail.length) p.trail.pop();
-  for (var ti = p.trail.length - 1; ti >= 1; ti -= 2) { var tr = p.trail[ti]; spr(tr.n, Math.round(tr.x - cx), Math.round(tr.y - cy) + 1, { flip: p.face < 0, rot: tr.r, alpha: 0.22 * (1 - ti / 7) }); }
+  for (var ti = p.trail.length - 1; ti >= 1; ti -= 2) { var tr = p.trail[ti]; spr(tr.n, Math.round(tr.x - cx), Math.round(tr.y - cy) + 1, { flip: p.face < 0, rot: tr.r, alpha: 0.22 * (1 - ti / 7), sc: CHR().sc }); }
   // a puff of dust each footfall
   if (ground && sp >= 115) { var step = Math.floor((p.dist || 0) / 30); if (step !== p.lastStep) { p.lastStep = step; FX.push({ k: 'bit', x: p.x - p.face * 6, y: p.y - 1, vx: -p.face * 30, vy: -18, t: 0.28, c: '#7a6a6a' }); } }
   if (G.super) { var gl = g0(); gl.save(); gl.globalCompositeOperation = 'lighter'; var ga = gl.createRadialGradient(x, y - 28, 4, x, y - 28, 46); ga.addColorStop(0, 'rgba(255,220,80,' + (0.35 + 0.1 * Math.sin(G.t * 20)).toFixed(2) + ')'); ga.addColorStop(1, 'rgba(255,160,0,0)'); gl.fillStyle = ga; gl.fillRect(x - 50, y - 80, 100, 100); gl.restore();
-    var gf = goldFrame(n); if (gf) { gl.save(); gl.translate(x, y + 1); if (rot) gl.rotate(rot); if (p.face < 0) gl.scale(-1, 1); gl.drawImage(gf, -gf.width / 2, -gf.height); gl.restore(); }
+    var gf = superImg(n); if (gf) { var gsc = CHR().sc || 1; gl.save(); gl.translate(x, y + 1); if (rot) gl.rotate(rot); if (CHR().flipped ? p.face > 0 : p.face < 0) gl.scale(-1, 1); gl.drawImage(gf, -gf.width * gsc / 2, -gf.height * gsc, gf.width * gsc, gf.height * gsc); gl.restore(); }
     if (Math.random() < 0.5) FX.push({ k: 'bit', x: p.x + (Math.random() - 0.5) * 30, y: p.y - Math.random() * 50, vx: 0, vy: -40, t: 0.4, c: Math.random() < 0.5 ? '#ffe36a' : '#fffbe8' });
-  } else spr(n, x, y + 1, { flip: p.face < 0, rot: rot });
+  } else spr(n, x, y + 1, { flip: CHR().flipped ? p.face > 0 : p.face < 0, rot: rot, sc: CHR().sc });
   if (p.shield) { var cg = g0(); cg.save(); cg.translate(x, y + 1); if (rot) cg.rotate(rot); KIT.condom(0, 2, 38, 56, G.t); cg.restore(); } // the condom: takes the next hit, turned with him round loops and slopes
   if (G.star > 0 && !G.super) for (var i = 0; i < 4; i++) { var a = G.t * 8 + i * 1.57; R(['#ffe36a', '#ff2630', '#fffbe8', '#9adfff'][i], x + Math.cos(a) * 20 - 2, y - 26 + Math.sin(a) * 26 - 2, 4, 4); }
   if (G.shoes > 0 && sp > 120 && Math.random() < 0.5) FX.push({ k: 'bit', x: p.x - p.face * 8, y: p.y - 4, vx: -p.face * 40, vy: -20, t: 0.3, c: '#ffe36a' });
@@ -211,7 +205,7 @@ function drawHud() {
   text('SCORE', 10, 8, { size: 8, col: '#ffe36a', outline: true }); text(String(G.score), 66, 8, { size: 8, outline: true });
   text('TIME', 10, 22, { size: 8, col: '#ffe36a', outline: true }); text(m + ':' + (s < 10 ? '0' : '') + s, 66, 22, { size: 8, outline: true });
   text('DROPS', 10, 36, { size: 8, col: low ? '#ff2630' : '#ffe36a', outline: true }); text(String(G.drops), 66, 36, { size: 8, outline: true });
-  spr('ch_icon0', 16, KIT.H - 6, { sc: 0.7 }); text('x' + G.lives, 28, KIT.H - 16, { size: 8, outline: true });
+  drawLifeIcon(16, KIT.H - 6); text('x' + G.lives, 28, KIT.H - 16, { size: 8, outline: true });
   var ic = 10; if (PL && PL.shield) { spr('hog_ishield', KIT.W - ic - 10, 14, { anchor: 'c' }); ic += 20; } if (G.shoes > 0) { spr('hog_ishoes', KIT.W - ic - 10, 14, { anchor: 'c' }); ic += 20; } if (G.star > 0) spr('hog_istar', KIT.W - ic - 10, 14, { anchor: 'c' });
   bossList().forEach(function (b, i) { var w = 120; KIT.bar(KIT.W / 2 - w / 2, 10 + i * 10, w, 5, b.hp / b.B.hp, '#ff2630', '#2a0509'); });
   if (G.bossName && bossList().length) text(G.bossName, KIT.W / 2, 22 + (G.boss2 ? 10 : 0), { size: 6, align: 'center', col: '#f1e7d0', outline: true });
