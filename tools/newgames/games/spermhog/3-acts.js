@@ -216,5 +216,5 @@ function buildAct(a) {
   for (var x = 0; x < W; x++) for (var y = 0; y < H; y++) t[y * W + x] = b.cols[x][y + y0];
   b.ents.forEach(function (e) { e.x = e.c * TS + TS / 2; e.y = (e.row - y0) * TS; }); // y: the top of that tile row (where a thing standing there has its feet)
   var dc = null; if (b.dists.length) { dc = new Array(W); var di = 0, cur = b.dists[0].id; for (var cx = 0; cx < W; cx++) { while (di < b.dists.length && b.dists[di].c <= cx) { cur = b.dists[di].id; di++; } dc[cx] = cur; } }
-  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, caves: b.caves, unders: (b.unders || []).map(function (u) { return { c0: u.c0, c1: u.c1, ceil: u.ceil.map(function (r) { return r - y0; }) }; }), bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
+  return { w: W, h: H, t: t, ents: b.ents, zone: Z, act: a, distCol: dc, dists: b.dists, caves: b.caves, unders: (b.unders || []).map(function (u) { return { c0: u.c0, c1: u.c1, dark: u.dark || [], ceil: u.ceil.map(function (r) { return r - y0; }) }; }), bands: b.bands.map(function (q) { return { c0: q.c0, c1: q.c1, H: q.H - y0 }; }) };
 }

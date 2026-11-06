@@ -45,59 +45,62 @@ SEC.pocket = function (b, gate) { // the cracked wall at the end and what it hid
   b.ground(14); return b; };
 /* ---------- digging the deep ---------- */
 function underRoutes(b, a) {
-  var W = b.cols.length, bad = new Array(W), Z = b.zone, ROWS = b.ROWS;
-  function mark(c0, c1) { for (var c = Math.max(0, c0); c < Math.min(W, c1); c++) bad[c] = 1; }
-  b.bands.forEach(function (q) { mark(q.c0 - 8, q.c1 + 8); }); b.caves.forEach(function (q) { mark(q.c0 - 6, q.c1 + 6); });
-  b.ents.forEach(function (e) { if (e.k === 'arena') mark(e.c0 - 20, W); else if (e.k === 'goal' || e.k === 'start') mark(e.c - 16, e.c + 16); else if (e.k === 'check' || e.k === 'portal' || e.k === 'trap') mark(e.c - 6, e.c + 6); else if (e.k === 'train' || e.k === 'traffic') mark(e.c - 4, e.c + (e.w || 10) + 4); });
-  for (var c = 0; c < W; c++) { var t = b.top[c]; if (t === null || t === undefined || b.cols[c].liq) { bad[c] = 1; continue; }
-    for (var y = t + 1; y < Math.min(ROWS, t + DEEP.crust + 2); y++) if (b.cols[c][y] !== '#') { bad[c] = 1; break; } }
-  var runs = [], s = -1; for (var c2 = 0; c2 <= W; c2++) { if (c2 < W && !bad[c2]) { if (s < 0) s = c2; } else if (s >= 0) { var L0 = c2 - s; while (L0 >= DEEP.minLen) { var take = Math.min(L0, DEEP.maxLen); if (L0 - take < DEEP.minLen && L0 > take) take = Math.floor(L0 / 2); runs.push([s, s + take]); s += take + 8; L0 = c2 - s; } s = -1; } }
-  if (runs.length > DEEP.maxAreas) runs = runs.sort(function (p, q) { return (q[1] - q[0]) - (p[1] - p[0]); }).slice(0, DEEP.maxAreas).sort(function (p, q) { return p[0] - q[0]; });
-  var made = [], gateAt = runs.length ? Math.min(runs.length - 1, 1) : -1, plan = DEEPPLAN[Z.id] || DEEPPLAN.city;
-  runs.forEach(function (rn, ri) {
-    var c0 = rn[0] + 3, c1 = rn[1] - 3, n = c1 - c0, maxTop = 0;
-    for (var i = c0; i < c1; i++) maxTop = Math.max(maxTop, b.top[i]);
-    // the roof: the street's own shape plus a crust, hanging low and jagged
-    var ceil = []; for (var k = 0; k < n; k++) { var m = 0; for (var j = -4; j <= 4; j++) m = Math.max(m, b.top[Math.max(rn[0], Math.min(rn[1] - 1, c0 + k + j))]); ceil.push(m + DEEP.crust + Math.floor(Math.abs(Math.sin((c0 + k) * 0.37) + Math.sin((c0 + k) * 0.91)) * 1.5)); }
-    // the level down there, built with the same builder
-    var L = Builder(Z, (a.seed || 1) * 31 + ri * 7), base = maxTop + DEEP.below; L.col = c0; L.h = base;
-    SEC.run(L, 8); var pi = ri * 3, guard = 0;
-    while (L.col < c1 - 100 && guard++ < 40) { var p = plan[pi++ % plan.length]; SEC[p[0]].apply(null, [L].concat(p.slice(1))); SEC.run(L, 4); } // leave room for the way out and the pocket
-    while (L.col < c1 - 40) L.ground(1);
-    if (L.h !== base) { var dh = L.h - base; if (dh < 0) SEC.drop(L, -dh); else SEC.climb(L, dh); }
-    SEC.pocket(L, ri === gateAt); while (L.col < c1) L.ground(1);
-    // push the whole level down if anything of it comes within 7 rows of the roof
-    var delta = 0; for (var k2 = 0; k2 < n; k2++) { var cc = c0 + k2, hi = null; for (var y2 = 0; y2 < L.ROWS; y2++) if (L.get(cc, y2) !== '.') { hi = y2; break; } if (hi !== null) delta = Math.max(delta, ceil[k2] + 8 - hi); }
-    if (base + delta + 12 >= ROWS) return;
-    // carve: rock wall from the roof down, the deep level's tiles over it
-    var floorBase = base + delta;
-    for (var k3 = 0; k3 < n; k3++) { var c3 = c0 + k3, col = b.cols[c3], Lc = L.cols[c3];
-      for (var y3 = ceil[k3]; y3 < ROWS; y3++) { var ly = y3 - delta, ch = ly < 0 ? '.' : ly < L.ROWS && Lc ? Lc[ly] : '#'; col[y3] = ch === '.' ? 'K' : ch; }
-      if (col[ROWS - 1] === 'K') { for (var y4 = floorBase + 8; y4 < ROWS; y4++) col[y4] = '#'; col[floorBase + 7] = '^'; } } // no bottomless pits: a spiked floor
-    L.ents.forEach(function (e) { if (e.c >= c0 && e.c < c1) { e.row += delta; if (e.row1 !== undefined) e.row1 += delta; b.ents.push(e); } });
-    function floorRow(c) { for (var y5 = ceil[c - c0]; y5 < ROWS; y5++) { var ch5 = b.cols[c][y5]; if (ch5 !== 'K' && ch5 !== '.') return ch5 === '#' ? y5 : null; } return null; }
-    // the ways in and out: holes in the street, updrafts back up, taking turns
-    var busy = {}; L.ents.forEach(function (e) { for (var d = -4; d <= 6; d++) busy[e.c + d] = 1; });
-    b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3; d2++) busy[e.c + d2] = 1; });
-    function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 26) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || floorRow(cA + w) !== f || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
-    function shaft(cA, up) { var f = floorRow(cA + 1); for (var w = 0; w < 3; w++) { var cc4 = cA + w; for (var y6 = b.top[cc4]; y6 < ceil[cc4 - c0] + 1; y6++) b.cols[cc4][y6] = 'K'; }
-      b.ents = b.ents.filter(function (e) { return !(e.k !== 'drop' && e.c >= cA - 1 && e.c <= cA + 3 && e.row <= b.top[cA] + 1); });
-      if (up) b.ent('updraft', cA + 1, f, { toprow: b.top[cA] - 3 }); else { for (var dd = 0; dd < 4; dd++) b.ent('drop', cA + 1, b.top[cA] + 4 + dd * 6); }
-      for (var d3 = -4; d3 <= 6; d3++) busy[cA + d3] = 1; }
-    function near(c, loose) { for (var d = 0; d < (loose ? 60 : 20); d++) { if (shaftOK(c + d, loose)) return c + d; if (shaftOK(c - d, loose)) return c - d; } return -1; }
-    var at = near(c0 + 6), up = false, sh = [];
-    if (at > 0) { shaft(at, false); sh.push(at); }
-    for (var cs = c0 + DEEP.step; cs < c1 - 40; cs += DEEP.step) { var q = near(cs); if (q > 0) { up = !up; shaft(q, up); sh.push(q); } }
-    var last = near(c1 - 40); if (last > 0) { shaft(last, true); sh.push(last); } else if (sh.length > 1) { /* the last way out stands */ }
-    var ups = b.ents.filter(function (e) { return e.k === 'updraft' && e.c >= c0 && e.c < c1; }).length;
-    if (!ups) { var any = near(c1 - 44, true); if (any < 0) any = near(c0 + Math.floor(n / 2), true); if (any > 0) shaft(any, true); } // always a way back up
-    if (!sh.length) { var ent = near(c0 + 8, true); if (ent > 0) shaft(ent, false); } // and a way in
-    // glowing crystals along the floor and roof
-    for (var g = c0 + 5; g < c1 - 5; g += 9) { var fr = floorRow(g); if (fr !== null && b.cols[g][fr - 1] === 'K') b.ent('glow', g, fr, { up: 0, v: g % 3 }); if (b.cols[g + 4][ceil[g + 4 - c0]] === 'K') b.ent('glow', g + 4, ceil[g + 4 - c0], { up: 1, v: (g + 1) % 3 }); }
-    made.push({ c0: c0, c1: c1, ceil: ceil.slice() });
-  });
-  b.unders = made;
+  /* ONE way under the whole act (his ask: a whole path down there through the different areas, not pockets you have to
+     come up out of): from just after the start to just before the sign or the arena. Its roof follows the lowest open
+     space of each column above it (street, low roads, tunnels, caves) plus a crust; gaps in the street simply open into it.
+     The level down there is laid with the same builder and kept at least 15 rows under the roof by climbs and drops. */
+  var W = b.cols.length, Z = b.zone, ROWS = b.ROWS, plan = DEEPPLAN[Z.id] || DEEPPLAN.city;
+  var st = 30, en = W - 60; b.ents.forEach(function (e) { if (e.k === 'start') st = Math.max(st, e.c + 30); if (e.k === 'goal') en = Math.min(en, e.c - 16); if (e.k === 'arena') en = Math.min(en, e.c0 - 26); });
+  var c0 = st, c1 = en, n = c1 - c0; if (n < 200) { b.unders = []; return; }
+  var open = new Array(W); for (var c = c0 - 8; c < c1 + 8; c++) { var col = b.cols[c], r = ROWS - 1; while (r >= 0 && col[r] === '#') r--; open[c] = r >= ROWS - 1 ? null : r; } // the lowest non-ground cell; null = a gap all the way down
+  var ceil = [], req = [];
+  for (var k = 0; k < n; k++) { var m = 0; for (var j = -3; j <= 3; j++) { var o = open[c0 + k + j]; if (o !== null && o !== undefined) m = Math.max(m, o); } ceil.push(m + DEEP.crust + Math.floor(Math.abs(Math.sin((c0 + k) * 0.37) + Math.sin((c0 + k) * 0.91)) * 1.5)); }
+  for (var k2 = 0; k2 < n; k2++) req.push(ceil[k2] + 15);
+  function need(c, w) { var q = 0; for (var i = Math.max(0, c - c0); i < Math.min(n, c - c0 + w); i++) q = Math.max(q, req[i]); return q; }
+  var L = Builder(Z, (a.seed || 1) * 31 + 7); L.col = c0; L.h = need(c0, 40); SEC.run(L, 10);
+  var pi = (a.seed || 0) % plan.length, guard = 0;
+  while (L.col < c1 - 90 && guard++ < 80) {
+    var nd = need(L.col, 120); if (L.h < nd) SEC.drop(L, nd - L.h + 1); else if (L.h > nd + 22) SEC.climb(L, Math.min(6, L.h - nd - 14));
+    var p = plan[pi++ % plan.length]; if (p[0] === 'climb' && L.h - p[1] - 1 < need(L.col, 120)) p = ['run', 8]; // never climb into the roof
+    SEC[p[0]].apply(null, [L].concat(p.slice(1))); SEC.run(L, 5); }
+  while (L.col < c1 - 34) L.ground(1);
+  if (L.h < need(L.col, 30)) SEC.drop(L, need(L.col, 30) - L.h + 1);
+  SEC.pocket(L, true); while (L.col < c1) L.ground(1);
+  // carve it in: rock from the roof down, the deep level's tiles over it
+  for (var k3 = 0; k3 < n; k3++) { var c3 = c0 + k3, cl = b.cols[c3], Lc = L.cols[c3]; if (!Lc) continue;
+    for (var y3 = ceil[k3]; y3 < ROWS; y3++) { var ch = Lc[y3]; cl[y3] = ch === '.' ? 'K' : ch; }
+    if (cl[ROWS - 1] === 'K') { for (var y4 = ROWS - 4; y4 < ROWS; y4++) cl[y4] = '#'; cl[ROWS - 5] = '^'; } }
+  L.ents.forEach(function (e) { if (e.c >= c0 && e.c < c1) b.ents.push(e); });
+  function floorRow(c) { for (var y5 = ceil[c - c0]; y5 < ROWS; y5++) { var ch5 = b.cols[c][y5]; if (ch5 !== 'K' && ch5 !== '.') return ch5 === '#' ? y5 : null; } return null; }
+  var busy = {}; L.ents.forEach(function (e) { for (var d = -4; d <= 6; d++) busy[e.c + d] = 1; });
+  b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3; d2++) busy[e.c + d2] = 1; });
+  b.bands.forEach(function (q) { for (var cb = q.c0 - 2; cb < q.c1 + 2; cb++) busy[cb] = 1; });
+  function solidTo(c) { var t = b.top[c]; if (t === null || t === undefined) return false; for (var y = t + 1; y < ceil[c - c0]; y++) if (b.cols[c][y] !== '#') return false; return true; }
+  function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 30) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || floorRow(cA + w) !== f || !solidTo(cA + w) || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
+  function shaft(cA, up) { var f = floorRow(cA + 1); for (var w = 0; w < 3; w++) { var cc4 = cA + w; for (var y6 = b.top[cc4]; y6 < ceil[cc4 - c0] + 1; y6++) b.cols[cc4][y6] = 'K'; }
+    b.ents = b.ents.filter(function (e) { return !(e.k !== 'drop' && e.c >= cA - 1 && e.c <= cA + 3 && e.row <= b.top[cA] + 1); });
+    if (up) b.ent('updraft', cA + 1, f, { toprow: b.top[cA] - 3 }); else for (var dd = 0; dd < 4; dd++) b.ent('drop', cA + 1, b.top[cA] + 4 + dd * 6);
+    for (var d3 = -4; d3 <= 6; d3++) busy[cA + d3] = 1; }
+  function near(c, loose) { for (var d = 0; d < (loose ? 50 : 24); d++) { if (shaftOK(c + d, loose)) return c + d; if (shaftOK(c - d, loose)) return c - d; } return -1; }
+  // ways in and out all along: a hole down, then an updraft up, and so on; the last is always a way up
+  var up = false; for (var cs = c0 + 14; cs < c1 - 60; cs += DEEP.step) { var q = near(cs); if (q > 0) { shaft(q, up); up = !up; } }
+  var last = near(c1 - 50, true); if (last > 0) shaft(last, true);
+  // dark spots: some stretches go pitch black, lanterns and crystals light them
+  var dark = [], h = (a.seed || 3); for (var ds = c0 + 60; ds < c1 - 80; ds += 70) { h = (h * 16807) % 2147483647; if (h % 3 === 0) { var dl = 34 + h % 30; dark.push([ds, ds + dl]); ds += dl; } }
+  // decoration along the way, in the look of the district above
+  var DS = DEEPDECO[Z.id] || DEEPDECO.city;
+  for (var g = c0 + 4; g < c1 - 4; g += 4 + (g % 3)) { var fr = floorRow(g); if (fr === null || b.cols[g][fr - 1] !== 'K' || busy[g] || floorRow(g + 1) !== fr || floorRow(g - 1) !== fr) continue;
+    var di = 0; for (var q2 = 0; q2 < b.dists.length; q2++) if (b.dists[q2].c <= g) di = q2;
+    var set = DS.slice(di % DS.length).concat(DS.slice(0, di % DS.length)).slice(0, 4), pick = set[(g * 7 + di) % set.length];
+    var inDark = dark.some(function (d) { return g >= d[0] && g < d[1]; });
+    b.ent('deco', g, fr, { d: inDark && g % 3 === 0 ? 'hog_lantern' : pick, flip: g % 2 }); }
+  for (var gg = c0 + 5; gg < c1 - 5; gg += 9) { if (b.cols[gg + 4] && b.cols[gg + 4][ceil[gg + 4 - c0]] === 'K') b.ent('glow', gg + 4, ceil[gg + 4 - c0], { up: 1, v: gg % 3 }); }
+  b.unders = [{ c0: c0, c1: c1, ceil: ceil.slice(), dark: dark }];
 }
+var DEEPDECO = { city: ['hog_crates', 'hog_barrels', 'hog_candle', 'hog_poster', 'hog_pallet', 'hog_cross', 'hog_lantern'], sewer: ['hog_pipe', 'hog_valve', 'hog_sludge', 'hog_fungus', 'hog_barrels', 'hog_drip', 'hog_lantern'],
+  park: ['hog_poster', 'hog_balloons', 'hog_booth', 'hog_popcorn', 'hog_crates', 'hog_ridesign', 'hog_lantern'], bone: ['hog_skullpile', 'hog_candle', 'hog_grave', 'hog_coffinup', 'p_ribs', 'hog_bonefence', 'hog_cross'],
+  factory: ['hog_gastank', 'hog_gauge', 'hog_valve', 'hog_barrels', 'hog_anvil', 'hog_crates', 'hog_lantern'], brain: ['hog_specimen', 'hog_terminal', 'hog_cables', 'hog_blumbanner', 'hog_gauge', 'hog_lantern'] };
+
 // the deep's own ground and rock, per zone (Clubhouse Row's stays black and red)
 var DEEPTILE = { city: { fill: 'stone', top: 'rim', pal: ['#5a2a2a', '#3a1a1c', '#1a0a0c'], edge: ['#a65a4a', '#6a2a24', '#2a0a0c'] },
   sewer: { fill: 'wetbrick', top: 'slime', pal: ['#5a5a40', '#38382a', '#181a12'], edge: ['#fffbe8', '#c8b880', '#4a4a30'] },
@@ -105,9 +108,14 @@ var DEEPTILE = { city: { fill: 'stone', top: 'rim', pal: ['#5a2a2a', '#3a1a1c', 
   bone: { fill: 'stone', top: 'skulls', pal: ['#5a4a3a', '#3a3024', '#1a1610'], edge: ['#f1e7d0', '#a89878', '#3a3024'] },
   factory: { fill: 'concrete', top: 'hazard', pal: ['#5a3a30', '#3a2420', '#1a0e0c'], edge: ['#ff8a2a', '#8a3a10', '#2a0e06'] },
   brain: { fill: 'tile', top: 'rim', pal: ['#4a3a50', '#2e2434', '#140e18'], edge: ['#ff2630', '#8a0a10', '#2a0408'] } };
-function deepTiles() { var k = 'deep:' + LV.zone.id; if (!TILESETS[k]) { var Z = {}, D = DEEPTILE[LV.zone.id] || DEEPTILE.city; for (var q in LV.zone) Z[q] = LV.zone[q]; for (var q2 in D) Z[q2] = D[q2]; TILESETS[k] = buildTileset(Z); } return TILESETS[k]; }
+function deepTiles(c) { // the deep under each district wears that district's ground, sunk into the dark (so travelling down there feels like travelling up top)
+  var id = typeof distAt === 'function' ? distAt(c) : null, k = 'deep:' + LV.zone.id + ':' + (id || '');
+  if (!TILESETS[k]) { var Z = {}, D = DEEPTILE[LV.zone.id] || DEEPTILE.city, S = id && styleOf(id, 'mid'); for (var q in LV.zone) Z[q] = LV.zone[q]; for (var q2 in D) Z[q2] = D[q2];
+    if (S && S.pal && S.edge) { Z.fill = S.fill; Z.top = S.top; Z.pal = S.pal.map(function (h) { return tohexS(h, 0.62); }); Z.edge = S.edge.map(function (h) { return tohexS(h, 0.8); }); }
+    TILESETS[k] = buildTileset(Z); } return TILESETS[k]; }
+function tohexS(h, k) { var v = [1, 3, 5].map(function (i) { return Math.round(parseInt(h.substr(i, 2), 16) * k); }); return '#' + v.map(function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
 /* ---------- in play ---------- */
-STANDS.cart = 1; STANDS.switch = 1; STANDS.buffer = 1;
+STANDS.cart = 1; STANDS.switch = 1; STANDS.buffer = 1; STANDS.deco = 1;
 function isBreak(ch) { return ch === 'X'; }
 function breakWall(cx, cy, ch) { // the whole block goes (cracked wall or a lifted gate), with rubble
   ch = ch || 'X'; var todo = [[cx, cy]], seen = {}, n = 0;
@@ -169,15 +177,23 @@ function drawDeepEnt(g, e, cx, cy) {
   if (e.k === 'updraft') { var top = e.top !== undefined ? e.top : e.y - 400; for (var yy = Math.round(top - cy); yy < y; yy += 6) { var ph = Math.floor(G.t * 20 + yy / 6) % 3; if (ph === 0) R(L.air, x - 10 + ((yy * 7) % 20), yy, 2, 4); }
     R('#12040a', x - 18, y - 4, 36, 4); R(L.glow, x - 16, y - 3, 32, 2); return true; }
   if (e.k === 'glow') return true; // drawn over the dark
+  if (e.k === 'deco') { if (e.d === 'hog_lantern') { R('#12040a', x - 1, y - 60, 2, 34); spr('hog_lantern', x, y - 20, { flip: !!e.flip }); if (Math.floor(G.t * 8 + e.x) % 5 === 0) R(L.glow2, x - 1, y - 30, 2, 2); } else spr(e.d, x, y + 1, { flip: !!e.flip }); return true; }
   return false;
 }
-var DARKL = null;
+var DKC = null;
 function drawDeepDark() {
   if (!LV || !PL || !LV.unders || !LV.unders.length || !deepAt(PL.x, PL.y - 20)) return;
-  var g = KIT.ctx, W = KIT.W, H = KIT.H, cx = Math.round(CAM.x), cy = Math.round(CAM.y), lx = Math.round(PL.x - cx), ly = Math.round(PL.y - 22 - cy), L = DEEPLOOK[LV.zone.id] || DEEPLOOK.city;
-  var D = KIT.layer('deepdark', 1000, 760, function () { var c = KIT.ctx; c.fillStyle = 'rgba(4,2,4,0.3)'; c.fillRect(0, 0, 1000, 760); c.globalCompositeOperation = 'destination-out';
-    [[240, 0.4], [170, 0.6], [110, 1]].forEach(function (q) { c.fillStyle = 'rgba(0,0,0,' + q[1] + ')'; c.beginPath(); c.arc(500, 380, q[0], 0, 6.3); c.fill(); }); c.globalCompositeOperation = 'source-over'; }, { px: true, crisp: true });
-  KIT.blit(D, lx - 500, ly - 380);
+  var g = KIT.ctx, W = KIT.W, H = KIT.H, cx = Math.round(CAM.x), cy = Math.round(CAM.y), U = LV.unders[0], L = DEEPLOOK[LV.zone.id] || DEEPLOOK.city;
+  var pc = PL.x / TS, dk = 0; (U.dark || []).forEach(function (d) { var k = Math.min(1, Math.min(pc - d[0], d[1] - pc) / 8); if (k > dk) dk = k; });
+  var base = 0.16 + dk * 0.68; // dim everywhere down there; pitch dark in the dark spots
+  if (!DKC) { DKC = document.createElement('canvas'); } if (DKC.width !== W || DKC.height !== H) { DKC.width = W; DKC.height = H; }
+  var d = DKC.getContext('2d'); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, W, H); d.fillStyle = 'rgba(4,2,4,' + base.toFixed(2) + ')'; d.fillRect(0, 0, W, H);
+  d.globalCompositeOperation = 'destination-out';
+  function hole(x, y, r) { [[r * 1.6, 0.35], [r * 1.2, 0.55], [r, 1]].forEach(function (q) { d.fillStyle = 'rgba(0,0,0,' + q[1] + ')'; d.beginPath(); d.arc(Math.round(x), Math.round(y), Math.round(q[0]), 0, 6.3); d.fill(); }); }
+  hole(PL.x - cx, PL.y - 22 - cy, dk > 0.5 ? 70 : 110);
+  ENTS.forEach(function (e) { if (e.k === 'deco' && e.d === 'hog_lantern') { var x = e.x - cx, y = e.y - 30 - cy; if (x > -120 && x < W + 120 && y > -120 && y < H + 120) hole(x, y, 46 + Math.sin(G.t * 7 + e.x) * 2); }
+    else if (e.k === 'glow' || e.k === 'updraft') { var x2 = e.x - cx, y2 = e.y - cy; if (x2 > -60 && x2 < W + 60 && y2 > -60 && y2 < H + 60) hole(x2, y2 + (e.up ? 8 : -10), e.k === 'updraft' ? 40 : 18); } });
+  g.drawImage(DKC, 0, 0);
   // the crystals glow through the dark
   ENTS.forEach(function (e) { if (e.k !== 'glow') return; var x = Math.round(e.x - cx), y = Math.round(e.y - cy); if (x < -20 || x > W + 20 || y < -30 || y > H + 30) return; var c1 = e.v === 2 ? L.glow2 : L.glow, f = Math.sin(G.t * 3 + e.x) > 0.6 ? 1 : 0;
     var s = e.up ? 1 : -1; R('#12040a', x - 4, y, 9, s * 3); R(c1, x - 3, y, 2, s * (8 + f)); R(c1, x, y, 2, s * 12); R(c1, x + 3, y, 2, s * 6); R('#ffffff', x, y + s * 2, 1, s * 3);
@@ -186,8 +202,8 @@ function drawDeepDark() {
 (function () {
   var sP = stepPlayer; stepPlayer = function (dt) { if (stepDeep(dt)) return; wallCheck(dt); sP(dt); };
   var sW = stepWorld; stepWorld = function (dt) { shotWalls(); sW(dt); };
-  var dE = drawEnt; drawEnt = function (g, e, cx, cy, W, H) { if (e.k === 'zip' || e.k === 'cart' || e.k === 'rails' || e.k === 'buffer' || e.k === 'switch' || e.k === 'updraft' || e.k === 'glow') { drawDeepEnt(g, e, cx, cy); return; } dE(g, e, cx, cy, W, H); };
-  var tF = tilesFor; tilesFor = function (c, r) { if (LV.unders && LV.unders.length && deepAt(c * TS + 8, r * TS + 8, -4)) return deepTiles(); return tF(c, r); };
+  var dE = drawEnt; drawEnt = function (g, e, cx, cy, W, H) { if (e.k === 'zip' || e.k === 'cart' || e.k === 'rails' || e.k === 'buffer' || e.k === 'switch' || e.k === 'updraft' || e.k === 'glow' || e.k === 'deco') { drawDeepEnt(g, e, cx, cy); return; } dE(g, e, cx, cy, W, H); };
+  var tF = tilesFor; tilesFor = function (c, r) { if (LV.unders && LV.unders.length && deepAt(c * TS + 8, r * TS + 8, -4)) return deepTiles(c); return tF(c, r); };
   var dW = drawWorld; drawWorld = function () { dW(); drawDeepDark(); };
   var bA = beginAct; beginAct = function (ai, fc) { if (PL) { PL.zip = null; PL.cart = 0; } bA(ai, fc); if (PL) { PL.zip = null; PL.cart = 0; } };
 })();
