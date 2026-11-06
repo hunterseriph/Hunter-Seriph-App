@@ -75,23 +75,34 @@ function drawBack(g, Z, cx, cy, W, H) {
   g.fillStyle = 'rgba(241,231,208,0.5)'; for (var i = 0; i < 40; i++) { var sx2 = ((i * 97 - cx * 0.03) % W + W) % W, sy = (i * 53) % (H * 0.35); g.fillRect(sx2, sy, 1, 1); }
   if (Z.id === 'park' || Z.id === 'bone') { g.fillStyle = Z.id === 'park' ? '#c4121c' : '#d8ccb0'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02, 34 + D * 0.3, 22, 0, 6.3); g.fill(); if (Z.id === 'park') { g.fillStyle = '#8a0a14'; g.beginPath(); g.arc(W * 0.78 - cx * 0.02 + 6, 30 + D * 0.3, 6, 0, 6.3); g.fill(); } }
   drawZL(g, Z.id, 'far', cx, D, W, H);
-  if (LV.dists && LV.dists.length) drawDistrictBack(g, cx, D, W, H);
-  drawZL(g, Z.id, 'mid', cx, D, W, H);
+  if (LV.dists && LV.dists.length) drawDistMid(g, cx, D, W, H); else drawZL(g, Z.id, 'mid', cx, D, W, H); // every district has its own painted middle layer (he said the whole act looked the same)
   drawZL(g, Z.id, 'near', cx, D, W, H);
   drawAir(g, Z.id, cx, cy, W, H);
 }
 /* the painted layers (tools/spermhog/backs: real pixel art with outlines and lit edges, his ask: the backdrops were too basic).
    [where its horizon sits on screen, how far it drifts, scroll speed, its horizon row in the picture] */
 var HOGBK = {}; Object.keys(typeof HOGBKIMG === 'undefined' ? {} : HOGBKIMG).forEach(function (k) { var i = new Image(); i.src = HOGBKIMG[k]; HOGBK[k] = i; });
+var BKCEIL = { sewer: 1, bone: 1 };
 var BKF = { far: [0.52, 0.6, 0.1, 140], mid: [0.64, 1.0, 0.24, 170], near: [0.86, 1.6, 0.6, 90] };
 function bkDrift(cy) { var base = (LV.sy || 0) - KIT.H * 0.62; return Math.max(-50, Math.min(50, (base - cy) * 0.07)); }
 function downBand(g, L, off, y, W, H, band) { // a layer carries on down to the bottom of the screen as itself (its bottom rows repeat), never a black block
   var bot = y + L.lh; if (bot >= H) return; var sc = L.height / L.lh, lw = L.lw, x0 = -((off % lw) + lw) % lw;
   for (var yy = bot; yy < H; yy += band) for (var x = x0; x < W; x += lw) g.drawImage(L, 0, (L.lh - band) * sc, L.width, band * sc, Math.round(x), Math.round(yy), lw, band);
 }
+function drawDistMid(g, cx, D, W, H) { // tools/spermhog/backs/districts.py: d_<district id>, cut over at a gateway pillar where districts meet
+  var ds = LV.dists, F = BKF.mid, left = distAt(Math.floor(cx / TS)), x = 0, gates = [];
+  function one(id, x0, x1) { if (x1 <= x0) return; var im = HOGBK['d_' + id]; if (!imgOk(im)) { g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); drawZL(g, LV.zone.id, 'mid', cx, D, W, H); g.restore(); return; }
+    var L = imgLayer('dm_' + id, im, im.naturalHeight, 0), y = Math.round(H * F[0] + D * F[1] - F[3]); if (typeof HOGBKROOF !== 'undefined' && HOGBKROOF[id]) y = Math.min(y, 0); // an indoor wall never shows its top edge
+    var lw = L.lw, mx = -(((cx * F[2]) % lw) + lw) % lw;
+    g.save(); g.beginPath(); g.rect(x0, 0, x1 - x0, H); g.clip(); for (; mx < W; mx += lw) KIT.blit(L, mx, y); downBand(g, L, cx * F[2], y, W, H, 32); g.restore(); }
+  for (var i = 0; i < ds.length; i++) { var bx = Math.round(ds[i].c * TS - cx); if (bx <= 0 || bx >= W) continue; one(left, x, bx); gates.push(bx); left = ds[i].id; x = bx; }
+  one(left, x, W); gates.forEach(function (bx) { drawGate(g, bx, H); });
+}
 function drawZL(g, z, kind, cx, D, W, H) {
   var im = HOGBK[z + '_' + kind]; if (!imgOk(im)) return false;
-  var F = BKF[kind], L = imgLayer('zl_' + z + '_' + kind, im, im.naturalHeight, 0), y = Math.round(H * F[0] + D * F[1] - F[3]), lw = L.lw, x0 = -(((cx * F[2]) % lw) + lw) % lw;
+  var F = BKF[kind], L = imgLayer('zl_' + z + '_' + kind, im, im.naturalHeight, 0), y = Math.round(H * F[0] + D * F[1] - F[3]), lw = L.lw;
+  if (kind === 'far' && BKCEIL[z]) y = Math.min(y, -16); // a far layer that is a ceiling (sewer vault, cave roof) never shows its top edge as a band across the screen
+  var x0 = -(((cx * F[2]) % lw) + lw) % lw;
   for (var x = x0; x < W; x += lw) KIT.blit(L, x, y);
   downBand(g, L, cx * F[2], y, W, H, 32); return true;
 }
