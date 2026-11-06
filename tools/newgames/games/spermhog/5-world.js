@@ -111,7 +111,13 @@ function stepFoe(e, dt) {
     if (!e.diving) { e.x = e.x0 + Math.sin(e.t * 0.8) * 40; e.y = e.y0 + Math.sin(e.t * 2) * 8; e.dir = p && p.x > e.x ? 1 : -1; if (near && Math.abs(p.x - e.x) < 110 && e.t > 1.5) { e.diving = true; e.dv = { x: (p.x - e.x), y: (p.y - 20 - e.y) }; var m = Math.hypot(e.dv.x, e.dv.y) || 1; e.dv.x *= 150 / m; e.dv.y *= 150 / m; e.dt2 = 0; } }
     else { e.dt2 += dt; if (e.dt2 < 0.9) { e.x += e.dv.x * dt; e.y += e.dv.y * dt; } else { e.x += (e.x0 - e.x) * dt * 1.5; e.y += (e.y0 - e.y) * dt * 1.5; if (e.dt2 > 2.6) { e.diving = false; e.t = 0; } } }
   } else if (F.beh === 'float') { e.x = e.x0 + Math.sin(e.t * 0.6) * 30; e.y = e.y0 + Math.sin(e.t * 1.4) * 16; }
-  else if (F.beh === 'pop') { var tgt = near && Math.abs(p.x - e.x) < 70 ? 1 : 0; e.rise = Math.max(0, Math.min(1, (e.rise || 0) + (tgt ? 2.5 : -1.5) * dt)); e.dir = p && p.x > e.x ? 1 : -1; }
+  else if (F.beh === 'pop') { // grave hands: the earth shakes, clods jump and the fingertips show first (he said they came out of nowhere)
+    var dx = p ? Math.abs(p.x - e.x) : 999, close = near && dx < 190;
+    e.warn = close ? Math.min(1.2, (e.warn || 0) + dt) : Math.max(0, (e.warn || 0) - dt * 0.6);
+    if (close && e.warn > 0.1 && Math.random() < dt * (16 + e.warn * 30)) FX.push({ k: 'bit', x: e.x - 14 + Math.random() * 28, y: e.y - 4, vx: (Math.random() - 0.5) * 80, vy: -110 - Math.random() * 120, t: 0.6, c: Math.random() < 0.5 ? '#7a6044' : '#4a3624' });
+    if (close && e.warn > 0.3 && !e.groan) { e.groan = 1; sfx.play('roar', 0.35); }
+    if (!close) e.groan = 0;
+    var tgt = close && e.warn >= 1 && dx < 110 ? 1 : 0; e.rise = Math.max(0, Math.min(1, (e.rise || 0) + (tgt ? 2.2 : -1.5) * dt)); e.dir = p && p.x > e.x ? 1 : -1; }
   else if (F.beh === 'turret') e.dir = p && p.x > e.x ? 1 : -1;
   if (F.throws && near) { e.cd -= dt; if (e.cd <= 0) { e.cd = 2.2 + Math.random() * 1.5; var dx = p.x - e.x, tt = 0.9; e.dir = Math.sign(dx) || e.dir;
     if (F.throws === 'orb' || F.throws === 'dagger') { var m2 = Math.hypot(dx, p.y - 20 - (e.y - 20)) || 1; SHOTS.push({ x: e.x, y: e.y - 20, vx: dx / m2 * 150, vy: (p.y - 20 - (e.y - 20)) / m2 * 150, life: 3, k: F.throws }); }

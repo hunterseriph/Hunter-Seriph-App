@@ -102,9 +102,9 @@ var TRAFFIC = { car: { spr: 'hog_car', w: 30, h: 26, v: 300 }, rats: { rats: 1, 
 var SWEEP = { train: { spr: 'hog_train', n: 3, len: 142, h: 44, v: 560 }, wave: { wave: 1, n: 1, len: 300, h: 40, v: 360 }, coaster: { spr: 'hog_coaster', n: 4, len: 72, h: 32, v: 520 }, ghost: { spr: 'hog_ghosttrain', n: 3, len: 112, h: 42, v: 480 }, ore: { spr: 'hog_oretrain', n: 3, len: 112, h: 38, v: 460 }, missile: { spr: 'hog_missile', n: 1, len: 70, h: 22, v: 700 } };
 function trafficStep(e, dt) {
   var p = PL; if (!e.cars) { e.cars = []; e.cd = 1; }
-  if (Math.abs(p.x - e.x) < (e.w || 40) * TS && Math.abs(p.y - e.y) < 60) { e.cd -= dt; if (e.cd <= 0) { e.cd = 3.2 + Math.random() * 1.6; e.warn = 0.9; e.cars.push({ x: p.x + KIT.W * 0.75 + 40, y: e.y, delay: 0.9, alive: true }); } }
+  if (Math.abs(p.x - e.x) < (e.w || 40) * TS && Math.abs(p.y - e.y) < 60) { e.cd -= dt; if (e.cd <= 0) { e.cd = 3.4 + Math.random() * 1.6; e.warn = 1.4; e.cars.push({ x: 0, y: e.y, delay: 1.4, alive: true }); sfx.play((e.kind || 'car') === 'rats' ? 'roar' : 'horn', 0.6); } }
   if (e.warn > 0) e.warn -= dt;
-  var TK = TRAFFIC[e.kind || 'car']; e.cars.forEach(function (c) { if (c.delay > 0) { c.delay -= dt; return; } c.x -= TK.v * dt; if (c.x < e.x - 60 || c.x < p.x - KIT.W) c.alive = false;
+  var TK = TRAFFIC[e.kind || 'car']; e.cars.forEach(function (c) { if (c.delay > 0) { c.delay -= dt; if (c.delay <= 0) c.x = CAM.x + KIT.W + TK.w + 20; return; } c.x -= TK.v * dt; // comes in from off screen (he said they appeared out of nowhere) if (c.x < e.x - 60 || c.x < p.x - KIT.W) c.alive = false;
     if (c.alive && p.state === 'normal' && Math.abs(p.x - c.x) < TK.w + PHW && p.y > c.y - TK.h && p.y - PH < c.y) { if (p.vy > 40 && p.y - p.vy / 60 <= c.y - TK.h + 8) { p.vy = -520; p.air = true; sfx.play('spring'); G.score += 100; } else hurt(c.x); } });
   e.cars = e.cars.filter(function (c) { return c.alive; });
 }
@@ -112,7 +112,7 @@ function trafficStep(e, dt) {
 function trainStep(e, dt) {
   var p = PL; if (e.t2 === undefined) { e.t2 = 2 + e.ph; e.tx = null; }
   var near = Math.abs(p.x - e.x) < (e.w || 40) * TS / 2 + 200 && Math.abs(p.y - e.y) < 60;
-  if (e.tx === null) { if (near) { e.t2 -= dt; e.warn = e.t2 < 1.4; if (e.t2 <= 0) { e.tx = p.x + KIT.W * 0.7 + 60; sfx.play('roar'); } } else e.warn = false; }
+  if (e.tx === null) { if (near) { var was = e.warn; e.t2 -= dt; e.warn = e.t2 < 2; if (e.warn && !was) sfx.play((e.kind || 'train') === 'wave' ? 'rumble' : 'horn', 0.7); if (e.warn) G.shake = Math.max(G.shake || 0, 1.2 * (1 - e.t2 / 2)); if (e.t2 <= 0) { e.tx = CAM.x + KIT.W + 30; sfx.play('rumble'); } } else e.warn = false; }
   else { var SK = SWEEP[e.kind || 'train']; e.tx -= SK.v * dt; e.warn = false; if (e.tx < p.x - KIT.W - 600) { e.tx = null; e.t2 = 4.5 + Math.random() * 2; }
     if (p.state === 'normal' && p.x > e.tx - 10 && p.x < e.tx + SK.n * SK.len && p.y > e.y - SK.h && p.y - PH < e.y) hurt(p.x + 30); }
 }
@@ -121,13 +121,22 @@ function awningTouch(e, dt) { var p = PL; if (p.state === 'normal' && p.vy > 0 &
 // highway ramps: hit one at speed and you fly
 function rampTouch(e, dt) { var p = PL; if (!p.air && p.state === 'normal' && p.gsp > 120 && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 8) { p.vx = Math.max(p.gsp, 430); p.gsp = p.vx; p.vy = -560; p.air = true; p.jumps = 1; p.spring = 0.4; sfx.play('dash'); } }
 var SETPIECE = { traffic: trafficStep, train: trainStep };
+function edgeWarn(g, y, k, col) { // something is coming from the right: a flashing sign and its lights shining in from the edge, brighter as it gets close
+  var W = KIT.W, a = Math.floor(G.t * (6 + k * 10)) % 2, r = 10 + k * 34;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = col; g.globalAlpha = 0.12 + k * 0.22;
+  g.beginPath(); g.moveTo(W, y - r); g.lineTo(W - 40 - k * 120, y - 4); g.lineTo(W - 40 - k * 120, y + 6); g.lineTo(W, y + r * 0.5); g.fill();
+  g.globalAlpha = 0.25 + k * 0.4; g.beginPath(); g.arc(W + 4, y, 6 + k * 10, 0, 6.3); g.fill(); g.restore();
+  if (a) { R('#12040a', W - 40, y - 44, 22, 22); R('#ffe36a', W - 38, y - 42, 18, 18); text('!', W - 29, y - 40, { size: 12, align: 'center', col: '#c4121c' }); }
+  text('>', W - 52 - (a ? 2 : 0), y - 38, { size: 10, col: '#ffe36a', outline: true });
+}
 function drawSetpiece(g, e, cx, cy) {
   var x = Math.round(e.x - cx), y = Math.round(e.y - cy);
-  if (e.k === 'traffic') { (e.cars || []).forEach(function (c) { if (c.delay > 0) { var wx = KIT.W - 18, a = Math.floor(G.t * 10) % 2; if (a) { g.fillStyle = 'rgba(255,246,192,0.8)'; g.beginPath(); g.arc(wx, c.y - cy - 10, 8, 0, 6.3); g.fill(); } text('!', wx, c.y - cy - 40, { size: 12, align: 'center', col: '#ffe36a', outline: true }); return; }
+  if (e.k === 'traffic') { (e.cars || []).forEach(function (c) { if (c.delay > 0) { edgeWarn(g, c.y - cy - 12, 1 - c.delay / 1.4, (e.kind || 'car') === 'rats' ? '#ff2630' : '#fff6c0'); return; }
       var TK = TRAFFIC[e.kind || 'car'];
       if (TK.rats) { for (var ri = 0; ri < 3; ri++) spr('f_rat_' + (Math.floor(G.t * 12 + ri) % 4), c.x - cx + ri * 16 - 16, c.y - cy + 1, { flip: false }); return; }
       spr(TK.spr, c.x - cx, c.y - cy + 1, { flip: true }); if ((e.kind || 'car') === 'car') { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(255,240,180,0.18)'; g.beginPath(); g.moveTo(c.x - cx - 30, c.y - cy - 10); g.lineTo(c.x - cx - 110, c.y - cy - 24); g.lineTo(c.x - cx - 110, c.y - cy); g.fill(); g.restore(); } }); return; }
   if (e.k === 'train') { // the warning light on the wall, then the train
+    if (e.warn && (e.tx === null || e.tx === undefined)) edgeWarn(g, y - 22, 1 - Math.max(0, e.t2) / 2, (e.kind || 'train') === 'wave' ? '#f1e0b0' : '#fff6c0');
     var lx = Math.min(KIT.W - 20, Math.max(20, x)), on = e.warn && Math.floor(G.t * 8) % 2; R('#12040a', lx - 6, y - 64, 12, 18); R(on ? '#ff2630' : '#3a0a10', lx - 4, y - 62, 8, 6); R(e.warn && !on ? '#ffe36a' : '#3a3010', lx - 4, y - 54, 8, 6);
     var SK = SWEEP[e.kind || 'train'];
     if (e.tx !== null && e.tx !== undefined) { if (SK.wave) { var wx0 = e.tx - cx; R('rgba(241,224,176,0.85)', wx0 + 30, y - 40, SK.len, 42); spr('hog_creamwave', wx0 + 30, y + 2, { sc: 0.8 }); for (var f = 0; f < 3; f++) FX.push({ k: 'bit', x: e.tx + 20 + Math.random() * 30, y: e.y - 40 - Math.random() * 20, vx: -60, vy: -60, t: 0.4, c: '#fffbe8' }); }

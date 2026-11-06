@@ -23,7 +23,7 @@ function stepPlayer(dt) {
   var ctl = p.state === 'normal' && p.lock <= 0, dir = ctl ? inp.dir : 0;
   if (dir) p.face = dir;
   // SUPER CUMHEAD: all seven Cum Chalices, 50 drops, in the air: hold up and press B
-  if (ap && p.air && inp.up && !G.super && canSuper() && p.state === 'normal') { goSuper(); ap = false; }
+  // Super Cumhead: jump, double jump, then press jump a third time in the air (his ask, like Sonic 3)
   // the shot
   if (ap && p.atkCd <= 0 && p.state === 'normal') { p.atkT = 0.2; p.atkCd = 0.32; SHOTS.push({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 330 + p.gsp * 0.3, vy: 0, life: 0.55, k: 'sperm', mine: true }); sfx.play('shoot'); }
   if (!p.air) {
@@ -53,6 +53,7 @@ function stepPlayer(dt) {
     if (p.coyote > 0) { p.coyote -= dt; if (jp && p.jumps === 0) { p.vy = -K.jumpv; p.jumps = 1; jp = false; p.coyote = 0; sfx.play('jump'); } }
     if (dir) { if (Math.abs(p.vx) < top || Math.sign(p.vx) !== dir) p.vx += dir * K.airacc * dt * (wet ? 0.6 : 1); }
     else p.vx -= p.vx * Math.min(1, dt * 0.4);
+    if (jp && p.jumps >= 2 && !G.super && canSuper() && p.state === 'normal') { goSuper(); jp = false; }
     if (jp && p.jumps <= 1 && p.state === 'normal' && p.spring <= 0.2) { p.vy = -K.jump2 * (wet ? 0.85 : 1); p.jumps = 2; sfx.play('jump2'); FX.push({ k: 'ring', x: p.x, y: p.y, t: 0.3 }); }
     if (!inp.j && p.vy < -K.jcut && p.jumps >= 1 && p.spring <= 0) p.vy = -K.jcut;
     p.vy = Math.min(K.term * (wet ? 0.35 : 1), p.vy + K.grav * dt * (wet ? 0.4 : 1));

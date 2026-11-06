@@ -121,7 +121,14 @@ function drawEnt(g, e, cx, cy, W, H) {
   if (k === 'loop') { drawLoop(g, e, cx, cy); return; }
   if (k === 'dsign') return; // he said the level already has a name: districts are never named on screen
   if (k === 'drop') { if (e.alive) spr('hog_drop', x, y - 2 + Math.sin(G.t * 4 + e.x * 0.1) * 1.5, {}); return; }
-  if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0; if (rs <= 0.02) return; spr(fr, x, y + (1 - rs) * 26, { flip: e.dir < 0 }); return; }
+  if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0, wn = e.warn || 0, gq = KIT.ctx;
+      if (wn > 0.05) { var sh = Math.round(Math.sin(G.t * 40) * Math.min(2, wn * 3)), mh = Math.round(3 + wn * 5); // a mound of churned earth heaves up, red light leaks out of the cracks
+        gq.fillStyle = '#12040a'; gq.beginPath(); gq.ellipse(x + sh, y - 1, 21, mh + 2, 0, Math.PI, 0); gq.fill(); gq.fillStyle = '#3a2618'; gq.beginPath(); gq.ellipse(x + sh, y, 18, mh, 0, Math.PI, 0); gq.fill();
+        gq.fillStyle = '#9a7a54'; gq.fillRect(x - 12 + sh, y - mh, 8, 2); gq.fillRect(x + 3 + sh, y - mh + 1, 8, 2); gq.fillStyle = '#6a4c30'; gq.fillRect(x - 15 + sh, y - 3, 30, 2);
+        if (Math.floor(G.t * (6 + wn * 10)) % 2) { gq.fillStyle = '#ff2630'; gq.fillRect(x - 9 + sh, y - 2, 6, 1); gq.fillRect(x - 3 + sh, y - 3, 1, 2); gq.fillRect(x + 2 + sh, y - 2, 8, 1); }
+        if (wn > 0.3) { gq.save(); gq.globalCompositeOperation = 'lighter'; gq.fillStyle = 'rgba(255,38,48,' + (0.12 + wn * 0.15).toFixed(2) + ')'; gq.beginPath(); gq.ellipse(x, y - 4, 26, 12, 0, 0, 6.3); gq.fill(); gq.restore(); } }
+      var show = Math.max(rs, wn >= 0.5 ? Math.min(0.38, (wn - 0.4) * 0.7) : 0); if (show <= 0.02) return; // fingertips poke out before it grabs
+      gq.save(); gq.beginPath(); gq.rect(x - 30, y - 80, 60, 80); gq.clip(); spr(fr, x, y + (1 - show) * 26, { flip: e.dir < 0 }); gq.restore(); return; }
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
   if (k === 'spring') { var sq = e.t > 0 ? 0.5 : 1; R('#12040a', x - 11, y - 6, 22, 6); R('#8a828a', x - 10, y - 5, 20, 4); R(e.pow === 2 ? '#ff2630' : '#ffe36a', x - 11, y - 6 - 10 * sq, 22, 5); R('#12040a', x - 11, y - 6 - 10 * sq, 22, 1); for (var i = 0; i < 3; i++) R('#d0c8d0', x - 6 + i * 5, y - 6 - 10 * sq + 5, 2, 10 * sq - 5); return; }
   if (k === 'dash') { for (var j = 0; j < 3; j++) { var a = (Math.floor(G.t * 8) + j) % 3 === 0; R(a ? '#ffe36a' : '#c4121c', x - 12 + j * 8, y - 3, 6, 3); } return; }

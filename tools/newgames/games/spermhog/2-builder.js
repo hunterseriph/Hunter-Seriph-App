@@ -166,6 +166,11 @@ var SEC = {
     hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
     var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#')) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
+    if (spec.portal) { // a second gateway on the other route, about half way along (he asked for a couple per level)
+      var other = spec.portal === 'top' ? 'low' : 'top', mc = Math.floor(s0 + (E - s0) * 0.45);
+      for (var k = 0; k < 40; k++) { var cc = mc + (k % 2 ? -1 : 1) * Math.ceil(k / 2), ok = true;
+        for (var w = -2; w <= 2; w++) { if (other === 'low') { if (b.get(cc + w, LF) !== '#' || b.get(cc + w, LF - 1) !== '.') ok = false; } else { var tq = Tp.top[cc + w]; if (tq === null || tq === undefined || tq !== Tp.top[cc]) ok = false; } }
+        if (ok) { b.ent('portal', cc, other === 'low' ? LF - 1 : Tp.top[cc] - 1); break; } } }
     b.h = H; return b;
   },
   fork: function (b, n, hz, item, portal) { // three ways through: a spring to the high road, the street with its foes, or a hole down to the low road
@@ -214,7 +219,7 @@ var SEC = {
     var r = Math.min(rise || 16, b.h - HMIN, 18); if (r < 8) return SEC.plunge(b, rise);
     b.ground(7); b.thing(-2, 'spring', 0, { pow: 2 }); for (var d = 2; d < r; d += 3) b.ent('drop', b.col - 2, b.h - d - 1);
     for (var i = 1; i * 3 < r; i++) b.ledge(i % 2 ? -6 : -4, i * 3, 3, '=');
-    b.step(-r); b.ground(8); b.drops(-6, 4, 2, null, 1.2); return b;
+    b.step(-r); b.ground(8); b.drops(-6, 4, 2, null, 1.2); if (!b.shaftGate) { b.shaftGate = 1; b.ground(6); b.ent('portal', b.col - 3, b.h - 1); } return b; // the first shaft of an act hides a gateway at the top
   },
   plunge: function (b, drop) { // off the edge and a long fall to the ground far below, drops all the way down
     var r = Math.min(drop || 14, HMAX - b.h); if (r < 6) return SEC.springShaft(b, drop);

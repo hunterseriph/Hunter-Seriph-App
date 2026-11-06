@@ -103,7 +103,7 @@ function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up:
   var vx = x, vy0 = y - SSCH, vz0 = z + SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH), vz = vz0 * cp - vy0 * sp, vy = vy0 * cp + vz0 * sp; // from the camera, tipped down
   if (vz < 0.25) return null;
   var bx = nx * SSR, by = ny * SSR - SSR, bz = nz * SSR; if (nx * (-bx) + ny * (SSCH - by) + nz * (-SSCD - bz) < 0) return null; // round the back of the ball: hidden
-  var F = Math.min(W * 0.185, H * 0.33) / SSK0.s; // a square under his feet is about a sixth of the screen wide (he said they were small)
+  var F = Math.min(W * 0.16, H * 0.285) / SSK0.s; // a touch further out than 108 (he asked) // a square under his feet is about a sixth of the screen wide (he said they were small)
   return { x: W / 2 + vx * F / vz, y: H * 0.8 - (vy / vz - SSK0.k) * F, s: F / vz, d: vz };
 }
 function drawSpecial() {
@@ -168,7 +168,7 @@ function drawSpecial() {
     text(win ? 'CUMHEAD GOT' : 'NO CHALICE', W / 2, H * 0.24, { size: 20, align: 'center', col: '#f1e7d0', font: 'title', outline: true });
     text(win ? CHALNAME[S.lv] : 'THIS TIME', W / 2, H * 0.24 + 30, { size: 20, align: 'center', col: win ? CHALCOL[S.lv] : '#ff2630', font: 'title', outline: true });
     for (var j = 0; j < 7; j++) spr('hog_chal' + j, W / 2 + (j - 3) * 30, H * 0.66 + (win && j === S.lv ? Math.sin(S.t * 6) * 3 : 0), { sc: 1.3, alpha: SV.chal[j] ? 1 : 0.2 });
-    if (win && chalCount() >= 7) text('ALL SEVEN! 50 DROPS, JUMP, HOLD UP + B: SUPER CUMHEAD', W / 2, H * 0.84, { size: 7, align: 'center', col: '#ffe36a', outline: true });
+    if (win && chalCount() >= 7) text('ALL SEVEN! 50 DROPS, THEN JUMP, DOUBLE JUMP AND JUMP AGAIN: SUPER CUMHEAD', W / 2, H * 0.84, { size: 7, align: 'center', col: '#ffe36a', outline: true });
   }
 }
 var FXS = [];

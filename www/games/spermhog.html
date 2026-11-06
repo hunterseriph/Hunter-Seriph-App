@@ -1009,6 +1009,11 @@ var SEC = {
     hole(s0 + 6); for (var xc = s0 + 60; xc < E - 40; xc += 64) { if (b.top[xc] === null || b.top[xc] === undefined || b.top[xc + 2] === null || b.top[xc + 2] === undefined || b.get(xc + 1, LF) !== '#') continue; hole(xc); b.ent('spring', xc + 1, LF, { pow: 2 }); }
     var ex = E - 9; while (ex > E - 40 && (b.get(ex + 1, LF) !== '#' || b.get(ex, LF) !== '#' || b.get(ex + 2, LF) !== '#')) ex--; hole(ex); b.ent('spring', ex + 1, LF, { pow: 2 }); // springs only stand on solid floor, never on cream hole(E - 5); b.ent('spring', E - 4, LF, { pow: 2 }); // the last spring sits right against the end wall: you can't miss it // a way down at the start, ways back up all along, the last at the end
     if (spec.portal === 'top') b.ent('portal', E - 14, (Tp.top[E - 14] || TF) - 1); else if (spec.portal === 'low') b.ent('portal', E - 14, LF - 1);
+    if (spec.portal) { // a second gateway on the other route, about half way along (he asked for a couple per level)
+      var other = spec.portal === 'top' ? 'low' : 'top', mc = Math.floor(s0 + (E - s0) * 0.45);
+      for (var k = 0; k < 40; k++) { var cc = mc + (k % 2 ? -1 : 1) * Math.ceil(k / 2), ok = true;
+        for (var w = -2; w <= 2; w++) { if (other === 'low') { if (b.get(cc + w, LF) !== '#' || b.get(cc + w, LF - 1) !== '.') ok = false; } else { var tq = Tp.top[cc + w]; if (tq === null || tq === undefined || tq !== Tp.top[cc]) ok = false; } }
+        if (ok) { b.ent('portal', cc, other === 'low' ? LF - 1 : Tp.top[cc] - 1); break; } } }
     b.h = H; return b;
   },
   fork: function (b, n, hz, item, portal) { // three ways through: a spring to the high road, the street with its foes, or a hole down to the low road
@@ -1057,7 +1062,7 @@ var SEC = {
     var r = Math.min(rise || 16, b.h - HMIN, 18); if (r < 8) return SEC.plunge(b, rise);
     b.ground(7); b.thing(-2, 'spring', 0, { pow: 2 }); for (var d = 2; d < r; d += 3) b.ent('drop', b.col - 2, b.h - d - 1);
     for (var i = 1; i * 3 < r; i++) b.ledge(i % 2 ? -6 : -4, i * 3, 3, '=');
-    b.step(-r); b.ground(8); b.drops(-6, 4, 2, null, 1.2); return b;
+    b.step(-r); b.ground(8); b.drops(-6, 4, 2, null, 1.2); if (!b.shaftGate) { b.shaftGate = 1; b.ground(6); b.ent('portal', b.col - 3, b.h - 1); } return b; // the first shaft of an act hides a gateway at the top
   },
   plunge: function (b, drop) { // off the edge and a long fall to the ground far below, drops all the way down
     var r = Math.min(drop || 14, HMAX - b.h); if (r < 6) return SEC.springShaft(b, drop);
@@ -1780,7 +1785,13 @@ function stepFoe(e, dt) {
     if (!e.diving) { e.x = e.x0 + Math.sin(e.t * 0.8) * 40; e.y = e.y0 + Math.sin(e.t * 2) * 8; e.dir = p && p.x > e.x ? 1 : -1; if (near && Math.abs(p.x - e.x) < 110 && e.t > 1.5) { e.diving = true; e.dv = { x: (p.x - e.x), y: (p.y - 20 - e.y) }; var m = Math.hypot(e.dv.x, e.dv.y) || 1; e.dv.x *= 150 / m; e.dv.y *= 150 / m; e.dt2 = 0; } }
     else { e.dt2 += dt; if (e.dt2 < 0.9) { e.x += e.dv.x * dt; e.y += e.dv.y * dt; } else { e.x += (e.x0 - e.x) * dt * 1.5; e.y += (e.y0 - e.y) * dt * 1.5; if (e.dt2 > 2.6) { e.diving = false; e.t = 0; } } }
   } else if (F.beh === 'float') { e.x = e.x0 + Math.sin(e.t * 0.6) * 30; e.y = e.y0 + Math.sin(e.t * 1.4) * 16; }
-  else if (F.beh === 'pop') { var tgt = near && Math.abs(p.x - e.x) < 70 ? 1 : 0; e.rise = Math.max(0, Math.min(1, (e.rise || 0) + (tgt ? 2.5 : -1.5) * dt)); e.dir = p && p.x > e.x ? 1 : -1; }
+  else if (F.beh === 'pop') { // grave hands: the earth shakes, clods jump and the fingertips show first (he said they came out of nowhere)
+    var dx = p ? Math.abs(p.x - e.x) : 999, close = near && dx < 190;
+    e.warn = close ? Math.min(1.2, (e.warn || 0) + dt) : Math.max(0, (e.warn || 0) - dt * 0.6);
+    if (close && e.warn > 0.1 && Math.random() < dt * (16 + e.warn * 30)) FX.push({ k: 'bit', x: e.x - 14 + Math.random() * 28, y: e.y - 4, vx: (Math.random() - 0.5) * 80, vy: -110 - Math.random() * 120, t: 0.6, c: Math.random() < 0.5 ? '#7a6044' : '#4a3624' });
+    if (close && e.warn > 0.3 && !e.groan) { e.groan = 1; sfx.play('roar', 0.35); }
+    if (!close) e.groan = 0;
+    var tgt = close && e.warn >= 1 && dx < 110 ? 1 : 0; e.rise = Math.max(0, Math.min(1, (e.rise || 0) + (tgt ? 2.2 : -1.5) * dt)); e.dir = p && p.x > e.x ? 1 : -1; }
   else if (F.beh === 'turret') e.dir = p && p.x > e.x ? 1 : -1;
   if (F.throws && near) { e.cd -= dt; if (e.cd <= 0) { e.cd = 2.2 + Math.random() * 1.5; var dx = p.x - e.x, tt = 0.9; e.dir = Math.sign(dx) || e.dir;
     if (F.throws === 'orb' || F.throws === 'dagger') { var m2 = Math.hypot(dx, p.y - 20 - (e.y - 20)) || 1; SHOTS.push({ x: e.x, y: e.y - 20, vx: dx / m2 * 150, vy: (p.y - 20 - (e.y - 20)) / m2 * 150, life: 3, k: F.throws }); }
@@ -2004,9 +2015,9 @@ var TRAFFIC = { car: { spr: 'hog_car', w: 30, h: 26, v: 300 }, rats: { rats: 1, 
 var SWEEP = { train: { spr: 'hog_train', n: 3, len: 142, h: 44, v: 560 }, wave: { wave: 1, n: 1, len: 300, h: 40, v: 360 }, coaster: { spr: 'hog_coaster', n: 4, len: 72, h: 32, v: 520 }, ghost: { spr: 'hog_ghosttrain', n: 3, len: 112, h: 42, v: 480 }, ore: { spr: 'hog_oretrain', n: 3, len: 112, h: 38, v: 460 }, missile: { spr: 'hog_missile', n: 1, len: 70, h: 22, v: 700 } };
 function trafficStep(e, dt) {
   var p = PL; if (!e.cars) { e.cars = []; e.cd = 1; }
-  if (Math.abs(p.x - e.x) < (e.w || 40) * TS && Math.abs(p.y - e.y) < 60) { e.cd -= dt; if (e.cd <= 0) { e.cd = 3.2 + Math.random() * 1.6; e.warn = 0.9; e.cars.push({ x: p.x + KIT.W * 0.75 + 40, y: e.y, delay: 0.9, alive: true }); } }
+  if (Math.abs(p.x - e.x) < (e.w || 40) * TS && Math.abs(p.y - e.y) < 60) { e.cd -= dt; if (e.cd <= 0) { e.cd = 3.4 + Math.random() * 1.6; e.warn = 1.4; e.cars.push({ x: 0, y: e.y, delay: 1.4, alive: true }); sfx.play((e.kind || 'car') === 'rats' ? 'roar' : 'horn', 0.6); } }
   if (e.warn > 0) e.warn -= dt;
-  var TK = TRAFFIC[e.kind || 'car']; e.cars.forEach(function (c) { if (c.delay > 0) { c.delay -= dt; return; } c.x -= TK.v * dt; if (c.x < e.x - 60 || c.x < p.x - KIT.W) c.alive = false;
+  var TK = TRAFFIC[e.kind || 'car']; e.cars.forEach(function (c) { if (c.delay > 0) { c.delay -= dt; if (c.delay <= 0) c.x = CAM.x + KIT.W + TK.w + 20; return; } c.x -= TK.v * dt; // comes in from off screen (he said they appeared out of nowhere) if (c.x < e.x - 60 || c.x < p.x - KIT.W) c.alive = false;
     if (c.alive && p.state === 'normal' && Math.abs(p.x - c.x) < TK.w + PHW && p.y > c.y - TK.h && p.y - PH < c.y) { if (p.vy > 40 && p.y - p.vy / 60 <= c.y - TK.h + 8) { p.vy = -520; p.air = true; sfx.play('spring'); G.score += 100; } else hurt(c.x); } });
   e.cars = e.cars.filter(function (c) { return c.alive; });
 }
@@ -2014,7 +2025,7 @@ function trafficStep(e, dt) {
 function trainStep(e, dt) {
   var p = PL; if (e.t2 === undefined) { e.t2 = 2 + e.ph; e.tx = null; }
   var near = Math.abs(p.x - e.x) < (e.w || 40) * TS / 2 + 200 && Math.abs(p.y - e.y) < 60;
-  if (e.tx === null) { if (near) { e.t2 -= dt; e.warn = e.t2 < 1.4; if (e.t2 <= 0) { e.tx = p.x + KIT.W * 0.7 + 60; sfx.play('roar'); } } else e.warn = false; }
+  if (e.tx === null) { if (near) { var was = e.warn; e.t2 -= dt; e.warn = e.t2 < 2; if (e.warn && !was) sfx.play((e.kind || 'train') === 'wave' ? 'rumble' : 'horn', 0.7); if (e.warn) G.shake = Math.max(G.shake || 0, 1.2 * (1 - e.t2 / 2)); if (e.t2 <= 0) { e.tx = CAM.x + KIT.W + 30; sfx.play('rumble'); } } else e.warn = false; }
   else { var SK = SWEEP[e.kind || 'train']; e.tx -= SK.v * dt; e.warn = false; if (e.tx < p.x - KIT.W - 600) { e.tx = null; e.t2 = 4.5 + Math.random() * 2; }
     if (p.state === 'normal' && p.x > e.tx - 10 && p.x < e.tx + SK.n * SK.len && p.y > e.y - SK.h && p.y - PH < e.y) hurt(p.x + 30); }
 }
@@ -2023,13 +2034,22 @@ function awningTouch(e, dt) { var p = PL; if (p.state === 'normal' && p.vy > 0 &
 // highway ramps: hit one at speed and you fly
 function rampTouch(e, dt) { var p = PL; if (!p.air && p.state === 'normal' && p.gsp > 120 && Math.abs(p.x - e.x) < 10 && Math.abs(p.y - e.y) < 8) { p.vx = Math.max(p.gsp, 430); p.gsp = p.vx; p.vy = -560; p.air = true; p.jumps = 1; p.spring = 0.4; sfx.play('dash'); } }
 var SETPIECE = { traffic: trafficStep, train: trainStep };
+function edgeWarn(g, y, k, col) { // something is coming from the right: a flashing sign and its lights shining in from the edge, brighter as it gets close
+  var W = KIT.W, a = Math.floor(G.t * (6 + k * 10)) % 2, r = 10 + k * 34;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = col; g.globalAlpha = 0.12 + k * 0.22;
+  g.beginPath(); g.moveTo(W, y - r); g.lineTo(W - 40 - k * 120, y - 4); g.lineTo(W - 40 - k * 120, y + 6); g.lineTo(W, y + r * 0.5); g.fill();
+  g.globalAlpha = 0.25 + k * 0.4; g.beginPath(); g.arc(W + 4, y, 6 + k * 10, 0, 6.3); g.fill(); g.restore();
+  if (a) { R('#12040a', W - 40, y - 44, 22, 22); R('#ffe36a', W - 38, y - 42, 18, 18); text('!', W - 29, y - 40, { size: 12, align: 'center', col: '#c4121c' }); }
+  text('>', W - 52 - (a ? 2 : 0), y - 38, { size: 10, col: '#ffe36a', outline: true });
+}
 function drawSetpiece(g, e, cx, cy) {
   var x = Math.round(e.x - cx), y = Math.round(e.y - cy);
-  if (e.k === 'traffic') { (e.cars || []).forEach(function (c) { if (c.delay > 0) { var wx = KIT.W - 18, a = Math.floor(G.t * 10) % 2; if (a) { g.fillStyle = 'rgba(255,246,192,0.8)'; g.beginPath(); g.arc(wx, c.y - cy - 10, 8, 0, 6.3); g.fill(); } text('!', wx, c.y - cy - 40, { size: 12, align: 'center', col: '#ffe36a', outline: true }); return; }
+  if (e.k === 'traffic') { (e.cars || []).forEach(function (c) { if (c.delay > 0) { edgeWarn(g, c.y - cy - 12, 1 - c.delay / 1.4, (e.kind || 'car') === 'rats' ? '#ff2630' : '#fff6c0'); return; }
       var TK = TRAFFIC[e.kind || 'car'];
       if (TK.rats) { for (var ri = 0; ri < 3; ri++) spr('f_rat_' + (Math.floor(G.t * 12 + ri) % 4), c.x - cx + ri * 16 - 16, c.y - cy + 1, { flip: false }); return; }
       spr(TK.spr, c.x - cx, c.y - cy + 1, { flip: true }); if ((e.kind || 'car') === 'car') { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(255,240,180,0.18)'; g.beginPath(); g.moveTo(c.x - cx - 30, c.y - cy - 10); g.lineTo(c.x - cx - 110, c.y - cy - 24); g.lineTo(c.x - cx - 110, c.y - cy); g.fill(); g.restore(); } }); return; }
   if (e.k === 'train') { // the warning light on the wall, then the train
+    if (e.warn && (e.tx === null || e.tx === undefined)) edgeWarn(g, y - 22, 1 - Math.max(0, e.t2) / 2, (e.kind || 'train') === 'wave' ? '#f1e0b0' : '#fff6c0');
     var lx = Math.min(KIT.W - 20, Math.max(20, x)), on = e.warn && Math.floor(G.t * 8) % 2; R('#12040a', lx - 6, y - 64, 12, 18); R(on ? '#ff2630' : '#3a0a10', lx - 4, y - 62, 8, 6); R(e.warn && !on ? '#ffe36a' : '#3a3010', lx - 4, y - 54, 8, 6);
     var SK = SWEEP[e.kind || 'train'];
     if (e.tx !== null && e.tx !== undefined) { if (SK.wave) { var wx0 = e.tx - cx; R('rgba(241,224,176,0.85)', wx0 + 30, y - 40, SK.len, 42); spr('hog_creamwave', wx0 + 30, y + 2, { sc: 0.8 }); for (var f = 0; f < 3; f++) FX.push({ k: 'bit', x: e.tx + 20 + Math.random() * 30, y: e.y - 40 - Math.random() * 20, vx: -60, vy: -60, t: 0.4, c: '#fffbe8' }); }
@@ -2064,7 +2084,7 @@ function stepPlayer(dt) {
   var ctl = p.state === 'normal' && p.lock <= 0, dir = ctl ? inp.dir : 0;
   if (dir) p.face = dir;
   // SUPER CUMHEAD: all seven Cum Chalices, 50 drops, in the air: hold up and press B
-  if (ap && p.air && inp.up && !G.super && canSuper() && p.state === 'normal') { goSuper(); ap = false; }
+  // Super Cumhead: jump, double jump, then press jump a third time in the air (his ask, like Sonic 3)
   // the shot
   if (ap && p.atkCd <= 0 && p.state === 'normal') { p.atkT = 0.2; p.atkCd = 0.32; SHOTS.push({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 330 + p.gsp * 0.3, vy: 0, life: 0.55, k: 'sperm', mine: true }); sfx.play('shoot'); }
   if (!p.air) {
@@ -2094,6 +2114,7 @@ function stepPlayer(dt) {
     if (p.coyote > 0) { p.coyote -= dt; if (jp && p.jumps === 0) { p.vy = -K.jumpv; p.jumps = 1; jp = false; p.coyote = 0; sfx.play('jump'); } }
     if (dir) { if (Math.abs(p.vx) < top || Math.sign(p.vx) !== dir) p.vx += dir * K.airacc * dt * (wet ? 0.6 : 1); }
     else p.vx -= p.vx * Math.min(1, dt * 0.4);
+    if (jp && p.jumps >= 2 && !G.super && canSuper() && p.state === 'normal') { goSuper(); jp = false; }
     if (jp && p.jumps <= 1 && p.state === 'normal' && p.spring <= 0.2) { p.vy = -K.jump2 * (wet ? 0.85 : 1); p.jumps = 2; sfx.play('jump2'); FX.push({ k: 'ring', x: p.x, y: p.y, t: 0.3 }); }
     if (!inp.j && p.vy < -K.jcut && p.jumps >= 1 && p.spring <= 0) p.vy = -K.jcut;
     p.vy = Math.min(K.term * (wet ? 0.35 : 1), p.vy + K.grav * dt * (wet ? 0.4 : 1));
@@ -2323,7 +2344,14 @@ function drawEnt(g, e, cx, cy, W, H) {
   if (k === 'loop') { drawLoop(g, e, cx, cy); return; }
   if (k === 'dsign') return; // he said the level already has a name: districts are never named on screen
   if (k === 'drop') { if (e.alive) spr('hog_drop', x, y - 2 + Math.sin(G.t * 4 + e.x * 0.1) * 1.5, {}); return; }
-  if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0; if (rs <= 0.02) return; spr(fr, x, y + (1 - rs) * 26, { flip: e.dir < 0 }); return; }
+  if (k === 'foe') { if (!e.alive) return; var F = e.F, fr = F.spr + (Math.floor(e.t * 7) % F.n); if (F.beh === 'pop') { var rs = e.rise || 0, wn = e.warn || 0, gq = KIT.ctx;
+      if (wn > 0.05) { var sh = Math.round(Math.sin(G.t * 40) * Math.min(2, wn * 3)), mh = Math.round(3 + wn * 5); // a mound of churned earth heaves up, red light leaks out of the cracks
+        gq.fillStyle = '#12040a'; gq.beginPath(); gq.ellipse(x + sh, y - 1, 21, mh + 2, 0, Math.PI, 0); gq.fill(); gq.fillStyle = '#3a2618'; gq.beginPath(); gq.ellipse(x + sh, y, 18, mh, 0, Math.PI, 0); gq.fill();
+        gq.fillStyle = '#9a7a54'; gq.fillRect(x - 12 + sh, y - mh, 8, 2); gq.fillRect(x + 3 + sh, y - mh + 1, 8, 2); gq.fillStyle = '#6a4c30'; gq.fillRect(x - 15 + sh, y - 3, 30, 2);
+        if (Math.floor(G.t * (6 + wn * 10)) % 2) { gq.fillStyle = '#ff2630'; gq.fillRect(x - 9 + sh, y - 2, 6, 1); gq.fillRect(x - 3 + sh, y - 3, 1, 2); gq.fillRect(x + 2 + sh, y - 2, 8, 1); }
+        if (wn > 0.3) { gq.save(); gq.globalCompositeOperation = 'lighter'; gq.fillStyle = 'rgba(255,38,48,' + (0.12 + wn * 0.15).toFixed(2) + ')'; gq.beginPath(); gq.ellipse(x, y - 4, 26, 12, 0, 0, 6.3); gq.fill(); gq.restore(); } }
+      var show = Math.max(rs, wn >= 0.5 ? Math.min(0.38, (wn - 0.4) * 0.7) : 0); if (show <= 0.02) return; // fingertips poke out before it grabs
+      gq.save(); gq.beginPath(); gq.rect(x - 30, y - 80, 60, 80); gq.clip(); spr(fr, x, y + (1 - show) * 26, { flip: e.dir < 0 }); gq.restore(); return; }
     spr(fr, x, y, { flip: e.dir < 0, sc: e.small ? 0.6 : 1, flash: e.hitT > 0, alpha: F.ghost ? 0.6 + Math.sin(e.t * 3) * 0.3 : 1 }); return; }
   if (k === 'spring') { var sq = e.t > 0 ? 0.5 : 1; R('#12040a', x - 11, y - 6, 22, 6); R('#8a828a', x - 10, y - 5, 20, 4); R(e.pow === 2 ? '#ff2630' : '#ffe36a', x - 11, y - 6 - 10 * sq, 22, 5); R('#12040a', x - 11, y - 6 - 10 * sq, 22, 1); for (var i = 0; i < 3; i++) R('#d0c8d0', x - 6 + i * 5, y - 6 - 10 * sq + 5, 2, 10 * sq - 5); return; }
   if (k === 'dash') { for (var j = 0; j < 3; j++) { var a = (Math.floor(G.t * 8) + j) % 3 === 0; R(a ? '#ffe36a' : '#c4121c', x - 12 + j * 8, y - 3, 6, 3); } return; }
@@ -2569,7 +2597,7 @@ function ssP(l, f, up, W, H) { // l: squares to his right, f: squares ahead, up:
   var vx = x, vy0 = y - SSCH, vz0 = z + SSCD, cp = Math.cos(SSPITCH), sp = Math.sin(SSPITCH), vz = vz0 * cp - vy0 * sp, vy = vy0 * cp + vz0 * sp; // from the camera, tipped down
   if (vz < 0.25) return null;
   var bx = nx * SSR, by = ny * SSR - SSR, bz = nz * SSR; if (nx * (-bx) + ny * (SSCH - by) + nz * (-SSCD - bz) < 0) return null; // round the back of the ball: hidden
-  var F = Math.min(W * 0.185, H * 0.33) / SSK0.s; // a square under his feet is about a sixth of the screen wide (he said they were small)
+  var F = Math.min(W * 0.16, H * 0.285) / SSK0.s; // a touch further out than 108 (he asked) // a square under his feet is about a sixth of the screen wide (he said they were small)
   return { x: W / 2 + vx * F / vz, y: H * 0.8 - (vy / vz - SSK0.k) * F, s: F / vz, d: vz };
 }
 function drawSpecial() {
@@ -2634,7 +2662,7 @@ function drawSpecial() {
     text(win ? 'CUMHEAD GOT' : 'NO CHALICE', W / 2, H * 0.24, { size: 20, align: 'center', col: '#f1e7d0', font: 'title', outline: true });
     text(win ? CHALNAME[S.lv] : 'THIS TIME', W / 2, H * 0.24 + 30, { size: 20, align: 'center', col: win ? CHALCOL[S.lv] : '#ff2630', font: 'title', outline: true });
     for (var j = 0; j < 7; j++) spr('hog_chal' + j, W / 2 + (j - 3) * 30, H * 0.66 + (win && j === S.lv ? Math.sin(S.t * 6) * 3 : 0), { sc: 1.3, alpha: SV.chal[j] ? 1 : 0.2 });
-    if (win && chalCount() >= 7) text('ALL SEVEN! 50 DROPS, JUMP, HOLD UP + B: SUPER CUMHEAD', W / 2, H * 0.84, { size: 7, align: 'center', col: '#ffe36a', outline: true });
+    if (win && chalCount() >= 7) text('ALL SEVEN! 50 DROPS, THEN JUMP, DOUBLE JUMP AND JUMP AGAIN: SUPER CUMHEAD', W / 2, H * 0.84, { size: 7, align: 'center', col: '#ffe36a', outline: true });
   }
 }
 var FXS = [];
@@ -2650,7 +2678,7 @@ function mixHex(a, b, t) { var A = hexRgb(a), B = hexRgb(b); return 'rgb(' + A.m
    ===================================================================================================== */
 var SV = KIT.load('hog-save2', null) || { reached: 0, best: {}, hi: 0 }; SV.chal = SV.chal || [];
 function chalCount() { return SV.chal.filter(Boolean).length; }
-function persist() { KIT.save('hog-save2', SV); }
+function persist() { KIT.save('hog-save2', SV); if (typeof SLOTS !== 'undefined' && G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].chal = SV.chal.slice(); saveSlots(); } } // the chalices belong to the save slot being played
 var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, nextLife: 100, shoes: 0, star: 0, shake: 0, banner: 0, ai: 0, cam: 0 };
 /* sounds for this game */
 (function () { var t = sfx.tone, n = sfx.noise;
@@ -2668,6 +2696,9 @@ var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, 
   sfx.add('thud', function () { n(0.25, 0.25, 160); t('sine', 90, 40, 0.25, 0.15); });
   sfx.add('throw', function () { n(0.08, 0.06, 2500); });
   sfx.add('clink', function () { t('square', 1800, 1500, 0.06, 0.04); });
+  sfx.add('horn', function () { t('sawtooth', 311, 311, 0.32, 0.05); t('sawtooth', 392, 392, 0.32, 0.04); t('sawtooth', 311, 311, 0.32, 0.05, 0.42); t('sawtooth', 392, 392, 0.32, 0.04, 0.42); });
+  sfx.add('rumble', function () { n(0.9, 0.12, 120); t('sine', 55, 45, 0.9, 0.12); });
+  sfx.add('roar', function () { n(0.5, 0.12, 220); t('sawtooth', 90, 60, 0.45, 0.06); });
   sfx.add('pop', function () { n(0.1, 0.15, 1500); t('square', 600, 200, 0.1, 0.05); });
   sfx.add('bosshit', function () { n(0.2, 0.25, 700); t('sawtooth', 300, 80, 0.2, 0.08); });
   sfx.add('super', function () { [392, 523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) { t('square', f, f, 0.09, 0.05, i * 0.05); t('triangle', f / 2, f / 2, 0.12, 0.04, i * 0.05); }); n(0.4, 0.08, 3000); });
@@ -2684,12 +2715,14 @@ function beginAct(ai, fromCheck) {
   if (keep) ENTS.forEach(function (e) { if (e.k === 'check' && Math.abs(e.x - keep.x) < 4) e.on = true; });
   CAM.x = Math.max(0, sx - KIT.W * 0.42); CAM.y = Math.max(0, sy - KIT.H * 0.62);
   G.mode = 'card'; G.cardT = 0; music.play(LV.zone.song); G.ctl = true;
+  if (!fromCheck) slotSaveAct(); // the slot saves at the start of every act, like Sonic 3 saves at each zone
 }
 function loseLife() {
   G.lives--; if (G.lives < 0) { gameOver(); return; }
   if (G.check) G.check.time = G.check.time || G.time; beginAct(G.ai, !!G.check); G.cardT = 1.6;
 }
 function gameOver() {
+  if (G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].lives = 3; saveSlots(); }
   G.mode = 'over'; music.stop(0.5); sfx.play('lose'); if (G.score > SV.hi) { SV.hi = G.score; persist(); }
   KIT.menu({ cls: 'clear', title: 'Game Over', sub: 'Score ' + G.score, items: [
     { label: 'CONTINUE', sub: 'From the start of ' + ZONES[ACTS[G.ai].z].name + ' act ' + ACTS[G.ai].act, def: true, fn: function () { G.lives = 3; G.score = 0; G.check = null; beginAct(G.ai); } },
@@ -2707,16 +2740,15 @@ function nextAct() {
   G.check = null; beginAct(G.ai + 1);
 }
 function ending() {
-  G.mode = 'end'; music.play('hogtitle'); if (G.score > SV.hi) { SV.hi = G.score; persist(); } SV.done = 1; persist();
+  G.mode = 'end'; music.play('hogtitle'); if (G.score > SV.hi) { SV.hi = G.score; persist(); } SV.done = 1; if (G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].done = 1; saveSlots(); } persist();
   KIT.menu({ cls: 'clear', title: 'Blumhead is done for', sub: (chalCount() >= 7 ? 'The seven Cum Chalices glow in the clubhouse. ' : '') + 'Spunk Brain falls quiet. The homunculi are free, and Cumhead walks home through Night City as the sun comes up. Score ' + G.score + '.', items: [{ label: 'BACK TO THE TITLE', def: true, fn: titleMenu }] });
 }
 /* ---------- menus ---------- */
 function titleMenu() {
   G.mode = 'title'; G.check = null; if (!LV || LV.ai !== 0) loadAct(0); newPlayer(LV.sx, LV.sy); PL.state = 'normal'; music.play('hogtitle');
-  var items = [{ label: 'START', def: true, fn: function () { newGame(0); } }];
-  if (SV.reached > 0) items.push({ label: 'ZONE SELECT', fn: zoneMenu });
+  var items = [{ label: 'START', def: true, fn: dataSelect }]; // START opens the save slots (zones are picked on NO SAVE or a cleared slot)
   items.push({ label: 'HOW TO PLAY', fn: helpMenu });
-  KIT.menu({ cls: 'clear', logo: '../assets/hog-logo.webp', title: 'Cumhead the Spermhog', items: items, note: (SV.hi ? 'HIGH SCORE ' + SV.hi : '') + (chalCount() ? '   CHALICES ' + chalCount() + '/7' : '') });
+  KIT.menu({ cls: 'clear', logo: '../assets/hog-logo.webp', title: 'Cumhead the Spermhog', items: items, note: SV.hi ? 'HIGH SCORE ' + SV.hi : '' });
 }
 function zoneMenu() {
   KIT.menu({ cls: 'clear', title: 'Zone select', items: ZONES.map(function (z, i) { return { label: z.name + ' ZONE', dis: i > SV.reached, sub: bestTxt(i), fn: function () { newGame(i); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
@@ -2724,7 +2756,7 @@ function zoneMenu() {
 function bestTxt(z) { var a = SV.best['a' + z * 2], b = SV.best['a' + (z * 2 + 1)]; return (a ? 'Act 1 ' + clock(a) : '') + (b ? '  ·  Act 2 ' + clock(b) : ''); }
 function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + (s < 10 ? '0' : '') + s; }
 function helpMenu() {
-  KIT.menu({ cls: 'clear', title: 'How to play', wide: true, html: '<b>Run</b> with the d-pad or stick. Slopes speed you up going down. <b>A</b> jumps, press it again in the air to <b>double jump</b>. <b>B</b> shoots.<br>Land on foes to stomp them. <b>Drops</b> keep you alive: get hit and they scatter (grab some back), get hit with none and you lose a life. 100 drops is an extra life.<br>Item boxes hold drops, a bubble shield, speed shoes, invincibility or a life. Lamp posts are checkpoints. Run past the sign to clear an act; Act 2 of every zone ends with a boss: eight hits.<br>Routes split: a spring up to the high road, the street, or a hole down to the low road. One of them in every act hides a <b>giant gold ring</b>: jump in with 50 drops for a special stage and a <b>Cum Chalice</b>. Get all seven, then with 50 drops jump, hold <b>up</b> and press <b>B</b>: <b>Super Cumhead</b>.',
+  KIT.menu({ cls: 'clear', title: 'How to play', wide: true, html: '<b>Run</b> with the d-pad or stick. Slopes speed you up going down. <b>A</b> jumps, press it again in the air to <b>double jump</b>. <b>B</b> shoots.<br>Land on foes to stomp them. <b>Drops</b> keep you alive: get hit and they scatter (grab some back), get hit with none and you lose a life. 100 drops is an extra life.<br>Item boxes hold drops, a bubble shield, speed shoes, invincibility or a life. Lamp posts are checkpoints. Run past the sign to clear an act; Act 2 of every zone ends with a boss: eight hits.<br>Routes split: a spring up to the high road, the street, or a hole down to the low road. One of them in every act hides a <b>giant gold ring</b>: jump in with 50 drops for a special stage and a <b>Cum Chalice</b>. Get all seven, then with 50 drops jump, double jump and press <b>A</b> once more: <b>Super Cumhead</b>.',
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') KIT.closeMenu(); else titleMenu(); } }] });
 }
 function pauseMenu() {
@@ -2740,6 +2772,7 @@ function pauseMenu() {
 /* ---------- the loop ---------- */
 function update(dt) {
   G.t += dt; if (G.banner > 0) G.banner -= dt; if (G.distT > 0) G.distT -= dt;
+  if (G.mode === 'data') { stepData(dt); return; }
   if (G.mode === 'title') { CAM.x += 30 * dt; if (CAM.x > LV.w * TS - KIT.W) CAM.x = 0; G.cam = CAM.x; return; }
   if (G.mode === 'special') { if (!KIT.menuOpen()) stepSpecial(dt); return; }
   if (G.mode === 'card') { G.cardT += dt; if (G.cardT > 2.4) { G.mode = 'play'; } stepWorld(dt); camera(dt); return; }
@@ -2755,6 +2788,7 @@ function update(dt) {
 function draw() {
   var g = KIT.ctx; g.clearRect(0, 0, KIT.W, KIT.H);
   if (G.mode === 'special' && SS) { drawSpecial(); return; }
+  if (G.mode === 'data') { drawData(); return; }
   if (!LV || !TILESET) return;
   drawWorld();
   if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') return;
@@ -2779,11 +2813,107 @@ function drawTally() {
     text('DROP BONUS', cx - 110, y + 90, { size: 8, col: '#ffe36a', outline: true }); text(String(Math.round(G.db)), cx + 110, y + 90, { size: 8, align: 'right', outline: true });
     text('SCORE', cx - 110, y + 114, { size: 8, col: '#ffe36a', outline: true }); text(String(G.score), cx + 110, y + 114, { size: 8, align: 'right', outline: true }); }
 }
-KIT.start({ w: 480, h: 270, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') update(dt); },
+KIT.start({ w: 480, h: 270, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'data' || G.mode === 'title' || G.mode === 'over' || G.mode === 'end') update(dt); },
   pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'JUMP', cls: 'big' }, { k: 'b', label: 'B', sub: 'SHOT' }] } });
 titleMenu();
 window.__ch = { G: G, get PL() { return PL; }, get LV() { return LV; }, ACTS: ACTS, ZONES: ZONES, beginAct: beginAct, newGame: newGame, loadAct: loadAct, startBoss: startBoss, ENTS: function () { return ENTS; },
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };
+
+/* ---------- Data Select: save slots like Sonic 3 & Knuckles (his ask, because more characters are coming) ----------
+   NO SAVE, six save slots and the ERASE box in a row. A slot keeps the character, the act you reached (saved at the start
+   of every act), lives, score and the Cum Chalices of that game. A cleared slot (and NO SAVE once a zone is reached) picks
+   any zone with up/down; a new slot picks the character with up/down. Saves: 'hog-slots'. */
+var HOGCHARS = [{ id: 'cumhead', name: 'CUMHEAD', idle: 'ch_idle', icon: 'ch_icon0' }]; // more characters go here
+var NSLOT = 6, SLOTS = KIT.load('hog-slots', null);
+if (!SLOTS) { // the old single save becomes save 1
+  SLOTS = []; for (var si0 = 0; si0 < NSLOT; si0++) SLOTS.push(null);
+  if (SV.reached > 0 || chalCount() || SV.done) SLOTS[0] = { ch: 'cumhead', ai: Math.min(ACTS.length - 1, (SV.reached || 0) * 2), lives: 3, score: 0, chal: SV.chal.slice(), done: SV.done ? 1 : 0, zone: 0 };
+  KIT.save('hog-slots', SLOTS);
+}
+G.slot = -1;
+function saveSlots() { KIT.save('hog-slots', SLOTS); }
+function slotSaveAct() { // called at the start of every act (not when coming back from a checkpoint)
+  var s = SLOTS[G.slot]; if (G.slot < 0 || !s) return;
+  s.ai = G.ai; s.lives = Math.max(0, G.lives); s.score = G.score; s.chal = SV.chal.slice(); saveSlots();
+}
+function charOf(id) { for (var i = 0; i < HOGCHARS.length; i++) if (HOGCHARS[i].id === id) return HOGCHARS[i]; return HOGCHARS[0]; }
+
+var DS = { ci: 1, sx: 0, t: 0, erase: false, pick: {} };
+function dataSelect() {
+  KIT.closeMenu(); document.documentElement.classList.add('hs-menu'); G.mode = 'data'; DS.t = 0; // the touch pad hides: tap a panel to pick it, tap again to start DS.erase = false; music.play('hogtitle');
+  if (DS.ci < 0 || DS.ci > NSLOT + 1) DS.ci = 1;
+}
+function dsPanels() { return NSLOT + 2; } // 0 = no save, 1..6 = slots, 7 = erase
+function dsZones(i) { var s = SLOTS[i - 1]; return i === 0 ? (SV.reached || 0) : s && s.done ? ZONES.length - 1 : 0; }
+function dsGo(i) {
+  if (i === NSLOT + 1) { DS.erase = !DS.erase; if (DS.erase && DS.ci === NSLOT + 1) DS.ci = 1; sfx.play('clink'); return; }
+  if (DS.erase) { var e = SLOTS[i - 1]; if (i < 1 || !e) { sfx.play('bump'); return; }
+    KIT.confirm({ title: 'Erase save ' + i + '?', sub: 'It cannot be brought back.', yesLabel: 'Erase', noLabel: 'Keep', yes: function () { SLOTS[i - 1] = null; saveSlots(); KIT.closeMenu(); sfx.play('crumble'); DS.erase = false; }, no: function () { KIT.closeMenu(); } }); return; }
+  var z = DS.pick[i] || 0; sfx.play('check');
+  if (i === 0) { G.slot = -1; newGame(Math.min(z, SV.reached || 0)); return; }
+  var s = SLOTS[i - 1];
+  if (!s) { s = SLOTS[i - 1] = { ch: HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id, ai: 0, lives: 3, score: 0, chal: [], done: 0 }; saveSlots(); }
+  G.slot = i - 1; SV.chal = (s.chal || []).slice(); G.lives = s.lives > 0 ? s.lives : 3; G.score = s.score || 0; G.kills = 0; G.super = 0; G.ch = s.ch;
+  beginAct(s.done ? Math.min(z, ZONES.length - 1) * 2 : s.ai);
+}
+function dsGeom() { var W = KIT.W, pw = 116, gap = 12, tot = dsPanels() * (pw + gap) - gap + 32; return { pw: pw, gap: gap, ph: 186, y: 58, tot: tot, x0: 16 }; }
+function stepData(dt) {
+  DS.t += dt; if (KIT.menuOpen()) return;
+  var n = dsPanels(), lo = DS.erase ? 1 : 0, hi = DS.erase ? NSLOT + 1 : n - 1;
+  if (KIT.pressed('right')) { DS.ci = Math.min(hi, DS.ci + 1); sfx.play('clink'); }
+  if (KIT.pressed('left')) { DS.ci = Math.max(lo, DS.ci - 1); sfx.play('clink'); }
+  var i = DS.ci, s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null;
+  if ((KIT.pressed('up') || KIT.pressed('down')) && !DS.erase) { var d = KIT.pressed('up') ? 1 : -1;
+    if (i >= 1 && i <= NSLOT && !s && HOGCHARS.length > 1) { DS.pick['c' + i] = ((DS.pick['c' + i] || 0) + d + HOGCHARS.length) % HOGCHARS.length; sfx.play('clink'); }
+    else { var mz = dsZones(i); if (mz > 0) { DS.pick[i] = ((DS.pick[i] || 0) + d + mz + 1) % (mz + 1); sfx.play('clink'); } } }
+  if (KIT.pressed('a') || KIT.pressed('start')) dsGo(i);
+  else if (KIT.pressed('b')) { if (DS.erase) DS.erase = false; else titleMenu(); }
+  // taps: tap a panel to pick it, tap it again to open it
+  if (KIT.ptr.tap) { var G2 = dsGeom(); for (var k = 0; k < n; k++) { var px = G2.x0 + k * (G2.pw + G2.gap) - DS.sx; if (KIT.ptr.x >= px && KIT.ptr.x < px + G2.pw && KIT.ptr.y >= G2.y && KIT.ptr.y < G2.y + G2.ph) { if (k === DS.ci) dsGo(k); else if (!(DS.erase && k === 0)) { DS.ci = k; sfx.play('clink'); } } } }
+  var Gm = dsGeom(), want = Gm.x0 + DS.ci * (Gm.pw + Gm.gap) + Gm.pw / 2 - KIT.W / 2; want = Math.max(0, Math.min(Gm.tot - KIT.W, want)); DS.sx += (want - DS.sx) * Math.min(1, dt * 10);
+}
+function dsZonePic(g, zi, x, y, w, h) { // a little window onto the zone: its sky in bands and its painted far layer
+  var Z = ZONES[zi]; for (var b = 0; b < 4; b++) { R(Z.sky[Math.min(Z.sky.length - 1, b >> 1)], x, y + b * h / 4, w, h / 4 + 1); }
+  var im = Z.id === 'city' ? HOGIM.skyline : HOGBK[Z.id + '_far'];
+  if (imgOk(im)) { g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); var sc = Z.id === 'city' ? h * 0.9 / im.naturalHeight : h * 1.5 / im.naturalHeight; g.imageSmoothingEnabled = false; g.drawImage(im, (zi * 137) % 300, 0, w / sc, im.naturalHeight, x, y + h - im.naturalHeight * sc * (Z.id === 'city' ? 1 : 0.62), w, im.naturalHeight * sc); g.restore(); }
+}
+function drawData() {
+  var g = KIT.ctx, W = KIT.W, H = KIT.H, Gm = dsGeom(), t = DS.t;
+  skyBands(g, ['#0a0204', '#16050a', '#24080e', '#36101a'], W, H);
+  for (var k = 0; k < 40; k++) { var sx = ((k * 83 - t * 12) % W + W) % W, sy = (k * 47) % (H * 0.3); g.fillStyle = k % 3 ? '#4a1a1c' : '#c4121c'; g.fillRect(sx, sy, 1, 1); } // embers drifting
+  g.fillStyle = '#c4121c'; g.beginPath(); g.arc(W * 0.62, 26, 16, 0, 6.3); g.fill(); g.fillStyle = '#8a0a14'; g.beginPath(); g.arc(W * 0.62 + 5, 22, 5, 0, 6.3); g.fill(); // his red moon
+  text(DS.erase ? 'ERASE WHICH SAVE?' : 'DATA SELECT', 18, 14, { size: 22, col: DS.erase ? '#ff2630' : '#f1e7d0', font: 'title', outline: true });
+  for (var i = 0; i < dsPanels(); i++) {
+    var x = Math.round(Gm.x0 + i * (Gm.pw + Gm.gap) - DS.sx), y = Gm.y, pw = Gm.pw, ph = Gm.ph, on = i === DS.ci, s = i >= 1 && i <= NSLOT ? SLOTS[i - 1] : null;
+    if (x > W + 4 || x + pw < -4) continue;
+    if (on && DS.erase && i <= NSLOT) x += Math.round(Math.sin(t * 40) * 2);
+    R('#12040a', x - 2, y - 2, pw + 4, ph + 4); R(on ? (Math.floor(t * 4) % 2 ? '#ff2630' : '#c4121c') : '#4a1a1c', x - 1, y - 1, pw + 2, ph + 2); R('#0e0708', x, y, pw, ph);
+    R(on ? '#c4121c' : '#2a0c12', x, y, pw, 16); text(i === 0 ? 'NO SAVE' : i === NSLOT + 1 ? 'ERASE' : 'SAVE ' + i, x + pw / 2, y + 4, { size: 7, align: 'center', col: '#f1e7d0' });
+    var bx = x + 8, by = y + 22, bw = pw - 16, bh = 62; R('#12040a', bx - 1, by - 1, bw + 2, bh + 2);
+    if (i === NSLOT + 1) { // the erase box: a coffin lid with a red X
+      R('#2a0c12', bx, by, bw, bh); g.fillStyle = '#4a1a1c'; g.beginPath(); g.moveTo(bx + bw * 0.3, by + 4); g.lineTo(bx + bw * 0.7, by + 4); g.lineTo(bx + bw * 0.82, by + 20); g.lineTo(bx + bw * 0.66, by + bh - 4); g.lineTo(bx + bw * 0.34, by + bh - 4); g.lineTo(bx + bw * 0.18, by + 20); g.fill();
+      g.strokeStyle = '#ff2630'; g.lineWidth = 4; g.beginPath(); g.moveTo(bx + bw * 0.36, by + 16); g.lineTo(bx + bw * 0.64, by + bh - 16); g.moveTo(bx + bw * 0.64, by + 16); g.lineTo(bx + bw * 0.36, by + bh - 16); g.stroke();
+      text(DS.erase ? 'PICK A SAVE, B: STOP' : 'A TO ERASE A SAVE', x + pw / 2, y + 100, { size: 6, align: 'center', col: '#a6968f' }); continue; }
+    var zi = 0, act = 1, clear = s && s.done;
+    if (i === 0) zi = Math.min(DS.pick[0] || 0, SV.reached || 0); else if (s) { zi = clear ? Math.min(DS.pick[i] || 0, ZONES.length - 1) : ACTS[s.ai].z; act = clear ? 1 : ACTS[s.ai].act; }
+    if (i >= 1 && !s) { // a new slot: static on the screen
+      for (var ny = 0; ny < bh; ny += 2) for (var nx = 0; nx < bw; nx += 2) { var v = (Math.sin(nx * 12.9898 + ny * 78.233 + Math.floor(t * 20) * 3.1) * 43758.5) % 1; v = v < 0 ? -v : v; g.fillStyle = v < 0.5 ? '#1e0a10' : v < 0.85 ? '#3a1a22' : '#6a3a44'; g.fillRect(bx + nx, by + ny, 2, 2); }
+      text('NEW', x + pw / 2, by + bh / 2 - 8, { size: 16, align: 'center', col: '#f1e7d0', font: 'title', outline: true }); }
+    else { dsZonePic(g, zi, bx, by, bw, bh); R('rgba(7,4,5,0.55)', bx, by + bh - 16, bw, 16); text(ZONES[zi].name, x + pw / 2, by + bh - 13, { size: 5, align: 'center', col: '#ffe36a' });
+      if (!clear && i > 0) text('ACT ' + act, x + pw / 2, by + 4, { size: 6, align: 'center', col: '#f1e7d0', outline: true });
+      if (clear) { var a2 = Math.floor(t * 3) % 2; text('CLEAR', x + pw / 2, by + 6, { size: 14, align: 'center', col: a2 ? '#ffe36a' : '#f1e7d0', font: 'title', outline: true }); }
+      if ((clear || (i === 0 && (SV.reached || 0) > 0)) && on) { text('^', x + pw / 2, by - 9, { size: 6, align: 'center', col: '#ffe36a' }); text('v', x + pw / 2, by + bh + 2, { size: 6, align: 'center', col: '#ffe36a' }); } }
+    // the character, standing on the panel
+    var C = charOf(s ? s.ch : HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id), fr = C.idle + (Math.floor((t + i * 0.3) * 6) % 7);
+    spr(fr, x + pw / 2, y + 140, { anchor: 'b' });
+    text(i === 0 ? 'ANY ZONE YOU HAVE REACHED' : C.name, x + pw / 2, y + 147, { size: i === 0 ? 4 : 6, align: 'center', col: '#f1e7d0' });
+    if (i >= 1 && !s && HOGCHARS.length > 1 && on) { text('^', x + pw / 2, y + 100, { size: 6, align: 'center', col: '#ffe36a' }); text('v', x + pw / 2, y + 150, { size: 6, align: 'center', col: '#ffe36a' }); }
+    if (s) { spr(C.icon, x + 14, y + 168, { anchor: 'b', sc: 0.5 }); text('x' + s.lives, x + 22, y + 160, { size: 6, col: '#f1e7d0' });
+      var ch = s.chal || []; for (var c = 0; c < 7; c++) spr('hog_chal' + c, x + 56 + c * 8, y + 168, { sc: 0.5, alpha: ch[c] ? 1 : 0.2, anchor: 'b' });
+      text(String(s.score || 0), x + pw - 6, y + 174, { size: 5, align: 'right', col: '#a6968f' }); }
+  }
+  text('TAP OR LEFT / RIGHT TO PICK   A START   B BACK' + (HOGCHARS.length > 1 ? '   UP / DOWN CHARACTER' : ''), W / 2, H - 14, { size: 5, align: 'center', col: '#a6968f' });
+}
 
 </script>
 </body></html>

@@ -3,7 +3,7 @@
    ===================================================================================================== */
 var SV = KIT.load('hog-save2', null) || { reached: 0, best: {}, hi: 0 }; SV.chal = SV.chal || [];
 function chalCount() { return SV.chal.filter(Boolean).length; }
-function persist() { KIT.save('hog-save2', SV); }
+function persist() { KIT.save('hog-save2', SV); if (typeof SLOTS !== 'undefined' && G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].chal = SV.chal.slice(); saveSlots(); } } // the chalices belong to the save slot being played
 var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, nextLife: 100, shoes: 0, star: 0, shake: 0, banner: 0, ai: 0, cam: 0 };
 /* sounds for this game */
 (function () { var t = sfx.tone, n = sfx.noise;
@@ -21,6 +21,9 @@ var G = { mode: 'title', t: 0, time: 0, lives: 3, drops: 0, score: 0, kills: 0, 
   sfx.add('thud', function () { n(0.25, 0.25, 160); t('sine', 90, 40, 0.25, 0.15); });
   sfx.add('throw', function () { n(0.08, 0.06, 2500); });
   sfx.add('clink', function () { t('square', 1800, 1500, 0.06, 0.04); });
+  sfx.add('horn', function () { t('sawtooth', 311, 311, 0.32, 0.05); t('sawtooth', 392, 392, 0.32, 0.04); t('sawtooth', 311, 311, 0.32, 0.05, 0.42); t('sawtooth', 392, 392, 0.32, 0.04, 0.42); });
+  sfx.add('rumble', function () { n(0.9, 0.12, 120); t('sine', 55, 45, 0.9, 0.12); });
+  sfx.add('roar', function () { n(0.5, 0.12, 220); t('sawtooth', 90, 60, 0.45, 0.06); });
   sfx.add('pop', function () { n(0.1, 0.15, 1500); t('square', 600, 200, 0.1, 0.05); });
   sfx.add('bosshit', function () { n(0.2, 0.25, 700); t('sawtooth', 300, 80, 0.2, 0.08); });
   sfx.add('super', function () { [392, 523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) { t('square', f, f, 0.09, 0.05, i * 0.05); t('triangle', f / 2, f / 2, 0.12, 0.04, i * 0.05); }); n(0.4, 0.08, 3000); });
@@ -37,12 +40,14 @@ function beginAct(ai, fromCheck) {
   if (keep) ENTS.forEach(function (e) { if (e.k === 'check' && Math.abs(e.x - keep.x) < 4) e.on = true; });
   CAM.x = Math.max(0, sx - KIT.W * 0.42); CAM.y = Math.max(0, sy - KIT.H * 0.62);
   G.mode = 'card'; G.cardT = 0; music.play(LV.zone.song); G.ctl = true;
+  if (!fromCheck) slotSaveAct(); // the slot saves at the start of every act, like Sonic 3 saves at each zone
 }
 function loseLife() {
   G.lives--; if (G.lives < 0) { gameOver(); return; }
   if (G.check) G.check.time = G.check.time || G.time; beginAct(G.ai, !!G.check); G.cardT = 1.6;
 }
 function gameOver() {
+  if (G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].lives = 3; saveSlots(); }
   G.mode = 'over'; music.stop(0.5); sfx.play('lose'); if (G.score > SV.hi) { SV.hi = G.score; persist(); }
   KIT.menu({ cls: 'clear', title: 'Game Over', sub: 'Score ' + G.score, items: [
     { label: 'CONTINUE', sub: 'From the start of ' + ZONES[ACTS[G.ai].z].name + ' act ' + ACTS[G.ai].act, def: true, fn: function () { G.lives = 3; G.score = 0; G.check = null; beginAct(G.ai); } },
@@ -60,16 +65,15 @@ function nextAct() {
   G.check = null; beginAct(G.ai + 1);
 }
 function ending() {
-  G.mode = 'end'; music.play('hogtitle'); if (G.score > SV.hi) { SV.hi = G.score; persist(); } SV.done = 1; persist();
+  G.mode = 'end'; music.play('hogtitle'); if (G.score > SV.hi) { SV.hi = G.score; persist(); } SV.done = 1; if (G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].done = 1; saveSlots(); } persist();
   KIT.menu({ cls: 'clear', title: 'Blumhead is done for', sub: (chalCount() >= 7 ? 'The seven Cum Chalices glow in the clubhouse. ' : '') + 'Spunk Brain falls quiet. The homunculi are free, and Cumhead walks home through Night City as the sun comes up. Score ' + G.score + '.', items: [{ label: 'BACK TO THE TITLE', def: true, fn: titleMenu }] });
 }
 /* ---------- menus ---------- */
 function titleMenu() {
   G.mode = 'title'; G.check = null; if (!LV || LV.ai !== 0) loadAct(0); newPlayer(LV.sx, LV.sy); PL.state = 'normal'; music.play('hogtitle');
-  var items = [{ label: 'START', def: true, fn: function () { newGame(0); } }];
-  if (SV.reached > 0) items.push({ label: 'ZONE SELECT', fn: zoneMenu });
+  var items = [{ label: 'START', def: true, fn: dataSelect }]; // START opens the save slots (zones are picked on NO SAVE or a cleared slot)
   items.push({ label: 'HOW TO PLAY', fn: helpMenu });
-  KIT.menu({ cls: 'clear', logo: '../assets/hog-logo.webp', title: 'Cumhead the Spermhog', items: items, note: (SV.hi ? 'HIGH SCORE ' + SV.hi : '') + (chalCount() ? '   CHALICES ' + chalCount() + '/7' : '') });
+  KIT.menu({ cls: 'clear', logo: '../assets/hog-logo.webp', title: 'Cumhead the Spermhog', items: items, note: SV.hi ? 'HIGH SCORE ' + SV.hi : '' });
 }
 function zoneMenu() {
   KIT.menu({ cls: 'clear', title: 'Zone select', items: ZONES.map(function (z, i) { return { label: z.name + ' ZONE', dis: i > SV.reached, sub: bestTxt(i), fn: function () { newGame(i); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
@@ -77,7 +81,7 @@ function zoneMenu() {
 function bestTxt(z) { var a = SV.best['a' + z * 2], b = SV.best['a' + (z * 2 + 1)]; return (a ? 'Act 1 ' + clock(a) : '') + (b ? '  ·  Act 2 ' + clock(b) : ''); }
 function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ':' + (s < 10 ? '0' : '') + s; }
 function helpMenu() {
-  KIT.menu({ cls: 'clear', title: 'How to play', wide: true, html: '<b>Run</b> with the d-pad or stick. Slopes speed you up going down. <b>A</b> jumps, press it again in the air to <b>double jump</b>. <b>B</b> shoots.<br>Land on foes to stomp them. <b>Drops</b> keep you alive: get hit and they scatter (grab some back), get hit with none and you lose a life. 100 drops is an extra life.<br>Item boxes hold drops, a bubble shield, speed shoes, invincibility or a life. Lamp posts are checkpoints. Run past the sign to clear an act; Act 2 of every zone ends with a boss: eight hits.<br>Routes split: a spring up to the high road, the street, or a hole down to the low road. One of them in every act hides a <b>giant gold ring</b>: jump in with 50 drops for a special stage and a <b>Cum Chalice</b>. Get all seven, then with 50 drops jump, hold <b>up</b> and press <b>B</b>: <b>Super Cumhead</b>.',
+  KIT.menu({ cls: 'clear', title: 'How to play', wide: true, html: '<b>Run</b> with the d-pad or stick. Slopes speed you up going down. <b>A</b> jumps, press it again in the air to <b>double jump</b>. <b>B</b> shoots.<br>Land on foes to stomp them. <b>Drops</b> keep you alive: get hit and they scatter (grab some back), get hit with none and you lose a life. 100 drops is an extra life.<br>Item boxes hold drops, a bubble shield, speed shoes, invincibility or a life. Lamp posts are checkpoints. Run past the sign to clear an act; Act 2 of every zone ends with a boss: eight hits.<br>Routes split: a spring up to the high road, the street, or a hole down to the low road. One of them in every act hides a <b>giant gold ring</b>: jump in with 50 drops for a special stage and a <b>Cum Chalice</b>. Get all seven, then with 50 drops jump, double jump and press <b>A</b> once more: <b>Super Cumhead</b>.',
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') KIT.closeMenu(); else titleMenu(); } }] });
 }
 function pauseMenu() {
@@ -93,6 +97,7 @@ function pauseMenu() {
 /* ---------- the loop ---------- */
 function update(dt) {
   G.t += dt; if (G.banner > 0) G.banner -= dt; if (G.distT > 0) G.distT -= dt;
+  if (G.mode === 'data') { stepData(dt); return; }
   if (G.mode === 'title') { CAM.x += 30 * dt; if (CAM.x > LV.w * TS - KIT.W) CAM.x = 0; G.cam = CAM.x; return; }
   if (G.mode === 'special') { if (!KIT.menuOpen()) stepSpecial(dt); return; }
   if (G.mode === 'card') { G.cardT += dt; if (G.cardT > 2.4) { G.mode = 'play'; } stepWorld(dt); camera(dt); return; }
@@ -108,6 +113,7 @@ function update(dt) {
 function draw() {
   var g = KIT.ctx; g.clearRect(0, 0, KIT.W, KIT.H);
   if (G.mode === 'special' && SS) { drawSpecial(); return; }
+  if (G.mode === 'data') { drawData(); return; }
   if (!LV || !TILESET) return;
   drawWorld();
   if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') return;
@@ -132,7 +138,7 @@ function drawTally() {
     text('DROP BONUS', cx - 110, y + 90, { size: 8, col: '#ffe36a', outline: true }); text(String(Math.round(G.db)), cx + 110, y + 90, { size: 8, align: 'right', outline: true });
     text('SCORE', cx - 110, y + 114, { size: 8, col: '#ffe36a', outline: true }); text(String(G.score), cx + 110, y + 114, { size: 8, align: 'right', outline: true }); }
 }
-KIT.start({ w: 480, h: 270, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over' || G.mode === 'end') update(dt); },
+KIT.start({ w: 480, h: 270, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'data' || G.mode === 'title' || G.mode === 'over' || G.mode === 'end') update(dt); },
   pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'JUMP', cls: 'big' }, { k: 'b', label: 'B', sub: 'SHOT' }] } });
 titleMenu();
 window.__ch = { G: G, get PL() { return PL; }, get LV() { return LV; }, ACTS: ACTS, ZONES: ZONES, beginAct: beginAct, newGame: newGame, loadAct: loadAct, startBoss: startBoss, ENTS: function () { return ENTS; },
