@@ -88,11 +88,11 @@ function stepPlayer(dt) {
   P.hurtT = Math.max(0, P.hurtT - dt); P.cool = Math.max(0, P.cool - dt); P.kick = Math.max(0, P.kick - dt * 6); P.flashT = Math.max(0, P.flashT - dt);
   if (P.dead) return;
   /* hidden in a locker: peek out, A (or moving away) climbs out */
-  if (P.hide) { P.ca += I.lx * dt * 1.6; var L = P.hide, base = Math.atan2(L.di, L.dj); P.ca = base + Math.max(-0.7, Math.min(0.7, angDiff(P.ca, base))); P.cp += (I.ly * 0.8 - P.cp) * dt * 2; P.cp = Math.max(-0.4, Math.min(0.3, P.cp));
+  if (P.hide) { P.ca -= I.lx * dt * 1.6; var L = P.hide, base = Math.atan2(L.di, L.dj); P.ca = base + Math.max(-0.7, Math.min(0.7, angDiff(P.ca, base))); P.cp += (I.ly * 0.8 - P.cp) * dt * 2; P.cp = Math.max(-0.4, Math.min(0.3, P.cp));
     P.st = Math.min(100, P.st + dt * 25); if (I.use || Math.hypot(I.mx, I.my) > 0.8 && G.hideT > 0.6) { var r = lockerRect(L); P.x = (r[0] + r[2]) / 2 + L.di * 0.95; P.z = (r[1] + r[3]) / 2 + L.dj * 0.95; P.a = base; P.hide = null; sfx.play('locker'); makeNoise(P.x, P.z, 2.5, 'locker'); }
     G.hideT += dt; return; }
   /* the camera: right stick or the arrows turn it */
-  var turn = 2.6 * (P.aim ? 0.55 : 1); P.ca += I.lx * dt * turn; P.cp = Math.max(-0.75, Math.min(0.55, P.cp - I.ly * dt * 1.6 * (P.aim ? 0.6 : 1)));
+  var turn = 2.6 * (P.aim ? 0.55 : 1); P.ca -= I.lx * dt * turn; P.cp = Math.max(-0.75, Math.min(0.55, P.cp - I.ly * dt * 1.6 * (P.aim ? 0.6 : 1)));
   if (!I.ly && !P.aim) P.cp += (-0.1 - P.cp) * dt * 0.8;
   var W = WEAP[P.weap];
   P.aim = I.aim && !P.atkT0 ? 1 : 0;

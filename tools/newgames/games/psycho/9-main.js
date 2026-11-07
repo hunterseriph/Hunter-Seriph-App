@@ -81,7 +81,7 @@ function optionsMenu(back) {
     { label: 'BACK', back: 1, fn: back }] });
 }
 function pauseMenu() {
-  if (!G || G.mode !== 'play' || KIT.menuOpen()) return;
+  if (!G || G.mode !== 'play') return; /* sub-menus come back here while a menu is open */
   KIT.menu({ cls: 'pn plain', title: 'Paused', sub: FLOORS[G.fi].n + '  ·  ' + FLOORS[G.fi].name + '  ·  ' + clock(G.time), items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu }, { label: 'MAP', fn: mapMenu }, { label: 'YOUR THINGS', fn: bagMenu },
     G.notesRead ? { label: 'NOTES', fn: notesMenu } : null, { label: 'HOW TO PLAY', fn: function () { helpMenu(pauseMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(pauseMenu); } },

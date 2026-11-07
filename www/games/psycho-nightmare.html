@@ -1526,11 +1526,11 @@ function stepPlayer(dt) {
   P.hurtT = Math.max(0, P.hurtT - dt); P.cool = Math.max(0, P.cool - dt); P.kick = Math.max(0, P.kick - dt * 6); P.flashT = Math.max(0, P.flashT - dt);
   if (P.dead) return;
   /* hidden in a locker: peek out, A (or moving away) climbs out */
-  if (P.hide) { P.ca += I.lx * dt * 1.6; var L = P.hide, base = Math.atan2(L.di, L.dj); P.ca = base + Math.max(-0.7, Math.min(0.7, angDiff(P.ca, base))); P.cp += (I.ly * 0.8 - P.cp) * dt * 2; P.cp = Math.max(-0.4, Math.min(0.3, P.cp));
+  if (P.hide) { P.ca -= I.lx * dt * 1.6; var L = P.hide, base = Math.atan2(L.di, L.dj); P.ca = base + Math.max(-0.7, Math.min(0.7, angDiff(P.ca, base))); P.cp += (I.ly * 0.8 - P.cp) * dt * 2; P.cp = Math.max(-0.4, Math.min(0.3, P.cp));
     P.st = Math.min(100, P.st + dt * 25); if (I.use || Math.hypot(I.mx, I.my) > 0.8 && G.hideT > 0.6) { var r = lockerRect(L); P.x = (r[0] + r[2]) / 2 + L.di * 0.95; P.z = (r[1] + r[3]) / 2 + L.dj * 0.95; P.a = base; P.hide = null; sfx.play('locker'); makeNoise(P.x, P.z, 2.5, 'locker'); }
     G.hideT += dt; return; }
   /* the camera: right stick or the arrows turn it */
-  var turn = 2.6 * (P.aim ? 0.55 : 1); P.ca += I.lx * dt * turn; P.cp = Math.max(-0.75, Math.min(0.55, P.cp - I.ly * dt * 1.6 * (P.aim ? 0.6 : 1)));
+  var turn = 2.6 * (P.aim ? 0.55 : 1); P.ca -= I.lx * dt * turn; P.cp = Math.max(-0.75, Math.min(0.55, P.cp - I.ly * dt * 1.6 * (P.aim ? 0.6 : 1)));
   if (!I.ly && !P.aim) P.cp += (-0.1 - P.cp) * dt * 0.8;
   var W = WEAP[P.weap];
   P.aim = I.aim && !P.atkT0 ? 1 : 0;
@@ -1972,7 +1972,8 @@ function ambience(dt) { // a low drone for the floor, wind in the pipes, your he
 }
 (function () { var S = music.songs;
   // the title: a music box that has been left in the damp too long
-  S.pntitle = { bpm: 64, beats: 3, vol: 0.85, wet: 0.65, lead: 'xylo', bass: 'drone', acc: 'bell', drums: null, chords: 'Am Am E E F F E E Dm Am E Am',
+  // (a 3/4 song can't use the 'bell' backing: it plays on step 14 of a 12-step bar)
+  S.pntitle = { bpm: 64, beats: 3, vol: 0.85, wet: 0.65, lead: 'xylo', bass: 'drone', acc: 'arp8', drums: null, chords: 'Am Am E E F F E E Dm Am E Am',
     mel: 'e5 - a5 - c6 - | b5 - g#5 - e5 - | d5 - f5 - g#5 - | b5 - - - - - | c6 - a5 - f5 - | e5 - c5 - a4 - | g#4 - b4 - d5 - | e5 - - - . . | d5 - f5 - a5 - | c6 - b5 - a5 - | g#5 - e5 - b4 - | a4 - - - - -' };
   // when TB is coming: relentless
   S.pnchase = { bpm: 176, beats: 4, vol: 0.85, wet: 0.2, lead: 'fm', fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'industrial', chords: 'Em Em F Em Em Em F B',
@@ -2065,7 +2066,7 @@ function optionsMenu(back) {
     { label: 'BACK', back: 1, fn: back }] });
 }
 function pauseMenu() {
-  if (!G || G.mode !== 'play' || KIT.menuOpen()) return;
+  if (!G || G.mode !== 'play') return; /* sub-menus come back here while a menu is open */
   KIT.menu({ cls: 'pn plain', title: 'Paused', sub: FLOORS[G.fi].n + '  ·  ' + FLOORS[G.fi].name + '  ·  ' + clock(G.time), items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu }, { label: 'MAP', fn: mapMenu }, { label: 'YOUR THINGS', fn: bagMenu },
     G.notesRead ? { label: 'NOTES', fn: notesMenu } : null, { label: 'HOW TO PLAY', fn: function () { helpMenu(pauseMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(pauseMenu); } },

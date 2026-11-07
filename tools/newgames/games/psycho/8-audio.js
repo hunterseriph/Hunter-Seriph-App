@@ -41,7 +41,8 @@ function ambience(dt) { // a low drone for the floor, wind in the pipes, your he
 }
 (function () { var S = music.songs;
   // the title: a music box that has been left in the damp too long
-  S.pntitle = { bpm: 64, beats: 3, vol: 0.85, wet: 0.65, lead: 'xylo', bass: 'drone', acc: 'bell', drums: null, chords: 'Am Am E E F F E E Dm Am E Am',
+  // (a 3/4 song can't use the 'bell' backing: it plays on step 14 of a 12-step bar)
+  S.pntitle = { bpm: 64, beats: 3, vol: 0.85, wet: 0.65, lead: 'xylo', bass: 'drone', acc: 'arp8', drums: null, chords: 'Am Am E E F F E E Dm Am E Am',
     mel: 'e5 - a5 - c6 - | b5 - g#5 - e5 - | d5 - f5 - g#5 - | b5 - - - - - | c6 - a5 - f5 - | e5 - c5 - a4 - | g#4 - b4 - d5 - | e5 - - - . . | d5 - f5 - a5 - | c6 - b5 - a5 - | g#5 - e5 - b4 - | a4 - - - - -' };
   // when TB is coming: relentless
   S.pnchase = { bpm: 176, beats: 4, vol: 0.85, wet: 0.2, lead: 'fm', fmbass: 1, bass: 'pulse16', acc: 'arp16', drums: 'industrial', chords: 'Em Em F Em Em Em F B',
