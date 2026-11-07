@@ -21,34 +21,42 @@ function carX(i) { return FL.tx - i * (FLCAR.L + FLCAR.gap); } // front edge of 
 function carAt(x) { for (var i = 0; i < FLCAR.n; i++) { var a = carX(i) - FLCAR.L; if (x >= a && x <= carX(i)) return i; } return -1; }
 function deckY(x) { return trackY(x) - FLCAR.h; }
 
-function startFlume(e) {
-  var x0 = e.c0 * TS;
-  FL = { x0: x0, y0: e.y, tx: x0 + 520, v: 0, t: 0, st: 'board', ps: [], pcd: 0, st2: 0, shots: [], fx: [], photo: null, flash: 0, done: false,
+function makeFlume(e) { // built with the act: the platform is the level's own ground, the ride waits at the end of it
+  var x0 = e.c1 * TS - 38;
+  FL = { e: e, x0: x0, y0: e.y + 22, tx: x0 + 520, v: 0, t: 0, st: 'wait', drops: [], ps: [], pcd: 0, st2: 0, shots: [], fx: [], photo: null, flash: 0, done: false,
     p: { x: 0, y: 0, vx: 0, vy: 0, air: false, face: 1, jumps: 0, inv: 0, dist: 0, atkT: 0 }, foes: [] };
-  var p = FL.p; FL.stX = carX(FLCAR.n - 1) - FLCAR.L - 8; FL.stY = FL.y0 - 22; p.x = FL.stX - 430; p.y = FL.stY; p.face = 1; /* he walks in through the ride's entrance and hops on the back boat */
+  FL.stX = carX(FLCAR.n - 1) - FLCAR.L - 8; FL.stY = FL.y0 - 22;
   FL.foes.push({ id: 'pig', spr: 'f_pig_', sc: 0.62, car: 0, ox: 0.5, y: 0, vy: 0, air: false, hp: 6, hitT: 0, st: 'idle', t: 2.4, w: 30, h: 36, dir: -1, mi: 0 });
   FL.foes.push({ id: 'cow', spr: 'f_cowpig_', sc: 0.8, car: 1, ox: 0.5, y: 0, vy: 0, air: false, hp: 6, hitT: 0, st: 'idle', t: 3.2, w: 20, h: 44, dir: -1, mi: 0 });
   FL.foes.forEach(function (f) { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); });
-  G.mode = 'flume'; G.lock = null; FL.foes.forEach(function (f) { f.hide = 1; });
+  FL.foes.forEach(function (f) { f.hide = 1; });
+}
+function startFlume(e) { // no jump cut: he carries on from where he is, walks the rest of the platform and hops on
+  if (!FL || FL.st !== 'wait') makeFlume(e); var p = FL.p; p.x = Math.max(PL.x, e.c0 * TS + 40); p.y = FL.stY; p.face = 1; p.dist = PL.dist || 0; FL.st = 'board'; FL.cx = CAM.x; FL.cy = CAM.y;
+  G.mode = 'flume'; G.lock = null; PL.vx = PL.gsp = 0;
 }
 function flHurt(srcx) {
   var p = FL.p; if (p.inv > 0 || G.star > 0 || G.super || FL.st !== 'fight') return;
   if (PL.shield) { PL.shield = 0; p.inv = 1.2; sfx.play('pop'); return; }
   if (G.drops <= 0) { // out: back to the checkpoint, like any death
     FL.st = 'dead'; FL.deadT = 0; p.vy = -420; p.air = true; sfx.play('die'); music.stop(0.4); return; }
-  for (var i = 0; i < Math.min(G.drops, 16); i++) FL.fx.push({ x: p.x, y: p.y - 20, vx: (Math.random() - 0.5) * 300, vy: -200 - Math.random() * 200, t: 1, c: '#f1e7d0', drop: 1 });
+  for (var i = 0; i < Math.min(G.drops, 20); i++) { var a = -0.3 - (i / 20) * 2.6; FL.drops.push({ x: p.x, y: p.y - 20, vx: Math.cos(a) * (140 + (i % 3) * 60), vy: Math.sin(a) * 260 - 120, t: 0, on: 0 }); } /* they bounce round the boats: grab them back */
   G.drops = 0; sfx.play('scatter'); p.inv = 2; p.vy = -300; p.air = true; p.vx = (p.x < srcx ? -1 : 1) * 120;
 }
 function stepFlume(dt) {
   var F = FL, p = F.p, W = KIT.W; F.t += dt; if (F.flash > 0) F.flash -= dt;
   // the boats: faster down the slopes
   var g0 = trackG(F.tx - 200), tv = F.st === 'photo' || F.st === 'off' || F.st === 'board' ? 0 : 120 + g0 * 260; F.v += (tv - F.v) * Math.min(1, dt * 1.5); var mv = F.v * dt; F.tx += mv;
-  if (F.st === 'dead') { F.deadT += dt; p.vy += 900 * dt; p.y += p.vy * dt; p.x += mv; if (F.deadT > 1.6) { var a = G.arena; FL = null; G.mode = 'play'; PL.state = 'normal'; die(false); PL.deadT = 1.5; } return; }
+  if (F.st === 'dead') { F.deadT += dt; p.vy += 900 * dt; p.y += p.vy * dt; p.x += mv; if (F.deadT > 1.6) { var a = G.arena; makeFlume(FL.e); G.mode = 'play'; /* the ride waits at the dock again for the next try */ PL.state = 'normal'; die(false); PL.deadT = 1.5; } return; }
   if (F.st === 'board') { // in through the entrance, along the platform, a hop onto the back boat, then the ride sets off
     var seat = carX(FLCAR.n - 2) - FLCAR.L / 2;
     if (!F.hopB) { p.x += 110 * dt; p.dist += 110 * dt; p.y = F.stY; p.air = false; if (p.x >= F.stX - 6) { F.hopB = { x0: p.x, t: 0 }; p.vy = -420; p.air = true; sfx.play('jump'); } }
     else { F.hopB.t += dt; var hk = Math.min(1, F.hopB.t / 0.75); p.x = F.hopB.x0 + (seat - F.hopB.x0) * hk; p.vy += 1000 * dt; p.y += p.vy * dt; var dk = deckY(p.x); if (hk >= 1 && p.y >= dk) { p.y = dk; p.air = false; p.vy = 0; p.jumps = 0; p.vx = 0; F.st = 'intro'; F.t = 0; F.foes.forEach(function (f) { f.hide = 0; }); G.bossName = BOSSES.pig.name; G.banner = 2.4; G.bannerTxt = BOSSES.pig.name; music.play('hogboss'); sfx.play('roar'); sfx.play('splash'); } }
-    var tgb = p.x - W * 0.4; F.cx = F.cx == null ? tgb : F.cx + (tgb - F.cx) * Math.min(1, dt * 4); F.cy = F.stY - KIT.H * 0.62; F.foes.forEach(function (f) { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); }); return; }
+    var tgb = p.x - W * 0.4, tgy = F.stY - KIT.H * 0.62; F.cx += (tgb - F.cx) * Math.min(1, dt * 3); F.cy += (tgy - F.cy) * Math.min(1, dt * 3); F.foes.forEach(function (f) { f.x = carX(f.car) - FLCAR.L * f.ox; f.y = deckY(f.x); }); return; }
+  // scattered drops: bounce on the decks and ride along with the boats; grab them before they blink out (or fall in the cream)
+  F.drops = F.drops.filter(function (d) { d.t += dt; if (d.t > 5) return false; var fr = carX(0), bk = carX(FLCAR.n - 1) - FLCAR.L, onB = d.x > bk && d.x < fr;
+    if (d.on) { d.x += mv; d.y = deckY(d.x); if (!onB) d.on = 0; } else { d.vy += 900 * dt; d.x += d.vx * dt + mv * 0.5; d.y += d.vy * dt; var dk = onB ? deckY(d.x) : trackY(d.x) + 2; if (d.y >= dk && d.vy > 0) { if (!onB) return false; d.y = dk; if (d.vy > 160) { d.vy *= -0.45; d.vx *= 0.7; } else { d.on = 1; d.vy = 0; } } }
+    if (p.inv < 1.7 && F.st !== 'dead' && Math.abs(d.x - p.x) < 14 && d.y > p.y - 40 && d.y < p.y + 8) { gotDrop(); return false; } return true; });
   // the shot (B), same as on foot: it hurts the brothers too
   F.pcd -= dt; var inpS = pIn(); if (inpS.at && F.pcd <= 0 && (F.st === 'fight' || F.st === 'intro')) { F.pcd = 0.32; p.atkT = 0.2; F.ps.push({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 360, life: 0.6 }); sfx.play('shoot'); }
   if (p.atkT > 0) p.atkT -= dt;
@@ -127,19 +135,26 @@ function stepFlFoe(f, dt, mv) {
 }
 function drawFlume() {
   var F = FL, g = KIT.ctx, W = KIT.W, H = KIT.H, cx = Math.round(F.cx || 0), cy = Math.round(F.cy || 0);
-  // Ejaculand behind (the park's own backdrop, drifting down as the ride drops)
-  drawBack(g, LV.zone, F.x0 + (cx - F.x0) * 0.6, LV.sy - KIT.H * 0.62 + Math.min(60, (cy - F.y0 + KIT.H * 0.6) * 0.15), W, H);
-  // trestles under the channel, then the channel itself, then the cream
-  for (var x = Math.floor(cx / 48) * 48; x < cx + W + 48; x += 48) { var ty = trackY(x) - cy + 18;
+  // the act itself (Ejaculand, the platform you walked along), so there is no cut between the level and the ride
+  var ox = CAM.x, oy = CAM.y; CAM.x = cx; CAM.y = cy; G.openEnd = 1; PL.hide = 1; drawWorld(); PL.hide = 0; G.openEnd = 0; CAM.x = ox; CAM.y = oy;
+  drawFlScene(g, cx, cy, W, H);
+  drawFlRest(g, cx, cy, W, H);
+}
+function drawFlScene(g, cx, cy, W, H) { // the channel on its trestles, the cream, the boats and the gate: drawn in the level too while the ride waits
+  var F = FL, xs = F.stX - 2;
+  for (var x = Math.max(Math.floor(cx / 48) * 48, Math.ceil(xs / 48) * 48); x < cx + W + 48; x += 48) { var ty = trackY(x) - cy + 18;
     R('#12040a', x - cx - 3, ty, 6, H - ty); R('#3a1418', x - cx - 2, ty, 4, H - ty);
     for (var by = ty + 20; by < H; by += 34) { for (var k = 0; k < 24; k++) { R('#2a0c10', x - cx - 2 + k, by + k * 0.6, 2, 2); } } }
-  for (var sx = -4; sx < W + 8; sx += 4) { var wx = cx + sx, y = Math.round(trackY(wx) - cy);
+  for (var sx = Math.max(-4, Math.floor(xs - cx)); sx < W + 8; sx += 4) { var wx = cx + sx, y = Math.round(trackY(wx) - cy);
     R('#12040a', sx, y - 8, 4, 28); R('#5a2018', sx, y - 7, 4, 3); R('#3a1410', sx, y - 4, 4, 22); if (Math.floor(wx / 16) % 2) R('#2a0c0a', sx, y + 2, 1, 16);
     R('#e8d4a0', sx, y - 5, 4, 6); R('#f1e0b0', sx, y - 6, 4, 3); if (Math.floor((wx + F.t * 70) / 12) % 3 === 0) R('#fffbe8', sx, y - 6, 3, 1); }
   // the boats
   for (var i = FLCAR.n - 1; i >= 0; i--) { var bx = carX(i) - FLCAR.L / 2, by = trackY(bx) + 3, a = Math.atan(trackG(bx));
     if (bx - cx < -80 || bx - cx > W + 80) continue; spr('p_logboat', bx - cx, by - cy, { sc: FLCAR.L / 60, rot: a }); }
   drawFlEntrance(g, cx, cy, W, H);
+}
+function drawFlRest(g, cx, cy, W, H) {
+  var F = FL;
   F.ps.forEach(function (s) { spr('hog_shot', s.x - cx, s.y - cy, { anchor: 'c', flip: s.vx < 0 }); });
   // the station and the way into the Bone Pit (in front of the channel: the boats slide in under the dock)
   if (F.endX) drawFlStation(g, cx, cy, W, H);
@@ -158,6 +173,7 @@ function drawFlume() {
     if (G.super) { var gf = superImg(n); if (gf) { g.save(); g.translate(Math.round(p.x - cx), Math.round(p.y - cy) + 1); g.rotate(rot); if (p.face < 0) g.scale(-1, 1); g.drawImage(gf, -gf.width * sc / 2, -gf.height * sc, gf.width * sc, gf.height * sc); g.restore(); } }
     else spr(n, p.x - cx, p.y - cy + 1, { flip: p.face < 0, rot: rot, sc: sc }); }
   F.fx.forEach(function (q) { if (q.drop) spr('hog_drop', q.x - cx, q.y - cy, {}); else R(q.c, q.x - cx - 1, q.y - cy - 1, 3, 3); });
+  F.drops.forEach(function (d) { if (d.t > 3.5 && Math.floor(d.t * 12) % 2) return; spr('hog_drop', d.x - cx, d.y - cy - 4, { anchor: 'c' }); });
   // the ride photo: the flash, then the picture pops up like the print at the end of a real flume
   if (F.snapAt) { F.snapAt = 0; var c = document.createElement('canvas'), sw = Math.min(260, W * 0.6), shh = sw * 0.62; c.width = Math.round(sw); c.height = Math.round(shh);
     var CV = KIT.ctx.canvas, S = CV.width / W, sxp = (p.x - cx - sw * 0.5) * S, syp = (p.y - cy - shh * 0.78) * S; try { c.getContext('2d').drawImage(CV, sxp, syp, sw * S, shh * S, 0, 0, c.width, c.height); } catch (e) {} F.photo = c; }
@@ -173,8 +189,7 @@ function drawFlume() {
 }
 function drawFlEntrance(g, cx, cy, W, H) { // where the ride starts: the platform you walk along, the LOAD FLUME gate with bulbs, queue rails, Steve's height sign
   var F = FL, x1 = F.stX - cx, y = F.stY - cy, x0 = x1 - 520; if (x1 < -40 || x0 > W + 40) return;
-  R('#12040a', x0 - 2, y - 2, x1 - x0 + 4, 8); R('#7a1a14', x0, y, x1 - x0, 4); R('#c4121c', x0, y, x1 - x0, 1); for (var k = 0; k < x1 - x0; k += 14) R('#4a1410', x0 + k, y + 1, 1, 3);
-  for (var k2 = 10; k2 < x1 - x0; k2 += 60) { R('#12040a', x0 + k2 - 1, y + 6, 6, H - y); R('#3a1418', x0 + k2, y + 6, 4, H - y); }
+  x0 = x1 - 300 - 160; R('#12040a', x0 - 2, y - 2, x1 - x0 + 4, 5); R('#7a1a14', x0, y - 1, x1 - x0, 3); R('#c4121c', x0, y - 1, x1 - x0, 1); for (var k = 0; k < x1 - x0; k += 14) R('#4a1410', x0 + k, y, 1, 2);
   var gx = x1 - 300;
   [gx - 46, gx + 34].forEach(function (px) { R('#12040a', px, y - 110, 14, 110); R('#3a1418', px + 2, y - 108, 10, 108); for (var b = 0; b < 7; b++) R(Math.floor(G.t * 6 + b + px) % 2 ? '#ffe36a' : '#ff2630', px + 5, y - 102 + b * 15, 4, 4); });
   R('#12040a', gx - 58, y - 140, 120, 32); R('#c4121c', gx - 56, y - 138, 116, 28); R('#12040a', gx - 53, y - 135, 110, 22); text('THE LOAD FLUME', gx + 2, y - 130, { size: 6, align: 'center', col: '#ffe36a' });
@@ -210,4 +225,13 @@ function drawFlStation(g, cx, cy, W, H) {
 (function () { // the Ejaculand arena is now the flume ride
   var sB = startBoss; startBoss = function (e) { if (e.boss === 'pig') { if (G.flumeDone) return; G.arena = e; startFlume(e); return; } sB(e); };
   var bA = beginAct; beginAct = function (ai, fc) { FL = null; G.flumeDone = 0; bA(ai, fc); };
+})();
+
+(function () { // the ride is built with the act and waits at the end of the platform, drawn in the level as you walk up to it
+  var lA = loadAct; loadAct = function (ai) { lA(ai); FL = null; if (LV.arena && LV.arena.boss === 'pig') makeFlume(LV.arena); };
+  var dW = drawWorld; drawWorld = function () { dW(); if (FL && FL.st === 'wait' && G.mode !== 'flume') drawFlScene(KIT.ctx, Math.round(CAM.x), Math.round(CAM.y), KIT.W, KIT.H); };
+  var dF = drawFollower; drawFollower = function (cx, cy) { if (G.mode === 'flume' || (FL && FL.done)) return; dF(cx, cy); };
+  var dH = drawHud; drawHud = function () { dH(); if (!FL || G.mode !== 'flume' || (FL.st !== 'fight' && FL.st !== 'intro')) return; var W = KIT.W; // Brothers Load's two health bars
+    FL.foes.forEach(function (f, i) { var w = 110, x = W / 2 - w - 4 + i * (w + 8); KIT.bar(x, 10, w, 5, Math.max(0, f.hp) / 6, '#ff2630', '#2a0509'); text(f.id === 'pig' ? 'PIGGY' : 'COWBOY', x + w / 2, 18, { size: 4, align: 'center', col: f.hp > 0 ? '#f1e7d0' : '#6a5a50', outline: true }); });
+    text(G.bossName || '', W / 2, 26, { size: 6, align: 'center', col: '#f1e7d0', outline: true }); };
 })();

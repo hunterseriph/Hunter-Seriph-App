@@ -236,5 +236,6 @@ var SEC = {
     b.ground(Math.floor(n / 2)); SEC.district(b, id); b.ground(n - Math.floor(n / 2)); b.ground(4); return b;
   },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(40); return b; }, // no wall after the sign: the camera stops and he runs off
-  arena: function (b, boss) { b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(48); return b; } // road on past the arena: the wall comes down after the boss and he runs off the screen
+  arena: function (b, boss) { if (boss === 'pig') { b.ground(4); var p0 = b.col; b.ground(34); b.thing(-30, 'arena', 0, { boss: boss, c0: p0, c1: b.col }); for (var k = 0; k < 40; k++) { b.set(b.col, 0, '.'); b.col++; } return b; } /* Ejaculand: the Load Flume's station platform, then the drop the ride goes down (7b-flume.js) */
+    b.ground(4); var c0 = b.col; b.ground(30); b.thing(-15, 'arena', 0, { boss: boss, c0: c0, c1: b.col }); for (var y = 0; y < 18; y++) { b.set(c0 - 1, b.h - 1 - y, y > 6 ? 'W' : '.'); b.set(b.col, b.h - 1 - y, 'W'); } b.ground(48); return b; } // road on past the arena: the wall comes down after the boss and he runs off the screen
 };
