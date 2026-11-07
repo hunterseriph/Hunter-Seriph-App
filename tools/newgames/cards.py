@@ -1,11 +1,13 @@
-"""Game cards for the app's Games tab (118 x 138, pixel art scaled up). Writes www/assets/<id>-card.webp."""
+"""Game cards for the app's Games tab (118 x 138, pixel art scaled up). Writes www/assets/<id>-card.webp (all of them, or only the ids given)."""
 import os, sys
 from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__)); APP = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE); import art
 B = art.base()
 def ex(g): return art.extra(g)[0]
+ONLY = sys.argv[1:]  # python3 cards.py pn  -> only that card
 def card(bg_rows, items, name):
+    if ONLY and name not in ONLY: return
     im = Image.new('RGBA', (59, 69), bg_rows[0]); d = ImageDraw.Draw(im)
     for i, (y0, y1, c) in enumerate(bg_rows[1]): d.rectangle([0, y0, 58, y1], fill=c)
     for spr, x, y, sc, flip in items:
@@ -28,4 +30,10 @@ _moon = Image.new('RGBA', (16, 16)); ImageDraw.Draw(_moon).ellipse((1, 1, 14, 14
 card(((10, 4, 8, 255), [(0, 44, (30, 8, 14)), (45, 68, (42, 38, 48))]), [(_moon, 44, 20, 1, False), (_chk, 29, 52, 1, False), (_ch, 26, 54, 0.62, False), (ck['ck_kart'], 28, 66, 1.0, False), (ck['ck_flame0'], 4, 63, 0.9, False)], 'ck')
 sk = ex('skeet')
 _moon2 = Image.new('RGBA', (20, 20)); ImageDraw.Draw(_moon2).ellipse((1, 1, 18, 18), fill=(196, 18, 28, 255)); ImageDraw.Draw(_moon2).ellipse((3, 3, 14, 14), fill=(255, 38, 48, 255))
-card(((8, 3, 6, 255), [(0, 40, (22, 6, 12)), (41, 46, (58, 20, 26)), (47, 68, (46, 16, 20))]), [(_moon2, 44, 22, 1, False), (sk['wb_gloop_teen_hurt'], 46, 62, 1.0, True), (sk['sk_cu_jab'], 22, 64, 0.62, False), (sk['fx_spark2'], 39, 56, 1, False)], 'sk')
+card(((8, 3, 6, 255), [(0, 40, (22, 6, 12)), (41, 46, (58, 20, 26)), (47, 68, (46, 16, 20))]), [(_moon2, 44, 22, 1, False), (sk['wb_gloop_teen_hurt'], 46, 62, 1.0, True), (sk.get('sk_cu_jab') or sk['sk_cu_jab1'], 22, 64, 0.62, False), (sk['fx_spark2'], 39, 56, 1, False)], 'sk')
+mn = ex('meatnado')
+_hall = Image.new('RGBA', (59, 69), (0, 0, 0, 0)); _hd = ImageDraw.Draw(_hall)
+for i in range(6): _hd.rectangle([8 + i * 3, 10 + i * 3, 50 - i * 3, 50 - i * 2], outline=(40 - i * 5, 12, 14 + i * 4, 255))  # a long hall into the dark
+_hd.rectangle([26, 26, 32, 38], fill=(4, 2, 3, 255)); _hd.rectangle([27, 22, 31, 24], fill=(196, 18, 28, 255))
+_pill = mn['mn_pill'] if 'mn_pill' in mn else None
+card(((8, 3, 6, 255), [(0, 46, (18, 10, 12)), (47, 68, (30, 22, 20))]), [(_hall, 29, 69, 1, False), (B['npc_tb'], 42, 66, 1.25, True), (B['ch_idle0'].crop((0, 0, 30, 34)), 16, 68, 0.6, False)] + ([(_pill, 10, 20, 1, False), (_pill, 50, 14, 1, True), (_pill, 28, 10, 1, False)] if _pill else []), 'pn')

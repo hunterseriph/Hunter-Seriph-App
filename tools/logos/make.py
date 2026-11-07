@@ -354,7 +354,28 @@ def make_sk():
     return compose([('SKEET', 150, dict(arc=6, stretch=1.25)), ('FIGHTER', 118, dict(stripes=True, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=m, mascot_y=0.72, extras=drips('#f1e0b0', n=6, seed=9))
 
 
-LOGOS = {'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
+def make_pn():
+    """PSYCHO NIGHTMARE: TB grinning over swirling oil-slick lettering, Silly Pills spilling everywhere, blood dripping off NIGHTMARE"""
+    st = dict(face=[(0, '#ff7ab8'), (0.3, '#ffe36a'), (0.6, '#4adfff'), (1, '#9a3ad8')], side=['#3a0a4a', '#12040a'], shine='#ffffff', outline=12, rim=3, depth=16, shear=0.08)
+    tb = pixel_sprite('npc_tb', 7)
+    pills = ['#ff4a8a', '#ffe36a', '#4adfff', '#7aff6a', '#c04aff', '#ff7a2a']
+    def pill(col, ang):
+        c = Image.new('RGBA', (90, 44), (0, 0, 0, 0)); d = ImageDraw.Draw(c)
+        d.rounded_rectangle((4, 4, 86, 40), radius=18, fill=INK); d.rounded_rectangle((10, 10, 46, 34), radius=12, fill=hexc(col)); d.rounded_rectangle((44, 10, 80, 34), radius=12, fill=hexc('#f1e7d0'))
+        d.rectangle((16, 14, 40, 17), fill=(255, 255, 255, 170)); return c.rotate(ang, expand=True, resample=Image.BICUBIC)
+    def ex(canvas, layers, st):
+        rnd = random.Random(11); d = Image.new('RGBA', canvas.size, (0, 0, 0, 0)); dr = ImageDraw.Draw(d); cx, cy = canvas.width // 2, int(canvas.height * 0.3)
+        for i in range(16, 0, -1):  # a psychedelic swirl behind TB
+            r = i * 26; dr.ellipse((cx - r * 1.4, cy - r * 0.8, cx + r * 1.4, cy + r * 0.8), outline=hexc(pills[i % 6], 70 + i * 6), width=9)
+        layers.insert(0, ('stripe', d, (0, 0)))
+        for i in range(14):
+            pl = pill(pills[i % 6], rnd.randint(0, 360)); x = rnd.choice([rnd.randint(0, 260), rnd.randint(canvas.width - 340, canvas.width - 90)]); y = rnd.randint(0, int(canvas.height * 0.62))
+            layers.insert(1, ('stripe', pl, (x, y)))
+        drips('#c4121c', n=8, seed=4)(canvas, layers, st)
+    return compose([('PSYCHO', 150, dict(arc=8, stretch=1.3)), ('NIGHTMARE', 104, dict(stretch=1.25, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=tb, mascot_y=0.8, extras=ex)
+
+
+LOGOS = {'pn': make_pn, 'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
 
 if __name__ == '__main__':
     want = sys.argv[1:] or list(LOGOS)

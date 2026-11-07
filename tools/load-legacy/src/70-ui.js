@@ -159,6 +159,7 @@ function openArcadeMenu() {
     { icon: 'greebo_d', name: 'PLAY JOURNEY TO THE VOID', sub: 'Cumhead, Spermaid and Greebo', fn: function () { openCab('journey-to-the-void.html'); } },
     { icon: 'cumface', name: 'PLAY CUMHEAD KART', sub: 'Twelve courses, one red moon', fn: function () { openCab('cumhead-kart.html'); } },
     { icon: 'f_blum_0', name: 'PLAY SKEET FIGHTER', sub: 'Six stages to Blumhead', fn: function () { openCab('skeet-fighter.html'); } },
+    { icon: 'npc_tb', name: 'PLAY PSYCHO NIGHTMARE', sub: "Get out of TB's basement", fn: function () { openCab('psycho-nightmare.html'); } },
     { icon: 'coin', name: 'THE LEGACY BOARD', sub: 'Every heir who went in', fn: function () { openLegacy(); } },
     { icon: 'f_blum_0', name: 'RECORDS', sub: 'Blumhead beaten ' + META.blumWins + 'x' + (META.seenSuper || META.superWins ? '  ·  Super Blumhead ' + META.superWins + 'x' : '') + '  ·  New Game+ ' + META.ng + (META.cwins.blumc ? '  ·  King Blumhead ' + META.cwins.blumc + 'x' : '') + (META.cwins.grotto ? '  ·  Sir Johnathan ' + META.cwins.grotto + 'x' : ''), fn: null }
   ];
