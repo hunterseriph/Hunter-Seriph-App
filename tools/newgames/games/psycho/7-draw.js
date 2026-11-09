@@ -40,7 +40,7 @@ function drawWorld() {
   var tp = P.hide ? [0, -50, 0] : [P.x + Math.sin(P.ca) * 0.15 - Math.cos(P.ca) * 0.25, P.crouch ? 1.05 : 1.4, P.z + Math.cos(P.ca) * 0.15 + Math.sin(P.ca) * 0.25];
   var tk = (eyesB ? 1.9 : 1.45) * (G.mode === 'catch' ? 0.3 : 1), flick = G.trip > 3 && Math.sin(KIT.t * 17) > 0.97 ? 0.2 : 1;
   R3.scene({ fog: fog, fogR: G.mode === 'end' ? [10, 40] : th.kind ? (th.kind === 'woods' ? [7, 30] : [10, 48]) : eyesB ? [8, 28] : [6, 23], amb: [th.amb[0] * (th.kind ? 2.6 : 1.6), th.amb[1] * (th.kind ? 2.6 : 1.6), th.amb[2] * (th.kind ? 2.6 : 1.6)], lights: lightsNow(C.eye), torch: { p: tp, d: fwd, c: [tk * flick, tk * 0.92 * flick, tk * 0.76 * flick] }, t: KIT.t, warp: T.warp, hue: T.hue, meat: T.meat, neg: T.neg });
-  R3.draw(MESH, ATT, { tint: T.tint }); if (FRONTMESH && sheetTex()) R3.draw(FRONTMESH, sheetTex(), { tint: T.tint });
+  R3.draw(MESH, ATT, { tint: T.tint }); if (DECALMESH) R3.draw(DECALMESH, ATT, { tint: T.tint, offset: 6, decal: 1 }); if (FRONTMESH && sheetTex()) R3.draw(FRONTMESH, sheetTex(), { tint: T.tint });
   var heads = G.ev && G.ev.k === 'heads';
   FL.doors.forEach(function (D) { var cx = tx(D.i), cz = tx(D.j); if (Math.hypot(cx - P.x, cz - P.z) > 26) return; var op = D.open * Math.PI * 0.5 * D.side, m;
     if (D.ax === 'x') m = R3.model(cx, 0, D.i >= 0 ? D.j * TSZ + (D.side > 0 ? 0.1 : TSZ - 0.1) : 0, (D.side > 0 ? -Math.PI / 2 : Math.PI / 2) + op, 0, 0);
@@ -48,11 +48,21 @@ function drawWorld() {
     R3.draw(RIGS.door, ATT, { m: m, tint: T.tint }); });
   var cd = FL.cellDoor; if (cd) { var ccx = tx(cd.i), ccz = tx(cd.j), sw = FL.cellLocked ? 0 : Math.PI * 0.45, mm = cd.di ? R3.model(ccx, 0, cd.j * TSZ, -Math.PI / 2 + sw, 0, 0) : R3.model(cd.i * TSZ, 0, ccz, sw, 0, 0); R3.draw(RIGS.bars, ATT, { m: mm }); }
   /* people */
-  G.foes.forEach(function (f) { if (dist2(f, P) > 25) return; var Q = pose0(), rig = RIGS[f.k], run = f.st === 'chase';
-    if (f.st === 'dead') { poseDown(Q, Math.min(1, f.t * 2.5), f.k === 'butcher'); }
+  G.foes.forEach(function (f) { if (dist2(f, P) > (f.d && f.d.boss ? 40 : 25)) return; var Q = pose0(), rig = RIGS[f.k] || RIGS.gimp, run = f.st === 'chase' || f.st === 'fight', B = f.d && f.d.boss, mvk = f.mv && f.mv.k;
+    if (f.under) return; // under the ground: the mound is drawn with the rest
+    if (f.st === 'dead') { poseDown(Q, Math.min(1, f.t * 2.5), f.k === 'butcher' || B); }
     else if (f.st === 'ko') { poseDown(Q, 1, 0); Q.hr = Math.sin(KIT.t * 2) * 0.3; }
-    else { poseWalk(Q, f.ph, Math.min(1, f.spd / 2), run); if (f.atk >= 0) { if (f.k === 'gimp') posePunch(Q, Math.min(1, f.atk / 0.9)); else poseSwing(Q, Math.min(1, f.atk / 0.7)); } if (f.hurt > 0) poseHurt(Q, f.hurt * 4); if (f.st !== 'idle' && f.sus > 0.2 && f.st !== 'chase') Q.hp = -0.15; }
-    drawRig(rig, f.x, 0, f.z, f.a, Q, { flash: f.hurt > 0.15 ? [0.5, 0.05, 0.05] : null, held: rig.P.weapon, heldP: -Math.PI / 2, head: heads && f.st !== 'dead' ? RIGS.tbmad.P.head : null, tint: T.tint });
+    else { poseWalk(Q, f.ph, Math.min(1, f.spd / 2), run);
+      if (f.atk >= 0) { if (f.k === 'gimp' || f.k === 'clown') posePunch(Q, Math.min(1, f.atk / 0.9)); else poseSwing(Q, Math.min(1, f.atk / 0.7)); }
+      if (B && f.wind > 0) { Q.sh[1] = [2.4 * f.wind, 0.2, 0]; Q.sh[0] = [1.6 * f.wind, 0.3, 0]; Q.lean = -0.2 * f.wind; Q.el[1] = 0.6; }
+      else if (B && mvk && (mvk === 'swipe' || mvk === 'slam')) { poseSwing(Q, 0.8); if (mvk === 'slam') { Q.lean = 0.5; } }
+      else if (B && mvk === 'charge') { Q.lean = 0.55; }
+      if (f.k === 'stag') { Q.lean += 0.75; Q.sh[0][0] += 1.0; Q.sh[1][0] += 1.0; Q.hp = -0.6; } // on his hands and feet
+      if (f.k === 'muckies' && !f.mv) { Q.sh[0] = [1.3, 0.1, 0.5]; Q.el[0] = 1.6; } // sucking the bottle
+      if (f.hurt > 0) poseHurt(Q, f.hurt * 4); if (f.st !== 'idle' && f.sus > 0.2 && f.st !== 'chase' && !B) Q.hp = -0.15; }
+    var yaw = f.a + (f.spinT ? KIT.t * 14 : 0), fl = f.hurt > 0.15 ? [0.5, 0.05, 0.05] : B && f.wind > 0 && Math.sin(KIT.t * 30) > 0 ? [0.45, 0.02, 0.02] : f.stun > 0 ? [0.2, 0.2, 0.05] : null;
+    var out = drawRig(rig, f.x, f.y || 0, f.z, yaw, Q, { flash: fl, held: rig.P.weapon, heldP: -Math.PI / 2, heldL: f.k === 'muckies' ? rig.P.weapon : null, head: heads && f.st !== 'dead' && !B ? RIGS.tbmad.P.head : null, tint: T.tint, sc: f.d && f.d.sc });
+    if (f.k === 'smiles' && f.st !== 'dead' && rig.P.cleaver) for (var cq = 0; cq < 3; cq++) { var ca = KIT.t * 3 + cq * 2.09, sc2 = f.d.sc || 1; R3.draw(rig.P.cleaver, ATT, { m: R3.model(f.x + Math.sin(yaw) * 0.25 + Math.cos(ca) * 0.5 * Math.cos(yaw), 2.4 * sc2 + Math.sin(ca) * 0.35, f.z + Math.cos(yaw) * 0.25 - Math.cos(ca) * 0.5 * Math.sin(yaw), yaw, KIT.t * 9 + cq, 0), tint: T.tint, warp: 0 }); }
     });
   var tb = G.tb; if (tb && tb.st !== 'away' && tb.st !== 'gone' && tb.st !== 'crash') drawTB(tb, T, G.mode === 'catch' || tb.angry ? (tb.clown ? 'tbclown' : 'tbmad') : tb.clown ? 'tbclown' : 'tb');
   if (G.R && !G.R.gone && !G.R.hide) drawPerson(G.R, T);
@@ -61,8 +71,10 @@ function drawWorld() {
   /* pickups, sparks, blood, glows */
   var m = DYN || (DYN = new R3.Mesh()); m.clear();
   G.loot.forEach(function (l) { if (Math.hypot(l.x - P.x, l.z - P.z) > 22) return; var L = LOOT[l.k]; bill(m, l.x, 0.42 + Math.sin(l.t * 2.4) * 0.06, l.z, 0.26, 0.26, TL(L.tile), [0.5, 0.5, 0.5], 0.7); });
-  G.shots.forEach(function (s) { bill(m, s.x, s.y, s.z, 0.09, 0.09, TL('i_pill'), [0.5, 0.5, 0.5], 1); });
+  G.shots.forEach(function (s) { if (!s.tex) bill(m, s.x, s.y, s.z, 0.09, 0.09, TL('i_pill'), [0.5, 0.5, 0.5], 1); });
   G.fx.forEach(function (e) { if (e.k === 'blood') bill(m, e.x, e.y, e.z, 0.05, 0.05, TL('drop'), [0.35, 0.01, 0.02], 0); else if (e.k === 'pillfall') bill(m, e.x, e.y, e.z, 0.12, 0.12, TL('i_pill'), [0.5, 0.5, 0.5], 1); else if (e.k === 'smoke') bill(m, e.x, e.y + (4 - e.t) * (e.vy || 1) * 0.6, e.z, 0.6 + (4 - e.t) * 0.4, 0.6 + (4 - e.t) * 0.4, TL('smoke'), [0.22, 0.2, 0.18], 0); });
+  drawHazards(m, 0); G.foes.forEach(function (f) { if (f.under) { bill(m, f.x, 0.25, f.z, 0.7, 0.3, TL('dirt'), [0.4, 0.35, 0.3], 0); bill(m, f.x + Math.sin(KIT.t * 9) * 0.2, 0.5, f.z, 0.3, 0.3, TL('smoke'), [0.3, 0.26, 0.2], 0); } });
+  G.shots.forEach(function (s) { if (s.tex) bill(m, s.x, s.y, s.z, s.sz || 0.12, s.sz || 0.12, TL(s.tex), [0.5, 0.5, 0.5], 0.8); });
   drawBagsFx(m); R3.draw(m, ATT, {});
   m.clear(); var t = KIT.t;
   G.loot.forEach(function (l) { if (Math.hypot(l.x - P.x, l.z - P.z) > 18) return; var s = 0.14 + Math.max(0, Math.sin(l.t * 3)) * 0.12; bill(m, l.x + 0.15, 0.62 + Math.sin(l.t * 2.4) * 0.06, l.z, s, s, TL('spark'), l.k === 'key' || l.k === 'bag' ? [0.5, 0.42, 0.1] : [0.35, 0.3, 0.22], 1); });
@@ -72,6 +84,7 @@ function drawWorld() {
   if (P.flashT > 0) { var hx = P.x + Math.sin(P.a) * 0.75 - Math.cos(P.a) * 0.22, hz = P.z + Math.cos(P.a) * 0.75 + Math.sin(P.a) * 0.22; bill(m, hx, 1.35, hz, 0.28, 0.28, TL('spark'), [0.6, 0.45, 0.2], 1); }
   if (tb && tb.st !== 'away' && tb.st !== 'out') { var ey = RIGS.tb.eyeY; bill(m, tb.x + Math.sin(tb.a) * 0.18 - Math.cos(tb.a) * 0.07, ey - 0.05, tb.z + Math.cos(tb.a) * 0.18 + Math.sin(tb.a) * 0.07, 0.05, 0.05, TL('halo'), [0.6, 0.05, 0.03], 1); } // his one eye glints in the dark
   if (G.mode === 'end') { var dz = 3 * TSZ + 0.03, dx = tx(20); m.quad([dx - 0.65, 0, dz], [dx + 0.65, 0, dz], [dx + 0.65, 2.2, dz], [dx - 0.65, 2.2, dz], [0, 1, 1, 1, 1, 0, 0, 0], TL('glow'), [0.5, 0.48, 0.42], [0, 0, 1], 1); bill(m, dx, 1.1, dz + 0.2, 1.6, 1.6, TL('halo'), [0.5, 0.45, 0.4], 1); }
+  drawHazards(m, 1);
   drawFlames(m, P); R3.draw(m, ATT, { add: 1, soft: 1, lit: false });
 }
 function drawTB(tb, T, rigN, alpha) {
@@ -144,7 +157,8 @@ function drawHud() {
   if (FL.cellLocked && G.mode === 'play' && !G.prompt) KIT.text('THE CELL DOOR IS LOCKED. FIND IT AND FORCE IT.', W / 2, H - 60, { align: 'center', size: 8, col: '#a6968f' });
   if (G.ev && G.ev.k === 'whisper' || G.ev && G.ev.k === 'reverse') { var e = G.ev, a2 = Math.min(1, e.t, e.len - e.t); KIT.text(e.s, W / 2 + Math.sin(t * 9) * 6, H * 0.4 + Math.cos(t * 7) * 4, { align: 'center', font: 'title', size: 26, col: ['#ff4a8a', '#c4121c', '#f1e7d0'][Math.floor(t * 10) % 3], alpha: a2 * 0.85, outline: 1 }); }
   if (G.ev && G.ev.k === 'fakeover') { var fa = Math.min(1, G.ev.t * 2); ctx.fillStyle = 'rgba(0,0,0,' + fa * 0.92 + ')'; ctx.fillRect(0, 0, W, H); KIT.text('GAME OVER', W / 2, H * 0.4, { align: 'center', font: 'title', size: 44, col: '#c4121c', alpha: fa }); KIT.text('TB GOT YOU FOR GOOD', W / 2, H * 0.4 + 46, { align: 'center', size: 8, col: '#a6968f', alpha: fa }); }
-  drawBossHud();
+  drawBossHud(); drawHenchHud();
+  if (G.splatT > 0) { var sa = Math.min(1, G.splatT / 1.2), sr = srand(77); ctx.save(); ctx.globalAlpha = sa; ctx.fillStyle = '#f1e7d0'; for (var si = 0; si < 16; si++) { ctx.beginPath(); ctx.ellipse(W * (0.15 + sr() * 0.7), H * (0.12 + sr() * 0.7), 30 + sr() * 70, 24 + sr() * 50, sr() * 3, 0, 6.28); ctx.fill(); } ctx.fillStyle = '#d8c8a0'; for (var sj = 0; sj < 10; sj++) { ctx.beginPath(); ctx.ellipse(W * (0.2 + sr() * 0.6), H * (0.2 + sr() * 0.6) + (3.2 - G.splatT) * 20, 6 + sr() * 14, 10 + sr() * 24, 0, 0, 6.28); ctx.fill(); } ctx.restore(); }
   if (G.R && !G.R.gone) { var rq = R3.project(G.R.x, 2.2, G.R.z); if (rq && rq.x > 0 && rq.x < W && rq.y > 0 && rq.y < H) KIT.text(G.R.name || (G.R.who === 'lab' ? 'LABOOZIE' : 'CUMHEAD'), rq.x, rq.y, { align: 'center', size: 6, col: '#ffe36a' }); KIT.text((G.R.who === 'lab' ? 'LABOOZIE ' : 'CUMHEAD ') + (G.R.dead ? 'DOWN' : Math.ceil(G.R.hp || 0)), W - 10, 70, { align: 'right', size: 6, col: G.R.dead ? '#ff2630' : '#a6968f' }); }
   if (G.wake > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.wake / 2) + ')'; ctx.fillRect(0, 0, W, H); }
 }

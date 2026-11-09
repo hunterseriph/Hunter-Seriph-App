@@ -68,7 +68,7 @@ function nextAct() {
 }
 function ending() {
   G.mode = 'end'; music.play('hogtitle'); if (G.score > SV.hi) { SV.hi = G.score; persist(); } SV.done = 1; if (G.slot >= 0 && SLOTS[G.slot]) { SLOTS[G.slot].done = 1; saveSlots(); } persist();
-  KIT.menu({ cls: 'clear', title: 'Blumhead is done for', sub: (chalCount() >= 7 ? 'The seven Cum Chalices glow in the clubhouse. ' : '') + 'Spunk Brain falls quiet. The homunculi are free, and Cumhead walks home through Night City as the sun comes up. Score ' + G.score + '.', items: [{ label: 'BACK TO THE TITLE', def: true, fn: titleMenu }] });
+  KIT.menu({ cls: 'clear', title: 'Blumhead is done for', sub: (chalCount() >= 7 ? 'The seven Cum Chalices glow in the clubhouse. ' : '') + 'Spunk Brain falls quiet. The homunculi are free, and Cumhead walks home through Cum City as the sun comes up. Score ' + G.score + '.', items: [{ label: 'BACK TO THE TITLE', def: true, fn: titleMenu }] });
 }
 /* ---------- menus ---------- */
 function titleMenu() {

@@ -4,7 +4,7 @@
    Laboozie as the guest reports him, on the guest it is Cumhead as the host sends him). The host runs TB, his boys,
    the doors and the pickups for both; a guest only runs itself and tells the host what it hit, threw and picked up.
    ===================================================================================================== */
-var G = null, MESH = null;
+var G = null, MESH = null, DECALMESH = null;
 function newPlayer(who) { var lab = who === 'lab'; return { who: lab ? 'lab' : 'cum', x: 0, z: 0, a: 0, ca: 0, cp: -0.08, hp: 100, st: 100, stLock: 0, weap: lab ? 'bag' : 'fists', weaps: lab ? { bag: 1 } : { fists: 1 }, ammo: { '9mm': 0, shells: 0, rifle: 0 }, inv: { cracker: 0, cuppa: 0, pill: 0 }, keys: {}, buffs: [],
   ph: 0, spd: 0, run: 0, crouch: 0, aim: 0, atkT: -1, cool: 0, kick: 0, hurtT: 0, hide: null, noise: 0, flashT: 0, mash: 0, dead: 0 }; }
 function hasBuff(b, pl) { return (pl || G.P).buffs.indexOf(b) >= 0; }
@@ -22,22 +22,23 @@ function loadFloor(fi, how) {
   var th = FLOORS[fi], seed = (G.seed * 7919 + fi * 104729) >>> 0; setMapSize(th.size); G.crash = null; G.R && (G.R.gone = 0);
   if (th.kind === 'drive') { startDrive(fi, how); return; }
   if (th.kind === 'ride') { startRide(fi, how); return; }
-  FL = th.kind === 'woods' ? genWoods(fi, seed) : th.kind === 'park' ? genPark(fi, seed) : th.kind === 'district' ? genDistrict(fi, seed) : th.kind === 'boss' ? genArena(fi, seed) : genFloor(fi, seed);
+  FL = th.kind === 'woods' ? genWoods(fi, seed) : th.kind === 'park' ? genPark(fi, seed) : th.kind === 'district' ? genDistrict(fi, seed) : th.kind === 'cemetery' ? genCemetery(fi, seed) : th.kind === 'site' ? genSite(fi, seed) : th.kind === 'boss' ? genArena(fi, seed) : genFloor(fi, seed);
+  placeHench(FL, fi); G.hazards = []; G.splatT = 0;
   FL.cellLocked = th.kind ? 0 : how === 'cell' || (fi === 0 && how === 'new');
   FL.propAt = {}; FL.props.forEach(function (p) { FL.propAt[idx(p.i, p.j)] = p; }); FL.lockerAt = {}; FL.lockers.forEach(function (L) { FL.lockerAt[idx(L.i, L.j)] = L; });
   FL.doorAt = {}; FL.doors = []; FL.rooms.forEach(function (r) { if (r.cell || r.open) return; r.doors.forEach(function (d) { if (FL.K[idx(d.i, d.j)] !== KD || FL.doorAt[idx(d.i, d.j)]) return; var D = { i: d.i, j: d.j, ax: d.di ? 'x' : 'z', open: 0, idle: 0, side: ((d.i + d.j) % 2) ? 1 : -1 }; FL.doors.push(D); FL.doorAt[idx(d.i, d.j)] = D; }); });
   FL.seen = new Uint8Array(MW * MH);
-  if (MESH) MESH.free(); MESH = buildFloorMesh(FL);
+  if (MESH) MESH.free(); FL._dm = null; MESH = buildFloorMesh(FL); if (DECALMESH) DECALMESH.free(); DECALMESH = FL._dm && FL._dm.n ? FL._dm.upload() : null; FL._dm = null;
   G.fi = fi; G.lootId = G.lootId || 1; G.loot = FL.loot.map(function (l) { return { id: G.lootId++, x: tx(l.i), z: tx(l.j), k: l.k, t: Math.random() * 6 }; });
   FL.notes.forEach(function (n) { if (!(G.read || {})[fi + ':' + n.n]) G.loot.push({ id: G.lootId++, x: tx(n.i), z: tx(n.j), k: 'note', n: n.n, t: Math.random() * 6 }); });
-  G.foes = FL.foes.map(function (f, n) { var d = FOES[f.k]; return { id: n, k: f.k, d: d, x: tx(f.i), z: tx(f.j), a: Math.random() * 6.28, hp: d.hp * (G.R ? 1.35 : 1), st: 'idle', sus: 0, home: { i: f.i, j: f.j }, ph: 0, t: 0, atk: -1, cool: 0, ko: 0, bleed: 0, poison: 0, daze: 0, goal: null, spd: 0, hurt: 0, wait: Math.random() * 3, roam: th.kind === 'district' || th.kind === 'park' || th.kind === 'woods' ? 12 : 5 }; });
+  G.foes = FL.foes.map(function (f, n) { var d = FOES[f.k]; return { id: n, k: f.k, d: d, x: tx(f.i), z: tx(f.j), a: Math.random() * 6.28, hp: d.hp * (G.R ? 1.35 : 1), max: d.hp * (G.R ? 1.35 : 1), st: 'idle', sus: 0, home: { i: f.i, j: f.j }, ph: 0, t: 0, atk: -1, cool: 0, ko: 0, bleed: 0, poison: 0, daze: 0, goal: null, spd: 0, hurt: 0, wait: Math.random() * 3, roam: th.kind === 'district' || th.kind === 'park' || th.kind === 'woods' ? 12 : 5 }; });
   G.fx = []; G.shots = []; G.bags = []; G.burns = []; G.stash = null; G.keys = {}; G.lootV = (G.lootV || 0) + 1;
   players().forEach(function (pl) { if (pl.dead && !pl.gone) { pl.dead = 0; pl.hp = Math.max(pl.hp, 50); pl.downT = 0; } }); G.transWord = null;
   var P = G.P, st = how === 'cell' ? FL.cellIn : FL.start; placeAt(P, st, how === 'cell' ? Math.atan2(FL.cellDoor.di, FL.cellDoor.dj) : st.a);
   if (G.R && !isGuest()) placeAt(G.R, FL.start2 || FL.start, FL.start.a, 0.9);
   if (isGuest()) placeAt(P, FL.start2 || FL.start, FL.start.a, 0.9);
-  var tbOn = th.kind === 'woods' || th.kind === 'park' ? 'away' : th.kind === 'district' ? 'gone' : th.kind === 'boss' ? 'boss' : fi === 0 && how === 'new' ? 'roam' : 'away';
-  var tb = G.tb = { x: tx(FL.tb.i), z: tx(FL.tb.j), a: 0, st: tbOn, t: fi === 0 ? 0 : th.kind === 'woods' ? 30 : th.kind === 'park' ? 26 : 22 + Math.random() * 18, sus: 0, ph: 0, spd: 0, grace: fi === 0 ? 25 : 8, pillT: TBK.gap[0] + Math.random() * (TBK.gap[1] - TBK.gap[0]), goal: null, flow: null, flowKey: -1, lost: 0, flinch: 0, rage: 0, laughT: 0, angry: th.kind === 'boss' ? 1 : 0, tgt: null, said: 0, clown: th.kind === 'park' ? 1 : 0, fire: th.kind === 'boss' ? 1 : 0 };
+  var tbOn = th.kind === 'woods' || th.kind === 'park' || th.kind === 'cemetery' || th.kind === 'site' ? 'away' : th.kind === 'district' ? (th.city && th.city.hussy ? 'gone' : 'away') : th.kind === 'boss' ? 'boss' : fi === 0 && how === 'new' ? 'roam' : 'away';
+  var tb = G.tb = { x: tx(FL.tb.i), z: tx(FL.tb.j), a: 0, st: tbOn, t: fi === 0 ? 0 : th.kind === 'woods' ? 30 : th.kind === 'park' ? 26 : th.burnt ? 26 + Math.random() * 14 : 22 + Math.random() * 18, sus: 0, ph: 0, spd: 0, grace: fi === 0 ? 25 : 8, pillT: TBK.gap[0] + Math.random() * (TBK.gap[1] - TBK.gap[0]), goal: null, flow: null, flowKey: -1, lost: 0, flinch: 0, rage: 0, laughT: 0, angry: th.kind === 'boss' || th.burnt ? 1 : 0, tgt: null, said: 0, clown: th.kind === 'park' ? 1 : 0, fire: th.kind === 'boss' || th.burnt ? 1 : 0 };
   if (tb.st === 'away' || tb.st === 'gone') { tb.x = -50; tb.z = -50; }
   if (tb.st === 'boss') bossInit(tb);
   G.banner = { s: (th.n ? th.n + '  ·  ' : '') + th.name, t: 4 };
@@ -147,7 +148,7 @@ function markSeen() { var P = G.P, i0 = tileOf(P.x), j0 = tileOf(P.z); for (var 
 function useThing(it) {
   var P = G.P;
   if (it.k === 'locker') { P.hide = it.o; G.hideT = 0; P.ca = Math.atan2(it.o.di, it.o.dj); P.cp = 0; P.crouch = 0; sfx.play('locker'); var tb = G.tb; P.hideSeen = tb && tb.st === 'chase' && dist2(tb, P) < 7 && canSee(tb.x, tb.z, P.x, P.z); if (!isGuest()) G.foes.forEach(function (f) { if (f.st === 'chase' && f.tgt === P) { f.st = 'lost'; f.t = 0; } }); return; }
-  if (it.k === 'exit') { if (!haveKey()) { say('The gate is locked. TB keeps the ' + FLOORS[G.fi].key + ' somewhere on this floor.', 3.5); sfx.play('no'); return; } sfx.play('door'); if (isGuest()) netSend({ t: 'exit' }); else climb(); return; }
+  if (it.k === 'exit') { if (henchBlock()) return; if (!haveKey()) { say('The gate is locked. TB keeps the ' + FLOORS[G.fi].key + ' somewhere on this floor.', 3.5); sfx.play('no'); return; } sfx.play('door'); if (isGuest()) netSend({ t: 'exit' }); else climb(); return; }
   if (it.k === 'down') { say('The gate slammed shut behind you. The only way is up.', 3); sfx.play('no'); }
 }
 function swapWeapon(dir) {
@@ -186,7 +187,7 @@ function attack() {
     if (ends >= wd - 0.01) G.fx.push({ k: 'puff', x: P.x + Math.sin(a) * (wd - 0.1), z: P.z + Math.cos(a) * (wd - 0.1), y: 1.2, t: 0.4 });
   }
 }
-function targets() { return wfoes().concat(G.ghost ? [G.ghost] : []).concat(G.tb && G.tb.st !== 'away' && G.tb.st !== 'gone' && G.tb.st !== 'dead' ? [G.tb] : []); }
+function targets() { return wfoes().filter(function (f) { return !f.under; }).concat(G.ghost ? [G.ghost] : []).concat(G.tb && G.tb.st !== 'away' && G.tb.st !== 'gone' && G.tb.st !== 'dead' ? [G.tb] : []); }
 function aimTarget(cone) { // the nearest thing to shoot in front of the camera
   var P = G.P, best = null, bs = 1e9; targets().forEach(function (f) {
     if (f.st === 'dead') return; var d = dist2(f, P); if (d > 24 || d < 0.3) return; var ang = Math.abs(angDiff(Math.atan2(f.x - P.x, f.z - P.z), P.ca)); if (ang > cone) return; if (!canSee(P.x, P.z, f.x, f.z)) return;
@@ -195,7 +196,7 @@ function aimTarget(cone) { // the nearest thing to shoot in front of the camera
 function rayWall(x, z, a, max) { var dx = Math.sin(a), dz = Math.cos(a); for (var d = 0.2; d < max; d += 0.1) { var i = tileOf(x + dx * d), j = tileOf(z + dz * d); if (blocksEyes(i, j) || (inMap(i, j) && FL.K[idx(i, j)] === KP && FL.propAt[idx(i, j)] && ['crate', 'keg', 'barrel', 'car', 'dumpster'].indexOf(FL.propAt[idx(i, j)].k) >= 0 && d > 1)) return d; } return max; }
 function rayFoes(x, z, a, max) {
   var dx = Math.sin(a), dz = Math.cos(a), out = []; targets().forEach(function (f) { if (f.st === 'dead') return;
-    var ox = f.x - x, oz = f.z - z, t = ox * dx + oz * dz; if (t < 0 || t > max) return; var px = ox - dx * t, pz = oz - dz * t, r = f.st === 'ko' ? 0.6 : f === G.tb && G.tb.st === 'boss' ? 0.55 : 0.42; if (px * px + pz * pz < r * r) out.push({ f: f, d: t }); });
+    var ox = f.x - x, oz = f.z - z, t = ox * dx + oz * dz; if (t < 0 || t > max) return; var px = ox - dx * t, pz = oz - dz * t, r = f.st === 'ko' ? 0.6 : f === G.tb && G.tb.st === 'boss' ? 0.55 : f.d && f.d.hr ? f.d.hr : 0.42; if (px * px + pz * pz < r * r) out.push({ f: f, d: t }); });
   return out.sort(function (p, q) { return p.d - q.d; });
 }
 function meleeHit() {
@@ -203,7 +204,7 @@ function meleeHit() {
   targets().forEach(function (f) { if (f.st === 'dead' || (done && !W.cleave)) return; var d = dist2(f, P); if (d > W.reach + 0.3) return; var ang = Math.abs(angDiff(Math.atan2(f.x - P.x, f.z - P.z), P.a)); if (ang > arc && d > 0.8) return;
     var dmg = W.dmg * (hasBuff('rage') ? 1.6 : 1);
     // the knife from behind, on one who has not seen you coming: dead in one go
-    if (W.stab && f !== G.tb && f.st !== 'chase' && f.st !== 'dead' && Math.abs(angDiff(f.a, Math.atan2(f.x - P.x, f.z - P.z))) < 1.0) { dmg = 999; say('Quiet as you like.', 1.6, '#a6968f'); }
+    if (W.stab && f !== G.tb && !(f.d && f.d.boss) && f.st !== 'chase' && f.st !== 'dead' && Math.abs(angDiff(f.a, Math.atan2(f.x - P.x, f.z - P.z))) < 1.0) { dmg = 999; say('Quiet as you like.', 1.6, '#a6968f'); }
     hit = 1; done = 1; dealHit(f, dmg, Math.atan2(f.x - P.x, f.z - P.z), W.heavy ? 2.2 : 1.2, P.weap); });
   if (hit) { sfx.play(P.weap === 'bat' || P.weap === 'hammer' ? 'bonk' : P.weap === 'knife' ? 'stab' : 'thud'); KIT.shake(W.heavy ? 5 : 3); makeNoise(P.x, P.z, W.stab ? 1.5 : 4, 'hit'); }
 }
@@ -216,7 +217,8 @@ function dealHit(f, dmg, a, push, w) {
 function blood(x, y, z, n, k) { for (var i = 0; i < n; i++) G.fx.push({ k: 'blood', x: x, y: y, z: z, vx: (Math.random() - 0.5) * 3 * (k || 1), vy: Math.random() * 3, vz: (Math.random() - 0.5) * 3 * (k || 1), t: 1.2 + Math.random() }); }
 function hurtFoe(f, dmg, a, push, w) {
   if (f === G.tb) { hurtTB(dmg, a, w); return; }
-  if (f.st === 'dead') return;
+  if (f.st === 'dead' || f.under) return;
+  if (f.d && f.d.boss) { f.hp -= dmg * (f.stun > 0 ? 1.6 : 1); f.hurt = 0.2; blood(f.x, 1.5, f.z, 6); netEv({ k: 'blood', x: f.x, z: f.z, n: 6 }); var WB = WEAP[w]; if (WB && WB.bleed) { f.bleed = WB.bleedT; f.bleedK = WB.bleed; } if (f.st !== 'fight') f.st = 'chase'; if (f.hp <= 0) killFoe(f); return; }
   var ko = f.st === 'ko'; f.hp -= dmg * (ko ? 2 : 1); f.hurt = 0.25; blood(f.x, 1.2, f.z, 6); netEv({ k: 'blood', x: f.x, z: f.z, n: 6 }); f.x += Math.sin(a) * push * 0.3; f.z += Math.cos(a) * push * 0.3; collide(f, 0.32, 'foe');
   var W = WEAP[w]; if (W && W.bleed) { f.bleed = W.bleedT; f.bleedK = W.bleed; } if (W && W.daze) f.daze = 1.4;
   if (W && W.ko && f.st !== 'ko') { f.ko += W.ko; if (f.ko >= f.d.ko && f.hp > 0) { f.st = 'ko'; f.t = 0; f.koT = 16 + Math.random() * 6; sayAll(f.d.n + ' is out cold.', 2, '#a6968f'); sfx.play('bonk'); } }
@@ -229,6 +231,7 @@ function hurtTB(dmg, a, w) {
   if (!tb.tgt) tb.tgt = nearestPlayer(tb); if (Math.random() < 0.5) subtitle('TB', tbLine());
 }
 function killFoe(f) {
+  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H) subtitle(f.d.n, H.die, 3.5); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
   f.st = 'dead'; f.t = 0; f.hp = 0; G.kills++; sfx.play('scream'); blood(f.x, 1, f.z, 14, 1.4); netEv({ k: 'blood', x: f.x, z: f.z, n: 14 });
   if (Math.random() < 0.55) { var P = G.P, guns = ['handgun', 'shotgun', 'rifle'].filter(function (g) { return P.weaps[g]; }), k = Math.random() < 0.35 ? 'cracker' : guns.length ? { handgun: 'ammo9', shotgun: 'shells', rifle: 'riflea' }[guns[Math.floor(Math.random() * guns.length)]] : 'cracker'; addLoot(f.x, f.z, k); }
 }
@@ -290,12 +293,14 @@ function stepFoes(dt) {
     if (f.st === 'dead') return;
     if (f.bleed > 0) { f.bleed -= dt; f.hp -= f.bleedK * dt; if (Math.random() < dt * 6) G.fx.push({ k: 'blood', x: f.x, y: 1.1, z: f.z, vx: 0, vy: -0.5, vz: 0, t: 0.8 }); if (f.hp <= 0) { killFoe(f); return; } }
     if (f.poison > 0) { f.poison -= dt; f.hp -= 7 * dt; if (f.hp <= 0) { killFoe(f); return; } }
+    if (d.boss) { if (f.stun > 0) { f.stun -= dt; f.mv = null; return; } stepHench(f, dt); return; }
+    if (f.leapT > 0) { f.leapT -= dt; var lk = 1 - f.leapT / 0.7; f.x = f.lf.x + (f.lt.x - f.lf.x) * lk; f.z = f.lf.z + (f.lt.z - f.lf.z) * lk; f.y = Math.sin(lk * Math.PI) * 1.8; collide(f, 0.32, 'foe'); if (f.leapT <= 0) { f.y = 0; players().forEach(function (pl) { if (!pl.dead && dist2(f, pl) < 1.4) hurtPlayer(pl, d.dmg + 4, f, 0); }); sfx.play('thud'); } return; }
     if (f.st === 'ko') { if (f.t > f.koT) { f.st = 'chase'; f.ko = 0; f.sus = 1; f.tgt = nearestPlayer(f); } return; }
     if (f.daze > 0) { f.a += dt * 4; return; } // seeing stars
     var sw = bestSeen(f, d.sight, 1.05), see = sw.s, P = f.st === 'chase' && f.tgt && !f.tgt.gone ? f.tgt : sw.p || nearestPlayer(f), pd = dist2(f, P);
     if (f.st === 'chase' && f.tgt) see = watching(f, d.sight, 1.05, f.tgt);
     if (f.st === 'idle' || f.st === 'alert' || f.st === 'lost') {
-      if (see) { f.sus += dt * (0.9 + see * 2.2); if (f.sus >= 1) { f.st = 'chase'; f.tgt = sw.p; f.lost = 0; sfx.play('shout'); netEv({ k: 'sfx', n: 'shout' }); makeNoise(f.x, f.z, 16, 'shout'); } } else f.sus = Math.max(0, f.sus - dt * 0.25);
+      if (see) { f.sus += dt * (0.9 + see * 2.2); if (f.sus >= 1) { f.st = 'chase'; f.tgt = sw.p; f.lost = 0; sfx.play(d.honk ? 'honk' : 'shout'); netEv({ k: 'sfx', n: 'shout' }); makeNoise(f.x, f.z, 16, 'shout'); } } else f.sus = Math.max(0, f.sus - dt * 0.25);
     }
     if (f.st === 'idle') { // amble about near home
       f.wait -= dt; if (f.wait <= 0 || !f.goal) { var g = randomNear(f.home.i, f.home.j, f.roam || 5); f.goal = { x: tx(g.i), z: tx(g.j) }; f.wait = 6 + Math.random() * 6; }
@@ -305,9 +310,10 @@ function stepFoes(dt) {
       P = f.tgt || P; pd = dist2(f, P);
       if (P.hide || P.dead || P.gone) { var other = players().filter(function (q) { return q !== P && !q.hide && !q.dead && !q.gone; })[0]; if (other && watching(f, d.sight, 3.2, other)) { f.tgt = other; return; } f.st = 'lost'; f.t = 0; f.goal = { x: P.x, z: P.z }; f.tgt = null; return; }
       if (see || pd < 2) { f.lost = 0; f.last = { x: P.x, z: P.z }; } else { f.lost += dt; if (f.lost > 5) { f.st = 'lost'; f.t = 0; f.goal = f.last; f.tgt = null; return; } }
-      if (f.atk >= 0) { f.atk += dt; if (f.atk > 0.45 && !f.hitDone) { f.hitDone = 1; if (pd < d.reach + 0.25 && Math.abs(angDiff(Math.atan2(P.x - f.x, P.z - f.z), f.a)) < 1.2) hurtPlayer(P, d.dmg, f, d.dose ? 0.4 : 0); } if (f.atk > 0.9) { f.atk = -1; f.cool = d.rate; } return; }
+      if (f.atk >= 0) { f.atk += dt; if (f.atk > 0.45 && !f.hitDone) { f.hitDone = 1; if (d.slam) { KIT.shake(7); sfx.play('boom'); players().forEach(function (pl) { if (!pl.dead && dist2(f, pl) < d.reach + 0.6) hurtPlayer(pl, d.dmg, f, 0); }); } else if (pd < d.reach + 0.25 && Math.abs(angDiff(Math.atan2(P.x - f.x, P.z - f.z), f.a)) < 1.2) hurtPlayer(P, d.dmg, f, d.dose ? 0.4 : 0); } if (f.atk > 0.9) { f.atk = -1; f.cool = d.rate; } return; }
       if (pd < d.reach && f.cool <= 0) { f.atk = 0; f.hitDone = 0; sfx.play('grunt'); return; }
-      if (d.throws && see && pd > 4 && pd < 10 && f.cool <= 0) { f.cool = 2.2; var a = Math.atan2(P.x - f.x, P.z - f.z); G.shots.push({ x: f.x, z: f.z, y: 1.4, vx: Math.sin(a) * 9, vz: Math.cos(a) * 9, t: 1.4 }); sfx.play('throw'); }
+      if (d.throws && see && pd > 4 && pd < 10 && f.cool <= 0) { f.cool = 2.2; var a = Math.atan2(P.x - f.x, P.z - f.z); G.shots.push(d.pie ? { x: f.x, z: f.z, y: 1.4, vx: Math.sin(a) * 9, vz: Math.cos(a) * 9, t: 1.4, dmg: 3, dose: 0, splat: 1, tex: 'splat', sz: 0.2 } : { x: f.x, z: f.z, y: 1.4, vx: Math.sin(a) * 9, vz: Math.cos(a) * 9, t: 1.4 }); sfx.play('throw'); }
+      if (d.leap && see && pd > 3.2 && pd < 8 && f.cool <= 0) { f.cool = 2.6; f.leapT = 0.7; f.lf = { x: f.x, z: f.z }; f.lt = { x: P.x, z: P.z }; sfx.play('grunt'); return; }
       var sp = d.run * (f.burnT > 0 ? 0.6 : 1); f.burnT = Math.max(0, (f.burnT || 0) - dt);
       if (see && pd < 5) steer(f, (P.x - f.x) / pd, (P.z - f.z) / pd, sp, dt, 'foe');
       else { var tg = f.lost > 0 && f.last ? f.last : P; followFlow(f, tileFlow(f, tileOf(tg.x), tileOf(tg.z)), sp, dt, 'foe'); }
@@ -316,7 +322,7 @@ function stepFoes(dt) {
   });
   // the thrown pills
   for (var s = G.shots.length - 1; s >= 0; s--) { var q = G.shots[s]; q.t -= dt; q.x += q.vx * dt; q.z += q.vz * dt; if (q.t <= 0 || blocksEyes(tileOf(q.x), tileOf(q.z))) { G.shots.splice(s, 1); continue; }
-    var hitP = players().filter(function (P) { return !P.hide && !P.dead && Math.hypot(q.x - P.x, q.z - P.z) < 0.45; })[0]; if (hitP) { G.shots.splice(s, 1); hurtPlayer(hitP, 4, q, 0.3); } }
+    var hitP = players().filter(function (P) { return !P.hide && !P.dead && Math.hypot(q.x - P.x, q.z - P.z) < 0.45; })[0]; if (hitP) { G.shots.splice(s, 1); hurtPlayer(hitP, q.dmg || 4, q, q.dose === undefined ? 0.3 : q.dose); if (q.splat) { if (hitP === G.P) G.splatT = 3.2; else netEv({ k: 'splat' }); sfx.play('splat'); } } }
 }
 function randomNear(i, j, r) { for (var k = 0; k < 30; k++) { var a = i + Math.floor(Math.random() * (r * 2 + 1)) - r, b = j + Math.floor(Math.random() * (r * 2 + 1)) - r; if (walkable(a, b, 'foe')) return { i: a, j: b }; } return { i: i, j: j }; }
 function randomFar(minD) { var L = players(); for (var k = 0; k < 80; k++) { var i = 1 + Math.floor(Math.random() * (MW - 2)), j = 1 + Math.floor(Math.random() * (MH - 2)); if (walkable(i, j, 'tb') && L.every(function (P) { return Math.hypot(tx(i) - P.x, tx(j) - P.z) > minD; })) return { i: i, j: j }; } return { i: FL.exitIn.i, j: FL.exitIn.j }; }

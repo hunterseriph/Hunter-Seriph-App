@@ -110,9 +110,9 @@ function netStep(dt) {
   if (!NET.link || !NET.link.up) return;
   var s = { t: 'snap', m: G.mode, P: packP(G.P), cl: FL.cellLocked ? 1 : 0, keys: G.keys, trip: Math.round(G.trip * 100) / 100 };
   var tb = G.tb; if (tb) s.tb = { x: r2(tb.x), z: r2(tb.z), a: r2(tb.a), st: tb.st, ph: r2(tb.ph || 0), spd: r2(tb.spd || 0), sus: r2(tb.sus || 0), clown: tb.clown ? 1 : 0, fire: tb.fire ? 1 : 0, angry: tb.angry ? 1 : 0, hp: r2(tb.hp || 0), max: tb.max || 0, phase: tb.phase || 1, mv: tb.mv ? [tb.mv.k, r2(tb.mv.t)] : null, stun: r2(tb.stun || 0), hurtT: r2(tb.hurtT || 0), downT: r2(tb.downT || 0), flinch: r2(tb.flinch || 0) };
-  s.f = G.foes.map(function (f) { return [f.id, r2(f.x), r2(f.z), r2(f.a), f.st, r2(f.ph), r2(f.spd), r2(f.atk), r2(f.hurt), r2(f.sus), f.poison > 0 ? 1 : 0, f.burnT > 0 ? 1 : 0, f.k]; });
+  s.f = G.foes.map(function (f) { return [f.id, r2(f.x), r2(f.z), r2(f.a), f.st, r2(f.ph), r2(f.spd), r2(f.atk), r2(f.hurt), r2(f.sus), f.poison > 0 ? 1 : 0, f.burnT > 0 ? 1 : 0, f.k, Math.round(f.hp), Math.round(f.max || 0), f.under ? 1 : 0, r2(f.y || 0), r2(f.wind || 0), f.p2 ? 1 : 0, f.mv ? f.mv.k : 0, f.spinT ? 1 : 0]; }); s.hz = (G.hazards || []).map(function (h) { return [r2(h.x), r2(h.z), r2(h.r), r2(h.t), h.k, r2(h.delay || 0)]; });
   s.bags = G.bags.map(function (b) { return [r2(b.x), r2(b.y), r2(b.z)]; }); s.burns = G.burns.map(function (B) { return [r2(B.x), r2(B.z), r2(B.t), B.r]; });
-  s.shots = G.shots.map(function (q) { return [r2(q.x), r2(q.y || 1.4), r2(q.z)]; });
+  s.shots = G.shots.map(function (q) { return [r2(q.x), r2(q.y || 1.4), r2(q.z), q.tex || 0, q.sz || 0]; });
   if (G.mode === 'drive' && DR) s.dr = { z: r2(DR.z), x: r2(DR.x), yaw: r2(DR.yaw), v: r2(DR.v), steer: r2(DR.steer), hp: r2(DR.hp), end: DR.end, hits: DR.hits, splat: r2(DR.splat), peds: DR.peds.map(function (p) { return [p.id, p.k, r2(p.z), r2(p.x), p.st, r2(p.y), r2(p.spin), r2(p.a), r2(p.ph)]; }) };
   if ((G.mode === 'ride' || FL.ride) && RD) s.rd = { d: r2(RD.d), v: r2(RD.v), fly: r2(RD.fly) };
   if (G.doorsOpen = FL.doors && FL.doors.length) s.doors = FL.doors.map(function (D) { return r2(D.open); });
@@ -137,8 +137,9 @@ function guestSnap(s) {
   var R = G.R; if (R && s.P) unpackP(R, s.P); if (!FL) return;
   if (G.mode === 'play' || G.mode === 'win' || G.mode === 'crash') { FL.cellLocked = s.cl; G.keys = s.keys || {}; }
   if (s.tb && G.tb) { var tb = G.tb, q = s.tb; tb.tx = q.x; tb.tz = q.z; if (tb.x < -40 || Math.hypot(tb.x - q.x, tb.z - q.z) > 4) { tb.x = q.x; tb.z = q.z; } tb.a = q.a; tb.ph = q.ph; tb.spd = q.spd; tb.sus = q.sus; tb.clown = q.clown; tb.fire = q.fire; tb.angry = q.angry; tb.hp = q.hp; tb.max = q.max; tb.phase = q.phase; tb.mv = q.mv ? { k: q.mv[0], t: q.mv[1] } : null; tb.stun = q.stun; tb.hurtT = q.hurtT; tb.downT = q.downT; tb.flinch = q.flinch; if (G.mode !== 'catch' && G.mode !== 'crash') tb.st = q.st; }
-  if (s.f) { var map = {}; G.foes.forEach(function (f) { map[f.id] = f; }); G.foes = s.f.map(function (q) { var f = map[q[0]] || { id: q[0], k: q[12], d: FOES[q[12]] || FOES.gimp, x: q[1], z: q[2], hurt: 0, ph: 0 }; f.tx = q[1]; f.tz = q[2]; if (Math.hypot(f.x - q[1], f.z - q[2]) > 3) { f.x = q[1]; f.z = q[2]; } f.a = q[3]; if (f.st !== 'dead' && q[4] === 'dead') f.t = 0; f.st = q[4]; f.ph = q[5]; f.spd = q[6]; f.atk = q[7]; f.hurt = Math.max(f.hurt || 0, q[8]); f.sus = q[9]; f.poison = q[10]; f.burnT = q[11]; f.k = q[12]; f.d = FOES[q[12]] || FOES.gimp; return f; }); }
-  if (s.bags) G.bagsNet = s.bags; if (s.burns) G.burns = s.burns.map(function (q) { return { x: q[0], z: q[1], t: q[2], r: q[3] }; }); if (s.shots) G.shots = s.shots.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, t: 1 }; });
+  if (s.f) { var map = {}; G.foes.forEach(function (f) { map[f.id] = f; }); G.foes = s.f.map(function (q) { var f = map[q[0]] || { id: q[0], k: q[12], d: FOES[q[12]] || FOES.gimp, x: q[1], z: q[2], hurt: 0, ph: 0 }; f.tx = q[1]; f.tz = q[2]; if (Math.hypot(f.x - q[1], f.z - q[2]) > 3) { f.x = q[1]; f.z = q[2]; } f.a = q[3]; if (f.st !== 'dead' && q[4] === 'dead') f.t = 0; f.st = q[4]; f.ph = q[5]; f.spd = q[6]; f.atk = q[7]; f.hurt = Math.max(f.hurt || 0, q[8]); f.sus = q[9]; f.poison = q[10]; f.burnT = q[11]; f.k = q[12]; f.d = FOES[q[12]] || FOES.gimp; f.hp = q[13]; f.max = q[14]; f.under = q[15]; f.y = q[16]; f.wind = q[17]; f.p2 = q[18]; f.mv = q[19] ? { k: q[19] } : null; f.spinT = q[20]; return f; }); }
+  if (s.hz) G.hazards = s.hz.map(function (q) { return { x: q[0], z: q[1], r: q[2], t: q[3], k: q[4], delay: q[5] }; });
+  if (s.bags) G.bagsNet = s.bags; if (s.burns) G.burns = s.burns.map(function (q) { return { x: q[0], z: q[1], t: q[2], r: q[3] }; }); if (s.shots) G.shots = s.shots.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, t: 1, tex: q[3] || null, sz: q[4] }; });
   if (s.dr && DR) { var d = s.dr; ['z', 'x', 'yaw', 'v', 'steer', 'hp', 'end', 'hits', 'splat'].forEach(function (k) { DR[k] = d[k]; }); DR.peds = d.peds.map(function (q) { return { id: q[0], k: q[1], z: q[2], x: q[3], st: q[4], y: q[5], spin: q[6], a: q[7], ph: q[8] }; }); }
   if (s.rd && RD) { RD.d = s.rd.d; RD.v = s.rd.v; RD.fly = s.rd.fly; }
   if (s.doors && FL.doors) s.doors.forEach(function (o, i) { if (FL.doors[i]) FL.doors[i].open = o; });
@@ -153,7 +154,7 @@ function guestEv(e) { var P = G.P;
   else if (e.k === 'hurt') hurtPlayer(P, +e.dmg || 0, { x: e.fx, z: e.fz }, +e.dose || 0);
   else if (e.k === 'caught') catchPlayer(P);
   else if (e.k === 'blood') blood(e.x, 1.2, e.z, e.n || 6);
-  else if (e.k === 'sfx') sfx.play(e.n);
+  else if (e.k === 'sfx') sfx.play(e.n); else if (e.k === 'splat') G.splatT = 3.2;
   else if (e.k === 'climb') { G.mode = 'trans'; G.trans = 0; music.stop(1); }
   else if (e.k === 'crash') startCrash();
   else if (e.k === 'win') { G.mode = 'win'; G.winT = 0; G.tb.st = 'dead'; music.stop(0.5); }

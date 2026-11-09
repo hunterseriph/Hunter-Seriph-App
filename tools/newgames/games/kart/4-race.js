@@ -297,7 +297,8 @@ function hitKart(k, by, how, p) {
 }
 /* drivers shout now and then (TB always says one of his lines) */
 var SAYS = {
-  tb: ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"'],
+  tb: ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"',
+  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"'],
   joff: ['"Pineapple belongs on pizza. Fight me."'], amy: ['"Mild, hot or dynamite?"'], greebo: ['"Fresh cream pies. Don\'t ask what\'s in them."'], saba: ['"Hitless runs only."'],
   beebs: ['"Sit down, lad. First one\'s always warm."'], ali: ['"Everything is better with garlic."'], potbelly: ['"Cabinets are free, kid."'], kaya: ['"Kaya\'s on the coffee!"'],
   spermaid: ['"Sweetie!"'], kingblum: ['"ON MY OWN GROUND I AM KING."'], blum: ['"THE LOAD AT THE END."'], sirj: ['"Mrrrow."'], cumhead: ['"Splat!"'], hom: ['"Blub!"']

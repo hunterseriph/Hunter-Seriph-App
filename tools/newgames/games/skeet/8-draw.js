@@ -218,7 +218,7 @@ function drawEnd() {
   if (G.endArc) KIT.spr(P.hero.A.win[Math.floor(G.t * 3) % 2], W / 2, 112, { sc: 1.4 });
   else HEROLIST.forEach(function (h, i) { KIT.spr(HEROES[h].A.win[Math.floor(G.t * 3 + i) % 2], W / 2 + (i - (HEROLIST.length - 1) / 2) * 50, 112, {}); });
   var lines = G.endArc ? [P.hero.n + ' beat all ten.', 'Blumhead crawls back to his throne, minus a crown.', 'The Clubhouse puts your name on the wall.', 'ARCADE CLEAR', 'Thanks for playing.']
-    : ['Blumhead is down. The goo drains out of the city.', 'Every homunculus on Clubhouse Row wakes up in their own colours.', 'They go home. The Clubhouse gets the first round in.', 'SKEET FIGHTER', 'Thanks for playing.'];
+    : ['Blumhead is down. The goo drains out of Cum City.', 'Every homunculus on Clubhouse Row wakes up in their own colours.', 'They go home. The Clubhouse gets the first round in.', 'SKEET FIGHTER', 'Thanks for playing.'];
   lines.forEach(function (l, i) { if (t < 1 + i * 1.4) return; var big = l === 'SKEET FIGHTER' || l === 'ARCADE CLEAR'; T(l, W / 2, 120 + i * 15 + (i >= 3 ? 4 : 0), { size: big ? 16 : 8, align: 'center', col: big ? '#ff2630' : '#f1e7d0', font: big ? 'title' : 'px', max: W - 16 }); });
   if (t > 9 && Math.floor(G.t * 2) % 2) T('PRESS A', W / 2, KIT.H - 12, { size: 8, align: 'center', col: '#a6968f' });
 }

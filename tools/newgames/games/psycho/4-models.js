@@ -143,6 +143,7 @@ function buildRigs() {
   var dm = M(); dm.quad([0, 0, -0.04], [TSZ * 0.92, 0, -0.04], [TSZ * 0.92, 2.25, -0.04], [0, 2.25, -0.04], [0, 1, 1, 1, 1, 0, 0, 0], TL('door'), [0.5, 0.5, 0.5], [0, 0, -1]); dm.quad([0, 0, 0.04], [TSZ * 0.92, 0, 0.04], [TSZ * 0.92, 2.25, 0.04], [0, 2.25, 0.04], [0, 1, 1, 1, 1, 0, 0, 0], TL('door'), [0.5, 0.5, 0.5], [0, 0, 1]);
   bxp(dm, 0, 0, -0.04, TSZ * 0.92, 0.02, 0.04, '#3a2014'); RIGS.door = dm.upload();
   var cb = M(); cb.quad([0, 0, 0], [TSZ, 0, 0], [TSZ, 2.25, 0], [0, 2.25, 0], [0, 1, 1.5, 1, 1.5, 0, 0, 0], TL('bars'), [0.5, 0.5, 0.5], [0, 0, 1]); RIGS.bars = cb.upload();
+  buildRigs2();
 }
 /* ---------- posing: a pose is joint angles; drawRig builds the matrices down the body and draws each part ---------- */
 function pose0() { return { y: 0, lean: 0, twist: 0, roll: 0, hp: 0, hy: 0, hr: 0, sh: [[0, 0.08], [0, 0.08]], el: [0.15, 0.15], hip: [0, 0], kn: [0, 0], bp: 0, br: 0, bodyY: 0 }; }

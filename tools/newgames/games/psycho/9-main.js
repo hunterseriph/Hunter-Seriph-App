@@ -25,7 +25,7 @@ function update(dt) {
   if (G.mode === 'intro') { G.introT += dt; if (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap) G.introT = Math.ceil(G.introT / 3.4 + 0.01) * 3.4; if (G.introT > INTRO.length * 3.4) startFloorOne(); return; }
   if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } return; }
   if (G.mode === 'play') {
-    G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); } else stepGuestWorld(dt); stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
+    G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); stepHazards(dt); } else stepGuestWorld(dt); if (G.splatT > 0) G.splatT -= dt; stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
     G.noises = G.noises.filter(function (n) { n.t -= dt; return n.t > 0; });
     var chase = G.tb && G.tb.st === 'chase' || G.foes.some(function (f) { return f.st === 'chase'; }); if (chase && !(G.ev && G.ev.k === 'mute')) music.play('pnchase'); else if (music.current === 'pnchase') music.stop(2.5);
   } else if (G.mode === 'catch') { stepCatch(dt); stepFx(dt); }
@@ -64,19 +64,19 @@ function onlineAgain() { KIT.closeMenu(); [G.P, G.R].forEach(function (pl) { if 
 function titleMenu() {
   if (!G || G.mode !== 'title') { G = freshG(12345); G.trip = 2.6; loadFloor(0, 'new'); G.mode = 'title'; G.tb.st = 'ghost'; var P = G.P; G.tb.x = P.x + Math.sin(P.a) * 3.5; G.tb.z = P.z + Math.cos(P.a) * 3.5; collide(G.tb, 0.3, 'tb'); G.evT = 999; }
   music.play('pntitle');
-  var r = SV.run, items = [r ? { label: 'CONTINUE', sub: FLOORS[r.fi].n + '  ·  ' + FLOORS[r.fi].name, def: 1, fn: continueGame } : null, { label: r ? 'NEW NIGHTMARE' : 'START', def: !r, fn: function () { if (r) KIT.confirm({ title: 'Start again?', sub: 'Your run on ' + FLOORS[r.fi].n + ' will be lost.', yesLabel: 'Start again', yes: newGame, no: titleMenu }); else newGame(); } },
+  var r = SV.run, items = [r ? { label: 'CONTINUE', sub: (FLOORS[r.fi].n ? FLOORS[r.fi].n + '  ·  ' : '') + FLOORS[r.fi].name, def: 1, fn: continueGame } : null, { label: r ? 'NEW NIGHTMARE' : 'START', def: !r, fn: function () { if (r) KIT.confirm({ title: 'Start again?', sub: 'Your run on ' + FLOORS[r.fi].n + ' will be lost.', yesLabel: 'Start again', yes: newGame, no: titleMenu }); else newGame(); } },
     { label: 'PLAY ONLINE', fn: function () { onlineMenu(); } }, { label: 'HOW TO PLAY', fn: function () { helpMenu(titleMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(titleMenu); } }];
   KIT.menu({ cls: 'clear pn', logo: '../assets/pn-logo.webp', title: 'Psycho Nightmare', items: items, note: SV.wins ? 'Escaped ' + SV.wins + (SV.wins === 1 ? ' time' : ' times') + (SV.best ? '  ·  best ' + clock(SV.best) : '') : '' });
 }
 function clock(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
 function helpMenu(back) {
   KIT.menu({ cls: 'pn plain', title: 'How to play', wide: true, html:
-    '<b>Get out of TB\'s basement.</b> Four floors. Each one has a locked gate to the stairs up, and TB keeps its key somewhere on that floor. Then get home: the getaway car, the woods, what\'s left of Ejaculand and its rides, and Clubhouse Row\'s red light district to the Clubhouse door. Every shop in Clubhouse Row can be walked into.<br><br>' +
+    '<b>Get out of TB\'s basement.</b> Four floors. Each one has a locked gate to the stairs up, and TB keeps its key somewhere on that floor. Then get home: the getaway car, the woods, what\'s left of Ejaculand and its rides, then <b>Cum City</b>: the red light district, the cemetery, the cumstruction site, the cafe streets and Clubhouse Row to the Clubhouse door. Every shop front can be walked into.<br><b>TB\'s henchmen</b> wait at the end of B1, the woods, Ejaculand, the cemetery and Clubhouse Row. The way on stays shut until they are dead. Watch for the red rings on the floor.<br><br>' +
     '<b>Move</b> with the left stick (WASD). <b>Look</b> with the right stick (the arrow keys, or drag on the right of the screen). <b>B</b> (Shift) runs, but running is loud and wears you out. <b>L</b> (Q) sneaks: slower, quiet, harder to see.<br>' +
     '<b>A</b> (Z or Space) uses what is in front of you, or attacks. <b>X</b> (C, or the left trigger) aims a gun' + (TOUCH ? ' (on a phone it toggles)' : '') + '; aimed shots hit harder. The right trigger fires too. <b>Y</b> (V) swaps weapon. <b>R</b> (E) eats a Cum Cracker or a Cumpuccino.<br><br>' +
     '<b>TB</b> cannot be killed. Shoot him and he only laughs. If he sees you the eye at the edge of the screen fills up: once it is full, run. Lose him round corners, behind doors or in a <b>locker</b>. Now and then he takes his own pills and checks out for a while.<br>' +
     '<b>If TB catches you</b> he feeds you more Silly Pills and locks you back in the cell. Everything you had stays where he grabbed you. Get it back <b>without him seeing you</b>, or it is over.<br><br>' +
-    '<b>His boys</b> (Gimps, Butchers, Pill Pushers) can be killed. Hide or fight. The <b>2x4</b> has a rusty nail: they bleed. The <b>bat</b> knocks them out cold. Guns need ammo, and TB hears every shot.<br>' +
+    '<b>His boys</b> (Gimps, Butchers, Pill Pushers, and Ejaculand\'s circus: Killer Clowns, Pie Clowns, Strongmen, Acrobats) can be killed. Hide or fight. The <b>2x4</b> has a rusty nail: they bleed. The <b>bat</b> knocks them out cold. Guns need ammo, and TB hears every shot.<br>' +
     '<b>Silly Pills</b> always make the trip worse. Sometimes they also make you stronger. A Cumpuccino clears your head a little.<br><br>' +
     '<b>On the rides</b> look round with the right stick. When something comes at you, <b>A</b> shoves or hits it and <b>L</b> ducks.<br>' +
     '<b>Play online</b> with a friend: the host is Cumhead, whoever joins is <b>Shithead Laboozie</b>. His Flaming Bag of Shit covers whoever it hits (poison), and where it lands it burns for 8 seconds. If one of you goes down, the other has to last until they get back up.',
@@ -86,11 +86,19 @@ function optionsMenu(back) {
   KIT.menu({ cls: 'pn plain', title: 'Options', items: [
     R3.ok ? R3.resItem(function () { optionsMenu(back); }) : null, KIT.resItem(function () { optionsMenu(back); }),
     TOUCH ? { label: 'AIM ON SCREEN: ' + (SV.aim === 'hold' ? 'HOLD' : 'TAP TO TOGGLE'), fn: function () { SV.aim = SV.aim === 'hold' ? 'toggle' : 'hold'; persist(); if (G) G.touchMode = SV.aim !== 'hold'; optionsMenu(back); } } : null,
+    back === titleMenu ? { label: "TB'S PILL JAR", fn: function () { PILLTAPS++; sfx.play('rattle'); if (PILLTAPS >= 7) { PILLTAPS = 0; levelSelect(back); } else optionsMenu(back); } } : null,
     { label: 'BACK', back: 1, fn: back }] });
 }
+/* the secret: rattle TB's pill jar in Options seven times and his stash opens: a level select over every part of the night */
+var PILLTAPS = 0;
+function levelSelect(back) { sfx.play('tblaugh');
+  KIT.menu({ cls: 'pn plain', title: "TB's secret stash", sub: 'Pick where the night starts. You get a few things to take with you.', items: FLOORS.map(function (F, fi) { return { label: (F.n ? F.n + '  ·  ' : '') + F.name, fn: function () { startAt(fi); } }; }).concat([{ label: 'BACK', back: 1, fn: back }]) }); }
+function startAt(fi) { KIT.closeMenu(); SV.runs++; persist(); G = freshG((Math.random() * 1e9) >>> 0); var P = G.P;
+  if (fi > 0) { ['knife', 'bat', 'handgun', 'shotgun'].forEach(function (w) { P.weaps[w] = 1; }); P.weap = 'handgun'; P.ammo['9mm'] += 30; P.ammo.shells += 10; P.inv.cracker += 3; P.inv.cuppa += 2; }
+  music.stop(1); loadFloor(fi, fi === 0 ? 'new' : 'up'); saveRun(); }
 function pauseMenu() {
   if (!G || ['play', 'drive', 'ride'].indexOf(G.mode) < 0) return; /* sub-menus come back here while a menu is open */
-  KIT.menu({ cls: 'pn plain', title: 'Paused', sub: FLOORS[G.fi].n + '  ·  ' + FLOORS[G.fi].name + '  ·  ' + clock(G.time), items: [
+  KIT.menu({ cls: 'pn plain', title: 'Paused', sub: (FLOORS[G.fi].n ? FLOORS[G.fi].n + '  ·  ' : '') + FLOORS[G.fi].name + '  ·  ' + clock(G.time), items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu }, { label: 'MAP', fn: mapMenu }, { label: 'YOUR THINGS', fn: bagMenu },
     G.notesRead ? { label: 'NOTES', fn: notesMenu } : null, { label: 'HOW TO PLAY', fn: function () { helpMenu(pauseMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(pauseMenu); } },
     { label: 'QUIT TO THE TITLE', fn: function () { KIT.confirm({ title: 'Quit?', sub: G.net ? 'You will leave the online game.' : 'You will carry on from the start of ' + (FLOORS[G.fi].n || FLOORS[G.fi].name) + '.', yesLabel: 'Quit', yes: function () { netLeave(); G = null; titleMenu(); }, no: pauseMenu }); } }] });
@@ -110,7 +118,7 @@ function mapMenu() {
   function dot(x, z, col, r) { g.fillStyle = col; g.beginPath(); g.arc(x / TSZ * s, z / TSZ * s, r, 0, 6.28); g.fill(); }
   G.loot.forEach(function (l) { if (FL.seen[idx(tileOf(l.x), tileOf(l.z))] && (l.k === 'key' || l.k === 'bag')) dot(l.x, l.z, '#ffe36a', 4); });
   var P = G.P; g.save(); g.translate(P.x / TSZ * s, P.z / TSZ * s); g.rotate(-P.a); g.fillStyle = '#f1e7d0'; g.beginPath(); g.moveTo(0, 6); g.lineTo(4, -4); g.lineTo(-4, -4); g.fill(); g.restore();
-  KIT.menu({ cls: 'pn plain', title: 'Map', sub: FLOORS[G.fi].n + '  ·  ' + FLOORS[G.fi].name, wide: true, html: '<img class="pnmap" src="' + c.toDataURL() + '" alt="map"><p class="pnkey">You (white arrow)  ·  <span style="color:#c4121c">stairs up</span>  ·  <span style="color:#ffe36a">key / your stuff</span>  ·  <span style="color:#7a9a78">lockers</span></p>', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] });
+  KIT.menu({ cls: 'pn plain', title: 'Map', sub: (FLOORS[G.fi].n ? FLOORS[G.fi].n + '  ·  ' : '') + FLOORS[G.fi].name, wide: true, html: '<img class="pnmap" src="' + c.toDataURL() + '" alt="map"><p class="pnkey">You (white arrow)  ·  <span style="color:#c4121c">stairs up</span>  ·  <span style="color:#ffe36a">key / your stuff</span>  ·  <span style="color:#7a9a78">lockers</span></p>', items: [{ label: 'BACK', back: 1, fn: pauseMenu }] });
 }
 /* ---------- the way out: the bar upstairs, TB at the front door ---------- */
 function beginEnding() {

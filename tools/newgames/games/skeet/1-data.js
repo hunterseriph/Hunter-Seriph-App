@@ -84,7 +84,7 @@ var HEROES = {
       dash: { n: 'SKID MARK', an: 'dash', st: 0.06, lunge: 330, dur: 0.32, dmg: 12, kd: true, kb: 220, box: [0, 28, 6, 44] },
       ground: { n: 'FLAMING STOMP', an: 'pound', st: 0.2, ring: 52, dmg: 11, kd: true, lift: 220, fx: 'fx_cream', fire: 1 },
       sup: { n: 'SHIT STORM', kind: 'pies', dmg: 64, col: '#ff7a1a' } },
-    quote: 'Smell that? That is you losing.' }
+    quote: 'Smell that? It\'s shit' }
 };
 var HEROLIST = ['cumhead', 'spermaid', 'greebo', 'homunculus', 'laboozie'];
 /* every fighter's frames come from the rig (art.py: rig.py + fighters.py): sk_<k>_<anim><i>, ANIMN frames each */
@@ -139,7 +139,7 @@ var BOSSES = {
   titan: { n: 'MIND-MELTED TITAN', spr: ['wb_titan_adult_idle0', 'wb_titan_adult_run0', 'wb_titan_adult_run1', 'wb_titan_adult_run2', 'wb_titan_adult_run3'], atk: 'wb_titan_adult_atk', hurt: 'wb_titan_adult_hurt', sc: 2.2, hp: 560, dmg: 17, spd: 50, w: 52, ht: 88, song: 'bbeast',
     moves: ['pound', 'rocks', 'leap', 'pound', 'charge'], intro: 'GOO... IN... MY... HEAD...', washed: 1 },
   blum: { n: 'BLUMHEAD', spr: ['f_blum_0', 'f_blum_1'], sc: 1, hp: 640, dmg: 16, spd: 56, w: 56, ht: 100, song: 'blum',
-    moves: ['goo', 'teleport', 'summon', 'goo', 'slam'], intro: 'My homunculi. My goo. My city. Kneel.', super: { n: 'SUPER BLUMHEAD', spr: ['f_blum2_0', 'f_blum2_1'], song: 'super', moves: ['beam', 'rain', 'teleport', 'goo', 'slam', 'beam'] } }
+    moves: ['goo', 'teleport', 'summon', 'goo', 'slam'], intro: 'My homunculi. My goo. My Cum City. Kneel.', super: { n: 'SUPER BLUMHEAD', spr: ['f_blum2_0', 'f_blum2_1'], song: 'super', moves: ['beam', 'rain', 'teleport', 'goo', 'slam', 'beam'] } }
 };
 
 /* STAGES: each is a run of sections. The camera stops at a section, the waves come in from both sides, beat them and

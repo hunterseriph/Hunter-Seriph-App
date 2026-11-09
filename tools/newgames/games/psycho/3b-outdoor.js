@@ -13,6 +13,7 @@ function lvlFill(F, rnd, th, used, D, minD) { // pickups and TB's boys on free o
   function take(pred) { var c = free.filter(pred); if (!c.length) return null; var p = c[Math.floor(rnd() * c.length)]; free.splice(free.indexOf(p), 1); used[idx(p.i, p.j)] = 1; return p; }
   th.loot.forEach(function (l) { var p = take(function () { return true; }); if (p) F.loot.push({ i: p.i, j: p.j, k: l }); });
   th.foes.forEach(function (f) { var p = take(function (q) { return q.d > (minD || 12); }); if (p) F.foes.push({ i: p.i, j: p.j, k: f }); });
+  for (var n = 0; n < 3; n++) { var np = take(function () { return true; }); if (np) F.notes.push({ i: np.i, j: np.j, n: noteFor(F.fi, n) }); }
 }
 function addHides(F, rnd, n, used, D, keep) { // lockers by another name: thick bushes, dumpsters
   var c = []; for (var j = 1; j < MH - 1; j++) for (var i = 1; i < MW - 1; i++) { if (F.K[idx(i, j)] !== KC || used[idx(i, j)] || D[idx(i, j)] < 4) continue; var walls = DIRS.filter(function (q) { return F.K[idx(i + q[0], j + q[1])] === KW; }); if (walls.length) c.push({ i: i, j: j, w: walls }); }
@@ -55,7 +56,7 @@ var FRONTS = ['fac_cafe', 'fac_amy', 'fac_beebs', 'fac_bonjo', 'fac_joff', 'fac_
 var NEONS = ['n_girls', 'n_xxx', 'n_live', 'n_peep', 'n_open', 'n_heart', 'n_lips', 'n_cum'];
 function streetGrid(F, rows, cols) { var K = F.K; rows.forEach(function (j) { for (var i = 1; i < MW - 1; i++) { K[idx(i, j)] = KC; K[idx(i, j + 1)] = KC; } }); cols.forEach(function (i) { for (var j = 1; j < MH - 1; j++) { K[idx(i, j)] = KC; K[idx(i + 1, j)] = KC; } }); }
 function genDistrict(fi, seed) {
-  var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], rows = [], cols = [];
+  var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], CT = th.city || { fronts: FRONTS, hussy: 1, club: 1, closed: 10, neons: NEONS, lamps: [[1, 0.1, 0.18], [1, 0.3, 0.65]] }, rows = [], cols = [];
   for (var r = 2; r + 1 < MH - 3; r += 7) rows.push(r); for (var c = 2; c + 1 < MW - 3; c += 8) cols.push(c);
   streetGrid(F, rows, cols);
   for (var i0 = 1; i0 < MW - 1; i0++) K[idx(i0, 1)] = KW; // the top street is closed off on the north by the buildings
@@ -100,22 +101,25 @@ function genDistrict(fi, seed) {
   // T's Hussy House: a shop front about half way along the route to the Clubhouse
   var faces = []; for (var j5 = 2; j5 < MH - 2; j5++) for (var i5 = 2; i5 < MW - 2; i5++) { if (K[idx(i5, j5)] !== KC || D[idx(i5, j5)] < 0) continue; DIRS.forEach(function (q, d) { if (K[idx(i5 + q[0], j5 + q[1])] === KW) faces.push({ i: i5, j: j5, d: d, dd: D[idx(i5, j5)] }); }); }
   faces.sort(function (p, q) { return Math.abs(p.dd - total * 0.5) - Math.abs(q.dd - total * 0.5) + (rnd() - 0.5) * 6; });
-  var best = null; for (var h = 0; h < faces.length && !best; h++) { var f0 = { i: faces[h].i, j: faces[h].j, d: faces[h].d, k: 'fac_t', big: 1 }; if (carve(f0, 'fac_t')) { best = f0; } }
-  F.hussy = best; F.fronts.push(best);
-  F.fronts.push({ i: mid, j: 2, d: 3, k: 'fac_club', big: 1, at: mid + 0.5 }); // the Clubhouse, north end of the top street
+  var best = null; if (CT.hussy) { for (var h = 0; h < faces.length && !best; h++) { var f0 = { i: faces[h].i, j: faces[h].j, d: faces[h].d, k: 'fac_t', big: 1 }; if (carve(f0, 'fac_t')) { best = f0; } } F.hussy = best; if (best) F.fronts.push(best); }
+  if (CT.club) F.fronts.push({ i: mid, j: 2, d: 3, k: 'fac_club', big: 1, at: mid + 0.5 }); // the Clubhouse, north end of the top street
+  else { K[idx(mid, 1)] = KC; K[idx(mid + 1, 1)] = KC; F.exitZone = [mid, 1, mid + 1, 2]; F.lights.push({ i: mid + 0.5, j: 1.2, k: 2, r: 10, fl: 0, c: CT.lamps[0], y: 3, exit: 1 }); F.neons.push({ i: mid - 1, j: 2, d: 3, k: CT.exitSign || 'n_open', y: 3.6, o: 0 }); } // the street runs on north
   faces.sort(function () { return rnd() - 0.5; });
   function place(k, n) { for (var h2 = 0; h2 < faces.length; h2++) { var q = faces[h2]; if (F.fronts.some(function (o) { return Math.abs(o.i - q.i) + Math.abs(o.j - q.j) < 5; }) || q.dd < 4) continue; var f = { i: q.i, j: q.j, d: q.d, k: k }; if (carve(f, k)) { faces.splice(h2, 1); if (k !== 'closed') F.fronts.push(f); else F.plain.push(f); return f; } } }
-  F.plain = []; FRONTS.forEach(function (k) { place(k); }); for (var cl = 0; cl < 10 * scale; cl++) place('closed');
+  F.plain = []; CT.fronts.forEach(function (k) { place(k); }); for (var cl = 0; cl < (CT.closed || 10) * scale; cl++) place('closed');
   // neon on every other wall
-  faces.slice(0, Math.round(160 * scale)).forEach(function (f, n) { if (n % 2 && K[idx(f.i + DIRS[f.d][0], f.j + DIRS[f.d][1])] === KW) F.neons.push({ i: f.i, j: f.j, d: f.d, k: NEONS[Math.floor(rnd() * NEONS.length)], y: 3.2 + rnd() * 2.2, o: (rnd() - 0.5) * 0.8 }); });
+  faces.slice(0, Math.round(160 * scale)).forEach(function (f, n) { if (n % 2 && K[idx(f.i + DIRS[f.d][0], f.j + DIRS[f.d][1])] === KW) F.neons.push({ i: f.i, j: f.j, d: f.d, k: CT.neons[Math.floor(rnd() * CT.neons.length)], y: 3.2 + rnd() * 2.2, o: (rnd() - 0.5) * 0.8 }); });
   // red street lamps everywhere
-  for (var j6 = 1; j6 < MH - 1; j6++) for (var i6 = 1; i6 < MW - 1; i6++) if (K[idx(i6, j6)] === KC && (i6 * 7 + j6 * 13) % 9 === 0) { var adj = DIRS.some(function (q) { return K[idx(i6 + q[0], j6 + q[1])] === KW; }); if (adj) F.lights.push({ i: i6, j: j6, k: 1.25, r: 8, fl: rnd() < 0.2 ? 1 : 0, c: rnd() < 0.7 ? [1, 0.1, 0.18] : [1, 0.3, 0.65], y: 3.6, pole: 1 }); }
+  for (var j6 = 1; j6 < MH - 1; j6++) for (var i6 = 1; i6 < MW - 1; i6++) if (K[idx(i6, j6)] === KC && (i6 * 7 + j6 * 13) % 9 === 0) { var adj = DIRS.some(function (q) { return K[idx(i6 + q[0], j6 + q[1])] === KW; }); if (adj) F.lights.push({ i: i6, j: j6, k: 1.25, r: 8, fl: rnd() < 0.2 ? 1 : 0, c: rnd() < 0.7 ? CT.lamps[0] : CT.lamps[1], y: 3.6, pole: 1 }); }
   F.fronts.forEach(function (f) { var q = DIRS[f.d]; F.lights.push({ i: f.i - q[0] * 0.2, j: f.j - q[1] * 0.2, k: f.big ? 1.4 : 0.9, r: 7, fl: 0, c: [1, 0.3, 0.25], y: 2.6 }); });
   D = bfs(F, mid, last); addHides(F, rnd, Math.round(12 * scale), used, D, keep); F.hideWord = 'HIDE IN THE DUMPSTER'; F.dumpsters = 1;
   // wardrobes to hide in inside some of the shops
   F.rooms.forEach(function (R, n) { if (n % 2) return; for (var y = R.y; y < R.y + R.h; y++) for (var x = R.x; x < R.x + R.w; x++) { if (K[idx(x, y)] !== KR) continue; var w3 = DIRS.find(function (q) { return K[idx(x + q[0], y + q[1])] === KW; }); if (!w3) continue; K[idx(x, y)] = KL; if (!keep() || bfs(F, mid, last)[idx(R.doors[0].i, R.doors[0].j)] < 0) { K[idx(x, y)] = KR; continue; } F.lockers.push({ i: x, j: y, di: -w3[0], dj: -w3[1], indoor: 1 }); return; } });
+  if (CT.tables) { // the cafes put their tables out on the pavement
+    F.fronts.forEach(function (f) { if (!f.k || f.k === 'fac_club') return; var q = DIRS[f.d], s0 = [-q[1], q[0]]; [-2, 2].forEach(function (w) { var i = f.i + s0[0] * w - q[0], j = f.j + s0[1] * w - q[1]; if (!inMap(i, j) || K[idx(i, j)] !== KC || used[idx(i, j)]) return; K[idx(i, j)] = KP; if (!keep()) { K[idx(i, j)] = KC; return; } used[idx(i, j)] = 1; F.props.push({ i: i, j: j, k: 'cafetable', a: Math.atan2(q[0], q[1]) }); }); });
+  }
   lvlFill(F, rnd, th, used, D, 10);
-  F.tbIn = { i: best.i, j: best.j }; F.toClub = bfs(F, mid, 2); F.clubTotal = F.toClub[idx(mid, last)];
+  F.tbIn = best ? { i: best.i, j: best.j } : { i: mid, j: last }; F.toClub = bfs(F, mid, 2); F.clubTotal = F.toClub[idx(mid, last)]; if (!CT.club) F.exitIn = { i: mid, j: 2 };
   return F;
 }
 /* ---------- THE PLAZA in front of the Clubhouse ---------- */
@@ -145,7 +149,8 @@ function buildOutdoorMesh(F, mesh) {
   function face(i, j, d, y0, y1, T, k, uv, g) { var x0 = i * TSZ, z0 = j * TSZ, x1 = x0 + TSZ, z1 = z0 + TSZ, a, b, n, v = (y1 - y0) / TSZ;
     if (d === 0) { a = [x1, z0]; b = [x1, z1]; n = [-1, 0, 0]; } else if (d === 1) { a = [x0, z1]; b = [x0, z0]; n = [1, 0, 0]; } else if (d === 2) { a = [x1, z1]; b = [x0, z1]; n = [0, 0, -1]; } else { a = [x0, z0]; b = [x1, z0]; n = [0, 0, 1]; }
     m.quad([a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y1, b[1]], [a[0], y1, a[1]], uv || [0, v, 1, v, 1, 0, 0, 0], T, vc(k), n, g || 0); }
-  function indoor(i, j) { return inMap(i, j) && (F.RM[idx(i, j)] >= 0 && FLOORS[F.fi].kind === 'district' || K[idx(i, j)] === KD); }
+  var CTY = FLOORS[F.fi].city || {}, WIN1 = CTY.win || 'windows', WIN2 = CTY.glow || 'shopglow';
+  function indoor(i, j) { if (!inMap(i, j)) return false; var rm = F.RM[idx(i, j)]; return rm >= 0 && F.rooms[rm] && F.rooms[rm].shop || K[idx(i, j)] === KD; }
   if (kind === 'park') parkMesh(F, m, { boxM: boxM, cylM: cylM, cross: cross, face: face, vc: vc, kk: kk, rnd: rnd });
   else if (kind === 'woods') {
     for (var j = 0; j < MH; j++) for (var i = 0; i < MW; i++) {
@@ -164,26 +169,37 @@ function buildOutdoorMesh(F, mesh) {
     var H = {}; function hgt(i, j) { var key = idx(i, j); if (H[key]) return H[key]; var b = ((i >> 2) * 73856093 ^ (j >> 2) * 19349663) >>> 0; return (H[key] = 6 + (b % 9)); }
     for (var j2 = 0; j2 < MH; j2++) for (var i2 = 0; i2 < MW; i2++) {
       var k2 = kk(i2, j2), x02 = i2 * TSZ, z02 = j2 * TSZ;
-      if (k2 === KD) { var hq = DIRS.findIndex(function (q) { var n = kk(i2 + q[0], j2 + q[1]); return n !== KW && n !== KD && !indoor(i2 + q[0], j2 + q[1]); }); if (hq >= 0) { var sq = DIRS[hq], nb = DIRS.map(function (q) { return kk(i2 + q[0], j2 + q[1]) === KW ? hgt(i2 + q[0], j2 + q[1]) : 0; }), hh = Math.max.apply(0, nb) || 7; face(i2 + sq[0], j2 + sq[1], hq === 0 ? 1 : hq === 1 ? 0 : hq === 2 ? 3 : 2, CEIL, hh, TL('windows'), 0.9, [0, (hh - CEIL) / 2.6, 1, (hh - CEIL) / 2.6, 1, 0, 0, 0]); } continue; }
+      if (k2 === KD) { var hq = DIRS.findIndex(function (q) { var n = kk(i2 + q[0], j2 + q[1]); return n !== KW && n !== KD && !indoor(i2 + q[0], j2 + q[1]); }); if (hq >= 0) { var sq = DIRS[hq], nb = DIRS.map(function (q) { return kk(i2 + q[0], j2 + q[1]) === KW ? hgt(i2 + q[0], j2 + q[1]) : 0; }), hh = Math.max.apply(0, nb) || 7, bt = null; DIRS.forEach(function (q) { var nq = idx(i2 + q[0], j2 + q[1]); if (F.BT && F.BT[nq] && kk(i2 + q[0], j2 + q[1]) === KW) bt = F.BT[nq]; }); face(i2 + sq[0], j2 + sq[1], hq === 0 ? 1 : hq === 1 ? 0 : hq === 2 ? 3 : 2, bt ? 2.25 : CEIL, hh, TL(bt || 'windows'), 0.9, [0, (hh - CEIL) / 2.6, 1, (hh - CEIL) / 2.6, 1, 0, 0, 0]); } continue; }
       if (k2 !== KW && indoor(i2, j2)) continue;
-      if (k2 !== KW) { var nearWall = DIRS.some(function (q) { return kk(i2 + q[0], j2 + q[1]) === KW; }); m.quad([x02, 0, z02 + TSZ], [x02 + TSZ, 0, z02 + TSZ], [x02 + TSZ, 0, z02], [x02, 0, z02], [0, 1, 1, 1, 1, 0, 0, 0], TL(nearWall ? 'pave' : 'asphalt'), vc(0.85 + rnd() * 0.15), [0, 1, 0]); continue; }
+      if (k2 !== KW) { var nearWall = DIRS.some(function (q) { return kk(i2 + q[0], j2 + q[1]) === KW; }), ft = F.FT ? F.FT[idx(i2, j2)] || FLOORS[F.fi].floor : nearWall ? 'pave' : FLOORS[F.fi].floor || 'asphalt'; m.quad([x02, 0, z02 + TSZ], [x02 + TSZ, 0, z02 + TSZ], [x02 + TSZ, 0, z02], [x02, 0, z02], [0, 1, 1, 1, 1, 0, 0, 0], TL(ft), vc(0.85 + rnd() * 0.15), [0, 1, 0]); continue; }
+      var bq = idx(i2, j2), BT = F.BT && inMap(i2, j2) ? F.BT[bq] : null;
+      if (BT) { var bh = F.BH[bq], roofT = BT === 'hedge' ? 'hedge' : BT === 'conc' ? 'roof' : BT; m.quad([x02, bh, z02], [x02 + TSZ, bh, z02], [x02 + TSZ, bh, z02 + TSZ], [x02, bh, z02 + TSZ], [0, 0, 1, 0, 1, 1, 0, 1], TL(roofT), vc(0.7), [0, 1, 0]);
+        for (var db = 0; db < 4; db++) { var qb = DIRS[db]; if (indoor(i2 + qb[0], j2 + qb[1])) continue; var nkb = kk(i2 + qb[0], j2 + qb[1]), nib = i2 + qb[0], njb = j2 + qb[1], nhb = nkb === KW ? (inMap(nib, njb) ? (F.BT[idx(nib, njb)] ? F.BH[idx(nib, njb)] : hgt(nib, njb)) : 99) : 0; if (nhb >= bh) continue;
+          var fdb = db === 0 ? 1 : db === 1 ? 0 : db === 2 ? 3 : 2, y0b = nhb; while (y0b < bh) { var y1b = Math.min(bh, y0b + TSZ); face(nib, njb, fdb, y0b, y1b, TL(BT), 0.85, [0, (y1b - y0b) / TSZ, 1, (y1b - y0b) / TSZ, 1, 0, 0, 0]); y0b = y1b; }
+          if (BT === 'crypt' || BT === 'stonewall') face(nib, njb, fdb, bh - 0.2, bh, TL('marble'), 0.8);
+          if (F.BT[bq + '_s'] && nhb === 0) { var ox = (i2 + 0.5 + qb[0] * 0.5) * TSZ + qb[0] * 0.35, oz = (j2 + 0.5 + qb[1] * 0.5) * TSZ + qb[1] * 0.35; for (var ly = 2; ly < bh; ly += 2.2) { if (qb[0]) boxM(ox - 0.06, ly, z02, ox + 0.06, ly + 0.08, z02 + TSZ, TL('plywood'), 0.8); else boxM(x02, ly, oz - 0.06, x02 + TSZ, ly + 0.08, oz + 0.06, TL('plywood'), 0.8); }
+            if ((i2 + j2) % 2 === 0) boxM(ox - 0.04, 0, oz - 0.04, ox + 0.04, bh, oz + 0.04, TL('metal'), 0.8); } }
+        continue; }
       var h = hgt(i2, j2); m.quad([x02, h, z02], [x02 + TSZ, h, z02], [x02 + TSZ, h, z02 + TSZ], [x02, h, z02 + TSZ], [0, 0, 1, 0, 1, 1, 0, 1], TL('roof'), vc(0.6), [0, 1, 0]);
       for (var d = 0; d < 4; d++) { var q = DIRS[d]; if (indoor(i2 + q[0], j2 + q[1])) continue; var nk = kk(i2 + q[0], j2 + q[1]), nh = nk === KW ? (inMap(i2 + q[0], j2 + q[1]) ? hgt(i2 + q[0], j2 + q[1]) : 99) : 0; if (nh >= h) continue;
         var fd = d === 0 ? 1 : d === 1 ? 0 : d === 2 ? 3 : 2, ni = i2 + q[0], nj = j2 + q[1]; // the face on the neighbour's side, looking back at this building
-        if (nh < 3.2) { var lit = ((ni * 31 + nj * 17 + d * 7) % 5) < 2; if (lit) { face(ni, nj, fd, nh, 0.6, TL('citywall'), 0.8); face(ni, nj, fd, 0.6, 2.7, TL('shopglow'), 0.7, [0, 1, 1, 1, 1, 0, 0, 0], 0.7); face(ni, nj, fd, 2.7, 3.2, TL('citywall'), 0.8); } else face(ni, nj, fd, nh, 3.2, TL('citywall'), 0.8); } var y = Math.max(3.2, nh); while (y < h) { var y1 = Math.min(h, y + 2.6); face(ni, nj, fd, y, y1, TL('windows'), 0.9, [0, (y1 - y) / 2.6, 1, (y1 - y) / 2.6, 1, 0, 0, 0]); y = y1; }
+        if (nh < 3.2) { var lit = ((ni * 31 + nj * 17 + d * 7) % 5) < 2; if (lit) { face(ni, nj, fd, nh, 0.6, TL('citywall'), 0.8); face(ni, nj, fd, 0.6, 2.7, TL(WIN2), 0.7, [0, 1, 1, 1, 1, 0, 0, 0], 0.7); face(ni, nj, fd, 2.7, 3.2, TL('citywall'), 0.8); } else face(ni, nj, fd, nh, 3.2, TL('citywall'), 0.8); } var y = Math.max(3.2, nh); while (y < h) { var y1 = Math.min(h, y + 2.6); face(ni, nj, fd, y, y1, TL(WIN1), 0.9, [0, (y1 - y) / 2.6, 1, (y1 - y) / 2.6, 1, 0, 0, 0]); y = y1; }
         face(ni, nj, fd, h - 0.25, h, TL('metal'), 0.7); }
     }
     // neon on the walls (lights itself)
     F.neons.forEach(function (N) { var q = DIRS[N.d], x0 = N.i * TSZ, z0 = N.j * TSZ, s = 1.05, y = N.y, T = TL(N.k), off = TSZ / 2 - 0.03, cx = x0 + TSZ / 2 + q[0] * off, cz = z0 + TSZ / 2 + q[1] * off, n = [-q[0], 0, -q[1]];
-      if (q[0]) m.quad([cx, y - s, cz + s * q[0] + N.o], [cx, y - s, cz - s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n, 1.6);
-      else m.quad([cx - s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y + s, cz], [cx - s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n, 1.6); });
+      if (q[0]) m.quad([cx, y - s, cz - s * q[0] + N.o], [cx, y - s, cz + s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n, 1.6);
+      else m.quad([cx + s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y + s, cz], [cx + s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n, 1.6); });
     // red neon tubes strung across the streets
-    for (var j7 = 2; j7 < MH - 2; j7++) for (var i7 = 2; i7 < MW - 2; i7++) { if (kk(i7, j7) !== KC || (i7 * 3 + j7 * 5) % 11) continue; var hz = kk(i7 - 1, j7) === KW && kk(i7 + 2, j7) === KW && kk(i7 + 1, j7) === KC, vt = kk(i7, j7 - 1) === KW && kk(i7, j7 + 2) === KW && kk(i7, j7 + 1) === KC, y7 = 4.6 + (i7 % 3) * 0.4, tc = TL('glow'), cc = (i7 + j7) % 3 ? [0.6, 0.06, 0.1] : [0.6, 0.2, 0.45];
+    if (kind === 'district') for (var j7 = 2; j7 < MH - 2; j7++) for (var i7 = 2; i7 < MW - 2; i7++) { if (kk(i7, j7) !== KC || (i7 * 3 + j7 * 5) % 11) continue; var hz = kk(i7 - 1, j7) === KW && kk(i7 + 2, j7) === KW && kk(i7 + 1, j7) === KC, vt = kk(i7, j7 - 1) === KW && kk(i7, j7 + 2) === KW && kk(i7, j7 + 1) === KC, y7 = 4.6 + (i7 % 3) * 0.4, tc = TL('glow'), cc = (i7 + j7) % 3 ? [0.6, 0.06, 0.1] : [0.6, 0.2, 0.45];
       if (hz) m.quad([i7 * TSZ, y7, (j7 + 0.5) * TSZ - 0.05], [(i7 + 2) * TSZ, y7 - 0.3, (j7 + 0.5) * TSZ - 0.05], [(i7 + 2) * TSZ, y7 - 0.22, (j7 + 0.5) * TSZ + 0.05], [i7 * TSZ, y7 + 0.08, (j7 + 0.5) * TSZ + 0.05], [0, 0, 1, 0, 1, 1, 0, 1], tc, cc, [0, -1, 0], 2);
       if (vt) m.quad([(i7 + 0.5) * TSZ - 0.05, y7, j7 * TSZ], [(i7 + 0.5) * TSZ - 0.05, y7 - 0.3, (j7 + 2) * TSZ], [(i7 + 0.5) * TSZ + 0.05, y7 - 0.22, (j7 + 2) * TSZ], [(i7 + 0.5) * TSZ + 0.05, y7 + 0.08, j7 * TSZ], [0, 0, 1, 0, 1, 1, 0, 1], tc, cc, [0, -1, 0], 2); }
     // lamp posts, dumpsters
     F.lights.forEach(function (L) { if (!L.pole) return; var x = tx(L.i), z = tx(L.j); boxM(x - 0.05, 0, z - 0.05, x + 0.05, L.y, z + 0.05, TL('metal'), 0.6); boxM(x - 0.2, L.y - 0.1, z - 0.2, x + 0.2, L.y + 0.05, z + 0.2, TL('metal'), 0.8); });
-    F.lockers.forEach(function (L) { if (L.indoor) return; var r = lockerRect(L); boxM(r[0], 0.1, r[1], r[2], 1.4, r[3], TL('rust'), 1); boxM(r[0] - 0.05, 1.4, r[1] - 0.05, r[2] + 0.05, 1.5, r[3] + 0.05, TL('metal'), 0.7); });
+    F.lockers.forEach(function (L) { if (L.indoor) return; var r = lockerRect(L);
+      if (L.style === 'coffin') { boxM(r[0], 0, r[1], r[2], 2.0, r[3], TL('wood'), 0.55); boxM((r[0] + r[2]) / 2 - 0.05, 1.2, (r[1] + r[3]) / 2 - 0.05, (r[0] + r[2]) / 2 + 0.05, 1.7, (r[1] + r[3]) / 2 + 0.05, TL('marble'), 0.9); return; }
+      if (L.style === 'loo') { boxM(r[0], 0, r[1], r[2], 2.3, r[3], TL('carpaint'), 0.3); boxM(r[0] - 0.03, 2.3, r[1] - 0.03, r[2] + 0.03, 2.38, r[3] + 0.03, TL('white'), 0.8); return; }
+      boxM(r[0], 0.1, r[1], r[2], 1.4, r[3], TL('rust'), 1); boxM(r[0] - 0.05, 1.4, r[1] - 0.05, r[2] + 0.05, 1.5, r[3] + 0.05, TL('metal'), 0.7); });
   }
   // props outside
   F.props.forEach(function (p) { if (p.indoor) return; var cx = tx(p.i), cz = tx(p.j), s = Math.sin(p.a), c = Math.cos(p.a);
@@ -196,6 +212,19 @@ function buildOutdoorMesh(F, mesh) {
     else if (p.k === 'car') { B(-1.0, 1.0, -0.85, 0.85, 0.3, 0.95, TL('carpaint'), 0.35); B(-0.5, 0.45, -0.75, 0.75, 0.95, 1.45, TL('windscreen'), 0.8); [[-0.75, -0.7], [0.75, -0.7], [-0.75, 0.7], [0.75, 0.7]].forEach(function (w) { var wx = cx + w[1] * c + w[0] * s, wz = cz - w[1] * s + w[0] * c; boxM(wx - 0.18, 0, wz - 0.18, wx + 0.18, 0.4, wz + 0.18, TL('black'), 1); }); }
     else if (p.k === 'barrier') { B(-0.15, 0.15, -1.1, 1.1, 0, 0.9, TL('metal'), 0.8); B(-0.17, 0.17, -1.12, 1.12, 0.55, 0.7, TL('carpaint'), 0.9); }
     else if (p.k === 'bin' || p.k === 'dumpster') B(-0.5, 0.5, -0.5, 0.5, 0, 1.1, TL('rust'), 1);
+    else if (p.k === 'grave') { var go = p.o || 0; B(-0.12 + go, 0.12 + go, -0.42, 0.42, 0, 1.05, TL('grave'), 0.9); B(-0.6, 0.6, -0.45, 0.45, 0, 0.12, TL('dirt'), 0.8); }
+    else if (p.k === 'cross') { B(-0.06, 0.06, -0.06, 0.06, 0, 1.6, TL('grave'), 0.9); B(-0.06, 0.06, -0.4, 0.4, 1.1, 1.24, TL('grave'), 0.9); B(-0.5, 0.5, -0.4, 0.4, 0, 0.1, TL('dirt'), 0.8); }
+    else if (p.k === 'tomb') { B(-0.85, 0.85, -0.5, 0.5, 0, 0.9, TL('marble'), 0.8); B(-0.9, 0.9, -0.55, 0.55, 0.9, 1.0, TL('marble'), 1); B(-0.1, 0.1, -0.35, 0.35, 1.0, 1.9, TL('marble'), 0.9); }
+    else if (p.k === 'angel') { B(-0.45, 0.45, -0.45, 0.45, 0, 0.7, TL('marble'), 0.8); cylM(cx, cz, 0.7, 2.0, 0.24, TL('marble'), 0.9); cylM(cx, cz, 2.0, 2.4, 0.15, TL('marble'), 1); B(-0.1, 0.1, -0.75, 0.75, 1.5, 2.3, TL('marble'), 0.75); }
+    else if (p.k === 'deadtree') { cylM(cx, cz, 0, 4.2, 0.2, TL('bark'), 0.6); B(-0.05, 0.05, 0, 1.3, 2.6, 2.7, TL('bark'), 0.6); B(-1.1, 0, -0.05, 0.05, 3.2, 3.3, TL('bark'), 0.6); B(-0.05, 0.05, -1.0, 0, 3.7, 3.8, TL('bark'), 0.6); }
+    else if (p.k === 'girders') { for (var gl = 0; gl < 3; gl++) B(-0.25 + gl * 0.02, 0.25, -1.1, 1.1, gl * 0.25, gl * 0.25 + 0.22, TL('girder'), 0.9 - gl * 0.1); }
+    else if (p.k === 'pipes') { for (var pp = 0; pp < 3; pp++) { var px = cx + (pp - 1) * 0.42 * c, pz = cz - (pp - 1) * 0.42 * s; if (c > 0.5 || c < -0.5) boxM(px - 0.2, 0, cz - 1.1, px + 0.2, 0.4, cz + 1.1, TL('pipe'), 0.9); else boxM(cx - 1.1, 0, pz - 0.2, cx + 1.1, 0.4, pz + 0.2, TL('pipe'), 0.9); } B(-0.2, 0.2, -1.1, 1.1, 0.4, 0.75, TL('pipe'), 0.8); }
+    else if (p.k === 'mixer') { cylM(cx, cz, 0.5, 1.6, 0.6, TL('plastic'), 0.9, 9); B(-0.7, 0.7, -0.5, 0.5, 0, 0.5, TL('metal'), 0.8); [[-0.6, -0.5], [0.6, -0.5]].forEach(function (w) { boxM(cx + w[0] - 0.2, 0, cz + w[1] - 0.2, cx + w[0] + 0.2, 0.4, cz + w[1] + 0.2, TL('black'), 1); }); }
+    else if (p.k === 'cones') { [[-0.5, -0.4], [0.4, 0.3], [-0.2, 0.5]].forEach(function (q) { cylM(cx + q[0], cz + q[1], 0, 0.6, 0.12, TL('hazard'), 1, 6); }); B(-0.9, 0.9, -0.06, 0.06, 0.5, 0.65, TL('hazard'), 1); }
+    else if (p.k === 'skip') { B(-0.85, 0.85, -1.05, 1.05, 0, 1.2, TL('plastic'), 0.6); B(-0.75, 0.75, -0.95, 0.95, 1.0, 1.3, TL('crate'), 0.7); }
+    else if (p.k === 'digger') { B(-0.9, 0.9, -1.0, 1.0, 0.4, 1.6, TL('hazard'), 0.8); B(-0.6, 0.6, -0.6, 0.4, 1.6, 2.6, TL('windscreen'), 0.8); B(-1.0, 1.0, -1.1, 1.1, 0, 0.45, TL('black'), 1); B(0.9, 2.0, -0.12, 0.12, 1.6, 1.9, TL('hazard'), 0.7); B(1.8, 2.3, -0.4, 0.4, 0.2, 1.1, TL('metal'), 0.8); }
+    else if (p.k === 'pallets') { for (var pl = 0; pl < 4; pl++) B(-0.6, 0.6, -0.55, 0.55, pl * 0.18, pl * 0.18 + 0.14, TL('plywood'), 0.85); }
+    else if (p.k === 'cafetable') { cylM(cx, cz, 0, 0.75, 0.05, TL('metal'), 0.8, 6); cylM(cx, cz, 0.72, 0.78, 0.5, TL('metal'), 1, 10); cylM(cx, cz, 0.78, 2.3, 0.03, TL('metal'), 0.7, 5); var aw = [cx, 2.7, cz]; for (var at = 0; at < 6; at++) { var a0 = at / 6 * 6.28, a1 = (at + 1) / 6 * 6.28; m.tri([cx + Math.cos(a0) * 1.0, 2.2, cz + Math.sin(a0) * 1.0], [cx + Math.cos(a1) * 1.0, 2.2, cz + Math.sin(a1) * 1.0], aw, [0, 1, 1, 1, 0.5, 0], TL('awning'), vc(0.9)); } [[0.65, 0], [-0.65, 0]].forEach(function (q) { boxM(cx + q[0] * c - 0.2, 0.42, cz - q[0] * s - 0.2, cx + q[0] * c + 0.2, 0.48, cz - q[0] * s + 0.2, TL('metal'), 0.8); }); }
   });
   return mesh ? m : m.upload();
 }

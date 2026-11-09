@@ -131,8 +131,8 @@ function gunIcon(g, w) {
 var ATL = null, ATT = null, ICONS = {};
 function buildAtlas() {
   if (ATL) return; ATL = Atlas(41);
-  Object.keys(PAINT).forEach(function (k) { ATL.add(k, PAINT[k], { flat: k === 'white' || k === 'glow' || k === 'skin' || k === 'nail' || k === 'black', crisp: k === 'bars' || k === 'hook' || k === 'ironbar' || k === 'lattice' || k === 'rail' }); });
-  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: ['halo', 'shadow', 'bush', 'moon', 'flame', 'smoke', 'stink', 'headlight'].indexOf(k) >= 0 }); });
+  Object.keys(PAINT).forEach(function (k) { ATL.add(k, PAINT[k], { flat: k === 'white' || k === 'glow' || k === 'skin' || k === 'nail' || k === 'black', crisp: k === 'bars' || k === 'hook' || k === 'ironbar' || k === 'lattice' || k === 'rail' || k === 'scaffold' }); });
+  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: ['halo', 'shadow', 'bush', 'moon', 'flame', 'smoke', 'stink', 'headlight', 'splat', 'ring'].indexOf(k) >= 0 }); });
   ATT = R3.texture(ATL.canvas, true);
   ['handgun', 'shotgun', 'rifle', 'plank', 'bat', 'fists', 'knife', 'hammer', 'fireaxe', 'bag'].forEach(function (w) { var c = document.createElement('canvas'); c.width = c.height = 64; gunIcon(c.getContext('2d'), w); ICONS[w] = c; });
 }
