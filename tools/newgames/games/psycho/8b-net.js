@@ -150,11 +150,11 @@ function stepGuestWorld(dt) { // smooth the host's people between snapshots
   if (G.bagsNet) G.bags = G.bagsNet.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, vy: 0, t: 1, ghost: 1 }; });
 }
 function guestEv(e) { var P = G.P;
-  if (e.k === 'say') say(e.s, e.t, e.col); else if (e.k === 'sub') G.sub = { who: e.who, s: e.s, t: e.t || 3.2 };
+  if (e.k === 'say') say(e.s, e.t, e.col); else if (e.k === 'sub') { G.sub = { who: e.who, s: e.s, t: e.t || 3.2 }; voice(e.who, e.s); }
   else if (e.k === 'hurt') hurtPlayer(P, +e.dmg || 0, { x: e.fx, z: e.fz }, +e.dose || 0);
   else if (e.k === 'caught') catchPlayer(P);
   else if (e.k === 'blood') blood(e.x, 1.2, e.z, e.n || 6);
-  else if (e.k === 'sfx') sfx.play(e.n); else if (e.k === 'splat') G.splatT = 3.2;
+  else if (e.k === 'sfx') sfx.play(e.n); else if (e.k === 'splat') G.splatT = 3.2; else if (e.k === 'scene') guestScene(e);
   else if (e.k === 'climb') { G.mode = 'trans'; G.trans = 0; music.stop(1); }
   else if (e.k === 'crash') startCrash();
   else if (e.k === 'win') { G.mode = 'win'; G.winT = 0; G.tb.st = 'dead'; music.stop(0.5); }

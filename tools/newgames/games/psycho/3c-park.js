@@ -80,8 +80,8 @@ function parkMesh(F, m, H) {
     }
   }
   F.neons.forEach(function (N) { var q = DIRS[N.d], x0 = N.i * TSZ, z0 = N.j * TSZ, s = 0.7, y = N.y, T = TL(N.k), off = TSZ / 2 - 0.03, cx = x0 + TSZ / 2 + q[0] * off, cz = z0 + TSZ / 2 + q[1] * off, n = [-q[0], 0, -q[1]], g = N.broken ? 0.3 : 1.4;
-    if (q[0]) m.quad([cx, y - s, cz + s * q[0] + N.o], [cx, y - s, cz - s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g);
-    else m.quad([cx - s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y + s, cz], [cx - s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g); });
+    if (q[0]) m.quad([cx, y - s, cz - s * q[0] + N.o], [cx, y - s, cz + s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g);
+    else m.quad([cx + s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y + s, cz], [cx + s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g); });
   F.lights.forEach(function (L) { if (!L.pole) return; var x = tx(L.i), z = tx(L.j); boxM(x - 0.05, 0, z - 0.05, x + 0.05, L.y, z + 0.05, TL('metal'), 0.6); boxM(x - 0.22, L.y - 0.1, z - 0.22, x + 0.22, L.y + 0.05, z + 0.22, TL('rust'), 0.8); });
   F.lockers.forEach(function (L) { var r = lockerRect(L); boxM(r[0], 0, r[1], r[2], 2.2, r[3], TL('polka'), 0.6); boxM(r[0] - 0.05, 2.2, r[1] - 0.05, r[2] + 0.05, 2.35, r[3] + 0.05, TL('black'), 1); });
   // the rides and the junk

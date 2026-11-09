@@ -16,19 +16,21 @@ function continueGame() {
   G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; G.notesRead = r.notesRead || 0; G.spotted = r.spotted || 0;
   loadFloor(r.fi, r.fi === 0 ? 'new' : 'up'); music.stop(1);
 }
-function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
+function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); if (!G.botIn) { sceneCell(); netEv({ k: 'scene', id: 'cell' }); } say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
 /* ---------- the loop ---------- */
 function update(dt) {
   if (!G) return;
   G.msgs.forEach(function (m) { m.t -= dt; }); G.msgs = G.msgs.filter(function (m) { return m.t > 0; });
   if (G.sub) { G.sub.t -= dt; if (G.sub.t <= 0) G.sub = null; } if (G.banner) G.banner.t -= dt; if (G.wake > 0) G.wake -= dt;
   if (G.mode === 'intro') { G.introT += dt; if (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap) G.introT = Math.ceil(G.introT / 3.4 + 0.01) * 3.4; if (G.introT > INTRO.length * 3.4) startFloorOne(); return; }
-  if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } return; }
+  if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } var gpl = !!(KIT.gamepad && KIT.gamepad.buttons[4] && KIT.gamepad.buttons[4].pressed); if (gpl && !G.lbWas && JAR) jarTap(); G.lbWas = gpl; return; }
+  if (JAR) jarShow(0);
   if (G.mode === 'play') {
     G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); stepHazards(dt); } else stepGuestWorld(dt); if (G.splatT > 0) G.splatT -= dt; stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
     G.noises = G.noises.filter(function (n) { n.t -= dt; return n.t > 0; });
     var chase = G.tb && G.tb.st === 'chase' || G.foes.some(function (f) { return f.st === 'chase'; }); if (chase && !(G.ev && G.ev.k === 'mute')) music.play('pnchase'); else if (music.current === 'pnchase') music.stop(2.5);
   } else if (G.mode === 'catch') { stepCatch(dt); stepFx(dt); }
+  else if (G.mode === 'scene') { stepScene(dt); stepFx(dt); }
   else if (G.mode === 'drive') { G.time += dt; stepDrive(dt); stepTrip(dt); stepFx(dt); }
   else if (G.mode === 'ride') { G.time += dt; stepRide(dt); }
   else if (G.mode === 'crash') { stepCrash(dt); stepFx(dt); }
@@ -54,7 +56,7 @@ function stepCatch(dt) {
 }
 /* ---------- game over ---------- */
 function gameOver(why) {
-  G.mode = 'over'; music.stop(1); sfx.play(why === 'seen' ? 'grab' : 'lose'); var q = tbLine();
+  G.mode = 'over'; music.stop(1); sfx.play(why === 'seen' ? 'grab' : 'lose'); var q = tbLine(); setTimeout(function () { voice('TB', q); }, 900);
   setTimeout(function () { KIT.menu({ cls: 'pn', title: why === 'seen' ? 'TB GOT YOU FOR GOOD' : 'YOU DIED', sub: why === 'seen' ? 'He saw you before you got your stuff back. "' + q + '"' : 'TB will be along to tidy you up.', items: [
     G.net === 'guest' ? null : { label: G.net ? 'TRY AGAIN TOGETHER' : 'TRY THIS FLOOR AGAIN', def: 1, fn: G.net ? onlineAgain : continueGame }, { label: 'QUIT TO THE TITLE', back: 1, fn: function () { netLeave(); G = null; titleMenu(); } }] }); }, why === 'seen' ? 1800 : 1200);
   if (why === 'seen') { G.over = { t: 0 }; }
@@ -66,6 +68,7 @@ function titleMenu() {
   music.play('pntitle');
   var r = SV.run, items = [r ? { label: 'CONTINUE', sub: (FLOORS[r.fi].n ? FLOORS[r.fi].n + '  ·  ' : '') + FLOORS[r.fi].name, def: 1, fn: continueGame } : null, { label: r ? 'NEW NIGHTMARE' : 'START', def: !r, fn: function () { if (r) KIT.confirm({ title: 'Start again?', sub: 'Your run on ' + FLOORS[r.fi].n + ' will be lost.', yesLabel: 'Start again', yes: newGame, no: titleMenu }); else newGame(); } },
     { label: 'PLAY ONLINE', fn: function () { onlineMenu(); } }, { label: 'HOW TO PLAY', fn: function () { helpMenu(titleMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(titleMenu); } }];
+  jarShow(1);
   KIT.menu({ cls: 'clear pn', logo: '../assets/pn-logo.webp', title: 'Psycho Nightmare', items: items, note: SV.wins ? 'Escaped ' + SV.wins + (SV.wins === 1 ? ' time' : ' times') + (SV.best ? '  ·  best ' + clock(SV.best) : '') : '' });
 }
 function clock(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
@@ -85,12 +88,27 @@ function helpMenu(back) {
 function optionsMenu(back) {
   KIT.menu({ cls: 'pn plain', title: 'Options', items: [
     R3.ok ? R3.resItem(function () { optionsMenu(back); }) : null, KIT.resItem(function () { optionsMenu(back); }),
+    voiceItem(function () { optionsMenu(back); }),
     TOUCH ? { label: 'AIM ON SCREEN: ' + (SV.aim === 'hold' ? 'HOLD' : 'TAP TO TOGGLE'), fn: function () { SV.aim = SV.aim === 'hold' ? 'toggle' : 'hold'; persist(); if (G) G.touchMode = SV.aim !== 'hold'; optionsMenu(back); } } : null,
-    back === titleMenu ? { label: "TB'S PILL JAR", fn: function () { PILLTAPS++; sfx.play('rattle'); if (PILLTAPS >= 7) { PILLTAPS = 0; levelSelect(back); } else optionsMenu(back); } } : null,
     { label: 'BACK', back: 1, fn: back }] });
 }
-/* the secret: rattle TB's pill jar in Options seven times and his stash opens: a level select over every part of the night */
-var PILLTAPS = 0;
+/* the secret (his ask: a real pill bottle, not a menu item): TB's pill bottle sits in the bottom corner of the title
+   screen. Tap it (or press LB) seven times and his stash opens: a level select over every part of the night */
+var PILLTAPS = 0, JAR = null;
+function jarShow(on) {
+  if (!on) { if (JAR) { JAR.remove(); JAR = null; } return; } if (JAR) return;
+  var c = document.createElement('canvas'); c.width = 16; c.height = 22; var g = c.getContext('2d');
+  function r(x, y, w, h, col) { g.fillStyle = col; g.fillRect(x, y, w, h); }
+  r(3, 0, 10, 5, '#12040a'); r(4, 1, 8, 3, '#c4121c'); r(5, 1, 2, 1, '#ff6a5a'); r(2, 5, 12, 17, '#12040a'); r(3, 6, 10, 15, '#e8a040'); r(3, 6, 2, 15, '#ffd080'); r(11, 6, 2, 15, '#a86020');
+  r(3, 10, 10, 7, '#f1e7d0'); r(4, 11, 8, 1, '#12040a'); r(4, 13, 6, 1, '#7a0a10'); r(4, 15, 7, 1, '#7a0a10'); [[5, 18, '#ff4a8a'], [8, 19, '#ffe36a'], [9, 7, '#7ac8ff']].forEach(function (p) { r(p[0], p[1], 2, 1, p[2]); });
+  var b = JAR = document.createElement('button'); b.setAttribute('aria-label', 'pill bottle'); b.tabIndex = -1;
+  b.style.cssText = 'position:fixed;left:10px;bottom:10px;width:34px;height:46px;padding:0;border:0;background:transparent;z-index:99999;opacity:0.55;cursor:pointer;image-rendering:pixelated;transition:transform .08s';
+  c.style.cssText = 'width:100%;height:100%;image-rendering:pixelated;display:block'; b.appendChild(c);
+  b.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); jarTap(); });
+  document.body.appendChild(b);
+}
+function jarTap() { PILLTAPS++; sfx.play('rattle'); if (JAR) { JAR.style.transform = 'rotate(' + (PILLTAPS % 2 ? 14 : -14) + 'deg)'; setTimeout(function () { if (JAR) JAR.style.transform = ''; }, 120); }
+  if (PILLTAPS >= 7) { PILLTAPS = 0; jarShow(0); levelSelect(titleMenu); } }
 function levelSelect(back) { sfx.play('tblaugh');
   KIT.menu({ cls: 'pn plain', title: "TB's secret stash", sub: 'Pick where the night starts. You get a few things to take with you.', items: FLOORS.map(function (F, fi) { return { label: (F.n ? F.n + '  ·  ' : '') + F.name, fn: function () { startAt(fi); } }; }).concat([{ label: 'BACK', back: 1, fn: back }]) }); }
 function startAt(fi) { KIT.closeMenu(); SV.runs++; persist(); G = freshG((Math.random() * 1e9) >>> 0); var P = G.P;
@@ -158,6 +176,7 @@ function draw() {
   if (G.mode === 'drive' || G.mode === 'trans' && DR && FL && FL.drive) { drawDrive(); drawDriveHud(); drawMsgs(); }
   else if (G.mode === 'ride' || G.mode === 'trans' && FL && FL.ride && RD) { drawRide(); drawHud(); drawRideHud(); }
   else if (G.mode === 'crash') { drawCrash(); KIT.blit(vignette(), 0, 0); drawMsgs(); }
+  else if (G.mode === 'scene') { drawWorld(); drawSceneHud(); }
   else { drawWorld(); drawHud(); }
   if (G.mode === 'trans') { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.trans / 1) + ')'; ctx.fillRect(0, 0, W, H); if (G.trans > 0.6) KIT.text(G.transWord || (FLOORS[G.fi].kind ? '...' : 'CLIMBING...'), W / 2, H / 2, { align: 'center', font: 'title', size: 26, col: '#a6968f', alpha: Math.min(1, (G.trans - 0.6) * 2) }); }
   if (G.mode === 'over') { G.overT = (G.overT || 0) + 1 / 60; ctx.fillStyle = 'rgba(80,0,6,' + Math.min(0.85, G.overT) + ')'; ctx.fillRect(0, 0, W, H); }

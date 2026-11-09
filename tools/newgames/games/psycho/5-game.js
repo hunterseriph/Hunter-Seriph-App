@@ -11,7 +11,7 @@ function hasBuff(b, pl) { return (pl || G.P).buffs.indexOf(b) >= 0; }
 function maxHp(pl) { return 100 + (hasBuff('gut', pl) ? 35 : 0); }
 function say(s, t, col) { G.msgs.push({ s: s, t: t || 3, col: col || '#f1e7d0' }); if (G.msgs.length > 4) G.msgs.shift(); }
 function sayAll(s, t, col) { say(s, t, col); netEv({ k: 'say', s: s, t: t, col: col }); }
-function subtitle(who, s, t) { G.sub = { who: who, s: s, t: t || 3.2 }; netEv({ k: 'sub', who: who, s: s, t: t }); }
+function subtitle(who, s, t) { G.sub = { who: who, s: s, t: t || 3.2 }; voice(who, s); netEv({ k: 'sub', who: who, s: s, t: t }); }
 function tbLine() { var q = TBQUOTES[Math.floor(Math.random() * TBQUOTES.length)]; if (q === G.lastQ) q = TBQUOTES[(TBQUOTES.indexOf(q) + 1) % TBQUOTES.length]; G.lastQ = q; return q; }
 function isGuest() { return !!(G && G.net === 'guest'); }
 function isHost() { return !!(G && G.net === 'host'); }
@@ -44,6 +44,7 @@ function loadFloor(fi, how) {
   G.banner = { s: (th.n ? th.n + '  ·  ' : '') + th.name, t: 4 };
   G.trans = 0; G.mode = 'play'; G.bossIntro = 0;
   if (isHost()) netFloor(how);
+  floorScene(fi, how);
 }
 function placeAt(P, st, a, side) { P.x = tx(st.i) + (side ? Math.cos(a) * side : 0); P.z = tx(st.j) - (side ? Math.sin(a) * side : 0); P.a = P.ca = a; P.hide = null; P.hp = Math.max(P.hp, 1); collide(P, 0.3, 'me'); }
 function tileFlow(who, i, j) { // a cached flow field to a tile
@@ -231,7 +232,7 @@ function hurtTB(dmg, a, w) {
   if (!tb.tgt) tb.tgt = nearestPlayer(tb); if (Math.random() < 0.5) subtitle('TB', tbLine());
 }
 function killFoe(f) {
-  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H) subtitle(f.d.n, H.die, 3.5); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
+  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H && (G.botIn || G.noScenes)) subtitle(f.d.n, H.die, 3.5); else if (H) setTimeout(function () { if (G && G.mode === 'play') sceneHenchDie(f); }, 400); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
   f.st = 'dead'; f.t = 0; f.hp = 0; G.kills++; sfx.play('scream'); blood(f.x, 1, f.z, 14, 1.4); netEv({ k: 'blood', x: f.x, z: f.z, n: 14 });
   if (Math.random() < 0.55) { var P = G.P, guns = ['handgun', 'shotgun', 'rifle'].filter(function (g) { return P.weaps[g]; }), k = Math.random() < 0.35 ? 'cracker' : guns.length ? { handgun: 'ammo9', shotgun: 'shells', rifle: 'riflea' }[guns[Math.floor(Math.random() * guns.length)]] : 'cracker'; addLoot(f.x, f.z, k); }
 }

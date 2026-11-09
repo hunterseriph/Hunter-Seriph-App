@@ -5,6 +5,7 @@
    ===================================================================================================== */
 var DYN = null, CAM = { d: 2.3 };
 function camPose() {
+  if (G.mode === 'scene' && SCN && SCN.cam) return SCN.cam;
   var P = G.P, T = tripLook();
   if (P.hide) { var r = lockerRect(P.hide), cx = (r[0] + r[2]) / 2 + P.hide.di * 0.25, cz = (r[1] + r[3]) / 2 + P.hide.dj * 0.25, f = [Math.sin(P.ca) * Math.cos(P.cp), Math.sin(P.cp), Math.cos(P.ca) * Math.cos(P.cp)]; return { eye: [cx, 1.6, cz], at: [cx + f[0] * 5, 1.6 + f[1] * 5, cz + f[2] * 5], fov: 0.95, roll: T.roll * 0.5, T: T }; }
   var aim = P.aim, want = aim ? 1.9 : P.crouch ? 2.1 : 2.5, side = aim ? 0.92 : 0.62, h = P.crouch ? 1.45 : aim ? 1.78 : 1.92, cp = P.cp;
@@ -98,6 +99,8 @@ function drawTB(tb, T, rigN, alpha) {
   else if (tb.st === 'boss') { poseWalk(Q, tb.ph, Math.min(1, tb.spd / 2.4), tb.spd > 5); var bm = tb.mv; if (bm && bm.k === 'swipe') poseSwing(Q, Math.min(1, bm.t / 0.9)); else if (bm && (bm.k === 'pills' || bm.k === 'molotov')) { var kk = Math.min(1, bm.t / 0.7); Q.sh[1] = [2.4 * kk, 0.1, 0]; Q.el[1] = 1.2 - kk; } else if (bm && bm.k === 'charge' && bm.t < 0.9) { Q.lean = 0.5; Q.hp = 0.3; } else if (bm && bm.k === 'gulp') { Q.sh[0] = [2.3, 0.1, 0.5]; Q.el[0] = 1.9; Q.hp = -0.5; } if (tb.stun > 0) { Q.hr = Math.sin(KIT.t * 6) * 0.4; Q.lean = 0.3; } if (tb.hurtT > 0) poseHurt(Q, 1); }
   else if (tb.st === 'ghost') { Q.sh[0] = [0.2, 0.5, 0]; Q.sh[1] = [0.2, 0.5, 0]; Q.hr = 0.35; }
   else { poseWalk(Q, tb.ph, Math.min(1, tb.spd / 2.4), tb.st === 'chase'); Q.hr = 0.22 + Math.sin(tb.ph * 0.5) * 0.08; if (tb.st === 'chase') { Q.sh[1] = [1.1 + Math.sin(tb.ph) * 0.2, 0.15, -0.2]; Q.el[1] = 0.3; } if (tb.flinch > 0) poseHurt(Q, 1); }
+  if (tb.st === 'cut') { var pz = tb.pose, tt = KIT.t; if (pz === 'wave') { Q.sh[1] = [2.7, 0.4 + Math.sin(tt * 9) * 0.35, 0]; Q.el[1] = 0.5; } else if (pz === 'point') { Q.sh[1] = [1.55, 0.05, 0]; Q.el[1] = 0.05; Q.hp = -0.1; } else if (pz === 'laugh') { Q.hp = -0.45 + Math.sin(tt * 14) * 0.08; Q.sh[0] = [0.6, 0.9, 0]; Q.sh[1] = [0.6, 0.9, 0]; Q.lean = -0.15; } else if (pz === 'pills') { Q.sh[0] = [1.4, 0.2, 0.3]; Q.el[0] = 1.2 + Math.sin(tt * 20) * 0.15; } else if (pz === 'lean') { Q.lean = 0.35; Q.sh[0] = [1.2, 0.2, 0]; Q.sh[1] = [1.2, 0.2, 0]; Q.el = [1.0, 1.0]; } }
+  if (tb.st !== 'dead' && tb.st !== 'out') tbTwitch(Q, tb);
   drawRig(rig, tb.x, 0, tb.z, tb.a, Q, { heldL: rig.P.bottle, alpha: alpha, tint: T.tint });
 }
 function drawPlayerOld(T) {

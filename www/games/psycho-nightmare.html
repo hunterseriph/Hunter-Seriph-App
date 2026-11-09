@@ -1858,8 +1858,8 @@ function parkMesh(F, m, H) {
     }
   }
   F.neons.forEach(function (N) { var q = DIRS[N.d], x0 = N.i * TSZ, z0 = N.j * TSZ, s = 0.7, y = N.y, T = TL(N.k), off = TSZ / 2 - 0.03, cx = x0 + TSZ / 2 + q[0] * off, cz = z0 + TSZ / 2 + q[1] * off, n = [-q[0], 0, -q[1]], g = N.broken ? 0.3 : 1.4;
-    if (q[0]) m.quad([cx, y - s, cz + s * q[0] + N.o], [cx, y - s, cz - s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g);
-    else m.quad([cx - s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y - s, cz], [cx + s * q[1] + N.o, y + s, cz], [cx - s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g); });
+    if (q[0]) m.quad([cx, y - s, cz - s * q[0] + N.o], [cx, y - s, cz + s * q[0] + N.o], [cx, y + s, cz + s * q[0] + N.o], [cx, y + s, cz - s * q[0] + N.o], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g);
+    else m.quad([cx + s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y - s, cz], [cx - s * q[1] + N.o, y + s, cz], [cx + s * q[1] + N.o, y + s, cz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(N.broken ? 0.5 : 1), n, g); });
   F.lights.forEach(function (L) { if (!L.pole) return; var x = tx(L.i), z = tx(L.j); boxM(x - 0.05, 0, z - 0.05, x + 0.05, L.y, z + 0.05, TL('metal'), 0.6); boxM(x - 0.22, L.y - 0.1, z - 0.22, x + 0.22, L.y + 0.05, z + 0.22, TL('rust'), 0.8); });
   F.lockers.forEach(function (L) { var r = lockerRect(L); boxM(r[0], 0, r[1], r[2], 2.2, r[3], TL('polka'), 0.6); boxM(r[0] - 0.05, 2.2, r[1] - 0.05, r[2] + 0.05, 2.35, r[3] + 0.05, TL('black'), 1); });
   // the rides and the junk
@@ -2231,12 +2231,94 @@ function buildRigs2() {
     function (P) { var w = M(); tub(w, [0, -0.1, 0], [0, 0.85, 0], 0.022, 0.022, '#6a4a28', 6, { cap0: 1 }); bxp(w, -0.11, 0.85, -0.02, 0.11, 1.12, 0.02, '#7a7a80', TL('rust')); P.weapon = w.upload(); }) };
   /* THE SISSIFIER: huge, pink frills, white apron, gimp mask, pigtails, the giant lipstick */
   var Dz = { lu: 0.5, ll: 0.5, tor: 0.66, shW: 0.3, hipW: 0.14, au: 0.36, al: 0.34, arm: 0.075, hand: 0.08, leg: 0.085, neck: 0.08 };
+  buildTB2();
   RIGS.sissifier = { D: Dz, eyeY: 2.0, P: std(Dz, { sleeve: '#ff7ab0', fore: '#2a2026', hand: '#f4f0ec', legs: '#f4f0ec', boot: '#12040a' }, '#ffffff',
     function (to, D) { ell(to, 0, D.tor * 0.5, 0, 0.3, D.tor * 0.56, 0.2, '#ffffff', 10, 6, { T: TL('pinkfrill') }); tub(to, [0, D.tor * 0.1, 0], [0, -D.tor * 0.75, 0], 0.27, 0.6, '#ffffff', 12, { T: TL('pinkfrill') }); tub(to, [0, -D.tor * 0.72, 0], [0, -D.tor * 0.8, 0], 0.62, 0.66, '#ffffff', 12);
       ell(to, 0, D.tor * 0.3, 0.12, 0.2, D.tor * 0.4, 0.12, '#c8bcb8', 8, 5, { b0: 0.3 }); [-1, 1].forEach(function (sd) { ell(to, sd * 0.3, D.tor * 0.92, 0, 0.13, 0.09, 0.13, '#ffd0e4', 8, 4); }); tub(to, [0, D.tor * 0.92, 0], [0, D.tor * 1.0, 0], 0.13, 0.12, '#12040a', 8, { cap: 1 }); },
     function (hd) { ell(hd, 0, 0.18, 0, 0.18, 0.21, 0.19, '#2a2026', 12, 8, { face: 'f_sissy', fz: 0.12, fw: 0.92, fh: 0.92, T: TL('leather') }); [-1, 1].forEach(function (sd) { tub(hd, [sd * 0.17, 0.3, -0.04], [sd * 0.34, 0.05, -0.1], 0.06, 0.03, '#ffe36a', 7); ell(hd, sd * 0.17, 0.3, -0.04, 0.05, 0.05, 0.05, '#ff4a8a', 6, 3); }); ell(hd, 0, 0.38, -0.02, 0.17, 0.04, 0.15, '#ffffff', 10, 3); },
     function (P) { var w = M(); tub(w, [0, -0.08, 0], [0, 0.3, 0], 0.06, 0.06, '#d8b040', 10, { cap0: 1 }); tub(w, [0, 0.3, 0], [0, 0.55, 0], 0.05, 0.05, '#ff1a5a', 10); tub(w, [0, 0.55, 0], [0.03, 0.66, 0], 0.05, 0.0, '#ff1a5a', 8); P.weapon = w.upload(); }) };
 }
+
+/* =====================================================================================================
+   TB, MADE WORSE (his ask: way more fucked up). Sallow, sweating skin with boils; the eye patch is gone: the socket is
+   stitched shut with black thread and a nail through it, weeping blood; the other eye bulges, veined red; half his
+   nose is missing; the grin is cut out to the ears and stitched open, rotten teeth, gums, drool. A lumpy skull with a
+   missing ear and nails through the hat, a hunched back, a hanging belly with a stitched Y scar under the open jacket,
+   a blood-soaked vest, needles still stuck in his shoulder, long arms with claws, bandages. He twitches.
+   ===================================================================================================== */
+function tbFace(g, mad, clown) {
+  var skin = clown ? '#f4f0e8' : mad ? '#c8a888' : '#c0b08c';
+  g.fillStyle = skin; g.fillRect(0, 0, 128, 128);
+  if (!clown) { g.globalAlpha = 0.35; fEll(g, 30, 30, 22, 16, '#8a9a68'); fEll(g, 100, 96, 20, 14, '#8a9a68'); fEll(g, 64, 20, 30, 10, '#7a6a50'); g.globalAlpha = 1; // bruised, sallow patches
+    [[22, 70, 5], [104, 58, 4], [96, 28, 3], [30, 100, 3.5], [70, 30, 2.5]].forEach(function (b) { fEll(g, b[0], b[1], b[2], b[2], '#d8c070', '#7a5a30', 1.5); fEll(g, b[0] - 1, b[1] - 1, b[2] * 0.35, b[2] * 0.35, '#fff0b0'); }); // boils
+    g.fillStyle = 'rgba(40,30,20,0.35)'; for (var s = 0; s < 120; s++) g.fillRect((s * 53) % 124, 84 + (s * 29) % 40, 2, 2); } // stubble
+  // the left socket: stitched shut, a nail through it, blood running down
+  fEll(g, 42, 58, 16, 12, '#5a1a1a', K0, 3); fLine(g, [[28, 58], [56, 58]], 3, '#2a0808');
+  for (var x = 0; x < 5; x++) { fLine(g, [[30 + x * 6, 50], [34 + x * 6, 66]], 2.2, '#0a0404'); fLine(g, [[34 + x * 6, 50], [30 + x * 6, 66]], 2.2, '#0a0404'); }
+  fEll(g, 42, 56, 4, 4, '#8a8a90', K0, 2); fLine(g, [[42, 56], [36, 46]], 3, '#6a6a70');
+  g.fillStyle = '#8a0410'; g.fillRect(36, 66, 4, mad ? 40 : 26); g.fillRect(46, 66, 3, mad ? 30 : 16); fEll(g, 38, mad ? 106 : 92, 3, 4, '#8a0410');
+  // the right eye: bulging, bloodshot, tiny pupil
+  var er = mad ? 21 : 19; fEll(g, 86, 58, er + 4, er + 2, '#5a3020', K0, 3); fEll(g, 86, 58, er, er - 1, '#fff2e0', K0, 2);
+  g.strokeStyle = '#c4121c'; g.lineWidth = 1.4; for (var v = 0; v < 9; v++) { var a = v / 9 * 6.28; g.beginPath(); g.moveTo(86 + Math.cos(a) * er, 58 + Math.sin(a) * (er - 1)); g.lineTo(86 + Math.cos(a + 0.3) * er * 0.5, 58 + Math.sin(a + 0.3) * er * 0.45); g.stroke(); }
+  fEll(g, 88, 59, mad ? 4 : 5, mad ? 4 : 5, mad ? '#c4121c' : '#5a4a10', K0, 1.5); fEll(g, 88, 59, 2, 2, K0); fEll(g, 84, 54, 2.5, 2, '#ffffff');
+  fLine(g, [[66, mad ? 34 : 40], [86, mad ? 28 : 34], [106, mad ? 40 : 42]], 5, '#2a1a10'); // brow
+  // half a nose: two wet slits and the stump
+  fShape(g, [[60, 70], [66, 66], [70, 76], [62, 80]], '#9a6a5a', K0, 2); fEll(g, 62, 78, 2.5, 3.5, '#2a0808'); fEll(g, 69, 78, 2.5, 3.5, '#2a0808');
+  // the grin, cut to the ears and stitched open
+  var mo = mad ? 14 : 6; fShape(g, [[4, 82], [30, 98 + mo], [64, 106 + mo * 1.6], [98, 98 + mo], [124, 82], [98, 92], [64, 96], [30, 92]], '#2a0406', K0, 3);
+  if (mad) fEll(g, 64, 108, 12, 6, '#8a2a3a', K0, 1.5); // the tongue
+  g.fillStyle = '#7a1a22'; g.fillRect(24, 91, 80, 4); // gums
+  for (var t = 0; t < 13; t++) { var tx0 = 24 + t * 6.2, rot = (t * 7) % 5, h = 5 + (t * 3) % 4; if (rot === 3) continue; g.fillStyle = rot === 1 ? '#7a6a30' : rot === 4 ? '#5a4a28' : '#d8cc98'; g.fillRect(tx0, 93, 5, h); if (mad) { g.fillStyle = rot === 2 ? '#6a5a28' : '#c8bc88'; g.fillRect(tx0 + 1, 103 + mo * 0.9 - h, 4, h); } }
+  [[8, 84], [16, 90], [112, 84], [120, 82]].forEach(function (s) { fLine(g, [[s[0] - 4, s[1] - 6], [s[0] + 4, s[1] + 6]], 2, '#0a0404'); }); // the stitches at the corners
+  g.fillStyle = 'rgba(220,230,200,0.75)'; g.fillRect(52, 100 + mo, 3, 18); g.fillRect(80, 98 + mo, 2, 12); // drool
+  fLine(g, [[100, 20], [118, 44]], 2, '#6a3a2a'); fLine(g, [[106, 22], [112, 24]], 1.5, '#3a1a10'); fLine(g, [[110, 30], [116, 32]], 1.5, '#3a1a10'); // a stitched scar
+  if (clown) { fEll(g, 64, 74, 10, 9, '#e01010', K0, 3); g.globalAlpha = 0.7; fShape(g, [[74, 30], [86, 14], [98, 30], [86, 84]], '#2a50c0'); g.globalAlpha = 1; fEll(g, 86, 58, er, er - 1, '#fff2e0', K0, 2); fEll(g, 88, 59, 4, 4, '#c4121c', K0, 1.5); g.fillStyle = 'rgba(196,18,28,0.7)'; g.fillRect(4, 80, 120, 4); }
+}
+HIPAINT.f_tb = face(function (g) { tbFace(g, 0, 0); }, '#c0b08c');
+HIPAINT.f_tbmad = face(function (g) { tbFace(g, 1, 0); }, '#c8a888');
+HIPAINT.f_tbclown = face(function (g) { tbFace(g, 1, 1); }, '#f4f0e8');
+HIPAINT.tbvest = function (g, r) { g.fillStyle = '#b8a888'; g.fillRect(0, 0, 64, 64); g.fillStyle = 'rgba(80,60,30,0.5)'; for (var i = 0; i < 40; i++) g.fillRect(r() * 64, r() * 64, 3, 2); paintBlood(g, r, 1.1); };
+HIPAINT.tbbelly = function (g, r) { g.fillStyle = '#c0a888'; g.fillRect(0, 0, 64, 64); g.globalAlpha = 0.3; g.fillStyle = '#7a8a5a'; g.beginPath(); g.ellipse(20, 40, 14, 10, 0, 0, 6.28); g.fill(); g.globalAlpha = 1;
+  g.strokeStyle = '#5a1a14'; g.lineWidth = 2; g.beginPath(); g.moveTo(10, 8); g.lineTo(32, 30); g.lineTo(54, 8); g.moveTo(32, 30); g.lineTo(32, 62); g.stroke(); g.strokeStyle = '#0a0404'; g.lineWidth = 1;
+  for (var s = 0; s < 8; s++) { g.beginPath(); g.moveTo(29, 32 + s * 4); g.lineTo(35, 34 + s * 4); g.stroke(); } for (var k = 0; k < 4; k++) { g.beginPath(); g.moveTo(12 + k * 5, 8 + k * 5); g.lineTo(16 + k * 5, 6 + k * 5); g.moveTo(52 - k * 5, 8 + k * 5); g.lineTo(48 - k * 5, 6 + k * 5); g.stroke(); }
+  g.fillStyle = 'rgba(120,6,12,0.8)'; g.fillRect(30, 40, 3, 14); g.fillStyle = '#3a1a10'; g.beginPath(); g.arc(32, 46, 2.5, 0, 6.28); g.fill(); };
+function tbRig2(fc, clown) {
+  var D = { lu: 0.46, ll: 0.46, tor: 0.6, shW: 0.29, hipW: 0.13, au: 0.4, al: 0.38, arm: 0.07, hand: 0.08, leg: 0.085, neck: 0.06 }, P = {}, skin = clown ? '#f4f0e8' : '#c0b08c';
+  var c = { sleeve: clown ? '#ffffff' : '#4a2e18', fore: clown ? '#ffffff' : '#4a2e18', hand: skin, legs: clown ? '#2a50c0' : '#2a2a38', boot: clown ? '#c4121c' : '#1e140c' };
+  var hp = M(); ell(hp, 0, 0, 0, 0.23, 0.14, 0.17, c.legs, 8, 4); tub(hp, [-0.22, 0.06, 0], [0.22, 0.06, 0], 0.03, 0.03, '#3a2412', 6); ell(hp, 0, 0.06, 0.17, 0.05, 0.035, 0.02, '#c8a040', 6, 3); ell(hp, 0.08, -0.08, 0.15, 0.08, 0.1, 0.03, '#5a4020', 6, 3); P.hips = hp.upload(); // a piss stain
+  var to = M();
+  if (clown) { ell(to, 0, D.tor * 0.5, 0, 0.31, D.tor * 0.56, 0.21, '#ffffff', 10, 6, { T: TL('polka') }); [0.3, 0.55, 0.8].forEach(function (y) { ell(to, 0, D.tor * y, 0.21, 0.045, 0.045, 0.03, '#ffe36a', 6, 3); }); tub(to, [0, D.tor * 0.92, 0], [0, D.tor * 1.0, 0], 0.27, 0.2, '#f1e7d0', 12, { cap: 1 }); }
+  else {
+    ell(to, 0, D.tor * 0.5, -0.02, 0.29, D.tor * 0.56, 0.19, '#5a3a20', 10, 6); // the jacket
+    ell(to, 0, D.tor * 0.52, 0.07, 0.17, D.tor * 0.46, 0.15, '#ffffff', 8, 5, { T: TL('tbvest'), b0: 0.4 }); // the vest, soaked
+    ell(to, 0, D.tor * 0.16, 0.12, 0.21, D.tor * 0.24, 0.16, '#ffffff', 10, 5, { T: TL('tbbelly'), b0: 0.6 }); // the belly, hanging out
+    ell(to, 0, D.tor * 0.88, -0.17, 0.2, D.tor * 0.2, 0.1, '#5a3a20', 8, 4); // the hump
+    tub(to, [0, D.tor * 0.9, 0], [0, D.tor * 1.02, 0], 0.16, 0.13, '#5a0a0a', 10, { cap: 1 }); tub(to, [0.05, D.tor * 0.92, 0.12], [0.12, D.tor * 0.55, 0.2], 0.045, 0.02, '#5a0a0a', 6);
+    [[0.2, 0.86, 0.06], [0.24, 0.8, 0.0], [0.16, 0.9, -0.05]].forEach(function (s, n) { var b = [s[0], D.tor * s[1], s[2]]; tub(to, b, [b[0] + 0.12, b[1] + 0.13, b[2] + 0.06 - n * 0.04], 0.022, 0.022, '#e8f0f0', 6); tub(to, [b[0] + 0.03, b[1] + 0.03, b[2] + 0.02], [b[0] + 0.09, b[1] + 0.1, b[2] + 0.05], 0.018, 0.018, n === 1 ? '#7aff6a' : '#ff4a8a', 6); tub(to, b, [b[0] - 0.05, b[1] - 0.05, b[2]], 0.004, 0.002, '#c8c8d0', 3); }); // needles still in him
+  }
+  P.torso = to.upload();
+  var hd = M(); ell(hd, 0, 0.2, 0, 0.21, 0.24, 0.21, skin, 12, 8, { face: fc, fz: 0.18, fw: 0.84, fh: 0.84, fdv: 0.05 });
+  ell(hd, 0.12, 0.32, -0.08, 0.1, 0.09, 0.1, skin, 8, 5); ell(hd, -0.14, 0.28, -0.1, 0.08, 0.08, 0.08, skin, 8, 4); ell(hd, 0.02, 0.1, -0.15, 0.09, 0.08, 0.08, skin, 8, 4); // a lumpy skull
+  ell(hd, 0.21, 0.2, 0, 0.04, 0.065, 0.045, skin, 6, 3); ell(hd, -0.21, 0.2, 0, 0.03, 0.03, 0.03, '#6a1a14', 6, 3); // one ear, and where the other was
+  if (clown) { [-1, 1].forEach(function (sd) { ell(hd, sd * 0.21, 0.28, -0.02, 0.13, 0.12, 0.14, '#ffffff', 8, 5, { T: TL('wigred') }); }); ell(hd, 0, 0.18, 0.22, 0.05, 0.05, 0.04, '#e01010', 8, 5);
+    tub(hd, [0.05, 0.42, 0], [0.05, 0.44, 0], 0.14, 0.14, '#1a1a1e', 10, { cap: 1, cap0: 1 }); tub(hd, [0.05, 0.44, 0], [0.08, 0.6, 0.02], 0.07, 0.05, '#1a1a1e', 8, { cap: 1 }); }
+  else { ell(hd, 0, 0.29, -0.04, 0.21, 0.17, 0.2, '#3a2412', 10, 5, { only: 'back' }); // greasy hair
+    tub(hd, [0, 0.43, -0.03], [0.02, 0.45, -0.01], 0.33, 0.3, '#4a2e18', 14, { cap: 1, cap0: 1 }); tub(hd, [0, 0.45, -0.03], [0.03, 0.62, -0.05], 0.18, 0.14, '#4a2e18', 10, { cap: 1 }); tub(hd, [0, 0.46, -0.03], [0, 0.5, -0.03], 0.185, 0.18, '#5a0a0a', 10); // a sweat-black hat with a blood band
+    [[-0.08, 0.55, 0.1], [0.1, 0.57, 0.08], [0.0, 0.6, -0.17]].forEach(function (n) { tub(hd, [n[0], n[1], n[2]], [n[0] * 1.6, n[1] + 0.12, n[2] * 1.3], 0.012, 0.008, '#9a9aa0', 4); ell(hd, n[0] * 1.6, n[1] + 0.12, n[2] * 1.3, 0.02, 0.012, 0.02, '#9a9aa0', 5, 2); }); } // nails through the crown
+  P.head = hd.upload();
+  limbs(P, D, c);
+  // claws on the hands: re-upload the forearms with long black nails and a bandage on the right
+  ['L', 'R'].forEach(function (sd) { var al = M(); ell(al, 0, 0, 0, D.arm * 0.9, D.arm * 0.9, D.arm * 0.9, c.fore, 7, 4); tub(al, [0, 0, 0], [0, -D.al, 0], D.arm * 0.86, D.arm * 0.72, c.fore, 8);
+    if (sd === 'R' && !clown) tub(al, [0, -D.al * 0.55, 0], [0, -D.al * 0.95, 0], D.arm * 0.82, D.arm * 0.76, '#d8ccb0', 8);
+    ell(al, 0, -D.al - D.hand * 0.6, 0.01, D.hand * 0.95, D.hand * 1.1, D.hand * 0.8, c.hand, 8, 4);
+    for (var f = -1; f <= 1; f++) { var fx = f * D.hand * 0.5; tub(al, [fx, -D.al - D.hand * 1.2, 0.02], [fx * 1.2, -D.al - D.hand * 2.3, 0.05], D.hand * 0.22, D.hand * 0.16, c.hand, 5); tub(al, [fx * 1.2, -D.al - D.hand * 2.3, 0.05], [fx * 1.3, -D.al - D.hand * 2.9, 0.09], D.hand * 0.13, 0.0, '#1a1410', 4); }
+    P['al' + sd] = al.upload(); });
+  var bt = M(); tub(bt, [0, 0, 0], [0, 0.13, 0], 0.045, 0.045, '#f1e7d0', 8, { cap0: 1 }); tub(bt, [0, 0.13, 0], [0, 0.17, 0], 0.048, 0.048, '#c4121c', 8, { cap: 1 }); P.bottle = bt.upload();
+  return { P: P, D: D, eyeY: 1.75, tbx: 1 };
+}
+function buildTB2() { RIGS.tb = tbRig2('f_tb'); RIGS.tbmad = tbRig2('f_tbmad'); RIGS.tbclown = tbRig2('f_tbclown', 1); }
+/* he never stands straight: hunched, and his head jerks now and then */
+function tbTwitch(Q, tb) { var t = KIT.t + (tb.x || 0) * 0.37; Q.lean += 0.22; Q.hp -= 0.02; var j = Math.sin(t * 1.7) * Math.sin(t * 2.9); if (j > 0.82) { Q.hr += Math.sin(t * 47) * 0.35; Q.hy += Math.sin(t * 31) * 0.25; } Q.hr += 0.12; }
 
 /* =====================================================================================================
    THE GAME: Cumhead (and online, Shithead Laboozie), TB and TB's boys on a level. Moving, hiding, fighting, the pills,
@@ -2251,7 +2333,7 @@ function hasBuff(b, pl) { return (pl || G.P).buffs.indexOf(b) >= 0; }
 function maxHp(pl) { return 100 + (hasBuff('gut', pl) ? 35 : 0); }
 function say(s, t, col) { G.msgs.push({ s: s, t: t || 3, col: col || '#f1e7d0' }); if (G.msgs.length > 4) G.msgs.shift(); }
 function sayAll(s, t, col) { say(s, t, col); netEv({ k: 'say', s: s, t: t, col: col }); }
-function subtitle(who, s, t) { G.sub = { who: who, s: s, t: t || 3.2 }; netEv({ k: 'sub', who: who, s: s, t: t }); }
+function subtitle(who, s, t) { G.sub = { who: who, s: s, t: t || 3.2 }; voice(who, s); netEv({ k: 'sub', who: who, s: s, t: t }); }
 function tbLine() { var q = TBQUOTES[Math.floor(Math.random() * TBQUOTES.length)]; if (q === G.lastQ) q = TBQUOTES[(TBQUOTES.indexOf(q) + 1) % TBQUOTES.length]; G.lastQ = q; return q; }
 function isGuest() { return !!(G && G.net === 'guest'); }
 function isHost() { return !!(G && G.net === 'host'); }
@@ -2284,6 +2366,7 @@ function loadFloor(fi, how) {
   G.banner = { s: (th.n ? th.n + '  ·  ' : '') + th.name, t: 4 };
   G.trans = 0; G.mode = 'play'; G.bossIntro = 0;
   if (isHost()) netFloor(how);
+  floorScene(fi, how);
 }
 function placeAt(P, st, a, side) { P.x = tx(st.i) + (side ? Math.cos(a) * side : 0); P.z = tx(st.j) - (side ? Math.sin(a) * side : 0); P.a = P.ca = a; P.hide = null; P.hp = Math.max(P.hp, 1); collide(P, 0.3, 'me'); }
 function tileFlow(who, i, j) { // a cached flow field to a tile
@@ -2471,7 +2554,7 @@ function hurtTB(dmg, a, w) {
   if (!tb.tgt) tb.tgt = nearestPlayer(tb); if (Math.random() < 0.5) subtitle('TB', tbLine());
 }
 function killFoe(f) {
-  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H) subtitle(f.d.n, H.die, 3.5); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
+  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H && (G.botIn || G.noScenes)) subtitle(f.d.n, H.die, 3.5); else if (H) setTimeout(function () { if (G && G.mode === 'play') sceneHenchDie(f); }, 400); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
   f.st = 'dead'; f.t = 0; f.hp = 0; G.kills++; sfx.play('scream'); blood(f.x, 1, f.z, 14, 1.4); netEv({ k: 'blood', x: f.x, z: f.z, n: 14 });
   if (Math.random() < 0.55) { var P = G.P, guns = ['handgun', 'shotgun', 'rifle'].filter(function (g) { return P.weaps[g]; }), k = Math.random() < 0.35 ? 'cracker' : guns.length ? { handgun: 'ammo9', shotgun: 'shells', rifle: 'riflea' }[guns[Math.floor(Math.random() * guns.length)]] : 'cracker'; addLoot(f.x, f.z, k); }
 }
@@ -2666,7 +2749,7 @@ function buildDriveMesh() {
     if ((z / STEP) % 3 === 0) [-1, 1].forEach(function (sd) {
       var bx = x0 + sd * (w + 3.5);
       if (city) { var h = 6 + rnd() * 10, d = 7 + rnd() * 5; boxM(Math.min(bx, bx + sd * d), 0, z, Math.max(bx, bx + sd * d), h, z + STEP * 3 - 0.6, TL(rnd() < 0.5 ? 'windows' : 'citywall'), 0.8 + rnd() * 0.3);
-        if (rnd() < 0.6) { var nz = z + 2 + rnd() * 7, ny = 3 + rnd() * 3, T = TL(NEONS[Math.floor(rnd() * NEONS.length)]), fx = bx - sd * 0.05; m.quad([fx, ny - 0.9, nz + 0.9 * sd], [fx, ny - 0.9, nz - 0.9 * sd], [fx, ny + 0.9, nz - 0.9 * sd], [fx, ny + 0.9, nz + 0.9 * sd], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), [-sd, 0, 0], 1.6); } }
+        if (rnd() < 0.6) { var nz = z + 2 + rnd() * 7, ny = 3 + rnd() * 3, T = TL(NEONS[Math.floor(rnd() * NEONS.length)]), fx = bx - sd * 0.05; m.quad([fx, ny - 0.9, nz - 0.9 * sd], [fx, ny - 0.9, nz + 0.9 * sd], [fx, ny + 0.9, nz + 0.9 * sd], [fx, ny + 0.9, nz - 0.9 * sd], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), [-sd, 0, 0], 1.6); } }
       else if (!wood) { boxM(bx - 0.05, 0, z, bx + 0.05, 1.2, z + STEP * 3, TL('metal'), 0.7); if (rnd() < 0.4) boxM(bx + sd * 4, 0, z + 2, bx + sd * 8, 3, z + 8, TL('rust'), 0.8); }
       else { for (var t = 0; t < 4; t++) { var tx0 = bx + sd * (0.5 + rnd() * 9), tz0 = z + rnd() * STEP * 3, r = 0.25 + rnd() * 0.25; boxM(tx0 - r, 0, tz0 - r, tx0 + r, 9, tz0 + r, TL('bark'), 0.8); boxM(tx0 - 1.6, 4, tz0 - 1.6, tx0 + 1.6, 8.5, tz0 + 1.6, TL('leaves'), 0.7); } }
     });
@@ -2686,8 +2769,8 @@ function stepDrive(dt) {
   if (G.botIn) { gas = true; brake = false; }
   var top = DR.end ? 0 : gas ? 26 : 17, acc = DR.end ? -6 : brake ? -14 : (top > DR.v ? 7 : -4);
   DR.v = Math.max(0, Math.min(top + 0.01, DR.v + acc * dt)); if (DR.end && DR.v <= 0.2) { DR.v = 0; DR.stopT += dt; }
-  DR.steer += ((DR.end ? 0 : I.mx) - DR.steer) * Math.min(1, dt * 6); DR.x += DR.steer * dt * (4 + DR.v * 0.22); DR.z += DR.v * dt; DR.wheel += DR.v * dt * 3;
-  var rd = roadDir(DR.z); DR.yaw = rd + DR.steer * 0.25;
+  DR.steer += ((DR.end ? 0 : I.mx) - DR.steer) * Math.min(1, dt * 6); DR.x -= DR.steer * dt * (4 + DR.v * 0.22); DR.z += DR.v * dt; DR.wheel += DR.v * dt * 3;
+  var rd = roadDir(DR.z); DR.yaw = rd - DR.steer * 0.25; // facing +z, right is -x (he said the steering was the wrong way round)
   if (Math.abs(DR.x) > ROADW - 0.9) { // scraping the kerb and the walls
     DR.x = Math.sign(DR.x) * (ROADW - 0.9); if (DR.v > 8) { DR.hp = Math.max(DR.z < DRLEN * 0.72 ? 8 : 0, DR.hp - dt * 8); DR.v *= 1 - dt * 1.5; if (Math.random() < dt * 20) { G.fx.push({ k: 'spark', x: roadX(DR.z) + DR.x * 1.05, y: 0.6, z: DR.z, t: 0.3 }); } if (Math.random() < dt * 4) sfx.play('scrape'); KIT.shake(1.5); } }
   // TB's boys come at the car
@@ -2981,7 +3064,7 @@ function stepHench(f, dt) {
   var d = f.d, H = HENCH[f.k], P = nearestPlayer(f); if (!P) return; var pd = dist2(f, P); f.spd = 0; f.wind = 0;
   if (f.st !== 'fight') { // waiting by the way on: wakes when it sees you, or when you hurt it
     f.a += angDiff(Math.atan2(P.x - f.x, P.z - f.z), f.a) * Math.min(1, dt * 0.6);
-    if ((pd < 12 && canSee(f.x, f.z, P.x, P.z) && !P.hide) || f.hp < f.max || f.st === 'chase') { f.st = 'fight'; f.cd = 1.6; G.banner = { s: d.n.toUpperCase(), t: 3.5 }; subtitle(d.n, H.wake, 4); sfx.play('sting'); sfx.play('shout'); KIT.shake(6); netEv({ k: 'sfx', n: 'sting' }); }
+    if ((pd < 12 && canSee(f.x, f.z, P.x, P.z) && !P.hide) || f.hp < f.max || f.st === 'chase') { f.st = 'fight'; f.cd = 1.6; if (G.botIn || G.noScenes) { G.banner = { s: d.n.toUpperCase(), t: 3.5 }; subtitle(d.n, H.wake, 4); sfx.play('sting'); } else sceneHench(f); sfx.play('shout'); }
     return;
   }
   if (!f.p2 && f.hp < f.max * 0.5) { f.p2 = 1; subtitle(d.n, H.p2, 3.5); sfx.play('scream'); (H.summon || []).forEach(function (k, n) { var g = randomNear(tileOf(f.x), tileOf(f.z), 6), fd = FOES[k]; if (!g) return; G.foes.push({ id: G.foes.length, k: k, d: fd, x: tx(g.i), z: tx(g.j), a: 0, hp: fd.hp, st: 'chase', sus: 1, home: { i: g.i, j: g.j }, ph: 0, t: 0, atk: -1, cool: 1, ko: 0, bleed: 0, poison: 0, daze: 0, goal: null, spd: 0, hurt: 0, wait: 0, tgt: nearestPlayer({ x: tx(g.i), z: tx(g.j) }) }); }); }
@@ -3042,6 +3125,126 @@ function drawHenchHud() { var f = (G.foes || []).filter(function (f) { return f.
   KIT.text(f.d.n.toUpperCase(), W / 2, y + 12, { size: 8, col: '#f1e7d0', align: 'center' }); }
 
 /* =====================================================================================================
+   CUTSCENES (his ask: way more of them). In-engine shots with letterbox bars: the camera moves on its own, people are
+   posed, TB and the henchmen speak (with their voices). A or a tap skips. Every one:
+   - waking in the cell: TB at the bars, laughing, then gone down the hall
+   - each new basement floor: TB over the speakers, and a look down the first hall
+   - every place outside: a look at where you are, then TB somewhere ahead (in the clown suit in Ejaculand, on fire
+     after the crash), and he is gone
+   - every henchman: the camera finds them, close on their face, their line; and again when they die
+   - TB in front of the Clubhouse before the fight
+   Online, the host starts them and the guest plays the same shots.
+   ===================================================================================================== */
+var SCN = null;
+function lerp3(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+function ease(k) { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); }
+function cAt(o, y) { return [o.x, y, o.z]; }
+function cTo(from, to, d, y) { var dx = to.x - from.x, dz = to.z - from.z, l = Math.hypot(dx, dz) || 1; d = Math.min(d, l - 0.3); return [from.x + dx / l * d, y, from.z + dz / l * d]; } // a point on the line from one to the other
+function cBehind(P, back, y, side) { return [P.x - Math.sin(P.ca) * back + Math.cos(P.ca) * (side || 0), y, P.z - Math.cos(P.ca) * back - Math.sin(P.ca) * (side || 0)]; }
+function cAhead(P, d, y) { return [P.x + Math.sin(P.ca) * d, y, P.z + Math.cos(P.ca) * d]; }
+function camFree(p) { var i = tileOf(p[0]), j = tileOf(p[2]); return inMap(i, j) && !blocksEyes(i, j); }
+function safeEye(from, want) { for (var k = 1; k >= 0; k -= 0.1) { var p = lerp3(from, want, k); if (camFree(p) && canSee(from[0], from[2], p[0], p[2])) return p; } return from; }
+/* a spot ahead of the player you can see from where they stand: where TB shows himself */
+function standAhead(P, dMin, dMax) {
+  for (var d = dMax; d >= dMin; d -= 0.6) for (var s = 0; s < 7; s++) { var a = P.ca + [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8][s], x = P.x + Math.sin(a) * d, z = P.z + Math.cos(a) * d;
+    if (walkable(tileOf(x), tileOf(z), 'tb') && canSee(P.x, P.z, x, z)) return { x: x, z: z }; }
+  return null;
+}
+/* if the way he faces is a wall close by, turn him to the longest open view first */
+function faceOpen(P) { if (rayWall(P.x, P.z, P.ca, 20) >= 9) return; var best = P.ca, bd = 0; for (var s = 0; s < 16; s++) { var a = s / 16 * 6.283, d = rayWall(P.x, P.z, a, 24); if (d > bd + 0.5) { bd = d; best = a; } } P.ca = P.a = best; }
+function scene(id, shots, o) {
+  if (!shots || !shots.length || !G) return; o = o || {};
+  var tb = G.tb, keep = tb ? { x: tb.x, z: tb.z, a: tb.a, st: tb.st, pose: tb.pose, spd: tb.spd } : null;
+  SCN = { id: id, shots: shots, i: 0, t: 0, T: 0, after: o.after, back: o.back || 'play', restore: function () { if (tb && keep && !o.keepTB) { tb.x = keep.x; tb.z = keep.z; tb.a = keep.a; tb.st = keep.st; tb.pose = keep.pose; tb.spd = keep.spd; } } };
+  G.mode = 'scene'; G.prompt = null; document.documentElement.classList.add('hs-menu'); if (shots[0].enter) shots[0].enter(); stepScene(0);
+}
+function stepScene(dt) {
+  var S = SCN; if (!S) { G.mode = 'play'; return; } var sh = S.shots[S.i]; S.t += dt; S.T += dt; var k = Math.min(1, S.t / sh.len);
+  if (sh.on) sh.on(k, dt);
+  if (sh.say && !sh.said && S.t >= (sh.say[2] || 0.25)) { sh.said = 1; subtitle(sh.say[0], sh.say[1], sh.say[3] || Math.max(2.4, sh.len - S.t + 0.6)); if (sh.say[0] === 'TB') sfx.play('tblaugh'); }
+  if (sh.cap && !sh.capd) { sh.capd = 1; G.capT = { s: sh.cap, t: sh.len + 0.3 }; }
+  if (sh.snd && !sh.sndd) { sh.sndd = 1; sfx.play(sh.snd); }
+  if (sh.ban && !sh.band) { sh.band = 1; G.banner = { s: sh.ban, t: 3.6 }; }
+  var e = sh.eye(ease(k)), a = sh.at(ease(k)); S.cam = { eye: e, at: a, fov: sh.fov || 1.0, roll: sh.roll ? sh.roll(k) : 0, T: tripLook() };
+  if (G.capT) { G.capT.t -= dt; if (G.capT.t <= 0) G.capT = null; }
+  if (S.t >= sh.len) { S.i++; S.t = 0; if (S.i >= S.shots.length) { endScene(); return; } var n = S.shots[S.i]; if (n.enter) n.enter(); }
+  if (S.T > 0.6 && (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap)) endScene();
+}
+function endScene() { var S = SCN; SCN = null; G.capT = null; G.sub = null; if (G.mode === 'scene') G.mode = S ? S.back : 'play'; document.documentElement.classList.remove('hs-menu'); if (S && S.restore) S.restore(); if (S && S.after) S.after(); try { if (window.speechSynthesis && voiceMode() === 'spoken') { /* let the last line finish */ } } catch (e) {} }
+function drawSceneHud() {
+  var ctx = KIT.ctx, W = KIT.W, H = KIT.H, bar = Math.round(H * 0.11); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+  if (G.banner && G.banner.t > 0) { var ba = Math.min(1, G.banner.t, (3.6 - G.banner.t) * 2); KIT.text(G.banner.s, W / 2, H * 0.34, { align: 'center', font: 'title', size: 30, col: '#c4121c', alpha: ba, outline: 1 }); }
+  if (G.capT) KIT.wrap(G.capT.s, W - 60, 14, 'body').forEach(function (s, n) { KIT.text(s, W / 2, bar + 10 + n * 15, { align: 'center', font: 'body', size: 13, col: '#a6968f' }); });
+  if (G.sub) { var lines = KIT.wrap(G.sub.who + ':  ' + G.sub.s, W - 80, 15, 'body'); lines.forEach(function (s, n) { KIT.text(s, W / 2, H - bar - 12 - (lines.length - 1 - n) * 17, { align: 'center', font: 'body', size: 15, col: G.sub.who === 'TB' ? '#ff4a4a' : '#ffb0c0', outline: 1 }); }); }
+  KIT.text('A  SKIP', W - 12, H - bar + 8, { align: 'right', size: 6, col: '#4a1a1c' });
+}
+/* ---------- the scenes ---------- */
+function sceneCell() { // waking in the cell: TB is at the bars
+  var cd = FL.cellDoor, P = G.P, tb = G.tb; if (!cd || !tb) return; var ox = tx(cd.i) + cd.di * TSZ * 0.7, oz = tx(cd.j) + cd.dj * TSZ * 0.7, ins = { x: tx(cd.i) - cd.di * TSZ * 0.9, z: tx(cd.j) - cd.dj * TSZ * 0.9 };
+  var out = { x: ox, z: oz };
+  scene('cell', [
+    { len: 2.6, cap: 'Somebody is outside the cell.', enter: function () { tb.st = 'cut'; tb.pose = 'lean'; tb.x = ox; tb.z = oz; tb.a = Math.atan2(-cd.di, -cd.dj); }, eye: function (k) { return [tx(cd.i) - cd.di * TSZ * 1.75, 1.1 + k * 0.7, tx(cd.j) - cd.dj * TSZ * 1.75]; }, at: function () { return [ox, 1.6, oz]; }, fov: 1.1 },
+    { len: 2.8, say: ['TB', tbLine(), 0.3], enter: function () { tb.pose = 'laugh'; }, eye: function (k) { return lerp3([ins.x, 1.7, ins.z], [tx(cd.i) - cd.di * 0.5, 1.75, tx(cd.j) - cd.dj * 0.5], k); }, at: function () { return [ox, 1.72, oz]; }, fov: 0.85 },
+    { len: 2.4, cap: 'He rattles the bottle at you and walks off into the dark.', snd: 'rattle', enter: function () { tb.pose = 'pills'; tb.a = Math.atan2(cd.di, cd.dj) + 0.6; }, on: function (k, dt) { tb.x += Math.sin(tb.a) * dt * 1.6; tb.z += Math.cos(tb.a) * dt * 1.6; tb.spd = 1.6; tb.ph += dt * 4; }, eye: function () { return [ins.x, 1.5, ins.z]; }, at: function () { return [tb.x, 1.3, tb.z]; } }
+  ]);
+}
+var FLOORCAP = ['', 'The Meat Locker. Cold, and it smells like a butcher\'s bin.', 'The Pill Lab. Pink dust on everything. Something bubbles.', 'The Cellar Bar. Music somewhere above you. The way out is up there.'];
+function sceneSpeakers(fi) { // a new basement floor: TB over the speakers
+  var P = G.P, line = tbLine(); faceOpen(P);
+  scene('floor', [
+    { len: 3.0, cap: FLOORCAP[fi], eye: function (k) { return safeEye([P.x, 1.7, P.z], cBehind(P, -0.5 - k * 1.5, 1.9 + k * 0.6)); }, at: function (k) { return cAhead(P, 8, 1.2); }, fov: 1.15 },
+    { len: 3.2, snd: 'clang', say: ['TB', line, 0.5], eye: function (k) { return safeEye([P.x, 1.7, P.z], cAhead(P, 1 + k * 0.4, 2.6)); }, at: function () { return cAhead(P, 6, 2.9); }, roll: function (k) { return Math.sin(k * 9) * 0.02; } }
+  ]);
+}
+var PLACECAP = { woods: 'The car is dead at the tree line. The woods go on for ever.', park: 'The back gate of Ejaculand. Nobody has ridden anything here in years.', redlight: 'The coaster car comes off its rails into Cum City: the red light district. Every sign is still on. Nobody is about.',
+  cemetery: 'Past the neon, the cemetery. Somebody has been digging.', site: 'The Cumstruction site. Half-built towers in the dark, and the smell of wet cement.', cafe: 'The cafe streets. Every shutter down, every chair still out.', district: 'Clubhouse Row. The Clubhouse is at the end of it.' };
+function sceneArrive(fi) { // a new place outside: where you are, then TB somewhere ahead
+  var th = FLOORS[fi], P = G.P, tb = G.tb, cap = PLACECAP[th.id]; if (!cap) return; faceOpen(P);
+  var spot = th.id !== 'redlight' && standAhead(P, 7, 13), line = th.kind === 'woods' ? TBWOODS : tbLine();
+  var shots = [{ len: 3.2, cap: cap, ban: (th.n ? th.n + '  ·  ' : '') + th.name, eye: function (k) { return safeEye([P.x, 1.7, P.z], cBehind(P, 1.5 + k, 2.6 + k * 2.2)); }, at: function () { return cAhead(P, 16, 1.5); }, fov: 1.1 }];
+  if (spot) shots.push({ len: 3.4, say: ['TB', line, 0.6], snd: th.kind === 'park' ? 'honk' : 'sting',
+    enter: function () { tb.st = 'cut'; tb.pose = th.kind === 'park' ? 'wave' : 'point'; tb.x = spot.x; tb.z = spot.z; tb.a = Math.atan2(P.x - spot.x, P.z - spot.z); tb.spd = 0; },
+    eye: function (k) { return safeEye([P.x, 1.8, P.z], cTo(P, spot, 1.5 + k * 3.5, 1.75)); }, at: function () { return [spot.x, 1.7, spot.z]; }, fov: 0.85 });
+  if (spot) shots.push({ len: 1.4, cap: th.kind === 'park' ? 'He honks a horn and is gone behind the stalls.' : 'Then he is not there any more.', enter: function () { tb.x = -50; tb.z = -50; }, eye: function () { return safeEye([P.x, 1.8, P.z], cTo(P, spot, 4, 1.75)); }, at: function () { return [spot.x, 1.4, spot.z]; } });
+  scene('arrive', shots);
+}
+function sceneBoss() { // TB in front of the Clubhouse
+  var P = G.P, tb = G.tb, c = FL.exitIn || FL.tb;
+  scene('boss', [
+    { len: 2.8, cap: 'The Clubhouse. The lights are on.', eye: function (k) { return [P.x, 2.4 + k, P.z + 2 - k * 2]; }, at: function () { return [tx(c.i), 3, tx(c.j)]; }, fov: 1.1 },
+    { len: 3.4, ban: "HE'S HERE", say: ['TB', tbLine(), 0.4], enter: function () { tb.pose = 'laugh'; }, eye: function (k) { return cTo(tb, P, 2.6 - k * 0.8, 1.8); }, at: function () { return [tb.x, 1.75, tb.z]; }, fov: 0.9 }
+  ], { keepTB: 1, after: function () { G.bossIntro = 0.6; tb.pose = null; } });
+}
+function sceneHench(f) { // a henchman wakes
+  var P = G.P, d = f.d, H = HENCH[f.k], sc = d.sc || 1, hy = d.h * 0.86;
+  f.a = Math.atan2(P.x - f.x, P.z - f.z);
+  scene('hench', [
+    { len: 1.6, snd: 'sting', eye: function (k) { return safeEye([P.x, 1.7, P.z], cBehind(P, 1.6 - k * 0.6, 1.9)); }, at: function () { return [f.x, hy * 0.8, f.z]; }, fov: 1.0 },
+    { len: 3.4, ban: d.n.toUpperCase(), say: [d.n, H.wake, 0.5], on: function (k) { f.wind = 0.5 + Math.sin(k * 12) * 0.3; }, eye: function (k) { return cTo(f, P, (2.2 + (1 - k) * 1.4) * sc, hy); }, at: function () { return [f.x, hy * 0.97, f.z]; }, fov: 0.85 },
+    { len: 1.0, on: function () { f.wind = 0; }, eye: function (k) { return safeEye([P.x, 1.7, P.z], cBehind(P, 0.6 + k * 1.4, 1.9)); }, at: function () { return [f.x, hy * 0.7, f.z]; } }
+  ], { after: function () { f.wind = 0; } });
+  netEv({ k: 'scene', id: 'hench', f: f.id });
+}
+function sceneHenchDie(f) {
+  var d = f.d, H = HENCH[f.k], P = G.P, a0 = Math.atan2(P.x - f.x, P.z - f.z);
+  scene('henchdie', [{ len: 3.0, say: [d.n, H.die, 0.2], eye: function (k) { var a = a0 + k * 1.1, r = 3.2 * (d.sc || 1); return safeEye([f.x, 1.6, f.z], [f.x + Math.sin(a) * r, 1.6 + k * 0.8, f.z + Math.cos(a) * r]); }, at: function () { return [f.x, 0.5, f.z]; }, fov: 1.0 }]);
+  netEv({ k: 'scene', id: 'henchdie', f: f.id });
+}
+/* which one plays when a floor starts */
+function floorScene(fi, how) {
+  if (isGuest() || G.botIn || G.noScenes) return; var th = FLOORS[fi];
+  if (th.kind === 'boss') { sceneBoss(); netEv({ k: 'scene', id: 'boss' }); return; }
+  if (!th.kind && how === 'new' && fi === 0) return; // the cell scene plays from startFloorOne
+  if (!th.kind && how === 'up' && fi > 0) { sceneSpeakers(fi); netEv({ k: 'scene', id: 'floor', fi: fi }); return; }
+  if (th.kind && how === 'up' && PLACECAP[th.id]) { sceneArrive(fi); netEv({ k: 'scene', id: 'arrive', fi: fi }); }
+}
+function guestScene(e) { // the host started one: play it here too
+  if (e.id === 'floor') sceneSpeakers(e.fi); else if (e.id === 'arrive') sceneArrive(e.fi); else if (e.id === 'boss') sceneBoss();
+  else if (e.id === 'cell') sceneCell();
+  else { var f = G.foes.filter(function (q) { return q.id === e.f; })[0]; if (f && e.id === 'hench') sceneHench(f); else if (f && e.id === 'henchdie') sceneHenchDie(f); }
+}
+
+/* =====================================================================================================
    THE TRIP: TB's Silly Pills in your head. The more you have taken, the more the basement breathes, swims and runs
    with colour, and the more often it plays tricks (Eternal Darkness style): the walls turn to meat, the picture goes
    negative, the world flips upside down, TB stands at the end of the hall grinning (he isn't there), your hands stop
@@ -3090,6 +3293,7 @@ function tripLook() {
    ===================================================================================================== */
 var DYN = null, CAM = { d: 2.3 };
 function camPose() {
+  if (G.mode === 'scene' && SCN && SCN.cam) return SCN.cam;
   var P = G.P, T = tripLook();
   if (P.hide) { var r = lockerRect(P.hide), cx = (r[0] + r[2]) / 2 + P.hide.di * 0.25, cz = (r[1] + r[3]) / 2 + P.hide.dj * 0.25, f = [Math.sin(P.ca) * Math.cos(P.cp), Math.sin(P.cp), Math.cos(P.ca) * Math.cos(P.cp)]; return { eye: [cx, 1.6, cz], at: [cx + f[0] * 5, 1.6 + f[1] * 5, cz + f[2] * 5], fov: 0.95, roll: T.roll * 0.5, T: T }; }
   var aim = P.aim, want = aim ? 1.9 : P.crouch ? 2.1 : 2.5, side = aim ? 0.92 : 0.62, h = P.crouch ? 1.45 : aim ? 1.78 : 1.92, cp = P.cp;
@@ -3183,6 +3387,8 @@ function drawTB(tb, T, rigN, alpha) {
   else if (tb.st === 'boss') { poseWalk(Q, tb.ph, Math.min(1, tb.spd / 2.4), tb.spd > 5); var bm = tb.mv; if (bm && bm.k === 'swipe') poseSwing(Q, Math.min(1, bm.t / 0.9)); else if (bm && (bm.k === 'pills' || bm.k === 'molotov')) { var kk = Math.min(1, bm.t / 0.7); Q.sh[1] = [2.4 * kk, 0.1, 0]; Q.el[1] = 1.2 - kk; } else if (bm && bm.k === 'charge' && bm.t < 0.9) { Q.lean = 0.5; Q.hp = 0.3; } else if (bm && bm.k === 'gulp') { Q.sh[0] = [2.3, 0.1, 0.5]; Q.el[0] = 1.9; Q.hp = -0.5; } if (tb.stun > 0) { Q.hr = Math.sin(KIT.t * 6) * 0.4; Q.lean = 0.3; } if (tb.hurtT > 0) poseHurt(Q, 1); }
   else if (tb.st === 'ghost') { Q.sh[0] = [0.2, 0.5, 0]; Q.sh[1] = [0.2, 0.5, 0]; Q.hr = 0.35; }
   else { poseWalk(Q, tb.ph, Math.min(1, tb.spd / 2.4), tb.st === 'chase'); Q.hr = 0.22 + Math.sin(tb.ph * 0.5) * 0.08; if (tb.st === 'chase') { Q.sh[1] = [1.1 + Math.sin(tb.ph) * 0.2, 0.15, -0.2]; Q.el[1] = 0.3; } if (tb.flinch > 0) poseHurt(Q, 1); }
+  if (tb.st === 'cut') { var pz = tb.pose, tt = KIT.t; if (pz === 'wave') { Q.sh[1] = [2.7, 0.4 + Math.sin(tt * 9) * 0.35, 0]; Q.el[1] = 0.5; } else if (pz === 'point') { Q.sh[1] = [1.55, 0.05, 0]; Q.el[1] = 0.05; Q.hp = -0.1; } else if (pz === 'laugh') { Q.hp = -0.45 + Math.sin(tt * 14) * 0.08; Q.sh[0] = [0.6, 0.9, 0]; Q.sh[1] = [0.6, 0.9, 0]; Q.lean = -0.15; } else if (pz === 'pills') { Q.sh[0] = [1.4, 0.2, 0.3]; Q.el[0] = 1.2 + Math.sin(tt * 20) * 0.15; } else if (pz === 'lean') { Q.lean = 0.35; Q.sh[0] = [1.2, 0.2, 0]; Q.sh[1] = [1.2, 0.2, 0]; Q.el = [1.0, 1.0]; } }
+  if (tb.st !== 'dead' && tb.st !== 'out') tbTwitch(Q, tb);
   drawRig(rig, tb.x, 0, tb.z, tb.a, Q, { heldL: rig.P.bottle, alpha: alpha, tint: T.tint });
 }
 function drawPlayerOld(T) {
@@ -3561,11 +3767,11 @@ function stepGuestWorld(dt) { // smooth the host's people between snapshots
   if (G.bagsNet) G.bags = G.bagsNet.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, vy: 0, t: 1, ghost: 1 }; });
 }
 function guestEv(e) { var P = G.P;
-  if (e.k === 'say') say(e.s, e.t, e.col); else if (e.k === 'sub') G.sub = { who: e.who, s: e.s, t: e.t || 3.2 };
+  if (e.k === 'say') say(e.s, e.t, e.col); else if (e.k === 'sub') { G.sub = { who: e.who, s: e.s, t: e.t || 3.2 }; voice(e.who, e.s); }
   else if (e.k === 'hurt') hurtPlayer(P, +e.dmg || 0, { x: e.fx, z: e.fz }, +e.dose || 0);
   else if (e.k === 'caught') catchPlayer(P);
   else if (e.k === 'blood') blood(e.x, 1.2, e.z, e.n || 6);
-  else if (e.k === 'sfx') sfx.play(e.n); else if (e.k === 'splat') G.splatT = 3.2;
+  else if (e.k === 'sfx') sfx.play(e.n); else if (e.k === 'splat') G.splatT = 3.2; else if (e.k === 'scene') guestScene(e);
   else if (e.k === 'climb') { G.mode = 'trans'; G.trans = 0; music.stop(1); }
   else if (e.k === 'crash') startCrash();
   else if (e.k === 'win') { G.mode = 'win'; G.winT = 0; G.tb.st = 'dead'; music.stop(0.5); }
@@ -3622,6 +3828,62 @@ function joinPad(code) {
     if (c.length === 1 && 'ABCDEFGHJKLMNPQRSTUVWXYZ'.indexOf(c) >= 0) { e.preventDefault(); e.stopPropagation(); if (cur.length < 5) joinPad(cur + c); } else if (e.key === 'Backspace') { e.preventDefault(); joinPad(cur.slice(0, -1)); } }, true); })();
 
 /* =====================================================================================================
+   VOICES (his ask: TB needs a voice). Two ways, picked in Options (TB'S VOICE):
+   SPOKEN: the device reads his line out loud in the deepest, slowest voice it has (speechSynthesis: works on the PC;
+           many phone web views have no speech, and then it falls back to the growl), with a growl under it.
+   GROWL:  our own synth talks in his rhythm: a low, gravelly buzz pushed through vowel formants syllable by
+           syllable, hissed consonants, a wet laugh at the end. Works everywhere.
+   The henchmen get the growl, each at their own pitch.
+   ===================================================================================================== */
+var VOICES = {
+  TB: { f: 92, jit: 0.22, rate: 1, grit: 2.4, laugh: 0.45, speech: 1 },
+  'Mama Muckies': { f: 150, jit: 0.4, rate: 0.85, grit: 1.4, laugh: 0, wah: 1 },
+  'The Stitched Stag': { f: 70, jit: 0.6, rate: 0.7, grit: 4, laugh: 0, scream: 1 },
+  'The Smiles Twins': { f: 210, jit: 0.3, rate: 1.25, grit: 1.2, laugh: 0.8, twin: 1 },
+  'The Gravedigger Bride': { f: 240, jit: 0.15, rate: 0.75, grit: 0.8, laugh: 0, breath: 1 },
+  'The Sissifier': { f: 175, jit: 0.25, rate: 1.05, grit: 1.6, laugh: 0.4 }
+};
+var FORM = { a: [800, 1200], e: [450, 1900], i: [320, 2300], o: [480, 820], u: [340, 760], y: [320, 2100] };
+function voiceMode() { return SV.voice || 'spoken'; }
+function canSpeak() { try { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance && speechSynthesis.getVoices().length); } catch (e) { return false; } }
+var SPEECHV = null;
+function speakLine(s) {
+  try { var vs = speechSynthesis.getVoices(); if (!SPEECHV) SPEECHV = vs.filter(function (v) { return /^en/i.test(v.lang) && /male|david|george|mark|daniel|fred|guy|ryan|thomas|james/i.test(v.name) && !/female|zira|hazel|susan|samantha|karen/i.test(v.name); })[0] || vs.filter(function (v) { return /^en/i.test(v.lang); })[0] || vs[0];
+    speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(s.replace(/\.\.\./g, ', ')); u.voice = SPEECHV; u.pitch = 0.05; u.rate = 0.82; u.volume = sfx.muted ? 0 : 1; speechSynthesis.speak(u); return true; } catch (e) { return false; }
+}
+function growl(s, V, vol) {
+  var au = sfx.audio && sfx.audio(); if (!au || sfx.muted) return; var A = au.ctx, out = au.master, t0 = A.currentTime + 0.02;
+  // a shared grit (distortion) and a short dirty echo
+  var sh = A.createWaveShaper(), cv = new Float32Array(256); for (var i = 0; i < 256; i++) { var x = i / 128 - 1; cv[i] = Math.tanh(x * V.grit); } sh.curve = cv;
+  var g = A.createGain(); g.gain.value = vol || 0.5; var dl = A.createDelay(); dl.delayTime.value = 0.11; var fb = A.createGain(); fb.gain.value = 0.25; sh.connect(g); g.connect(out); g.connect(dl); dl.connect(fb); fb.connect(dl); fb.connect(out);
+  var words = s.toLowerCase().replace(/[^a-z' ]/g, ' ').split(/\s+/).filter(Boolean), t = t0, n = 0, sylT = 0.12 / V.rate;
+  words.forEach(function (w) {
+    var syl = w.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/g) || [w];
+    syl.forEach(function (sy, k) { if (n > 60) return; n++;
+      var vw = (sy.match(/[aeiouy]/) || ['a'])[0], F = FORM[vw], len = sylT * (0.8 + Math.min(4, sy.length) * 0.15), f = V.f * (1 + (Math.random() - 0.5) * V.jit) * (k === 0 ? 1.08 : 1);
+      if (/^[sfzcxh]/.test(sy) || /(sh|ss|ck|tt|k)$/.test(sy)) noiseAt(A, au.nb, g, t, 0.05, 0.25, /^[sfzcx]/.test(sy) ? 4200 : 1800);
+      var o = A.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * (0.86 + Math.random() * 0.1), t + len);
+      var lfo = A.createOscillator(), lg = A.createGain(); lfo.frequency.value = 6 + Math.random() * 3; lg.gain.value = f * 0.04; lfo.connect(lg); lg.connect(o.frequency);
+      var env = A.createGain(); env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(1, t + 0.02); env.gain.setValueAtTime(1, t + len * 0.7); env.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(env); [F[0], F[1], 2600].forEach(function (ff, m) { var bp = A.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = ff * (V.f > 180 ? 1.15 : 1); bp.Q.value = m === 2 ? 3 : 7; var bg = A.createGain(); bg.gain.value = m === 0 ? 1.6 : m === 1 ? 0.9 : 0.25; env.connect(bp); bp.connect(bg); bg.connect(sh); });
+      if (V.twin) { var o2 = A.createOscillator(); o2.type = 'square'; o2.frequency.value = f * 1.5; var e2 = A.createGain(); e2.gain.setValueAtTime(0.0001, t); e2.gain.exponentialRampToValueAtTime(0.25, t + 0.02); e2.gain.exponentialRampToValueAtTime(0.0001, t + len); o2.connect(e2); e2.connect(sh); o2.start(t); o2.stop(t + len + 0.02); }
+      o.start(t); lfo.start(t); o.stop(t + len + 0.02); lfo.stop(t + len + 0.02); t += len + 0.015;
+    }); t += 0.07 / V.rate; });
+  if (V.breath) noiseAt(A, au.nb, g, t, 0.5, 0.15, 900);
+  if (V.scream) { var o3 = A.createOscillator(); o3.type = 'sawtooth'; o3.frequency.setValueAtTime(420, t); o3.frequency.exponentialRampToValueAtTime(140, t + 0.8); var e3 = A.createGain(); e3.gain.setValueAtTime(0.5, t); e3.gain.exponentialRampToValueAtTime(0.0001, t + 0.8); o3.connect(e3); e3.connect(sh); o3.start(t); o3.stop(t + 0.85); }
+  if (V.laugh && Math.random() < V.laugh) for (var h = 0; h < 4; h++) { var lt = t + h * 0.14, lf = V.f * 1.6 - h * 6, lo = A.createOscillator(), le = A.createGain(); lo.type = 'sawtooth'; lo.frequency.setValueAtTime(lf, lt); lo.frequency.exponentialRampToValueAtTime(lf * 0.8, lt + 0.1); le.gain.setValueAtTime(0.8, lt); le.gain.exponentialRampToValueAtTime(0.0001, lt + 0.11); var lb = A.createBiquadFilter(); lb.type = 'bandpass'; lb.frequency.value = 700; lb.Q.value = 4; lo.connect(le); le.connect(lb); lb.connect(sh); lo.start(lt); lo.stop(lt + 0.12); }
+}
+function noiseAt(A, nb, dest, t, dur, vol, freq) { var s = A.createBufferSource(), f = A.createBiquadFilter(), g = A.createGain(); s.buffer = nb; f.type = 'bandpass'; f.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02); }
+/* who says it decides how it sounds */
+function voice(who, s) {
+  var m = voiceMode(), V = VOICES[who]; if (!V || m === 'off' || !s) return;
+  if (V.speech && m === 'spoken' && canSpeak() && speakLine(s)) { growl(s, V, 0.12); return; }
+  growl(s, V, 0.55);
+}
+function voiceItem(back) { var m = voiceMode(), lab = { spoken: 'SPOKEN', growl: 'GROWL', off: 'OFF' }; return { label: "TB'S VOICE: " + lab[m], fn: function () { SV.voice = m === 'spoken' ? 'growl' : m === 'growl' ? 'off' : 'spoken'; persist(); voice('TB', 'who is ready for shithead pudding'); back(); } }; }
+try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
+
+/* =====================================================================================================
    PSYCHO NIGHTMARE: the title, the story cards, getting caught, the stairs, game over, the way out, menus and saves.
    Save: pn-save (the run is kept at the start of every floor you reach).
    ===================================================================================================== */
@@ -3639,19 +3901,21 @@ function continueGame() {
   G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; G.notesRead = r.notesRead || 0; G.spotted = r.spotted || 0;
   loadFloor(r.fi, r.fi === 0 ? 'new' : 'up'); music.stop(1);
 }
-function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
+function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); if (!G.botIn) { sceneCell(); netEv({ k: 'scene', id: 'cell' }); } say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
 /* ---------- the loop ---------- */
 function update(dt) {
   if (!G) return;
   G.msgs.forEach(function (m) { m.t -= dt; }); G.msgs = G.msgs.filter(function (m) { return m.t > 0; });
   if (G.sub) { G.sub.t -= dt; if (G.sub.t <= 0) G.sub = null; } if (G.banner) G.banner.t -= dt; if (G.wake > 0) G.wake -= dt;
   if (G.mode === 'intro') { G.introT += dt; if (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap) G.introT = Math.ceil(G.introT / 3.4 + 0.01) * 3.4; if (G.introT > INTRO.length * 3.4) startFloorOne(); return; }
-  if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } return; }
+  if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } var gpl = !!(KIT.gamepad && KIT.gamepad.buttons[4] && KIT.gamepad.buttons[4].pressed); if (gpl && !G.lbWas && JAR) jarTap(); G.lbWas = gpl; return; }
+  if (JAR) jarShow(0);
   if (G.mode === 'play') {
     G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); stepHazards(dt); } else stepGuestWorld(dt); if (G.splatT > 0) G.splatT -= dt; stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
     G.noises = G.noises.filter(function (n) { n.t -= dt; return n.t > 0; });
     var chase = G.tb && G.tb.st === 'chase' || G.foes.some(function (f) { return f.st === 'chase'; }); if (chase && !(G.ev && G.ev.k === 'mute')) music.play('pnchase'); else if (music.current === 'pnchase') music.stop(2.5);
   } else if (G.mode === 'catch') { stepCatch(dt); stepFx(dt); }
+  else if (G.mode === 'scene') { stepScene(dt); stepFx(dt); }
   else if (G.mode === 'drive') { G.time += dt; stepDrive(dt); stepTrip(dt); stepFx(dt); }
   else if (G.mode === 'ride') { G.time += dt; stepRide(dt); }
   else if (G.mode === 'crash') { stepCrash(dt); stepFx(dt); }
@@ -3677,7 +3941,7 @@ function stepCatch(dt) {
 }
 /* ---------- game over ---------- */
 function gameOver(why) {
-  G.mode = 'over'; music.stop(1); sfx.play(why === 'seen' ? 'grab' : 'lose'); var q = tbLine();
+  G.mode = 'over'; music.stop(1); sfx.play(why === 'seen' ? 'grab' : 'lose'); var q = tbLine(); setTimeout(function () { voice('TB', q); }, 900);
   setTimeout(function () { KIT.menu({ cls: 'pn', title: why === 'seen' ? 'TB GOT YOU FOR GOOD' : 'YOU DIED', sub: why === 'seen' ? 'He saw you before you got your stuff back. "' + q + '"' : 'TB will be along to tidy you up.', items: [
     G.net === 'guest' ? null : { label: G.net ? 'TRY AGAIN TOGETHER' : 'TRY THIS FLOOR AGAIN', def: 1, fn: G.net ? onlineAgain : continueGame }, { label: 'QUIT TO THE TITLE', back: 1, fn: function () { netLeave(); G = null; titleMenu(); } }] }); }, why === 'seen' ? 1800 : 1200);
   if (why === 'seen') { G.over = { t: 0 }; }
@@ -3689,6 +3953,7 @@ function titleMenu() {
   music.play('pntitle');
   var r = SV.run, items = [r ? { label: 'CONTINUE', sub: (FLOORS[r.fi].n ? FLOORS[r.fi].n + '  ·  ' : '') + FLOORS[r.fi].name, def: 1, fn: continueGame } : null, { label: r ? 'NEW NIGHTMARE' : 'START', def: !r, fn: function () { if (r) KIT.confirm({ title: 'Start again?', sub: 'Your run on ' + FLOORS[r.fi].n + ' will be lost.', yesLabel: 'Start again', yes: newGame, no: titleMenu }); else newGame(); } },
     { label: 'PLAY ONLINE', fn: function () { onlineMenu(); } }, { label: 'HOW TO PLAY', fn: function () { helpMenu(titleMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(titleMenu); } }];
+  jarShow(1);
   KIT.menu({ cls: 'clear pn', logo: '../assets/pn-logo.webp', title: 'Psycho Nightmare', items: items, note: SV.wins ? 'Escaped ' + SV.wins + (SV.wins === 1 ? ' time' : ' times') + (SV.best ? '  ·  best ' + clock(SV.best) : '') : '' });
 }
 function clock(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
@@ -3708,12 +3973,27 @@ function helpMenu(back) {
 function optionsMenu(back) {
   KIT.menu({ cls: 'pn plain', title: 'Options', items: [
     R3.ok ? R3.resItem(function () { optionsMenu(back); }) : null, KIT.resItem(function () { optionsMenu(back); }),
+    voiceItem(function () { optionsMenu(back); }),
     TOUCH ? { label: 'AIM ON SCREEN: ' + (SV.aim === 'hold' ? 'HOLD' : 'TAP TO TOGGLE'), fn: function () { SV.aim = SV.aim === 'hold' ? 'toggle' : 'hold'; persist(); if (G) G.touchMode = SV.aim !== 'hold'; optionsMenu(back); } } : null,
-    back === titleMenu ? { label: "TB'S PILL JAR", fn: function () { PILLTAPS++; sfx.play('rattle'); if (PILLTAPS >= 7) { PILLTAPS = 0; levelSelect(back); } else optionsMenu(back); } } : null,
     { label: 'BACK', back: 1, fn: back }] });
 }
-/* the secret: rattle TB's pill jar in Options seven times and his stash opens: a level select over every part of the night */
-var PILLTAPS = 0;
+/* the secret (his ask: a real pill bottle, not a menu item): TB's pill bottle sits in the bottom corner of the title
+   screen. Tap it (or press LB) seven times and his stash opens: a level select over every part of the night */
+var PILLTAPS = 0, JAR = null;
+function jarShow(on) {
+  if (!on) { if (JAR) { JAR.remove(); JAR = null; } return; } if (JAR) return;
+  var c = document.createElement('canvas'); c.width = 16; c.height = 22; var g = c.getContext('2d');
+  function r(x, y, w, h, col) { g.fillStyle = col; g.fillRect(x, y, w, h); }
+  r(3, 0, 10, 5, '#12040a'); r(4, 1, 8, 3, '#c4121c'); r(5, 1, 2, 1, '#ff6a5a'); r(2, 5, 12, 17, '#12040a'); r(3, 6, 10, 15, '#e8a040'); r(3, 6, 2, 15, '#ffd080'); r(11, 6, 2, 15, '#a86020');
+  r(3, 10, 10, 7, '#f1e7d0'); r(4, 11, 8, 1, '#12040a'); r(4, 13, 6, 1, '#7a0a10'); r(4, 15, 7, 1, '#7a0a10'); [[5, 18, '#ff4a8a'], [8, 19, '#ffe36a'], [9, 7, '#7ac8ff']].forEach(function (p) { r(p[0], p[1], 2, 1, p[2]); });
+  var b = JAR = document.createElement('button'); b.setAttribute('aria-label', 'pill bottle'); b.tabIndex = -1;
+  b.style.cssText = 'position:fixed;left:10px;bottom:10px;width:34px;height:46px;padding:0;border:0;background:transparent;z-index:99999;opacity:0.55;cursor:pointer;image-rendering:pixelated;transition:transform .08s';
+  c.style.cssText = 'width:100%;height:100%;image-rendering:pixelated;display:block'; b.appendChild(c);
+  b.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); jarTap(); });
+  document.body.appendChild(b);
+}
+function jarTap() { PILLTAPS++; sfx.play('rattle'); if (JAR) { JAR.style.transform = 'rotate(' + (PILLTAPS % 2 ? 14 : -14) + 'deg)'; setTimeout(function () { if (JAR) JAR.style.transform = ''; }, 120); }
+  if (PILLTAPS >= 7) { PILLTAPS = 0; jarShow(0); levelSelect(titleMenu); } }
 function levelSelect(back) { sfx.play('tblaugh');
   KIT.menu({ cls: 'pn plain', title: "TB's secret stash", sub: 'Pick where the night starts. You get a few things to take with you.', items: FLOORS.map(function (F, fi) { return { label: (F.n ? F.n + '  ·  ' : '') + F.name, fn: function () { startAt(fi); } }; }).concat([{ label: 'BACK', back: 1, fn: back }]) }); }
 function startAt(fi) { KIT.closeMenu(); SV.runs++; persist(); G = freshG((Math.random() * 1e9) >>> 0); var P = G.P;
@@ -3781,6 +4061,7 @@ function draw() {
   if (G.mode === 'drive' || G.mode === 'trans' && DR && FL && FL.drive) { drawDrive(); drawDriveHud(); drawMsgs(); }
   else if (G.mode === 'ride' || G.mode === 'trans' && FL && FL.ride && RD) { drawRide(); drawHud(); drawRideHud(); }
   else if (G.mode === 'crash') { drawCrash(); KIT.blit(vignette(), 0, 0); drawMsgs(); }
+  else if (G.mode === 'scene') { drawWorld(); drawSceneHud(); }
   else { drawWorld(); drawHud(); }
   if (G.mode === 'trans') { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.trans / 1) + ')'; ctx.fillRect(0, 0, W, H); if (G.trans > 0.6) KIT.text(G.transWord || (FLOORS[G.fi].kind ? '...' : 'CLIMBING...'), W / 2, H / 2, { align: 'center', font: 'title', size: 26, col: '#a6968f', alpha: Math.min(1, (G.trans - 0.6) * 2) }); }
   if (G.mode === 'over') { G.overT = (G.overT || 0) + 1 / 60; ctx.fillStyle = 'rgba(80,0,6,' + Math.min(0.85, G.overT) + ')'; ctx.fillRect(0, 0, W, H); }

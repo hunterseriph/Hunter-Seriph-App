@@ -81,6 +81,7 @@ function buildRigs2() {
     function (P) { var w = M(); tub(w, [0, -0.1, 0], [0, 0.85, 0], 0.022, 0.022, '#6a4a28', 6, { cap0: 1 }); bxp(w, -0.11, 0.85, -0.02, 0.11, 1.12, 0.02, '#7a7a80', TL('rust')); P.weapon = w.upload(); }) };
   /* THE SISSIFIER: huge, pink frills, white apron, gimp mask, pigtails, the giant lipstick */
   var Dz = { lu: 0.5, ll: 0.5, tor: 0.66, shW: 0.3, hipW: 0.14, au: 0.36, al: 0.34, arm: 0.075, hand: 0.08, leg: 0.085, neck: 0.08 };
+  buildTB2();
   RIGS.sissifier = { D: Dz, eyeY: 2.0, P: std(Dz, { sleeve: '#ff7ab0', fore: '#2a2026', hand: '#f4f0ec', legs: '#f4f0ec', boot: '#12040a' }, '#ffffff',
     function (to, D) { ell(to, 0, D.tor * 0.5, 0, 0.3, D.tor * 0.56, 0.2, '#ffffff', 10, 6, { T: TL('pinkfrill') }); tub(to, [0, D.tor * 0.1, 0], [0, -D.tor * 0.75, 0], 0.27, 0.6, '#ffffff', 12, { T: TL('pinkfrill') }); tub(to, [0, -D.tor * 0.72, 0], [0, -D.tor * 0.8, 0], 0.62, 0.66, '#ffffff', 12);
       ell(to, 0, D.tor * 0.3, 0.12, 0.2, D.tor * 0.4, 0.12, '#c8bcb8', 8, 5, { b0: 0.3 }); [-1, 1].forEach(function (sd) { ell(to, sd * 0.3, D.tor * 0.92, 0, 0.13, 0.09, 0.13, '#ffd0e4', 8, 4); }); tub(to, [0, D.tor * 0.92, 0], [0, D.tor * 1.0, 0], 0.13, 0.12, '#12040a', 8, { cap: 1 }); },

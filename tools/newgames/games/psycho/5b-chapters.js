@@ -31,7 +31,7 @@ function buildDriveMesh() {
     if ((z / STEP) % 3 === 0) [-1, 1].forEach(function (sd) {
       var bx = x0 + sd * (w + 3.5);
       if (city) { var h = 6 + rnd() * 10, d = 7 + rnd() * 5; boxM(Math.min(bx, bx + sd * d), 0, z, Math.max(bx, bx + sd * d), h, z + STEP * 3 - 0.6, TL(rnd() < 0.5 ? 'windows' : 'citywall'), 0.8 + rnd() * 0.3);
-        if (rnd() < 0.6) { var nz = z + 2 + rnd() * 7, ny = 3 + rnd() * 3, T = TL(NEONS[Math.floor(rnd() * NEONS.length)]), fx = bx - sd * 0.05; m.quad([fx, ny - 0.9, nz + 0.9 * sd], [fx, ny - 0.9, nz - 0.9 * sd], [fx, ny + 0.9, nz - 0.9 * sd], [fx, ny + 0.9, nz + 0.9 * sd], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), [-sd, 0, 0], 1.6); } }
+        if (rnd() < 0.6) { var nz = z + 2 + rnd() * 7, ny = 3 + rnd() * 3, T = TL(NEONS[Math.floor(rnd() * NEONS.length)]), fx = bx - sd * 0.05; m.quad([fx, ny - 0.9, nz - 0.9 * sd], [fx, ny - 0.9, nz + 0.9 * sd], [fx, ny + 0.9, nz + 0.9 * sd], [fx, ny + 0.9, nz - 0.9 * sd], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), [-sd, 0, 0], 1.6); } }
       else if (!wood) { boxM(bx - 0.05, 0, z, bx + 0.05, 1.2, z + STEP * 3, TL('metal'), 0.7); if (rnd() < 0.4) boxM(bx + sd * 4, 0, z + 2, bx + sd * 8, 3, z + 8, TL('rust'), 0.8); }
       else { for (var t = 0; t < 4; t++) { var tx0 = bx + sd * (0.5 + rnd() * 9), tz0 = z + rnd() * STEP * 3, r = 0.25 + rnd() * 0.25; boxM(tx0 - r, 0, tz0 - r, tx0 + r, 9, tz0 + r, TL('bark'), 0.8); boxM(tx0 - 1.6, 4, tz0 - 1.6, tx0 + 1.6, 8.5, tz0 + 1.6, TL('leaves'), 0.7); } }
     });
@@ -51,8 +51,8 @@ function stepDrive(dt) {
   if (G.botIn) { gas = true; brake = false; }
   var top = DR.end ? 0 : gas ? 26 : 17, acc = DR.end ? -6 : brake ? -14 : (top > DR.v ? 7 : -4);
   DR.v = Math.max(0, Math.min(top + 0.01, DR.v + acc * dt)); if (DR.end && DR.v <= 0.2) { DR.v = 0; DR.stopT += dt; }
-  DR.steer += ((DR.end ? 0 : I.mx) - DR.steer) * Math.min(1, dt * 6); DR.x += DR.steer * dt * (4 + DR.v * 0.22); DR.z += DR.v * dt; DR.wheel += DR.v * dt * 3;
-  var rd = roadDir(DR.z); DR.yaw = rd + DR.steer * 0.25;
+  DR.steer += ((DR.end ? 0 : I.mx) - DR.steer) * Math.min(1, dt * 6); DR.x -= DR.steer * dt * (4 + DR.v * 0.22); DR.z += DR.v * dt; DR.wheel += DR.v * dt * 3;
+  var rd = roadDir(DR.z); DR.yaw = rd - DR.steer * 0.25; // facing +z, right is -x (he said the steering was the wrong way round)
   if (Math.abs(DR.x) > ROADW - 0.9) { // scraping the kerb and the walls
     DR.x = Math.sign(DR.x) * (ROADW - 0.9); if (DR.v > 8) { DR.hp = Math.max(DR.z < DRLEN * 0.72 ? 8 : 0, DR.hp - dt * 8); DR.v *= 1 - dt * 1.5; if (Math.random() < dt * 20) { G.fx.push({ k: 'spark', x: roadX(DR.z) + DR.x * 1.05, y: 0.6, z: DR.z, t: 0.3 }); } if (Math.random() < dt * 4) sfx.play('scrape'); KIT.shake(1.5); } }
   // TB's boys come at the car
