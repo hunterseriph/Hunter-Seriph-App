@@ -259,7 +259,7 @@ function useItem(k, inp) {
 }
 function throwPie(k, back) {
   var R = RACE, fx = Math.cos(k.yaw), fz = Math.sin(k.yaw), sp = back ? -24 : Math.max(k.spd, 0) + 36;
-  R.proj.push({ k: 'pie', x: k.x + fx * (back ? -1.8 : 1.8), z: k.z + fz * (back ? -1.8 : 1.8), y: k.y + 0.6, vx: fx * sp, vz: fz * sp, life: 5, by: k, safe: 0.25, seg: k.seg }); sfx.play('shoot');
+  R.proj.push({ k: 'pie', x: k.x + fx * (back ? -1.8 : 1.8), z: k.z + fz * (back ? -1.8 : 1.8), y: k.y + 0.6, vx: fx * sp, vz: fz * sp, life: 5, by: k, safe: 0.25, seg: k.seg, bag: k.c.id === 'lab' ? 1 : 0 }); sfx.play('shoot');
 }
 /* what each thing does when it hits you. how: 'spin' (default), 'pie', 'pill', 'goo', 'toss', 'pounce', 'bite'. Returns false if it did nothing. */
 /* the Gloop's bites and the coin magnet: worked out by whoever runs the race (the host online) */
@@ -297,7 +297,7 @@ function hitKart(k, by, how, p) {
 }
 /* drivers shout now and then (TB always says one of his lines) */
 var SAYS = {
-  tb: ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is someone plaything"'],
+  tb: ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"'],
   joff: ['"Pineapple belongs on pizza. Fight me."'], amy: ['"Mild, hot or dynamite?"'], greebo: ['"Fresh cream pies. Don\'t ask what\'s in them."'], saba: ['"Hitless runs only."'],
   beebs: ['"Sit down, lad. First one\'s always warm."'], ali: ['"Everything is better with garlic."'], potbelly: ['"Cabinets are free, kid."'], kaya: ['"Kaya\'s on the coffee!"'],
   spermaid: ['"Sweetie!"'], kingblum: ['"ON MY OWN GROUND I AM KING."'], blum: ['"THE LOAD AT THE END."'], sirj: ['"Mrrrow."'], cumhead: ['"Splat!"'], hom: ['"Blub!"']
@@ -388,6 +388,7 @@ function stepProjectiles(dt) {
     }
     R.karts.forEach(function (k) { if (p.life <= 0 || (k === p.by && p.safe > 0) || k.floatY > 1) return; if (Math.hypot(k.x - p.x, k.z - p.z) < 1.4 && Math.abs(k.y - p.y) < 2) { p.life = 0; hitKart(k, p.by, p.k === 'pie' ? 'pie' : 'spin', p); R.fx.push({ k: 'pop', x: p.x, y: p.y, z: p.z, t: 0.4, col: p.k === 'pie' ? '#f1e7d0' : '#fff6d8' }); } });
   });
+  R.proj.forEach(function (p) { if (p.bag && p.life <= 0 && !p.burnt) { p.burnt = 1; var g3 = T.locate(p.x, p.z, p.seg); R.traps.push({ k: 'goo', fire: 1, x: p.x, z: p.z, y: g3.y, life: 8, by: p.by, safe: 0.3, r: 2.2 }); sfx.play('splat'); } }); // Laboozie's bag: the road burns where it lands
   R.proj = R.proj.filter(function (p) { return p.life > 0; });
   R.traps.forEach(function (t) {
     t.life -= dt; if (t.safe > 0) t.safe -= dt;

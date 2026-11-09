@@ -9,7 +9,7 @@ function draw() {
   drawGround(cx, cy);
   // things on the floor
   hazards.forEach(function (z) { drawHazardFloor(z, cx, cy); });
-  pools.forEach(function (p) { var a = Math.min(1, (p.life - p.t) * 2) * (p.hold ? 0.35 : 0.6); ell(p.x - cx, p.y - cy, p.r, p.r * 0.55, 'rgba(184,160,112,' + a * 0.8 + ')'); ell(p.x - cx, p.y - cy, p.r - 3, p.r * 0.55 - 2, 'rgba(241,224,176,' + a + ')'); ell(p.x - cx - p.r * 0.3, p.y - cy - 2, p.r * 0.25, 1.5, 'rgba(255,255,255,' + a + ')'); });
+  pools.forEach(function (p) { if (p.fire) { var fa = Math.min(1, (p.life - p.t) / 1.5); ell(p.x - cx, p.y - cy, p.r, p.r * 0.5, 'rgba(70,36,12,' + 0.7 * fa + ')'); for (var fi = 0; fi < 5; fi++) spr('lab_burn' + ((Math.floor(KIT.t * 10) + fi) % 4), p.x - cx - p.r * 0.7 + fi * p.r * 0.35, p.y - cy + 4, { sc: 0.35 * fa + 0.1 }); return; } var a = Math.min(1, (p.life - p.t) * 2) * (p.hold ? 0.35 : 0.6); ell(p.x - cx, p.y - cy, p.r, p.r * 0.55, 'rgba(184,160,112,' + a * 0.8 + ')'); ell(p.x - cx, p.y - cy, p.r - 3, p.r * 0.55 - 2, 'rgba(241,224,176,' + a + ')'); ell(p.x - cx - p.r * 0.3, p.y - cy - 2, p.r * 0.25, 1.5, 'rgba(255,255,255,' + a + ')'); });
   marks.forEach(function (m) { var k = m.t / m.at; shadow(m.x - cx, m.y - cy, m.r * k, m.r * k * 0.5); });
   marks2.forEach(function (m) { if (m.t < 0) return; var k = m.t / m.at; ell(m.x - cx, m.y - cy, m.r, m.r * 0.55, 'rgba(255,38,48,' + (0.12 + 0.18 * k) + ')'); circ(m.x - cx, m.y - cy, m.r * k, m.col, 2); });
   if (G.garlic !== undefined) {} var gw = wOf('garlic'); if (gw && gw.rad) { var pr = gw.rad * (1 + Math.sin(KIT.t * 6) * 0.04); ell(P.x - cx, P.y - 12 - cy, pr, pr, gw.evo ? 'rgba(255,240,200,0.16)' : 'rgba(241,231,208,0.10)'); circ(P.x - cx, P.y - 12 - cy, pr, 'rgba(241,231,208,0.35)', 1); }

@@ -52,7 +52,7 @@ function drawWorld() {
   ENTS.forEach(function (e) { drawEnt(g, e, cx, cy, W, H); });
   SCAT.forEach(function (d) { if (d.t > 2.6 && Math.floor(d.t * 12) % 2) return; spr('hog_drop', d.x - cx, d.y - cy, {}); });
   bossList().concat([G.boss, G.boss2].filter(function (b) { return b && !b.alive && b.dead > 0; })).forEach(function (b) { drawBoss(b, cx, cy); });
-  SHOTS.forEach(function (s) { if (s.delay > 0) return; drawShot(g, s, s.x - cx, s.y - cy); });
+  if (typeof drawBurns === 'function') drawBurns(cx, cy); SHOTS.forEach(function (s) { if (s.delay > 0) return; drawShot(g, s, s.x - cx, s.y - cy); });
   if (PL) drawPlayer(PL, cx, cy);
   FX.forEach(function (f) { drawFx(g, f, f.x - cx, f.y - cy); });
   // dark rooms in the Bone Pit: a light round Cumhead
@@ -159,6 +159,7 @@ function drawEnt(g, e, cx, cy, W, H) {
 var ITEMICON = { drops: 'hog_drop', shield: 'hog_ishield', shoes: 'hog_ishoes', star: 'hog_istar', life: 'ch_icon0' };
 function drawShot(g, s, x, y) {
   if (s.k === 'sperm') { spr('hog_shot', x, y, { anchor: 'c', flip: s.vx < 0 }); return; }
+  if (s.k === 'bag') { spr('lab_bag' + (Math.floor(G.t * 10) % 4), x, y, { anchor: 'c' }); return; }
   var col = { pie: '#f1e7d0', dagger: '#d0c8d0', bone: '#f1e7d0', cork: '#c08040', orb: '#c040ff', ember: '#ff9a30', shard: '#ff2630', rock: '#7a6a6a', bubble: '#fffbe8', goo: '#9a4aff', wave: '#ff2630' }[s.k] || '#ff2630';
   if (s.k === 'wave') { R('#12040a', x - 7, y - 14, 14, 14); R(col, x - 6, y - 13, 12, 12); R('#ffe36a', x - 6, y - 13, 12, 3); return; }
   g.fillStyle = '#12040a'; g.beginPath(); g.arc(x, y, 5, 0, 6.3); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(x, y, 4, 0, 6.3); g.fill();

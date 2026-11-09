@@ -89,3 +89,64 @@ def frames():
             out['chb_%s%d' % (d, f)] = (lambda d=d, f=f: frame(d, f))
             if d != 'u': out['chb_%s%d_o' % (d, f)] = (lambda d=d, f=f: frame(d, f, True))
     return out
+
+
+# ---- chibi Shithead Laboozie (from Hunter's drawing): a swirl of poop for a head, black hoodie, white gloves,
+# camo cargo trousers, tan boots. Same sizes and facings as Cumhead, names chl_<dir><frame>(_o) ----
+LPAL = {'p1': '#3e1e08', 'p2': '#6e3e14', 'p3': '#9a5e26', 'cloth': ('#3a3440', '#1e1a22', '#0c0a0e'), 'camo': ('#7a7a4a', '#5a5a38', '#2e2e1c'), 'camod': '#3a3a22',
+        'glove': GLOVE, 'boot': ('#e0b070', '#b08850', '#5a4020'), 'eye': '#ffffff', 'pupil': '#12040a', 'mouth': '#3a0a0a', 'tongue': '#ff6a6a', 'shine': '#ffffff', 'string': '#d8d0c0', 'smile': '#1e0e04'}
+
+
+def lab_head(g, d, oy, mouth):
+    cx, cy = 12, 15 + oy
+    g.ellipse(cx, cy, 9.5, 6.5, 'p1'); g.ellipse(cx - 0.5, cy - 0.5, 8.7, 5.8, 'p2')            # the bottom coil
+    g.ellipse(cx + 0.5, cy - 6, 7.2, 4.6, 'p1'); g.ellipse(cx, cy - 6.5, 6.5, 4.0, 'p2')          # the middle coil
+    g.ellipse(cx - 0.5, cy - 11, 4.8, 3.2, 'p1'); g.ellipse(cx - 1, cy - 11.5, 4.2, 2.7, 'p2')     # the top coil
+    g.poly([(cx - 2, cy - 13), (cx + 2, cy - 18), (cx + 3, cy - 13)], 'p2')                       # the tip
+    g.line(cx - 7, cy - 3, cx + 6, cy - 2, 'p1'); g.line(cx - 5, cy - 9, cx + 5, cy - 8, 'p1')
+    g.ellipse(cx - 4, cy - 2, 2.2, 1.2, 'p3'); g.ellipse(cx - 2, cy - 8, 1.6, 0.9, 'p3')
+    if d == 'u': return
+    if d == 'd':
+        for ex in (cx - 3.5, cx + 3.5):
+            g.ellipse(ex, cy, 2.4, 2.8, 'eye'); g.rect(int(ex) - (0 if ex < cx else 1), int(cy), 2, 2, 'pupil')
+        if mouth: g.ellipse(cx, cy + 4, 3, 1.6, 'mouth'); g.put(cx, cy + 5, 'tongue')
+        else: g.line(cx - 3, cy + 3.5, cx, cy + 4.5, 'smile'); g.line(cx, cy + 4.5, cx + 3, cy + 3.5, 'smile')
+    else:
+        g.ellipse(cx + 4.5, cy, 2.2, 2.8, 'eye'); g.rect(cx + 5, cy, 2, 2, 'pupil')
+        if mouth: g.ellipse(cx + 6, cy + 4, 2, 1.4, 'mouth')
+        else: g.line(cx + 3, cy + 4, cx + 7, cy + 3.5, 'smile')
+
+
+def lab_body(g, d, f, oy):
+    sw = [0, 1, 0, -1][f]; by = 22 + oy
+    if d == 's':
+        g.rect(9, by + 5, 7, 4, 'camo'); g.put(10, by + 6, 'camod'); g.put(13, by + 7, 'camod')
+        g.rect(8 + sw * 2, by + 8, 5, 3, 'boot'); g.rect(12 - sw * 2, by + 8, 5, 3, 'boot')
+    else:
+        g.rect(7, by + 5, 10, 4, 'camo'); g.put(8, by + 6, 'camod'); g.put(12, by + 5, 'camod'); g.put(15, by + 7, 'camod'); g.put(10, by + 8, 'camod')
+        lf, rf = (-1 if sw > 0 else 0), (-1 if sw < 0 else 0)
+        g.rect(6, by + 8 + lf, 5, 3, 'boot'); g.rect(13, by + 8 + rf, 5, 3, 'boot')
+    if d == 's': g.rect(7, by - 1, 10, 7, 'cloth')
+    else: g.rect(6, by - 1, 12, 7, 'cloth')
+    if d == 'd': g.put(10, by + 1, 'string'); g.put(10, by + 2, 'string'); g.put(13, by + 1, 'string'); g.put(13, by + 2, 'string')
+    if d == 'u': g.rect(8, by - 2, 8, 3, 'cloth')  # the hood
+    if d == 's':
+        g.rect(11 - sw, by + 1, 3, 4, 'cloth'); g.rect(11 - sw * 2, by + 4, 3, 3, 'glove')
+    else:
+        g.rect(4, by + 1 + max(0, sw), 2, 4, 'cloth'); g.rect(18, by + 1 + max(0, -sw), 2, 4, 'cloth')
+        g.rect(3, by + 4 + max(0, sw), 3, 3, 'glove'); g.rect(18, by + 4 + max(0, -sw), 3, 3, 'glove')
+
+
+def lab_frame(d, f, mouth=False):
+    g = Grid(W, H); oy = 1 if f in (1, 3) else 0
+    lab_body(g, d, f, -oy); lab_head(g, d, -oy + 1, mouth)
+    return g, LPAL
+
+
+def lab_frames():
+    out = {}
+    for d in ('d', 'u', 's'):
+        for f in range(4):
+            out['chl_%s%d' % (d, f)] = (lambda d=d, f=f: lab_frame(d, f))
+            if d != 'u': out['chl_%s%d_o' % (d, f)] = (lambda d=d, f=f: lab_frame(d, f, True))
+    return out

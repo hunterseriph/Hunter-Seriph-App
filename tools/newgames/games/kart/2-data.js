@@ -14,6 +14,7 @@ var CHARS = [
   { id: 'hom', n: 'The Homunculus', f: 'h_gloop_adult_idle0', side: 'h_gloop_adult_idle0', only: 1, sc: 0.62, kart: ['#3fb43a', '#12040a', '#9aff5a'], st: [2, 4, 5, 1], from: 'A Gloop at the wheel. Corners like nothing else.' },
   { id: 'saba', n: 'Saba', f: 'npc_saba', sc: 0.66, kart: ['#2a8a2a', '#ffe36a', '#c4121c'], st: [3, 3, 4, 2], from: 'Hitless runs only. Smooth lines through every bend.' },
   { id: 'joff', n: 'Joff', f: 'npc_joff', sc: 0.66, kart: ['#ffe36a', '#f1e7d0', '#5aa82a'], st: [4, 3, 2, 3], from: 'Pineapple belongs on pizza. Quick on the straights.' },
+  { id: 'lab', n: 'Shithead Laboozie', f: 'lab_s0', side: 'lab_pwalk0', sc: 0.5, kart: ['#5a3010', '#12040a', '#ff7a1a'], st: [3, 3, 4, 3], from: 'His Cream Pies are Flaming Bags of Shit: splat whoever they hit, then burn on the road.' },
   { id: 'kaya', n: 'Kaya', f: 'npc_kaya', sc: 0.66, kart: ['#8a3a20', '#f1e7d0', '#c4121c'], st: [2, 5, 3, 2], from: "Kaya's on the coffee. Shoots off every start.", lock: 'Win the Cream Cup' },
   { id: 'beebs', n: 'Uncle Beeb', f: 'npc_beebs', sc: 0.66, kart: ['#a8601e', '#d0c8d0', '#ffe36a'], st: [5, 2, 2, 5], from: 'First one is always warm. A tank on wheels.', lock: 'Win the Blood Cup' },
   { id: 'ali', n: 'Ali', f: 'npc_ali', sc: 0.66, kart: ['#f1e7d0', '#3a8a2a', '#c8903a'], st: [3, 4, 4, 2], from: 'Everything is better with garlic. Even karts.', lock: 'Win the Moon Cup' },

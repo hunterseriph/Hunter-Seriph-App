@@ -9,14 +9,14 @@ var TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 function freshG(seed) { return { seed: seed, fi: 0, P: newPlayer(), trip: 0.25, tripKick: 0, evT: 30, ev: null, ghost: null, msgs: [], sub: null, banner: null, prompt: null, foes: [], tb: null, loot: [], fx: [], shots: [], noises: [], stash: null,
   read: {}, kills: 0, caught: 0, pills: 3, time: 0, notesRead: 0, spotted: 0, mode: 'title', cut: null, wake: 0, trans: 0, touchMode: TOUCH && SV.aim !== 'hold', touchAim: false }; }
 function snapshot() { var P = G.P; return { seed: G.seed, fi: G.fi, hp: P.hp, weaps: P.weaps, weap: P.weap, ammo: P.ammo, inv: P.inv, buffs: P.buffs, trip: G.trip, read: G.read, kills: G.kills, caught: G.caught, pills: G.pills, time: G.time, notesRead: G.notesRead, spotted: G.spotted }; }
-function saveRun() { SV.run = JSON.parse(JSON.stringify(snapshot())); persist(); }
+function saveRun() { if (isGuest()) return; SV.run = JSON.parse(JSON.stringify(snapshot())); persist(); }
 function newGame() { KIT.closeMenu(); SV.runs++; persist(); G = freshG((Math.random() * 1e9) >>> 0); G.mode = 'intro'; G.introT = 0; music.stop(1); }
 function continueGame() {
   var r = SV.run; if (!r) return newGame(); KIT.closeMenu(); G = freshG(r.seed); var P = G.P; P.hp = Math.max(40, r.hp); P.weaps = r.weaps; P.weap = r.weap; P.ammo = r.ammo; P.inv = r.inv; P.buffs = r.buffs || [];
   G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; G.notesRead = r.notesRead || 0; G.spotted = r.spotted || 0;
   loadFloor(r.fi, r.fi === 0 ? 'new' : 'up'); music.stop(1);
 }
-function startFloorOne() { loadFloor(0, 'new'); saveRun(); say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
+function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
 /* ---------- the loop ---------- */
 function update(dt) {
   if (!G) return;
@@ -25,12 +25,17 @@ function update(dt) {
   if (G.mode === 'intro') { G.introT += dt; if (KIT.pressed('a') || KIT.pressed('start') || KIT.ptr.tap) G.introT = Math.ceil(G.introT / 3.4 + 0.01) * 3.4; if (G.introT > INTRO.length * 3.4) startFloorOne(); return; }
   if (G.mode === 'title') { G.titleT = (G.titleT || 0) + dt; stepTrip(dt); if (G.tb) { G.tb.ph += dt * 1.2; } return; }
   if (G.mode === 'play') {
-    G.time += dt; stepPlayer(dt); stepDoors(dt); stepFoes(dt); stepTB(dt); stepLoot(dt); stepTrip(dt); stepFx(dt);
+    G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); } else stepGuestWorld(dt); stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
     G.noises = G.noises.filter(function (n) { n.t -= dt; return n.t > 0; });
     var chase = G.tb && G.tb.st === 'chase' || G.foes.some(function (f) { return f.st === 'chase'; }); if (chase && !(G.ev && G.ev.k === 'mute')) music.play('pnchase'); else if (music.current === 'pnchase') music.stop(2.5);
   } else if (G.mode === 'catch') { stepCatch(dt); stepFx(dt); }
-  else if (G.mode === 'trans') { G.trans += dt; if (G.trans > 1.4) { if (G.transTo >= FLOORS.length) beginEnding(); else { loadFloor(G.transTo, 'up'); saveRun(); G.wake = 1.5; } } }
+  else if (G.mode === 'drive') { G.time += dt; stepDrive(dt); stepTrip(dt); stepFx(dt); }
+  else if (G.mode === 'ride') { G.time += dt; stepRide(dt); }
+  else if (G.mode === 'crash') { stepCrash(dt); stepFx(dt); }
+  else if (G.mode === 'win') { stepWin(dt); stepFx(dt); stepBags(dt); }
+  else if (G.mode === 'trans') { G.trans += dt; if (G.trans > 1.4 && !isGuest()) { if (G.transTo >= BASEMENT && G.fi === BASEMENT - 1 && !G.outside) beginEnding(); else { G.outside = 0; loadFloor(G.transTo, 'up'); saveRun(); G.wake = 1.5; } } }
   else if (G.mode === 'end') stepEnding(dt);
+  netStep(dt);
   ambience(dt);
 }
 function idle(dt) { if (G && G.mode === 'title') update(dt); ambience(dt); }
@@ -51,27 +56,30 @@ function stepCatch(dt) {
 function gameOver(why) {
   G.mode = 'over'; music.stop(1); sfx.play(why === 'seen' ? 'grab' : 'lose'); var q = tbLine();
   setTimeout(function () { KIT.menu({ cls: 'pn', title: why === 'seen' ? 'TB GOT YOU FOR GOOD' : 'YOU DIED', sub: why === 'seen' ? 'He saw you before you got your stuff back. "' + q + '"' : 'TB will be along to tidy you up.', items: [
-    { label: 'TRY THIS FLOOR AGAIN', def: 1, fn: continueGame }, { label: 'QUIT TO THE TITLE', back: 1, fn: titleMenu }] }); }, why === 'seen' ? 1800 : 1200);
+    G.net === 'guest' ? null : { label: G.net ? 'TRY AGAIN TOGETHER' : 'TRY THIS FLOOR AGAIN', def: 1, fn: G.net ? onlineAgain : continueGame }, { label: 'QUIT TO THE TITLE', back: 1, fn: function () { netLeave(); G = null; titleMenu(); } }] }); }, why === 'seen' ? 1800 : 1200);
   if (why === 'seen') { G.over = { t: 0 }; }
 }
 /* ---------- the menus ---------- */
+function onlineAgain() { KIT.closeMenu(); [G.P, G.R].forEach(function (pl) { if (pl) { pl.dead = 0; pl.hp = Math.max(pl.hp, 60); pl.downT = 0; } }); G.stash = null; loadFloor(G.fi, 'up'); netEv({ k: 'revive' }); }
 function titleMenu() {
   if (!G || G.mode !== 'title') { G = freshG(12345); G.trip = 2.6; loadFloor(0, 'new'); G.mode = 'title'; G.tb.st = 'ghost'; var P = G.P; G.tb.x = P.x + Math.sin(P.a) * 3.5; G.tb.z = P.z + Math.cos(P.a) * 3.5; collide(G.tb, 0.3, 'tb'); G.evT = 999; }
   music.play('pntitle');
   var r = SV.run, items = [r ? { label: 'CONTINUE', sub: FLOORS[r.fi].n + '  ·  ' + FLOORS[r.fi].name, def: 1, fn: continueGame } : null, { label: r ? 'NEW NIGHTMARE' : 'START', def: !r, fn: function () { if (r) KIT.confirm({ title: 'Start again?', sub: 'Your run on ' + FLOORS[r.fi].n + ' will be lost.', yesLabel: 'Start again', yes: newGame, no: titleMenu }); else newGame(); } },
-    { label: 'HOW TO PLAY', fn: function () { helpMenu(titleMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(titleMenu); } }];
+    { label: 'PLAY ONLINE', fn: function () { onlineMenu(); } }, { label: 'HOW TO PLAY', fn: function () { helpMenu(titleMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(titleMenu); } }];
   KIT.menu({ cls: 'clear pn', logo: '../assets/pn-logo.webp', title: 'Psycho Nightmare', items: items, note: SV.wins ? 'Escaped ' + SV.wins + (SV.wins === 1 ? ' time' : ' times') + (SV.best ? '  ·  best ' + clock(SV.best) : '') : '' });
 }
 function clock(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
 function helpMenu(back) {
   KIT.menu({ cls: 'pn plain', title: 'How to play', wide: true, html:
-    '<b>Get out of TB\'s basement.</b> Four floors. Each one has a locked gate to the stairs up, and TB keeps its key somewhere on that floor.<br><br>' +
+    '<b>Get out of TB\'s basement.</b> Four floors. Each one has a locked gate to the stairs up, and TB keeps its key somewhere on that floor. Then get home: the getaway car, the woods, what\'s left of Ejaculand and its rides, and Clubhouse Row\'s red light district to the Clubhouse door. Every shop in Clubhouse Row can be walked into.<br><br>' +
     '<b>Move</b> with the left stick (WASD). <b>Look</b> with the right stick (the arrow keys, or drag on the right of the screen). <b>B</b> (Shift) runs, but running is loud and wears you out. <b>L</b> (Q) sneaks: slower, quiet, harder to see.<br>' +
     '<b>A</b> (Z or Space) uses what is in front of you, or attacks. <b>X</b> (C, or the left trigger) aims a gun' + (TOUCH ? ' (on a phone it toggles)' : '') + '; aimed shots hit harder. The right trigger fires too. <b>Y</b> (V) swaps weapon. <b>R</b> (E) eats a Cum Cracker or a Cumpuccino.<br><br>' +
     '<b>TB</b> cannot be killed. Shoot him and he only laughs. If he sees you the eye at the edge of the screen fills up: once it is full, run. Lose him round corners, behind doors or in a <b>locker</b>. Now and then he takes his own pills and checks out for a while.<br>' +
     '<b>If TB catches you</b> he feeds you more Silly Pills and locks you back in the cell. Everything you had stays where he grabbed you. Get it back <b>without him seeing you</b>, or it is over.<br><br>' +
     '<b>His boys</b> (Gimps, Butchers, Pill Pushers) can be killed. Hide or fight. The <b>2x4</b> has a rusty nail: they bleed. The <b>bat</b> knocks them out cold. Guns need ammo, and TB hears every shot.<br>' +
-    '<b>Silly Pills</b> always make the trip worse. Sometimes they also make you stronger. A Cumpuccino clears your head a little.',
+    '<b>Silly Pills</b> always make the trip worse. Sometimes they also make you stronger. A Cumpuccino clears your head a little.<br><br>' +
+    '<b>On the rides</b> look round with the right stick. When something comes at you, <b>A</b> shoves or hits it and <b>L</b> ducks.<br>' +
+    '<b>Play online</b> with a friend: the host is Cumhead, whoever joins is <b>Shithead Laboozie</b>. His Flaming Bag of Shit covers whoever it hits (poison), and where it lands it burns for 8 seconds. If one of you goes down, the other has to last until they get back up.',
     items: [{ label: 'BACK', back: 1, fn: back }] });
 }
 function optionsMenu(back) {
@@ -81,11 +89,11 @@ function optionsMenu(back) {
     { label: 'BACK', back: 1, fn: back }] });
 }
 function pauseMenu() {
-  if (!G || G.mode !== 'play') return; /* sub-menus come back here while a menu is open */
+  if (!G || ['play', 'drive', 'ride'].indexOf(G.mode) < 0) return; /* sub-menus come back here while a menu is open */
   KIT.menu({ cls: 'pn plain', title: 'Paused', sub: FLOORS[G.fi].n + '  ·  ' + FLOORS[G.fi].name + '  ·  ' + clock(G.time), items: [
     { label: 'CARRY ON', def: 1, back: 1, fn: KIT.closeMenu }, { label: 'MAP', fn: mapMenu }, { label: 'YOUR THINGS', fn: bagMenu },
     G.notesRead ? { label: 'NOTES', fn: notesMenu } : null, { label: 'HOW TO PLAY', fn: function () { helpMenu(pauseMenu); } }, { label: 'OPTIONS', fn: function () { optionsMenu(pauseMenu); } },
-    { label: 'QUIT TO THE TITLE', fn: function () { KIT.confirm({ title: 'Quit?', sub: 'You will carry on from the start of ' + FLOORS[G.fi].n + '.', yesLabel: 'Quit', yes: function () { G = null; titleMenu(); }, no: pauseMenu }); } }] });
+    { label: 'QUIT TO THE TITLE', fn: function () { KIT.confirm({ title: 'Quit?', sub: G.net ? 'You will leave the online game.' : 'You will carry on from the start of ' + (FLOORS[G.fi].n || FLOORS[G.fi].name) + '.', yesLabel: 'Quit', yes: function () { netLeave(); G = null; titleMenu(); }, no: pauseMenu }); } }] });
 }
 function bagMenu() {
   var P = G.P, items = [];
@@ -106,7 +114,7 @@ function mapMenu() {
 }
 /* ---------- the way out: the bar upstairs, TB at the front door ---------- */
 function beginEnding() {
-  var F = { fi: 3, K: new Uint8Array(MW * MH), RM: new Int16Array(MW * MH).fill(-1), rooms: [], props: [], lockers: [], pipes: [], decals: [], lights: [], loot: [], notes: [], foes: [] };
+  setMapSize(41); if (FRONTMESH) { FRONTMESH.free(); FRONTMESH = null; } var F = { fi: 3, K: new Uint8Array(MW * MH), RM: new Int16Array(MW * MH).fill(-1), rooms: [], props: [], lockers: [], pipes: [], decals: [], lights: [], loot: [], notes: [], foes: [] };
   for (var j = 3; j <= 18; j++) for (var i = 18; i <= 22; i++) { F.K[idx(i, j)] = KR; F.RM[idx(i, j)] = 0; }
   for (var l = 5; l <= 17; l += 3) F.lights.push({ i: 20, j: l, k: 1.3, r: 8, fl: l === 11 ? 1 : 0 });
   [['g_bro', 6], ['poster', 9], ['g_tb', 15], ['poster2', 12], ['g_suck', 17]].forEach(function (d, n) { F.decals.push({ i: n % 2 ? 18 : 22, j: d[1], d: n % 2 ? 1 : 0, k: d[0], y: 1.5, s: 1, o: 0 }); });
@@ -114,16 +122,16 @@ function beginEnding() {
   FL = F; F.seen = new Uint8Array(MW * MH); F.propAt = {}; F.props.forEach(function (p) { F.propAt[idx(p.i, p.j)] = p; }); F.lockerAt = {}; F.doorAt = {}; F.doors = []; F.cellLocked = 0; F.cellDoor = null; F.exit = { i: 20, j: 2, di: 0, dj: 1 };
   if (MESH) MESH.free(); MESH = buildFloorMesh(F); F.lights.push({ i: 20, j: 2.6, k: 2.2, r: 9, fl: 0, exit: 1, c: [1, 0.95, 0.85] });
   G.fi = 3; G.foes = []; G.loot = []; G.fx = []; G.shots = []; G.stash = null; G.ev = null; G.ghost = null;
-  var P = G.P; P.x = tx(20); P.z = tx(17.5); P.a = P.ca = Math.PI; P.cp = -0.05; P.hide = null; P.aim = 0; P.atkT = -1; P.crouch = 0;
+  setMapSize(41); var P = G.P; P.x = tx(20); P.z = tx(17.5); P.a = P.ca = Math.PI; P.cp = -0.05; P.hide = null; P.aim = 0; P.atkT = -1; P.crouch = 0;
   G.tb = { x: tx(21) - 0.2, z: tx(3) - 0.4, a: 0, st: 'door', ph: 0, spd: 0, sus: 0 }; F.lights.push({ i: 21, j: 3.2, k: 1.6, r: 5, fl: 0, exit: 1, c: [1, 0.3, 0.25] }); G.mode = 'end'; G.endT = 0; G.wake = 1.5; G.banner = { s: "TB'S SUCK N' FUCK", t: 4 };
-  SV.wins++; if (!SV.best || G.time < SV.best) SV.best = G.time; SV.run = null; persist(); music.play('pnend');
+  music.play('pnend');
 }
 function stepEnding(dt) {
   var P = G.P, tb = G.tb; G.endT += dt; tb.a = Math.atan2(P.x - tb.x, P.z - tb.z);
   if (P.z > tx(2) + 0.6) { var sp = 4.3; P.z -= sp * dt; P.spd = sp; P.run = 1; P.ph += sp * dt * 3.06; P.x += (tx(20) - 0.3 - P.x) * dt * 2; P.a = Math.PI; P.ca += angDiff(Math.PI, P.ca) * dt * 3; }
   if (!G.endSaid && P.z < tx(9)) { G.endSaid = 1; subtitle('TB', TBEND, 5); sfx.play('tblaugh'); }
   if (P.z <= tx(2) + 0.6 && !G.outT) { G.outT = G.endT; KIT.flash(0.6); sfx.play('door'); }
-  if (G.outT && G.endT - G.outT > 1.2 && !G.endMenu) { G.endMenu = 1; endMenu(); }
+  if (G.outT && G.endT - G.outT > 1.2 && G.mode === 'end' && !isGuest()) { G.mode = 'trans'; G.trans = 0; G.transTo = BASEMENT; G.outside = 1; G.transWord = 'OUT INTO THE NIGHT...'; netEv({ k: 'climb' }); }
 }
 function endMenu() {
   KIT.menu({ cls: 'pn ending', title: 'YOU GOT OUT', sub: 'Cumhead ran out of TB\'s Suck n\' Fuck into the night and did not stop running.', html: '<p class="pnstats">Time  ' + clock(G.time) + '<br>TB\'s boys put down  ' + G.kills + '<br>Times TB caught you  ' + G.caught + '<br>Silly Pills taken  ' + G.pills + '<br>Notes read  ' + G.notesRead + '</p><p class="pnbro">"' + TBEND + '"</p>',
@@ -136,14 +144,21 @@ function draw() {
   if (G.mode === 'intro') { R3.begin([0, 0, 0]); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); var n = Math.floor(G.introT / 3.4), u = G.introT - n * 3.4; if (n < INTRO.length) { var a = Math.min(1, u * 1.5, (3.4 - u) * 2), last = n === INTRO.length - 1;
     KIT.wrap(INTRO[n], W - 80, last ? 40 : 18, last ? 'title' : 'body').forEach(function (s, k, A) { KIT.text(s, W / 2, H / 2 - A.length * 11 + k * (last ? 40 : 22), { align: 'center', font: last ? 'title' : 'body', size: last ? 40 : 18, col: last ? '#c4121c' : '#f1e7d0', alpha: a }); }); }
     KIT.text('A  SKIP', W - 10, H - 14, { align: 'right', size: 6, col: '#4a3a3a' }); return; }
-  if (!FL) return;
+  if (G.mode === 'wait' || !FL) { R3.begin([0, 0, 0]); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); KIT.text('WAITING FOR THE HOST...', W / 2, H / 2, { align: 'center', size: 8, col: '#a6968f' }); return; }
   if (G.mode === 'title') { drawTitleScene(); return; }
   if (G.mode === 'catch') { drawCatch(); return; }
-  drawWorld(); drawHud();
-  if (G.mode === 'trans') { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.trans / 1) + ')'; ctx.fillRect(0, 0, W, H); if (G.trans > 0.6) KIT.text('CLIMBING...', W / 2, H / 2, { align: 'center', font: 'title', size: 26, col: '#a6968f', alpha: Math.min(1, (G.trans - 0.6) * 2) }); }
+  if (G.mode === 'drive' || G.mode === 'trans' && DR && FL && FL.drive) { drawDrive(); drawDriveHud(); drawMsgs(); }
+  else if (G.mode === 'ride' || G.mode === 'trans' && FL && FL.ride && RD) { drawRide(); drawHud(); drawRideHud(); }
+  else if (G.mode === 'crash') { drawCrash(); KIT.blit(vignette(), 0, 0); drawMsgs(); }
+  else { drawWorld(); drawHud(); }
+  if (G.mode === 'trans') { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.trans / 1) + ')'; ctx.fillRect(0, 0, W, H); if (G.trans > 0.6) KIT.text(G.transWord || (FLOORS[G.fi].kind ? '...' : 'CLIMBING...'), W / 2, H / 2, { align: 'center', font: 'title', size: 26, col: '#a6968f', alpha: Math.min(1, (G.trans - 0.6) * 2) }); }
   if (G.mode === 'over') { G.overT = (G.overT || 0) + 1 / 60; ctx.fillStyle = 'rgba(80,0,6,' + Math.min(0.85, G.overT) + ')'; ctx.fillRect(0, 0, W, H); }
   if (G.mode === 'end' && G.outT) { ctx.fillStyle = 'rgba(255,250,240,' + Math.min(1, (G.endT - G.outT) * 1.2) + ')'; ctx.fillRect(0, 0, W, H); }
 }
+function drawMsgs() { var W = KIT.W, H = KIT.H; G.msgs.forEach(function (m, n) { KIT.text(m.s, W / 2, H - 82 - (G.msgs.length - 1 - n) * 11, { size: 8, col: m.col, alpha: Math.min(1, m.t), max: W - 40, align: 'center' }); });
+  if (G.sub) { var lines = KIT.wrap(G.sub.s, W - 80, 14, 'body'); lines.forEach(function (s, n) { KIT.text((n ? '' : G.sub.who + ':  ') + s, W / 2, H * 0.52 + n * 15 - (lines.length - 1) * 15, { align: 'center', size: 14, font: 'body', col: G.sub.who === 'TB' ? '#ff2630' : '#f1e7d0', outline: 1, alpha: Math.min(1, G.sub.t * 2) }); }); }
+  if (G.banner && G.banner.t > 0) { var ba = Math.min(1, G.banner.t, (4 - G.banner.t) * 2); KIT.text(G.banner.s, W / 2, H * 0.3, { align: 'center', font: 'title', size: 30, col: '#c4121c', alpha: ba, outline: 1 }); }
+  if (G.wake > 0) { KIT.ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.wake / 2) + ')'; KIT.ctx.fillRect(0, 0, W, H); } }
 function drawTitleScene() {
   var P = G.P, t = G.titleT || 0; P.hide = null; var a = P.a + Math.sin(t * 0.15) * 0.5; P.ca = a; P.cp = -0.05 + Math.sin(t * 0.2) * 0.05; P.aim = 0; P.crouch = 0;
   var keep = G.mode; G.tb.st = 'ghost'; G.tb.a = Math.atan2(P.x - G.tb.x, P.z - G.tb.z);
@@ -174,5 +189,5 @@ KIT.start({ w: 480, h: 270, flex: 720, update: update, draw: draw, idleUpdate: i
 if (!R3.ok) KIT.menu({ title: 'Psycho Nightmare', sub: 'This device cannot draw 3D (WebGL is switched off or missing), so the basement cannot open here.', items: [] });
 else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "Pirata One"').then(function () { FONTOK = true; }, function () { FONTOK = true; }); } catch (e) { FONTOK = true; }
   (function wait() { if (FONTOK || Date.now() - fontT > 2500) { buildAtlas(); buildRigs(); titleMenu(); } else setTimeout(wait, 50); })(); }
-window.__pn = { get G() { return G; }, get FL() { return FL; }, SV: SV, newGame: newGame, continueGame: continueGame, loadFloor: loadFloor, titleMenu: titleMenu, beginEnding: beginEnding, catchPlayer: catchPlayer, takePill: takePill, startFloorOne: startFloorOne,
+window.__pn = { get G() { return G; }, get FL() { return FL; }, get RD() { return RD; }, get DR() { return DR; }, startCrash: startCrash, hostStart: hostStart, NET: NET, SV: SV, newGame: newGame, continueGame: continueGame, loadFloor: loadFloor, titleMenu: titleMenu, beginEnding: beginEnding, catchPlayer: catchPlayer, takePill: takePill, startFloorOne: startFloorOne,
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); } };

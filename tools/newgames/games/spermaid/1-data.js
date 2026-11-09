@@ -92,7 +92,7 @@ var STAGE = {}; STAGES.forEach(function (s, i) { s.i = i; STAGE[s.id] = s; });
 function stageOpen(i) { return i === 0 || !!SV.cleared[STAGES[i - 1].id]; }
 
 /* ---------- friends locked in cells (one per place). Freeing one is for good: a small gift every run after ---------- */
-var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is someone plaything"'];
+var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"'];
 var FRIENDS = {
   tb: { n: 'TB', spr: 'npc_tb', q: null, gift: '+1 reroll every run', f: function (s) { s.rerolls += 1; } },
   potbelly: { n: 'Potbelly', spr: 'npc_potbelly', q: '"Cabinets are free, kid. Play all you like."', gift: '+10% drops', f: function (s) { s.greed += 0.1; } },

@@ -110,7 +110,7 @@ var HIPAINT = {
   i_key: function (g) { g.strokeStyle = '#ffe36a'; g.lineWidth = 6; g.beginPath(); g.arc(20, 32, 11, 0, 6.28); g.stroke(); g.fillStyle = '#ffe36a'; g.fillRect(30, 29, 28, 6); g.fillRect(48, 35, 5, 9); g.fillRect(40, 35, 4, 6); },
   i_bag: function (g) { g.fillStyle = '#3a2a1a'; g.beginPath(); g.ellipse(32, 40, 24, 18, 0, 0, 6.28); g.fill(); g.fillRect(24, 14, 16, 12); g.fillStyle = '#c4121c'; g.fillRect(22, 24, 20, 4); g.fillStyle = '#f1e7d0'; g.font = 'bold 10px "Archivo Narrow", sans-serif'; g.textAlign = 'center'; g.fillText('YOUR', 32, 42); g.fillText('STUFF', 32, 52); },
   i_note: function (g) { g.fillStyle = '#e8dcc0'; g.save(); g.translate(32, 32); g.rotate(0.1); g.fillRect(-18, -24, 36, 48); g.fillStyle = '#3a2a2a'; for (var i = 0; i < 7; i++) g.fillRect(-13, -17 + i * 6, 20 + (i * 7) % 8, 2); g.fillStyle = '#8a0a10'; g.fillRect(6, 12, 8, 8); g.restore(); },
-  i_handgun: function (g) { gunIcon(g, 'handgun'); }, i_shotgun: function (g) { gunIcon(g, 'shotgun'); }, i_riflew: function (g) { gunIcon(g, 'rifle'); }, i_plank: function (g) { gunIcon(g, 'plank'); }, i_bat: function (g) { gunIcon(g, 'bat'); }
+  i_handgun: function (g) { gunIcon(g, 'handgun'); }, i_shotgun: function (g) { gunIcon(g, 'shotgun'); }, i_riflew: function (g) { gunIcon(g, 'rifle'); }, i_plank: function (g) { gunIcon(g, 'plank'); }, i_knife: function (g) { gunIcon(g, 'knife'); }, i_hammer: function (g) { gunIcon(g, 'hammer'); }, i_fireaxe: function (g) { gunIcon(g, 'fireaxe'); }, i_labbag: function (g) { gunIcon(g, 'bag'); }, i_bat: function (g) { gunIcon(g, 'bat'); }
 };
 function box(g, a, b, t) { g.fillStyle = '#12040a'; g.fillRect(8, 20, 48, 34); g.fillStyle = a; g.fillRect(10, 22, 44, 30); g.fillStyle = b; g.fillRect(10, 22, 44, 8); g.fillStyle = '#f1e7d0'; g.font = 'bold 12px "Archivo Narrow", sans-serif'; g.textAlign = 'center'; g.fillText(t, 32, 46); }
 /* weapon pictures (the HUD and the pickups share them) */
@@ -121,15 +121,19 @@ function gunIcon(g, w) {
   else if (w === 'rifle') { g.fillStyle = '#4a3018'; g.fillRect(2, 30, 20, 9); g.fillStyle = '#2a2a2e'; g.fillRect(20, 28, 42, 5); g.fillRect(26, 20, 16, 5); g.fillStyle = '#4a3018'; g.fillRect(20, 33, 18, 4); }
   else if (w === 'plank') { g.save(); g.translate(32, 32); g.rotate(-0.7); g.fillStyle = '#a07a48'; g.fillRect(-28, -5, 56, 10); g.fillStyle = '#6a4a28'; g.fillRect(-28, -5, 56, 2); g.fillStyle = '#c8c8c0'; g.fillRect(18, -14, 2, 10); g.fillStyle = '#8a3a1a'; g.fillRect(18, -16, 4, 3); g.restore(); }
   else if (w === 'bat') { g.save(); g.translate(32, 32); g.rotate(-0.7); g.fillStyle = '#c8a070'; g.beginPath(); g.moveTo(-28, -2); g.lineTo(10, -6); g.quadraticCurveTo(30, -7, 30, 0); g.quadraticCurveTo(30, 7, 10, 6); g.lineTo(-28, 2); g.fill(); g.fillStyle = '#2a1a10'; g.fillRect(-28, -3, 10, 6); g.fillStyle = 'rgba(110,4,12,0.9)'; g.fillRect(14, -5, 8, 6); g.restore(); }
+  else if (w === 'knife') { g.save(); g.translate(32, 32); g.rotate(-0.7); g.fillStyle = '#2a1a10'; g.fillRect(-24, -4, 18, 8); g.fillStyle = '#7a7a70'; g.fillRect(-7, -6, 3, 12); g.fillStyle = '#d8d8d0'; g.beginPath(); g.moveTo(-4, -4); g.lineTo(24, -4); g.lineTo(28, 0); g.lineTo(-4, 4); g.fill(); g.fillStyle = 'rgba(110,4,12,0.9)'; g.fillRect(14, -3, 9, 4); g.restore(); }
+  else if (w === 'hammer') { g.save(); g.translate(32, 32); g.rotate(-0.7); g.fillStyle = '#8a5a30'; g.fillRect(-26, -3, 44, 6); g.fillStyle = '#2a2a2e'; g.fillRect(-28, -3, 9, 6); g.fillStyle = '#5a5a60'; g.fillRect(14, -12, 10, 24); g.fillStyle = '#8a8a90'; g.fillRect(14, -12, 10, 4); g.fillStyle = '#4a4a50'; g.beginPath(); g.moveTo(14, 8); g.lineTo(8, 16); g.lineTo(14, 12); g.fill(); g.restore(); }
+  else if (w === 'fireaxe') { g.save(); g.translate(32, 34); g.rotate(-0.7); g.fillStyle = '#c4121c'; g.fillRect(-28, -3, 54, 6); g.fillStyle = '#ffe36a'; g.fillRect(-28, -3, 6, 6); g.fillStyle = '#9a9aa0'; g.beginPath(); g.moveTo(16, -3); g.lineTo(22, -18); g.quadraticCurveTo(32, -8, 28, -3); g.fill(); g.fillStyle = '#d8d8e0'; g.fillRect(24, -16, 3, 12); g.fillStyle = '#c4121c'; g.beginPath(); g.moveTo(18, 3); g.lineTo(24, 14); g.lineTo(14, 3); g.fill(); g.restore(); }
+  else if (w === 'bag') { g.fillStyle = '#ff7a20'; for (var f = 0; f < 4; f++) { g.beginPath(); g.moveTo(18 + f * 8, 30); g.lineTo(22 + f * 8, 8 + (f % 2) * 6); g.lineTo(26 + f * 8, 30); g.fill(); } g.fillStyle = '#ffe36a'; g.fillRect(24, 22, 16, 8); g.fillStyle = '#aa7846'; g.beginPath(); g.moveTo(16, 30); g.lineTo(48, 30); g.lineTo(50, 56); g.lineTo(14, 56); g.fill(); g.fillStyle = '#6e3c18'; g.beginPath(); g.ellipse(32, 30, 9, 5, 0, 0, 6.28); g.fill(); }
   else if (w === 'fists') { g.fillStyle = '#f1e7d0'; g.beginPath(); g.arc(32, 32, 14, 0, 6.28); g.fill(); g.fillStyle = '#c8b890'; for (var i = 0; i < 4; i++) g.fillRect(20 + i * 6, 20, 5, 6); }
   g.restore();
 }
 var ATL = null, ATT = null, ICONS = {};
 function buildAtlas() {
   if (ATL) return; ATL = Atlas(41);
-  Object.keys(PAINT).forEach(function (k) { ATL.add(k, PAINT[k], { flat: k === 'white' || k === 'glow' || k === 'skin' || k === 'nail' || k === 'black', crisp: k === 'bars' || k === 'hook' }); });
-  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: k === 'halo' || k === 'shadow' }); });
+  Object.keys(PAINT).forEach(function (k) { ATL.add(k, PAINT[k], { flat: k === 'white' || k === 'glow' || k === 'skin' || k === 'nail' || k === 'black', crisp: k === 'bars' || k === 'hook' || k === 'ironbar' || k === 'lattice' || k === 'rail' }); });
+  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: ['halo', 'shadow', 'bush', 'moon', 'flame', 'smoke', 'stink', 'headlight'].indexOf(k) >= 0 }); });
   ATT = R3.texture(ATL.canvas, true);
-  ['handgun', 'shotgun', 'rifle', 'plank', 'bat', 'fists'].forEach(function (w) { var c = document.createElement('canvas'); c.width = c.height = 64; gunIcon(c.getContext('2d'), w); ICONS[w] = c; });
+  ['handgun', 'shotgun', 'rifle', 'plank', 'bat', 'fists', 'knife', 'hammer', 'fireaxe', 'bag'].forEach(function (w) { var c = document.createElement('canvas'); c.width = c.height = 64; gunIcon(c.getContext('2d'), w); ICONS[w] = c; });
 }
 function TL(n) { return ATL.tile(n); }

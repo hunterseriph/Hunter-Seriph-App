@@ -26,6 +26,7 @@ P = [
 BREEDS = [('guard', 'Bulwark', '#d8d0c8'), ('ember', 'Embertail', '#ff7a20'), ('frost', 'Frostbite', '#9adfff'), ('volt', 'Voltling', '#ffe36a'), ('medic', 'Mendling', '#f1e7d0'),
           ('leech', 'Leechling', '#c4121c'), ('scout', 'Peeper', '#9a3ad8'), ('goldie', 'Goldie', '#ffc840'), ('titan', 'Titan', '#a8601e'), ('blood', 'Bloodmoon', '#ff2630')]
 for b, n, c in BREEDS: P.append(('hom_' + b, n, 'h_%s_adult_idle0' % b, None, 'Homunculi', c))
+P.append(('lab', 'Shithead Laboozie', 'lab_s0', None, 'Heroes', '#8a5020'))  # from Hunter's drawing (tools/laboozie)
 
 def hexc(h): h = h.lstrip('#'); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 def bbox(im):

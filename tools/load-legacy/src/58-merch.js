@@ -3,7 +3,7 @@
    Prices are in the drops you are carrying and go up in deeper areas. Each item sells once per stall.
    Effects that last the run go into RUN.bonus and are read by calcStats (bonusStats).
    ===================================================================================================== */
-var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is someone plaything"'];
+var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"'];
 function tbQuote() { return TBQUOTES[Math.floor(Math.random() * TBQUOTES.length)]; }
 // item: [icon, name, description, base price, effect]. Effects: heal (fraction), mana, full, or run bonuses
 var STALLS = {

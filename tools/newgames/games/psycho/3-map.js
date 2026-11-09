@@ -127,8 +127,8 @@ function genFloor(fi, seed) {
 }
 /* ---------- the floor's looks: one big mesh of floors, walls (a darker band at the bottom), ceilings, door heads,
    props, lockers, lamps, pipes, stairs and the blood and graffiti ---------- */
-function buildFloorMesh(F) {
-  var m = new R3.Mesh(), th = FLOORS[F.fi], K = F.K, rnd = srand(F.fi * 991 + 3);
+function buildIndoorMesh(F, mesh) { // the basement, and (with F.indoorOnly) the insides of Clubhouse Row's shops
+  var m = mesh || new R3.Mesh(), th0 = FLOORS[F.fi], th = th0, K = F.K, rnd = srand(F.fi * 991 + 3), only = F.indoorOnly;
   function kk(i, j) { return inMap(i, j) ? K[idx(i, j)] : KW; }
   function solid(k) { return k === KW; }
   function vc(k) { var v = 0.5 * k; return [v, v, v]; }
@@ -144,7 +144,8 @@ function buildFloorMesh(F) {
     m.quadN([[p0[0], y0, p0[1]], [p1[0], y0, p1[1]], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]]], [s / seg * 2, 1, (s + 1) / seg * 2, 1, (s + 1) / seg * 2, 0, s / seg * 2, 0], T, c, [[Math.cos(a0), 0, Math.sin(a0)], [Math.cos(a1), 0, Math.sin(a1)], [Math.cos(a1), 0, Math.sin(a1)], [Math.cos(a0), 0, Math.sin(a0)]]);
     m.tri([cx, y1, cz], [p1[0], y1, p1[1]], [p0[0], y1, p0[1]], [0.5, 0.5, 1, 0, 0, 0], T, c, [0, 1, 0]); } }
   for (var j = 0; j < MH; j++) for (var i = 0; i < MW; i++) {
-    var k = kk(i, j); if (solid(k)) continue;
+    var k = kk(i, j); if (solid(k)) continue; var rmi = F.RM[idx(i, j)];
+    if (only) { if (rmi < 0 && k !== KD) continue; var rr = rmi >= 0 ? F.rooms[rmi] : F.rooms[F.doorRoom[idx(i, j)]]; th = rr && rr.th || th0; }
     var x0 = i * TSZ, z0 = j * TSZ, x1 = x0 + TSZ, z1 = z0 + TSZ, room = F.RM[idx(i, j)] >= 0 || k === KD && false, v = 0.92 + rnd() * 0.16;
     var isRoom = F.RM[idx(i, j)] >= 0, fl = TL(isRoom ? th.roomf : th.floor), wt = TL(isRoom ? th.room : th.wall), wb = TL(th.wall2), cl = TL(th.ceil);
     var low = k === KD || k === KB ? 2.25 : CEIL;
@@ -167,6 +168,7 @@ function buildFloorMesh(F) {
   }
   /* props (all stand on their tile, turned to face into the room) */
   F.props.forEach(function (p) {
+    if (only && !p.indoor) return;
     var cx = tx(p.i), cz = tx(p.j), s = Math.sin(p.a), c = Math.cos(p.a), w = TSZ / 2 - 0.2;
     function B(f0, f1, s0, s1, y0, y1, T, kk) { var pts = [[s0, f0], [s1, f0], [s1, f1], [s0, f1]].map(function (q) { return [cx + q[0] * c + q[1] * s, cz - q[0] * s + q[1] * c]; }); var xs = pts.map(function (q) { return q[0]; }), zs = pts.map(function (q) { return q[1]; }); boxM(Math.min.apply(0, xs), y0, Math.min.apply(0, zs), Math.max.apply(0, xs), y1, Math.max.apply(0, zs), T, kk); }
     if (p.k === 'bed') { B(-0.5, 0.9, -0.55, 0.55, 0, 0.5, TL('steel'), 0.6); B(-0.45, 0.85, -0.5, 0.5, 0.5, 0.65, TL('bed'), 1); B(-0.5, -0.4, -0.55, 0.55, 0.5, 1.05, TL('steel'), 0.6); }
@@ -176,15 +178,21 @@ function buildFloorMesh(F) {
     else if (p.k === 'table') { B(-0.7, 0.7, -0.55, 0.55, 0.78, 0.88, TL('steel'), 1); [[-0.6, -0.45], [0.6, -0.45], [-0.6, 0.45], [0.6, 0.45]].forEach(function (q) { B(q[1] - 0.04, q[1] + 0.04, q[0] - 0.04, q[0] + 0.04, 0, 0.78, TL('steel'), 0.6); }); B(-0.3, 0.1, -0.2, 0.3, 0.88, 0.95, TL('blood1'), 1); }
     else if (p.k === 'chair') { B(-0.25, 0.25, -0.25, 0.25, 0.42, 0.5, TL('wood'), 1); B(-0.27, -0.2, -0.25, 0.25, 0.5, 1.1, TL('wood'), 0.9); [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(function (q) { B(q[1] - 0.03, q[1] + 0.03, q[0] - 0.03, q[0] + 0.03, 0, 0.42, TL('wood'), 0.6); }); B(0.4, 0.95, -0.5, 0.5, 0, 0.75, TL('crate'), 0.9); }
     else if (p.k === 'shelf') { B(-0.5, -0.1, -w, w, 0, 2.3, TL('shelf'), 1.25); }
+    else if (p.k === 'counter') { B(-0.45, 0.45, -w - 0.18, w + 0.18, 0, 1.0, TL('wood'), 0.8); B(-0.5, 0.5, -w - 0.2, w + 0.2, 1.0, 1.08, TL('steel'), 1); B(-0.15, 0.15, -0.2, 0.2, 1.08, 1.4, TL('black'), 0.9); }
+    else if (p.k === 'pot') { cylM(cx, cz, 0, 0.9, 0.4, TL('steel'), 0.9); cylM(cx, cz, 0.9, 0.95, 0.42, TL('meat'), 0.8); }
+    else if (p.k === 'rack') { B(-0.04, 0.04, -w, w, 1.6, 1.66, TL('steel'), 0.8); B(-0.04, 0.04, -w, -w + 0.06, 0, 1.66, TL('steel'), 0.7); B(-0.04, 0.04, w - 0.06, w, 0, 1.66, TL('steel'), 0.7); for (var r = -2; r <= 2; r++) B(-0.18, 0.18, r * 0.18 - 0.07, r * 0.18 + 0.07, 0.75, 1.6, TL(r % 2 ? 'leather' : 'velvet'), 0.9); }
+    else if (p.k === 'oven') { B(-0.5, 0.45, -0.55, 0.55, 0, 1.2, TL('steel'), 0.8); B(0.45, 0.47, -0.4, 0.4, 0.3, 0.9, TL('black'), 1); }
+    else if (p.k === 'speaker') { B(-0.4, 0.4, -0.4, 0.4, 0, 1.9, TL('black'), 1); cylM(cx + s * 0.41, cz + c * 0.41, 0.5, 0.52, 0.25, TL('steel'), 0.6, 8); }
+    else if (p.k === 'cabinet') { B(-0.4, 0.35, -0.4, 0.4, 0, 1.8, TL('black'), 1); B(0.35, 0.38, -0.3, 0.3, 1.0, 1.5, TL('neon'), 1.2); B(0.2, 0.5, -0.4, 0.4, 0.8, 0.9, TL('steel'), 0.8); }
     else if (p.k === 'hook') { B(-0.1, 0.1, -w, w, 2.6, 2.7, TL('steel'), 0.7); for (var h = -1; h <= 1; h += 2) { var hx = cx + h * 0.5 * c, hz = cz - h * 0.5 * s; boxM(hx - 0.02, 1.9, hz - 0.02, hx + 0.02, 2.6, hz + 0.02, TL('steel'), 0.8); boxM(hx - 0.28, 0.75, hz - 0.22, hx + 0.28, 1.95, hz + 0.22, TL('meat'), 1.05); } }
   });
   /* lockers: tall steel boxes with their doors facing the hall */
-  F.lockers.forEach(function (L) { var r = lockerRect(L); boxM(r[0], 0, r[1], r[2], 2.15, r[3], TL('locker'), 1.15); boxM(r[0] - 0.02, 2.15, r[1] - 0.02, r[2] + 0.02, 2.22, r[3] + 0.02, TL('steel'), 0.7); });
+  F.lockers.forEach(function (L) { if (only && !L.indoor) return; var r = lockerRect(L); boxM(r[0], 0, r[1], r[2], 2.15, r[3], TL('locker'), 1.15); boxM(r[0] - 0.02, 2.15, r[1] - 0.02, r[2] + 0.02, 2.22, r[3] + 0.02, TL('steel'), 0.7); });
   /* pipes along the halls, just under the ceiling */
   F.pipes.forEach(function (p) { var cx = tx(p.i), cz = tx(p.j), y = 2.72, o = p.side * (TSZ / 2 - 0.22), r = 0.11;
     if (p.ax === 'x') boxM(cx - TSZ / 2, y - r, cz + o - r, cx + TSZ / 2, y + r, cz + o + r, TL('pipe'), 0.9); else boxM(cx + o - r, y - r, cz - TSZ / 2, cx + o + r, y + r, cz + TSZ / 2, TL('pipe'), 0.9); });
   /* lamp fittings (the light itself is in F.lights) */
-  F.lights.forEach(function (L) { if (L.exit) return; var cx = tx(L.i), cz = tx(L.j); boxM(cx - 0.02, 2.55, cz - 0.02, cx + 0.02, CEIL, cz + 0.02, TL('black'), 1); boxM(cx - 0.18, 2.45, cz - 0.18, cx + 0.18, 2.56, cz + 0.18, TL('steel'), 0.8); });
+  F.lights.forEach(function (L) { if (L.exit || (only && !L.indoor)) return; var cx = tx(L.i), cz = tx(L.j); boxM(cx - 0.02, 2.55, cz - 0.02, cx + 0.02, CEIL, cz + 0.02, TL('black'), 1); boxM(cx - 0.18, 2.45, cz - 0.18, cx + 0.18, 2.56, cz + 0.18, TL('steel'), 0.8); });
   /* the stairs: steps up (or down) into the dark behind bars */
   [F.exit ? [F.exit, 1] : null, F.arrive ? [F.arrive, -1] : null].forEach(function (E) {
     if (!E) return; var e = E[0], up = E[1], cx = tx(e.i), cz = tx(e.j), x0 = e.i * TSZ, z0 = e.j * TSZ, T = TL('stairs');
@@ -206,14 +214,15 @@ function buildFloorMesh(F) {
     if (q[0]) m.quad([wx, y0, cz + o - s * q[0]], [wx, y0, cz + o + s * q[0]], [wx, y1, cz + o + s * q[0]], [wx, y1, cz + o - s * q[0]], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n);
     else m.quad([cx + o + s * q[1], y0, wz], [cx + o - s * q[1], y0, wz], [cx + o - s * q[1], y1, wz], [cx + o + s * q[1], y1, wz], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(1), n);
   });
-  return m.upload();
+  return mesh ? m : m.upload();
 }
 function lockerRect(L) { var cx = tx(L.i), cz = tx(L.j), back = TSZ / 2, dep = 0.85, wid = 0.75, fx = cx - L.di * (back - dep / 2), fz = cz - L.dj * (back - dep / 2);
   return [fx - (L.di ? dep / 2 : wid), fz - (L.dj ? dep / 2 : wid), fx + (L.di ? dep / 2 : wid), fz + (L.dj ? dep / 2 : wid)]; }
 /* ---------- moving about: what blocks feet and what blocks eyes ---------- */
 var FL = null; // the floor being played
+var BLOCKEYES = { shelf: 1, keg: 1, hook: 1, cabinet: 1, speaker: 1, rack: 1, stall: 1, big: 1, booth: 1, clownhead: 1 };
 function blocksFeet(i, j, who) { if (!inMap(i, j)) return true; var k = FL.K[idx(i, j)]; if (k === KW || k === KP || k === KL || k === KS || k === KA) return true; if (k === KB) return FL.cellLocked && who !== 'tb'; return false; }
-function blocksEyes(i, j) { if (!inMap(i, j)) return true; var k = FL.K[idx(i, j)]; if (k === KW || k === KL) return true; if (k === KP) { var p = FL.propAt[idx(i, j)]; return p && (p.k === 'shelf' || p.k === 'keg' || p.k === 'hook'); } if (k === KD) { var d = FL.doorAt[idx(i, j)]; return d && d.open < 0.35; } return false; }
+function blocksEyes(i, j) { if (!inMap(i, j)) return true; var k = FL.K[idx(i, j)]; if (k === KW || k === KL) return true; if (k === KP) { var p = FL.propAt[idx(i, j)]; return p && BLOCKEYES[p.k]; } if (k === KD) { var d = FL.doorAt[idx(i, j)]; return d && d.open < 0.35; } return false; }
 /* a circle of radius r at (x, z) pushed out of anything solid */
 function collide(o, r, who) {
   var i0 = tileOf(o.x - r), i1 = tileOf(o.x + r), j0 = tileOf(o.z - r), j1 = tileOf(o.z + r);

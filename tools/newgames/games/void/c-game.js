@@ -321,7 +321,7 @@ function townEnts(c, ents) {
     var B = BUILDINGS[b.id], cx = (b.x + 2.5) * TS - c.x, by = (b.y + 4) * TS - c.y; if (cx < -80 || cx > W + 80) return;
     ents.push({ y: by, d: function () { drawBuilding(B, cx, by); } });
   });
-  T.folk.forEach(function (f) { var x = f.px - c.x + 8, y = f.py - c.y + 16; ents.push({ y: y, d: function () { var bob = f.moving ? Math.abs(Math.sin(f.t * 12)) * 2 : Math.sin(f.t * 2.4) * 0.6; R('rgba(0,0,0,0.3)', x - 7, y - 2, 14, 3); spr(f.s, x, y - bob, { sc: f.s.indexOf('h_') === 0 ? 0.6 : f.s.indexOf('steve') === 0 ? 0.7 : 0.85, flip: f.dir === 'l' }); } }); });
+  T.folk.forEach(function (f) { var x = f.px - c.x + 8, y = f.py - c.y + 16; ents.push({ y: y, d: function () { var bob = f.moving ? Math.abs(Math.sin(f.t * 12)) * 2 : Math.sin(f.t * 2.4) * 0.6; R('rgba(0,0,0,0.3)', x - 7, y - 2, 14, 3); spr(f.s, x, y - bob, { sc: f.s.indexOf('h_') === 0 ? 0.6 : f.s.indexOf('steve') === 0 ? 0.7 : f.s.indexOf('lab_') === 0 ? 0.62 : 0.85, flip: f.dir === 'l' }); } }); });
 }
 function drawBuilding(B, cx, by) {
   R('rgba(0,0,0,0.35)', cx - 40, by - 4, 80, 6);

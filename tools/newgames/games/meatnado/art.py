@@ -2,7 +2,7 @@
 Characters and foes come from the art we already have (Cumhead's atlas, Greebo, the homunculus breeds, tools/foes)."""
 import math
 from pixelkit import Grid
-USE = ['ch_rn*', 'ch_jump*', 'ch_attack', 'ch_hurt0', 'ch_idle0', 'greebo_s*', 'npc_amy', 'npc_tb', 'h_*_baby_*', 'h_*_teen_*', 'h_*_adult_*', 'h_*_egg*',
+USE = ['lab_pwalk*', 'lab_pjump*', 'lab_toss*', 'lab_hurt0', 'lab_s0', 'lab_bag*', 'ch_rn*', 'ch_jump*', 'ch_attack', 'ch_hurt0', 'ch_idle0', 'greebo_s*', 'npc_amy', 'npc_tb', 'h_*_baby_*', 'h_*_teen_*', 'h_*_adult_*', 'h_*_egg*',
        'f_rat_*', 'f_crawler_*', 'f_slime_*', 'f_skeleton_*', 'f_clown_*', 'f_cultrat_*', 'f_bonehound_*', 'f_knight_*', 'f_bat_*', 'f_crow_*', 'f_balloon_*', 'f_imp_*', 'f_creamblob_*']
 CREAM = ('#fffbe8', '#f1e0b0', '#b8a070'); RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); IRON = ('#d0c8d0', '#8a828a', '#3a343c')
 BLUE = ('#9adfff', '#3a8ac8', '#14406a'); GREEN = ('#9aff5a', '#4aa82a', '#1a5a10'); PURP = ('#e0a0ff', '#9a3ad8', '#44106a')

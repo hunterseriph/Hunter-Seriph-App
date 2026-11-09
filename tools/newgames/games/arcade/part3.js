@@ -136,7 +136,8 @@ function drawHub() {
   var ox = odX(), on = cleared() >= OVERDRIVE_AT; if (on) aura(ox, FLOOR - 80, 90, 150, 0.35 + Math.sin(t * 4) * 0.1); spr('ao_cabbig', ox, FLOOR, { alpha: on ? 1 : 0.45 }); text('OVERDRIVE', ox, FLOOR - 176, { align: 'center', size: 8, col: on ? '#ffe36a' : '#5a4a50' }); if (!on) text(cleared() + '/' + OVERDRIVE_AT, ox, FLOOR - 164, { align: 'center', size: 6, col: '#a6968f' });
   if (h.near === 'od') { R('#ffe36a', ox - 4, FLOOR - 196 + Math.sin(t * 8) * 3, 8, 4); }
   // Cumhead
-  spr(Math.abs(h.vx) > 1 ? 'ch_walk' + (Math.floor(h.t * 12) % 9) : 'ch_idle' + (Math.floor(h.t * 7) % 7), h.x, FLOOR + 2, { flip: h.face < 0 });
+  if (SV.who === 'lab') KIT.spr(Math.abs(h.vx) > 1 ? 'lab_pwalk' + (Math.floor(h.t * 12) % 8) : 'lab_pidle' + (Math.floor(h.t * 5) % 4), h.x, FLOOR + 2, { flip: h.face < 0, sc: 1.1 });
+  else spr(Math.abs(h.vx) > 1 ? 'ch_walk' + (Math.floor(h.t * 12) % 9) : 'ch_idle' + (Math.floor(h.t * 7) % 7), h.x, FLOOR + 2, { flip: h.face < 0 });
   // light sweeping the floor
   KIT.ctx.globalAlpha = 0.07; KIT.ctx.fillStyle = '#ff2aa8'; KIT.ctx.beginPath(); var lx = cam + W / 2 + Math.sin(t * 0.7) * 260; KIT.ctx.moveTo(lx, 0); KIT.ctx.lineTo(lx - 60, FLOOR + 30); KIT.ctx.lineTo(lx + 60, FLOOR + 30); KIT.ctx.fill(); KIT.ctx.globalAlpha = 1;
   KIT.ctx.restore();
@@ -226,7 +227,7 @@ function draw() {
 function titleMenu() {
   G.mode = 'title'; music.play('aohub');
   KIT.menu({ cls: 'clear', logo: '../assets/ao-logo.webp', title: "Potbelly's Arcade Overdrive", sub: 'A cabinet for every game we made. Clear them, then wake up the gold one.',
-    items: [{ label: 'WALK IN', fn: function () { KIT.closeMenu(); enterHub(); }, cls: 'hot', def: true }, { label: 'HOW TO PLAY', fn: helpMenu }],
+    items: [{ label: 'WALK IN', fn: function () { KIT.closeMenu(); enterHub(); }, cls: 'hot', def: true }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'HOW TO PLAY', fn: helpMenu }],
     note: 'Cabinets cleared ' + cleared() + ' of ' + STAGES.length + '  ·  Overdrive best ' + SV.best });
 }
 function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p>Walk along the arcade floor and press <b>A</b> (or up) at a cabinet. Each cabinet is a stage: six micro games from that game, a few seconds each, faster after three, then its boss. Three lives. Clear one and the next cabinet switches on.</p><p>Before each game you see the word and the buttons it needs. The fuse along the bottom is your time.</p><p>Clear ' + OVERDRIVE_AT + ' cabinets and the gold <b>OVERDRIVE</b> cabinet wakes up: everything, endless, faster every five, a boss every tenth.</p><p>Only the <b>d-pad / stick</b> and <b>A</b> (Z or Space on a keyboard).</p>', items: [{ label: 'BACK', back: true, fn: function () { if (run && G.mode !== 'title' && G.mode !== 'over') pauseMenu(); else if (G.mode === 'hub') KIT.closeMenu(); else titleMenu(); } }] }); }
@@ -247,3 +248,11 @@ KIT.start({ w: W, h: H, update: update, draw: draw, onPause: pauseMenu, pad: { f
 titleMenu();
 window.__ao = { G: G, get M() { return M; }, get run() { return run; }, get HUB() { return HUB; }, MICRO: MICRO, BOSSG: BOSSG, STAGES: STAGES, SV: SV, newRun: newRun, startIntro: startIntro, enterHub: enterHub, cabinetMenu: cabinetMenu, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } },
   force: function (id) { var g = id === 'boss' ? BOSSG : MICRO.concat(STAGES.map(function (s) { return s.boss; })).filter(function (m) { return m.id === id; })[0]; M = { g: g, t: 0, lv: 1, word: g.word }; g.init(M, 1); G.mode = 'micro'; } };
+
+/* Shithead Laboozie in the micro games: Cumhead's frames swapped for his own (his walk, jump, throw, the chibi one) */
+function labName(n) {
+  var m = /^ch_(idle|walk|run|jump|attack|hurt|icon)(\d*)$/.exec(n), k;
+  if (m) { k = +(m[2] || 0); return m[1] === 'idle' ? 'lab_pidle' + (k % 4) : m[1] === 'walk' || m[1] === 'run' ? 'lab_pwalk' + (k % 8) : m[1] === 'jump' ? 'lab_pjump' + (k < 2 ? 0 : 1) : m[1] === 'attack' ? 'lab_toss1' : m[1] === 'hurt' ? 'lab_hurt0' : 'lab_face'; }
+  if (/^chb_/.test(n)) return 'chl_' + n.slice(4); return n;
+}
+spr = function (n, x, y, o) { if (SV.who === 'lab' && G.mode === 'micro' && typeof n === 'string') { var n2 = labName(n); if (n2 !== n) { o = Object.assign({}, o || {}); o.sc = (o.sc || 1) * (n2.indexOf('chl_') === 0 ? 1 : n2 === 'lab_face' ? 0.6 : 1.1); n = n2; } } return KIT.spr(n, x, y, o); };

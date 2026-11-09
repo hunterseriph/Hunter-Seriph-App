@@ -23,7 +23,16 @@ for k in ['atlas', 'sky', 'clouds', 'skyline', 'city', 'bricks']:
     f = [x for x in os.listdir(HOGA) if x.split('.')[0] == k][0]
     src[k] = 'data:image/' + ('png' if f.endswith('png') else 'webp') + ';base64,' + base64.b64encode(open(os.path.join(HOGA, f), 'rb').read()).decode()
 assert set(['atlas', 'sky', 'clouds', 'skyline', 'city', 'bricks']) <= set(src), src.keys()
-src['sheet'] = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(HERE, 'sprites.png'), 'rb').read()).decode()
+# Shithead Laboozie (tools/laboozie/make.py) joins the sheet: his frames go under the others, plus the names an heir needs
+import io
+from PIL import Image
+_sh = Image.open(os.path.join(HERE, 'sprites.png')).convert('RGBA'); _SPRJ = json.load(open(os.path.join(HERE, 'sprites.json')))
+_lab = Image.open(os.path.join(HERE, '..', 'laboozie', 'lab.png')).convert('RGBA'); _LJ = json.load(open(os.path.join(HERE, '..', 'laboozie', 'lab.json'))); _LJ = _LJ.get('frames', _LJ)
+_new = Image.new('RGBA', (max(_sh.width, _lab.width), _sh.height + _lab.height), (0, 0, 0, 0)); _new.paste(_sh, (0, 0)); _new.paste(_lab, (0, _sh.height))
+for _k, _v in _LJ.items(): _SPRJ[_k] = [_v[0], _v[1] + _sh.height, _v[2], _v[3]]
+_SPRJ['laboozie_s0'] = _SPRJ['lab_s0']; _SPRJ['laboozie_d'] = _SPRJ['lab_face']
+_buf = io.BytesIO(); _new.save(_buf, 'PNG', optimize=True)
+src['sheet'] = 'data:image/png;base64,' + base64.b64encode(_buf.getvalue()).decode()
 
 # the soundtrack is Load Legacy's own now: src/15-music.js
 
@@ -36,7 +45,7 @@ def put(s, key, val):
 
 js = put(js, 'ATLAS', atlas)
 js = put(js, 'SRC', json.dumps(src, separators=(',', ':')))
-js = put(js, 'SPR', open(os.path.join(HERE, 'sprites.json')).read())
+js = put(js, 'SPR', json.dumps(_SPRJ, separators=(',', ':')))
 js = put(js, 'ICONS', open(os.path.join(HERE, 'icons.json')).read())
 
 # the homunculus: pixel art from tools/homunculus/gen.py, merged into SPR (5th value 1 = the hom sheet)

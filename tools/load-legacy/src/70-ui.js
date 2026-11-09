@@ -173,7 +173,7 @@ function openCab(src) { closeMenu(); setMenuMode(true); el('arcFrame').src = src
 el('arcX').addEventListener('click', function () { el('arc').hidden = true; el('arcFrame').src = 'about:blank'; setMenuMode(false); music.play('town'); sfx.init(); });
 
 /* ---------- choosing the next heir ---------- */
-function heirPic(cls) { if (cls === 'cumhead') return cumCanvas('idle0'); if (cls === 'homunculus') return sprCanvas('h_gloop_teen_idle0', 2.6); return sprCanvas(cls + '_s0', 1.3); }
+function heirPic(cls) { if (cls === 'cumhead') return cumCanvas('idle0'); if (cls === 'homunculus') return sprCanvas('h_gloop_teen_idle0', 2.6); if (cls === 'laboozie') return sprCanvas('lab_s0', 1.0); return sprCanvas(cls + '_s0', 1.3); }
 function openHeirs() {
   var opts;
   if (!META.runs) opts = ['cumhead'];

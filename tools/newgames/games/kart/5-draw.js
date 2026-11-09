@@ -152,7 +152,7 @@ function drawRace(dt) {
   R3.draw(dm, R.atlas);
   if (dv && dv.n) R3.draw(dv, dtx);
   if (R._gdm) { R3.draw(R._gdm, R.atlas, { alpha: 0.42 }); if (dtx && R._gdv.n) R3.draw(R._gdv, dtx, { alpha: 0.42 }); R._gdm = null; R._gdv = null; } // the other players in an online time trial: see-through ghosts
-  R.traps.forEach(function (t) { if (t.k !== 'goo' || t.air) return; var g2 = R.T.locate(t.x, t.z, -1); flat(shm, A, t.x, g2.y + 0.06, t.z, t.r * 1.05, 'puff', [0.32, 0.08, 0.42], t.x); });
+  R.traps.forEach(function (t) { if (t.k !== 'goo' || t.air) return; var g2 = R.T.locate(t.x, t.z, -1); flat(shm, A, t.x, g2.y + 0.06, t.z, t.r * 1.05, 'puff', t.fire ? [0.3, 0.16, 0.05] : [0.32, 0.08, 0.42], t.x); if (t.fire) for (var fi = 0; fi < 4; fi++) billboard(sp, t.x + Math.cos(fi * 1.6) * t.r * 0.5, g2.y + 0.5 + Math.abs(Math.sin(R.t * 8 + fi)) * 0.3, t.z + Math.sin(fi * 1.6) * t.r * 0.5, 'lab_burn' + ((Math.floor(R.t * 8) + fi) % 4), 0.03); });
   R3.draw(shm, R.atlas, { soft: true });
   // light halos round lamps and torches near the camera
   R.B.lights.forEach(function (l) { if (!l.halo) return; var dx = l.x - cam.eye[0], dz = l.z - cam.eye[2]; if (dx * dx + dz * dz > 120 * 120 || dx * R3.cam.fwd[0] + dz * R3.cam.fwd[2] < -4) return; spark(glow, A, l.x, l.y, l.z, 1.1 + Math.sin(R.t * 7 + l.x) * 0.06, 'halo', l.hc || (l.hc = rgb01(l.halo).map(function (v) { return v * 0.32; }))); });
@@ -172,7 +172,7 @@ function drawRace(dt) {
   });
   R.drops.forEach(function (d) { if (d.t > 0) return; if (Math.abs(d.x - cam.eye[0]) + Math.abs(d.z - cam.eye[2]) > 180) return; billboard(sp, d.x, d.y + 0.35 + Math.sin(R.t * 4 + d.x) * 0.12, d.z, 'mn_drop', 0.065); });
   R.proj.forEach(function (p) {
-    if (p.k === 'pie') billboard(sp, p.x, p.y - 0.3, p.z, 'it_pie', 0.07);
+    if (p.k === 'pie') billboard(sp, p.x, p.y - 0.3, p.z, p.bag ? 'lab_bag' + (Math.floor(R.t * 10) % 4) : 'it_pie', p.bag ? 0.06 : 0.07);
     else if (p.k === 'sperm') billboard(sp, p.x, p.y - 0.3, p.z, 'ck_sperm', 0.07, { flip: Math.cos(p.a) * R3.cam.right[0] + Math.sin(p.a) * R3.cam.right[2] < 0 });
     else if (p.k === 'cat') billboard(sp, p.x, p.y + Math.abs(Math.sin(R.t * 14)) * 0.5, p.z, 'cat', 0.17, { flip: Math.cos(p.a) * R3.cam.right[0] + Math.sin(p.a) * R3.cam.right[2] < 0 });
   });

@@ -22,6 +22,8 @@ def base():
     out.update(_sheet(os.path.join(TOOLS, 'load-legacy', 'sprites.png'), os.path.join(TOOLS, 'load-legacy', 'sprites.json')))
     out.update(_sheet(os.path.join(TOOLS, 'foes', 'foes.png'), os.path.join(TOOLS, 'foes', 'foes.json')))
     out.update(_sheet(os.path.join(TOOLS, 'homunculus', 'hom.png'), os.path.join(TOOLS, 'homunculus', 'hom.json')))
+    lab = os.path.join(TOOLS, 'laboozie') # Shithead Laboozie (tools/laboozie/make.py, from Hunter's drawing)
+    if os.path.exists(os.path.join(lab, 'lab.png')): out.update(_sheet(os.path.join(lab, 'lab.png'), os.path.join(lab, 'lab.json')))
     hoga = os.path.join(TOOLS, 'spermhog', 'assets') # Cumhead's own atlas (first made for Cumhead the Spermhog)
     atlas = json.load(open(os.path.join(hoga, 'atlas.json'))); atlas = atlas.get('frames', atlas)
     im = Image.open(os.path.join(hoga, 'atlas.png')).convert('RGBA')

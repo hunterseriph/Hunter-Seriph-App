@@ -2,7 +2,7 @@
 (town, castle, cave, tower, lair, the Void gate), a save crystal, the three keys and the town buildings."""
 import math
 from pixelkit import Grid
-USE = ['ch_idle*', 'ch_walk*', 'ch_attack', 'ch_hurt0', 'ch_death*', 'ch_icon0', 'ch_jump1', 'spermaid_*', 'greebo_*', 'npc_*', 'steve0', 'steve1', 'cumface',
+USE = ['lab_s0', 'ch_idle*', 'ch_walk*', 'ch_attack', 'ch_hurt0', 'ch_death*', 'ch_icon0', 'ch_jump1', 'spermaid_*', 'greebo_*', 'npc_*', 'steve0', 'steve1', 'cumface',
        'f_*', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen', 'p_door', 'p_blumdoor', 'p_shrine', 'h_gloop_baby_idle0', 'h_blood_adult_idle0', 'h_*_adult_idle0', 'fac_*', 'p_slot', 'p_stall', 'p_feast']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); PURP = ('#c08aff', '#7a2ad8', '#34106a')
 STONE = ('#8a6a6e', '#5a4044', '#2e1c20'); WHITE = ('#ffffff', '#e8dcc8', '#a8987a'); CREAM = ('#fffbe8', '#f1e0b0', '#b8a070'); WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c')

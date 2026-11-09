@@ -2,7 +2,7 @@
 games need: meat chunks, pills, a lever, gate bars, targets, slot symbols, arrows, stairs and floor tiles."""
 import math
 from pixelkit import Grid
-USE = ['ch_*', 'cumface', 'npc_*', 'spermaid_s*', 'greebo_s*', 'f_crawler_*', 'f_bat_*', 'f_batP_*', 'f_blumling_*', 'f_blum_*', 'f_blum2_*', 'f_slime_*', 'f_ghoul_*', 'f_blumguard_*', 'f_vampire_*', 'f_imp_*',
+USE = ['lab_pidle*', 'lab_pwalk*', 'lab_pjump*', 'lab_toss*', 'lab_hurt0', 'lab_face', 'ch_*', 'cumface', 'npc_*', 'spermaid_s*', 'greebo_s*', 'f_crawler_*', 'f_bat_*', 'f_batP_*', 'f_blumling_*', 'f_blum_*', 'f_blum2_*', 'f_slime_*', 'f_ghoul_*', 'f_blumguard_*', 'f_vampire_*', 'f_imp_*',
        'f_sperm_*', 'f_pig_0', 'f_pig_1', 'f_demon_*', 'f_golem_*', 'f_beast_*', 'f_ratking_*',
        'p_logboat', 'p_slot', 'p_chest', 'p_chestopen', 'h_gloop_egg*', 'h_blood_egg*', 'h_gloop_baby_idle0', 'h_blood_baby_idle0', 'h_ember_baby_idle0', 'steve0', 'steve1']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); IRON = ('#9a929a', '#5a545c', '#2a262c')
@@ -79,7 +79,7 @@ _gr = _load('grinding'); _sw = _load('spuzzworld')
 for _k in ('gr_rock0', 'gr_bomb', 'gr_bombl'): ART[_k] = _gr[_k]
 ART['ao_mine'] = _sw['sw_mine1']
 import chibi as _ch
-ART.update(_ch.frames())
+ART.update(_ch.frames()); ART.update(_ch.lab_frames())
 def chilli():
     g = Grid(18, 10); g.ellipse(9, 5, 8, 4, 'c'); g.poly([(14, 2), (18, 5), (14, 8)], 'c'); g.rect(0, 4, 3, 2, 'stem'); g.put(6, 3, 'hi'); g.put(7, 3, 'hi')
     return g, {'c': RED, 'stem': ('#9aff5a', '#4aa82a', '#1a5a10'), 'hi': '#ffd0c0'}

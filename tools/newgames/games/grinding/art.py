@@ -2,7 +2,7 @@
 and an icon for every item. Same outline and bevel shading as everything else."""
 import math
 from pixelkit import Grid
-USE = ['ch_icon0', 'cumface', 'f_bat_*', 'f_batP_*', 'f_crawler_*', 'f_slime_*', 'f_slimeR_*', 'f_imp_*', 'f_ghoul_*', 'f_rat_*', 'f_wraith_*', 'f_skeleton_*', 'f_blumling_*',
+USE = ['lab_bag*', 'lab_burn*', 'ch_icon0', 'cumface', 'f_bat_*', 'f_batP_*', 'f_crawler_*', 'f_slime_*', 'f_slimeR_*', 'f_imp_*', 'f_ghoul_*', 'f_rat_*', 'f_wraith_*', 'f_skeleton_*', 'f_blumling_*',
        'f_blumeye_*', 'f_blumspore_*', 'f_magmaslug_*', 'f_emberbat_*', 'f_creamblob_*', 'f_cultrat_*', 'f_vampire_*', 'f_balloon_*', 'f_crow_*', 'f_bonehound_*', 'f_golem_*',
        'f_beast_*', 'f_demon_*', 'f_sperm_*', 'f_pig_*', 'f_ratking_*', 'f_boner_*', 'f_hotload_*', 'f_moon_*', 'f_blum_*', 'f_blum2_*', 'h_*_baby_idle0', 'h_blood_adult_idle0',
        'npc_saba', 'npc_tb', 'npc_jessiah', 'npc_potbelly', 'npc_spermaid', 'p_slot', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen']
@@ -142,4 +142,4 @@ for k in ('n', 'boss', 'gold', 'shop'):
     ART['gr_door_' + k] = (lambda k=k: door(k, False)); ART['gr_door_' + k + 'o'] = (lambda k=k: door(k, True))
 for k, fn in ITEMS.items(): ART['it_' + k] = (lambda fn=fn: icon(fn))
 import chibi
-ART.update(chibi.frames())
+ART.update(chibi.frames()); ART.update(chibi.lab_frames())

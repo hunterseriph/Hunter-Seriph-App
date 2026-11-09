@@ -421,6 +421,9 @@ function drawPlayer(cx) {
     else if (sp < 115) name = 'walk' + (Math.floor(P.anim) % 9);
     else name = 'rn' + (Math.floor(P.anim) % 8);
     cspr(name, x, y, flip);
+  } else if (cls === 'laboozie') { // Shithead Laboozie: his own walk, jump and throw
+    var ln = P.state === 'dead' ? 'lab_lie0' : P.state === 'hurt' ? 'lab_hurt0' : P.attackT > 0 ? 'lab_toss' + Math.min(2, Math.floor((0.22 - P.attackT) / 0.075)) : !P.onGround ? (P.vy < 0 ? 'lab_pjump0' : 'lab_pjump1') : sp < 10 ? 'lab_pidle' + (Math.floor(P.idleT * 4) % 4) : 'lab_pwalk' + (Math.floor(P.anim) % 8);
+    spr(ln, x, y + 1, flip, 1.02);
   } else if (cls === 'homunculus') {
     if (G.mode === 'play' && RUN) drawHom(x, y, flip);
     else if (P.thatch > 0) drawTownEgg(x, y);
@@ -454,7 +457,9 @@ function drawShots(cx) {
     else if (s.k === 'acid') { var ar = s.small ? 3.5 : s.r + 1; ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.arc(x, y, ar + 1.5, 0, 6.28); ctx.fill(); ctx.fillStyle = s.col || '#7dff3a'; ctx.beginPath(); ctx.arc(x, y, ar, 0, 6.28); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - 1, y - Math.round(ar * 0.6), 2, 2); }
     else if (s.k === 'claw') { var ca = (0.14 - s.life) / 0.14; ctx.save(); ctx.translate(Math.round(P.x - cx), Math.round(P.y - P.h * 0.55)); ctx.scale(P.face, 1); ctx.globalAlpha = 1 - ca; for (var cl = 0; cl < 3; cl++) { ctx.strokeStyle = cl === 1 ? '#f1e7d0' : (s.col || '#7dff3a'); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(4, -6 + cl * 7, 34, -1.0 + ca * 0.6, 0.6 + ca * 0.6); ctx.stroke(); } ctx.restore(); }
     else if (s.k === 'cat') { spr('cat', x, y, s.face < 0, 1.6); }
+    else if (s.k === 'bag') { spr('lab_bag' + (Math.floor(G.t * 10) % 4), x, y + 8, s.vx < 0, 0.8); }
   });
+  pburns.forEach(function (b) { var x = Math.round(b.x - cx), k = Math.min(1, b.t / 1.5); R(ctx, '#3a1e0a', x - 16, b.y - 2, 32, 3); for (var i = 0; i < 5; i++) spr('lab_burn' + ((Math.floor(G.t * 10) + i) % 4), x - 13 + i * 6.5, b.y + 1, false, 0.32 * k + 0.08); });
   eshots.forEach(function (b) {
     var x = Math.round(b.x - cx), y = Math.round(b.y);
     if (drawCastleShot(b, x, y)) return;

@@ -94,7 +94,7 @@ function spark(x, z, h, size, col) { G.fx.push({ k: 'spark', x: x, z: z, h: h, t
 function shoot(owner, s, o) {
   o = o || {}; var dir = o.dir || owner.face;
   var b = { team: owner.team, owner: owner, x: owner.x + dir * (o.dx || 16), z: owner.z + (o.dz || 0), h: owner.h + (o.h !== undefined ? o.h : 24), vx: dir * (s.spd || 200) * (o.k || 1), vz: o.vz || 0, vh: s.arc ? s.arc * (o.lob || 1) : 0, grav: s.arc ? GRAV * 0.9 : 0,
-    spr: s.spr, dmg: s.dmg, kb: s.kb || 60, kd: s.kd, stun: s.stun || 0.35, life: s.life || 2.2, t: 0, pierce: s.pierce, hit: {}, boom: s.boom, splat: s.splat, bubble: s.bubble, puddle: s.puddle, bounce: s.bounce || 0, boomer: s.boomer, spin: s.spin, ground: s.ground, big: s.big, col: s.col, silly: s.silly, green: s.green, dir: dir, fuse: s.fuse };
+    spr: s.spr, dmg: s.dmg, kb: s.kb || 60, kd: s.kd, stun: s.stun || 0.35, life: s.life || 2.2, t: 0, pierce: s.pierce, hit: {}, boom: s.boom, splat: s.splat, bubble: s.bubble, puddle: s.puddle, bounce: s.bounce || 0, boomer: s.boomer, spin: s.spin, ground: s.ground, big: s.big, col: s.col, silly: s.silly, green: s.green, dir: dir, fuse: s.fuse, fire: s.fire, poison: s.poison };
   if (b.ground) b.h = 0; G.shots.push(b); return b;
 }
 function stepShots(dt) {
@@ -113,6 +113,7 @@ function stepShots(dt) {
         if (b.team === 'f' && b.splat && t === P) G.splat = 1.4;
         strike(t, { dmg: b.dmg, kb: b.kb, kd: b.kd, stun: b.stun, hs: 0.04, from: b.owner, shot: 1, lift: 200 }, b.vx >= 0 ? 1 : -1);
         if (b.silly && t.team === 'f') { t.silly = 3; }
+        if (b.poison && !t.prop) { t.poisonT = b.poison; t.poisonBy = b.owner; }
         if (b.puddle) return burst(b);
         if (!b.pierce) { G.fx.push({ k: 'spr', spr: b.green ? 'fx_goo' : b.team === 'f' && b.spr === 's_orb' ? 'fx_goo' : 'fx_cream', x: b.x, z: b.z, h: b.h, t: 0, life: 0.25 }); return false; }
       } }
@@ -123,11 +124,15 @@ function stepShots(dt) {
 function burst(b) {
   if (b.boom) { G.fx.push({ k: 'ring', x: b.x, z: b.z, t: 0, life: 0.3, r: b.boom, col: b.fuse ? '#ffe36a' : '#fffbe8' }); if (b.splat) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.4, sc: 1.6 }); sfx.play(b.fuse ? 'boom' : 'splat'); KIT.shake(b.fuse ? 6 : 3);
     hitArea(b.x, b.z, b.boom, b.boom * 0.45, { dmg: b.dmg, kd: b.kd, kb: 160, lift: 240, from: b.owner, team: b.team, hs: 0.06 }); if (b.team === 'f' && b.splat && P && Math.abs(P.x - b.x) < b.boom && Math.abs(P.z - b.z) < 18) G.splat = 1.4; }
-  if (b.puddle) { G.puddles.push({ x: b.x, z: b.z, r: 18, t: 0, life: b.puddle, team: b.team, dmg: 3, col: b.green ? '#4aa82a' : '#9a3ad8', owner: b.owner }); sfx.play('splat'); }
+  if (b.puddle) { G.puddles.push({ x: b.x, z: b.z, r: b.fire ? 22 : 18, t: 0, life: b.puddle, team: b.team, dmg: b.fire ? 4 : 3, col: b.fire ? '#5a3010' : b.green ? '#4aa82a' : '#9a3ad8', fire: b.fire, owner: b.owner }); sfx.play('splat'); }
   if (!b.boom && !b.puddle) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.25 });
   return false;
 }
+function stepPoison(dt) { // Laboozie's bag: whoever it hits is covered in it and it eats at them
+  G.ents.concat(P ? [P] : []).forEach(function (t) { if (!(t.poisonT > 0) || t.st === 'dead') return; t.poisonT -= dt; t.ptick = (t.ptick || 0) - dt;
+    if (t.ptick <= 0) { t.ptick = 0.5; t.hp -= 3.5; t.flash = 0.06; if (Math.random() < 0.6) G.fx.push({ k: 'spr', spr: 'fx_goo', x: t.x, z: t.z, h: t.h + 30, t: 0, life: 0.3 }); if (t.hp <= 0) { t.hp = 0; launch(t, 1, 80, 200); onKO(t, t.poisonBy); } } }); }
 function stepPuddles(dt) {
+  stepPoison(dt);
   G.puddles = G.puddles.filter(function (q) { q.t += dt; q.tick = (q.tick || 0) - dt;
     if (q.tick <= 0) { q.tick = 0.4; var vs = q.team === 'p' ? targetsOf('p').filter(function (t) { return !t.prop; }) : (P && hittable(P) ? [P] : []); vs.forEach(function (t) { if (t.h < 4 && Math.abs(t.x - q.x) < q.r && Math.abs(t.z - q.z) < 9) { t.hp -= q.dmg; t.flash = 0.08; if (t.hp <= 0 && t.st !== 'dead') { t.hp = 0; launch(t, 1, 80, 200); onKO(t, q.owner); } } }); }
     return q.t < q.life; });

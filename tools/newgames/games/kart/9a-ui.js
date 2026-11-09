@@ -161,7 +161,7 @@ function pickChar(next, back) {
         '<div class="sw">' + c.kart.map(function (k) { return '<i style="background:' + k + '"></i>'; }).join('') + '</div>' : '');
   }
   screen({ title: pickChar.title || 'Who is driving?', back: back || titleMenu, redo: redo, foot: 'A / TAP PICK  ·  A AGAIN OR DRIVE TO GO  ·  B BACK',
-    html: '<div class="ckch"><div class="grid">' + CHARS.map(function (c) { var op = charOpen(c.id); return '<button type="button" class="ckbtn p' + (c.id === sel ? ' sel' : '') + '" data-act="ch" data-ch="' + c.id + '"' + (op ? '' : ' aria-disabled="true"') + (c.id === sel ? ' data-pad-default' : '') + ' aria-label="' + esc(op ? c.n : 'Locked') + '">' + pic(c.id) + '<span class="nm">' + esc(op ? c.n.replace(/^(The|Uncle|Sir) /, '').replace(/^King /, 'K.').split(' ')[0].toUpperCase() : '???') + '</span></button>'; }).join('') +
+    html: '<div class="ckch"><div class="grid">' + CHARS.map(function (c) { var op = charOpen(c.id); return '<button type="button" class="ckbtn p' + (c.id === sel ? ' sel' : '') + '" data-act="ch" data-ch="' + c.id + '"' + (op ? '' : ' aria-disabled="true"') + (c.id === sel ? ' data-pad-default' : '') + ' aria-label="' + esc(op ? c.n : 'Locked') + '">' + pic(c.id) + '<span class="nm">' + esc(op ? c.n.replace(/^(The|Uncle|Sir|Shithead) /, '').replace(/^King /, 'K.').split(' ')[0].toUpperCase() : '???') + '</span></button>'; }).join('') +
       '</div><div class="ckinfo"><div id="ckInfo">' + info(sel) + '</div><button type="button" class="ckbtn ckgo" data-act="go">DRIVE</button></div></div>',
     acts: {
       ch: function (b) { var id = b.getAttribute('data-ch'); if (!charOpen(id)) { document.getElementById('ckInfo').innerHTML = info(id); sfx.play('back'); return; }

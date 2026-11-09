@@ -24,6 +24,11 @@
   sfx.add('grab', function () { N(0.4, 0.5, 300); T('sawtooth', 80, 40, 0.8, 0.2); T('square', 900, 200, 0.5, 0.06); });
   sfx.add('sting', function () { T('sawtooth', 70, 70, 1.4, 0.06); T('sawtooth', 74, 74, 1.4, 0.06); T('square', 1480, 1400, 0.6, 0.03); });
   sfx.add('stairs', function () { for (var i = 0; i < 8; i++) N(0.06, 0.12, 500, i * 0.22); }); sfx.add('heart', function () { T('sine', 70, 40, 0.14, 0.32); T('sine', 64, 38, 0.12, 0.24, 0.17); });
+  sfx.add('engine', function () { T('sawtooth', 60, 75, 0.35, 0.05); N(0.3, 0.05, 300); });
+  sfx.add('fireup', function () { N(0.6, 0.18, 1200); T('sawtooth', 90, 140, 0.4, 0.04); });
+  sfx.add('honk', function () { T('square', 330, 320, 0.25, 0.06); T('square', 415, 400, 0.25, 0.05); T('square', 330, 320, 0.3, 0.06, 0.32); T('square', 415, 400, 0.3, 0.05, 0.32); });
+  sfx.add('scrape', function () { N(0.5, 0.2, 3000); T('sawtooth', 900, 600, 0.4, 0.03); });
+  sfx.add('swingbig', function () { N(0.28, 0.2, 1400); T('sine', 200, 90, 0.25, 0.08); });
   sfx.add('door', function () { T('sawtooth', 120, 90, 0.5, 0.03); N(0.35, 0.06, 900); });
 })();
 var AMB = null;

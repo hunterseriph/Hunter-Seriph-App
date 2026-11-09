@@ -150,11 +150,12 @@ var BUILDINGS = {
 var TOWNSPEC = {
   C: { name: 'Clubhouse Row', song: 'town', w: 44, h: 32, rowA: ['club', 'beebs', 'cafe', 'natty', 'saba', 'harold'], rowB: ['amy', 'joff', 'arcade', 'tb', 'bates', 'greebo'], theme: 'red', start: 'club',
     folk: [{ s: 'npc_pulsar', n: 'PulsarOctopus', at: [18, 15], say: ['Just vibes, friend. Free of charge.'] }, { s: 'h_gloop_adult_idle0', n: 'Homunculus', at: [25, 12], say: ['Squeak!', 'The homunculus looks very pleased to see you.'] },
-      { s: 'h_ember_adult_idle0', n: 'Homunculus', at: [10, 28], say: ['*warm squeak*'] }, { s: 'npc_elden', n: 'Elden', at: [30, 18], say: ["The grill's hot. So's the road. Buy puffs, you'll need them."] }] },
+      { s: 'h_ember_adult_idle0', n: 'Homunculus', at: [10, 28], say: ['*warm squeak*'] }, { s: 'npc_elden', n: 'Elden', at: [30, 18], say: ["The grill's hot. So's the road. Buy puffs, you'll need them."] },
+      { s: 'lab_s0', n: 'Shithead Laboozie', at: [22, 21], say: ['Alright. Name is Laboozie. Shithead Laboozie.', 'Out of the Void? Rather you than me. I would bring a flaming bag of shit, personally.', 'Lights a match. Thinks better of it.'] }] },
   E: { name: 'Ejaculand', song: 'park', w: 44, h: 32, rowA: ['steve', 'bonjo', 'fate', 't', 'pulsar', 'judge'], rowB: ['ali', 'jessiah'], theme: 'park', start: null,
     folk: [{ s: 'steve0', n: 'Steve', at: [21, 16], say: ['WELCOME TO EJACULAND!', 'Have you tried the Load Flume? It is VERY wet.'] }, { s: 'h_goldie_adult_idle0', n: 'Homunculus', at: [12, 13], say: ['*jingle*'] }, { s: 'npc_kaya', n: 'Kaya', at: [32, 28], say: ['Day off! Do not ask me for coffee.'] }] }
 };
-var TBQ = ['Fuck muck', 'Shithead Laboozie', 'let me tighten that kynodesme', 'dick skin', 'whyma wimina', 'suck your own and fuck your own', 'suck me fuck me suck me fuck me', "I got lotion on my dick I'm out here shooting my shit I'm free man for real!", 'Old geezer, Prick teaser', 'I made muckies...', 'a sissy doesn\'t deserve pleasure, a sissy is someone plaything'];
+var TBQ = ['Fuck muck', 'Shithead Laboozie', 'let me tighten that kynodesme', 'dick skin', 'whyma wimina', 'suck your own and fuck your own', 'suck me fuck me suck me fuck me', "I got lotion on my dick I'm out here shooting my shit I'm free man for real!", 'Old geezer, Prick teaser', 'I made muckies...', 'a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing'];
 var STORY = {
   intro: [
     ['', 'Every night, the same dream. A hole in the world, blacker than Blumhead\'s heart, calling his name.'],

@@ -3,7 +3,7 @@
    ===================================================================================================== */
 var G = { mode: 'title', t: 0, cam: { x: 0, y: 0 }, shake: 0, banner: 0, bannerTxt: '', bannerSub: '', flash: 0, lock: false, msg: null, fade: 0 };
 var RUN = null, L = null, P = {}, ST = {};
-var enemies = [], pshots = [], eshots = [], drops = [], parts = [], pops = [], fx = [], bosses = [], waves = [];
+var pburns = [], enemies = [], pshots = [], eshots = [], drops = [], parts = [], pops = [], fx = [], bosses = [], waves = [];
 var JUMP2 = 290, ACC = 520, DEC = 760, BRAKE = 980, MAXV = 170, AIRACC = 380, GRAV = 950, JUMPV = 335, JCUT = 125, TERM = 430;
 
 /* ---------- stats from class, town upgrades, gear, runes, provisions, Stacked Fate's card and powerups ---------- */
@@ -220,9 +220,11 @@ function attack0() {
     sfx.whip(); pshots.push({ k: 'whip', x: P.x, y: P.y, life: 0.13, m: 1.0, hit: {}, x2: P.x });
     if (P.combo % 3 === 2) { P.spin = 0.32; sfx.splat(); pshots.push({ k: 'acid', look: 'wave', x: P.x + P.face * 14, y: P.y - 14, vx: P.face * 280, vy: 0, life: 0.55, r: 8, rv: 12, m: 1.1, pierce: 1, hit: {}, col: '#9adfff' }); P.atkCd = cd * 1.4; }
   }
+  else if (c.atk === 'bag') { sfx.lob(); labBag(P.face * 210, -200); }
   else if (c.atk === 'pie') { sfx.lob(); pshots.push({ k: 'pie', x: P.x + P.face * 12, y: P.y - P.h * 0.62, vx: P.face * 260, vy: 0, life: 0.32, r: 10, m: 1.0 }); }
   else { sfx.spit(); pshots.push({ k: 'acid', x: P.x + P.face * 8, y: P.y - P.h * 0.6, vx: P.face * 360, vy: 0, life: 0.5, r: 4, m: 0.7 }); }
 }
+function labBag(vx, vy) { pshots.push({ k: 'bag', x: P.x + P.face * 10, y: P.y - P.h * 0.7, vx: vx, vy: vy, g: 620, life: 2.2, r: 7, m: 1.0 }); } // Shithead Laboozie's Flaming Bag of Shit
 function special() {
   var c = CLASSES[RUN.cls];
   if (P.mana < c.specCost || P.state !== 'normal') { if (P.mana < c.specCost) sfx.no(); return; }
@@ -230,6 +232,7 @@ function special() {
   if (homOn()) { homSpecial(); return; }
   if (c.spec === 'splash') { sfx.magic(); for (var i = 0; i < 8; i++) { var a = i / 8 * Math.PI * 2; pshots.push({ k: 'shot', x: P.x, y: P.y - P.h / 2, vx: Math.cos(a) * 280, vy: Math.sin(a) * 280, life: 0.6, r: 6, m: 1 }); } }
   else if (c.spec === 'song') { sfx.magic(); fx.push({ k: 'ring', x: P.x, y: P.y - 20, age: 0, big: 1, c: '#ff9ad0' }); enemies.forEach(function (e) { e.stun = 3; }); bosses.forEach(function (b) { b.stun = Math.max(b.stun || 0, 0.8); }); healP(Math.round(ST.mhp * 0.12)); for (var nn = 0; nn < 10; nn++) { var na = nn / 10 * 6.283; pops.push({ x: P.x + Math.cos(na) * 30, y: P.y - 24 + Math.sin(na) * 18, t: nn % 2 ? '♪' : '♫', c: '#ff9ad0', age: 0 }); } }
+  else if (c.spec === 'storm') { sfx.lob(); [[120, -300], [180, -250], [240, -200], [300, -150], [90, -360]].forEach(function (v) { labBag(P.face * v[0], v[1]); }); }
   else if (c.spec === 'cat') { sfx.roar(); pshots.push({ k: 'cat', x: P.x, y: P.y, vx: P.face * 420, vy: 0, life: 3, m: 3, hit: {}, pass: 0, face: P.face }); }
   else { sfx.magic(); P.ooze = 3; P.oozeT = 0.5; fx.push({ k: 'ring', x: P.x, y: P.y - 14, age: 0, c: '#7dff3a' }); }
 }
@@ -260,7 +263,7 @@ function enterRoom(k, from, at) {
   saveRun();
 }
 function spawnRoom(rs) {
-  enemies = []; pshots = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {}; G.chal = null;
+  enemies = []; pshots = []; pburns = []; eshots = []; drops = []; parts = []; pops = []; fx = []; bosses = []; waves = []; G.crumble = {}; G.chal = null;
   L.ents.forEach(function (e) {
     if (e.k === 'enemy') {
       var ed0 = ENEMIES[e.e], n0 = ed0.pack || 1;
@@ -386,6 +389,7 @@ function hurtE(e, dmg, src) {
   if (!e.alive) return;
   var crit = false; if (src === 'hit' || src === 'stomp') { crit = Math.random() < ST.crit; if (crit) dmg *= 1.8; }
   if (e.marked > G.t) dmg *= 1.5; // Peeper's Third Eye
+  if (e.covered > G.t) dmg *= 1.33; // covered in Laboozie's shit
   if (src !== 'burn' && src !== 'poison') { if (ST.berserk && P.hp < ST.mhp * 0.4) dmg *= 1 + ST.berserk; if (ST.slayer && e.boss) dmg *= 1 + ST.slayer; if (ST.cold && !e.boss && Math.random() < ST.cold) e.stun = Math.max(e.stun || 0, 1.2); }
   dmg = Math.max(1, Math.round(dmg)); e.hp -= dmg; e.flash = 0.15;
   pop(e.x, e.y - e.h - 4, String(dmg) + (crit ? '!' : ''), crit ? '#ffe36a' : (src === 'poison' ? '#7dff3a' : src === 'burn' ? '#ffb040' : '#fff'));
@@ -429,6 +433,7 @@ function hitShot(s, e) {
   if (shieldBlock(s, e)) return;
   var r = dmgRoll(s.crit); hurtE(e, r.v * s.m, 'hit');
   if (s.k === 'acid') e.poison = 3;
+  if (s.k === 'bag') { e.poison = 5; e.covered = G.t + 8; }
   homHit(s, e);
 }
 function splash(x, y, r, m) { sfx.splat(); fx.push({ k: 'ring', x: x, y: y, age: 0, c: '#f1e7d0' }); poof(x, y, 12, ['#f1e7d0', '#fff6d8', '#d9b36a']); var s = { m: m, k: 'pie', x: x }; enemies.concat(bosses).forEach(function (e) { if (e.alive && Math.hypot(e.x - x, (e.y - e.h / 2) - y) < r + e.w / 2) hitShot(s, e); }); }
@@ -448,11 +453,13 @@ function updateShots(dt) {
     if (s.ground && !solidT(tileAt(s.x, s.y + 10)) && tileAt(s.x, s.y + 10) !== TL) { s.life = 0; continue; } // shockwaves stop at a drop
     if (solidT(tt) || s.y > L.h * T) {
       if (s.bounce > 0 && s.vy > 0) { s.bounce--; s.y = Math.floor(s.y / T) * T - 1; s.vy = -Math.abs(s.vy) * 0.55; continue; }
+      if (s.k === 'bag') { var gy = Math.floor(s.y / T) * T; for (var up = 0; up < 3 && solidT(tileAt(s.x, gy - 1)); up++) gy -= T; pburns.push({ x: s.x, y: gy, t: 8, cd: 0 }); sfx.splat(); poof(s.x, gy - 4, 8, ['#5a3010', '#ff7a1a', '#ffd23a']); s.life = 0; continue; }
       if (s.boom) homBlast(s); else if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.5); else poof(s.x, s.y, 4, [s.col || '#f1e7d0']); s.life = 0; continue; }
     if (shotHits(s, s.x - s.r, s.y - (s.rv || s.r), s.x + s.r, s.y + (s.rv || s.r))) { if (s.k === 'pie') splash(s.x, s.y, 24, s.m * 0.4); if (!s.pierce) s.life = 0; }
     else if (s.k === 'pie' && s.life <= 0) poof(s.x, s.y, 8, ['#f1e7d0', '#fff6d8', '#c8903a']);
   }
   pshots = pshots.filter(function (q) { return q.life > 0; });
+  pburns = pburns.filter(function (b) { b.t -= dt; b.cd -= dt; if (b.cd <= 0) { b.cd = 0.5; enemies.concat(bosses).forEach(function (e) { if (e.alive && !e.hidden && Math.abs(e.x - b.x) < 18 + e.w / 2 && e.y > b.y - 30 && e.y - e.h < b.y + 4) hurtE(e, Math.max(2, ST.dmg * 0.35), 'burn'); }); } return b.t > 0; });
   for (i = 0; i < eshots.length; i++) {
     var b = eshots[i]; b.life -= dt; if (b.g) b.vy += b.g * dt;
     if (b.home && b.life > 0.6) { var ha = Math.atan2((P.y - P.h / 2) - b.y, P.x - b.x), hs = Math.hypot(b.vx, b.vy) || 1, ca = Math.atan2(b.vy, b.vx), dA = ((ha - ca + Math.PI * 3) % (Math.PI * 2)) - Math.PI; ca += clamp(dA, -2.4 * dt, 2.4 * dt); hs = Math.min(190, hs + 120 * dt); b.vx = Math.cos(ca) * hs; b.vy = Math.sin(ca) * hs; } /* swimmers home in */

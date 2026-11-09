@@ -14,7 +14,7 @@ var SUPERPAL = { cumhead: ['#6e3808', '#c88c1e', '#ffd84a', '#fffbe8'], gloop: [
 SV.homs = SV.homs || ['gloop']; SV.gs = SV.gs || 0;
 function homOpen(b) { return SV.homs.indexOf(b) >= 0; }
 function mkChars() {
-  var L = [{ id: 'cumhead', kind: 'ch', name: 'CUMHEAD', sup: 'cumhead' }];
+  var L = [{ id: 'cumhead', kind: 'ch', name: 'CUMHEAD', sup: 'cumhead' }, { id: 'lab', kind: 'lab', name: 'SHITHEAD LABOOZIE', sc: 1.15, sup: 'lab' }];
   HOMORDER.forEach(function (b) { if (homOpen(b)) L.push({ id: 'hom_' + b, kind: 'hom', breed: b, name: HOMNAME[b], sc: 1.15, sup: b }); });
   HOMORDER.forEach(function (b) { if (homOpen(b)) L.push({ id: 'ch_' + b, kind: 'ch', fol: b, name: 'CUMHEAD + ' + HOMNAME[b], sup: 'cumhead' }); });
   if (SV.gs) L.push({ id: 'greebo', kind: 'gs', name: 'GREEBO & SIR JOHNATHAN', fol: 'cat', sup: 'greebo' });
@@ -23,19 +23,24 @@ function mkChars() {
 function charDef(id) { var L = mkChars(); for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
   if (id && id.indexOf('hom_') === 0) return { id: id, kind: 'hom', breed: id.slice(4), name: HOMNAME[id.slice(4)] || 'HOMUNCULUS', sc: 1.15, sup: id.slice(4) };
   if (id && id.indexOf('ch_') === 0) return { id: id, kind: 'ch', fol: id.slice(3), name: 'CUMHEAD', sup: 'cumhead' };
+  if (id === 'lab') return { id: 'lab', kind: 'lab', name: 'SHITHEAD LABOOZIE', sc: 1.15, sup: 'lab' };
   if (id === 'greebo') return { id: 'greebo', kind: 'gs', name: 'GREEBO & SIR JOHNATHAN', fol: 'cat', sup: 'greebo' };
   return L[0]; }
 HOGCHARS = mkChars();
 charOf = function (id) { return charDef(id); };
 function CHR() { var id = G.mode === 'title' || !G.ch ? 'cumhead' : G.ch; if (CHR.id !== id) { CHR.id = id; CHR.c = charDef(id); } return CHR.c; }
-function superName() { var C = CHR(); return C.kind === 'hom' && C.breed === 'blood' ? 'THE ULTIMATE LIFEFORM!' : C.kind === 'hom' ? 'SUPER ' + C.name + '!' : C.kind === 'gs' ? 'SUPER GREEBO & SIR JOHNATHAN!' : 'SUPER CUMHEAD!'; }
-function shortName() { var C = CHR(); return C.kind === 'gs' ? 'GREEBO' : C.kind === 'hom' ? C.name : 'CUMHEAD'; }
-function ssBack(i) { var C = CHR(); return C.kind === 'hom' ? 'bk_' + C.breed + i : C.kind === 'gs' ? 'bk_greebo' + i : 'chb_u' + i; }
+function superName() { var C = CHR(); if (C.kind === 'lab') return 'SUPER LABOOZIE!'; return C.kind === 'hom' && C.breed === 'blood' ? 'THE ULTIMATE LIFEFORM!' : C.kind === 'hom' ? 'SUPER ' + C.name + '!' : C.kind === 'gs' ? 'SUPER GREEBO & SIR JOHNATHAN!' : 'SUPER CUMHEAD!'; }
+function shortName() { var C = CHR(); if (C.kind === 'lab') return 'LABOOZIE'; return C.kind === 'gs' ? 'GREEBO' : C.kind === 'hom' ? C.name : 'CUMHEAD'; }
+function ssBack(i) { var C = CHR(); if (C.kind === 'lab') return 'bk_lab' + i; return C.kind === 'hom' ? 'bk_' + C.breed + i : C.kind === 'gs' ? 'bk_greebo' + i : 'chb_u' + i; }
 function refreshChars() { HOGCHARS = mkChars(); CHR.id = null; }
 
 /* the frame for the player, by character */
 function pName(p, sp) { return frameFor(CHR(), p, sp); }
 function frameFor(C, p, sp) {
+  if (C.kind === 'lab') { // Shithead Laboozie: his own walk, jump and throw
+    if (p.state === 'dead') return 'lab_lie0'; if (p.state === 'hurt') return 'lab_hurt0'; if (p.atkT > 0) return 'lab_toss' + Math.min(2, Math.floor((0.2 - p.atkT) / 0.07));
+    if (p.air) return p.vy < 0 ? 'lab_pjump0' : 'lab_pjump1'; if (sp < 8) return 'lab_pidle' + (Math.floor(G.t * 4) % 4);
+    return 'lab_pwalk' + (Math.floor((p.dist || 0) / (sp < 115 ? 5.5 : 7.5)) % 8); }
   if (C.kind === 'hom') { var pre = 'h_' + C.breed + '_adult_';
     if (p.state === 'dead' || p.state === 'hurt') return pre + 'hurt'; if (p.atkT > 0) return pre + 'atk'; if (p.air) return pre + 'jump';
     if (sp < 8) return pre + 'idle' + (Math.floor(G.t * 3) % 2); return pre + 'run' + (Math.floor((p.dist || 0) / (sp < 115 ? 5 : 7)) % 4); }
@@ -64,7 +69,7 @@ function superImg(n, key) {
 goldFrame = function (n) { return superImg(n, 'cumhead'); };
 
 /* standing pictures and life icons for the HUD and Data Select */
-function charIdle(C, t) { return C.kind === 'hom' ? 'h_' + C.breed + '_adult_idle' + (Math.floor(t * 3) % 2) : C.kind === 'gs' ? 'npc_greebo' : 'ch_idle' + (Math.floor(t * 6) % 7); }
+function charIdle(C, t) { if (C.kind === 'lab') return 'lab_pidle' + (Math.floor(t * 4) % 4); return C.kind === 'hom' ? 'h_' + C.breed + '_adult_idle' + (Math.floor(t * 3) % 2) : C.kind === 'gs' ? 'npc_greebo' : 'ch_idle' + (Math.floor(t * 6) % 7); }
 function drawCharStand(C, x, y, t) {
   if (C.fol) drawFolStand(C.fol, x + 20, y, t);
   spr(charIdle(C, t), C.fol ? x - 6 : x, y, { anchor: 'b', sc: C.sc, flip: !!C.flipped });
@@ -73,9 +78,10 @@ function drawFolStand(b, x, y, t) { if (b === 'cat') spr('cat', x, y, { anchor: 
 function drawCharIcon(C, x, y) {
   if (C.kind === 'hom') spr('h_' + C.breed + '_baby_idle0', x, y, { anchor: 'b' });
   else if (C.kind === 'gs') spr('npc_greebo', x, y, { anchor: 'b', sc: 0.42 });
+  else if (C.kind === 'lab') spr('lab_face', x, y, { anchor: 'b', sc: 0.5 });
   else spr('ch_icon0', x, y, { anchor: 'b', sc: 0.5 });
 }
-function drawLifeIcon(x, y) { var C = CHR(); if (C.kind === 'hom') spr('h_' + C.breed + '_baby_idle0', x, y, { sc: 1.1 }); else if (C.kind === 'gs') spr('npc_greebo', x, y, { sc: 0.5 }); else spr('ch_icon0', x, y, { sc: 0.7 }); }
+function drawLifeIcon(x, y) { var C = CHR(); if (C.kind === 'lab') spr('lab_face', x, y, { sc: 0.55 }); else if (C.kind === 'hom') spr('h_' + C.breed + '_baby_idle0', x, y, { sc: 1.1 }); else if (C.kind === 'gs') spr('npc_greebo', x, y, { sc: 0.5 }); else spr('ch_icon0', x, y, { sc: 0.7 }); }
 
 /* ---------- the follower (a homunculus behind Cumhead, Sir Johnathan behind Greebo): Tails style, he runs where you ran
    a moment ago, bites foes he runs into (bosses too, now and then) and catches up from the sky if he is left behind */
@@ -123,3 +129,20 @@ function unlockFromEnding() {
 }
 (function () { var en = ending; ending = function () { var msg = unlockFromEnding(); en(); if (msg) { G.banner = 6; G.bannerTxt = msg; var m = document.querySelector('#menu .msub'); if (m) m.textContent = m.textContent + ' ' + msg; } }; })();
 (function () { var ds = dataSelect; dataSelect = function () { refreshChars(); ds(); }; })();
+
+/* ---------- Shithead Laboozie's Flaming Bag of Shit: B lobs it; a foe it hits is done, where it lands it burns for 8 s ---------- */
+var BURNS = [];
+(function () {
+  var bA = beginAct; beginAct = function (ai, fromCheck) { bA(ai, fromCheck); BURNS = []; };
+  var sP = stepPlayer; stepPlayer = function (dt) {
+    var p = PL, lab = CHR().kind === 'lab', n0 = SHOTS.length; sP(dt);
+    if (lab) for (var i = n0; i < SHOTS.length; i++) { var s = SHOTS[i]; if (s.k === 'sperm' && s.mine) { s.k = 'bag'; s.vy = -230; s.g = 620; s.vx = p.face * 230 + (p.gsp || 0) * 0.4; s.life = 1.8; s.fire = 1; } }
+    SHOTS.forEach(function (s) { if (s.k !== 'bag' || s.landed) return; if (s.life > 0 && wallAt(s.x, s.y + 4) || s.life <= 0.02) { s.landed = 1; s.life = 0; var y = s.y; for (var k = 0; k < 6 && wallAt(s.x, y); k++) y -= TS / 2; BURNS.push({ x: s.x, y: y + 2, t: 8 }); sfx.play('pop'); bits(s.x, y, 10, ['#5a3010', '#ff7a1a', '#ffd23a'], 140); } });
+    BURNS = BURNS.filter(function (b) { b.t -= dt; b.cd = (b.cd || 0) - dt;
+      ENTS.forEach(function (e) { if (e.k === 'foe' && e.alive && Math.abs(e.x - b.x) < 18 && Math.abs(e.y - b.y) < 20) hitFoe(e, 1); });
+      if (G.boss && G.boss.alive && b.cd <= 0 && typeof bossHitBy === 'function' && bossHitBy(b.x, b.y - 10)) { hitBoss(1); b.cd = 1; }
+      return b.t > 0; });
+  };
+})();
+function drawBurns(cx, cy) { var g = KIT.ctx; BURNS.forEach(function (b) { var x = Math.round(b.x - cx), y = Math.round(b.y - cy), k = Math.min(1, b.t / 1.5); if (x < -30 || x > KIT.W + 30) return; R('#3a1e0a', x - 16, y - 2, 32, 3);
+  for (var i = 0; i < 6; i++) { var fx = x - 14 + i * 5.6, fh = (6 + Math.abs(Math.sin(G.t * 10 + i * 1.9)) * 10) * k; g.fillStyle = i % 2 ? '#ff7a1a' : '#ffd23a'; g.beginPath(); g.moveTo(fx - 3, y); g.lineTo(fx, y - fh); g.lineTo(fx + 3, y); g.fill(); } }); }

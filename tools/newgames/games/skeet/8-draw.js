@@ -82,7 +82,8 @@ function drawHeld(e, x, y) {
 function drawWorld() {
   drawBack();
   var g = KIT.ctx;
-  G.puddles.forEach(function (q) { g.fillStyle = q.col; g.beginPath(); g.ellipse(q.x - G.cam, FLOOR + q.z, q.r, 4, 0, 0, 6.3); g.fill(); });
+  G.puddles.forEach(function (q) { g.fillStyle = q.col; g.beginPath(); g.ellipse(q.x - G.cam, FLOOR + q.z, q.r, 4, 0, 0, 6.3); g.fill();
+    if (q.fire) for (var fi = 0; fi < 5; fi++) { var fx = q.x - G.cam - q.r * 0.8 + fi * q.r * 0.4, fh = 7 + Math.abs(Math.sin(G.t * 9 + fi * 1.7)) * 8 * Math.min(1, (q.life - q.t) / 1.5); g.fillStyle = fi % 2 ? '#ff7a1a' : '#ffd23a'; g.beginPath(); g.moveTo(fx - 3, FLOOR + q.z); g.lineTo(fx, FLOOR + q.z - fh); g.lineTo(fx + 3, FLOOR + q.z); g.fill(); } });
   (G.waves || []).forEach(function (w) { g.strokeStyle = '#ffe36a'; g.lineWidth = 3; g.beginPath(); g.ellipse(w.x - G.cam, FLOOR + w.z, w.r, w.r / 2.6, 0, 0, 6.3); g.stroke(); g.strokeStyle = '#ff9a30'; g.lineWidth = 1; g.beginPath(); g.ellipse(w.x - G.cam, FLOOR + w.z, w.r - 4, (w.r - 4) / 2.6, 0, 0, 6.3); g.stroke(); });
   G.fx.forEach(function (f) { if (f.k === 'mark') { var a = Math.floor(f.t * 12) % 2; g.strokeStyle = a ? '#ff2630' : '#ffe36a'; g.lineWidth = 2; g.beginPath(); g.ellipse(f.x - G.cam, FLOOR + f.z, f.r, f.r / 3, 0, 0, 6.3); g.stroke(); g.lineWidth = 1; } });
   // everything that stands on the floor, far ones first
@@ -215,7 +216,7 @@ function drawOver() {
 function drawEnd() {
   var W = KIT.W, t = G.endT; R('#070405', 0, 0, W, KIT.H); moon(W / 2, 48, 30);
   if (G.endArc) KIT.spr(P.hero.A.win[Math.floor(G.t * 3) % 2], W / 2, 112, { sc: 1.4 });
-  else HEROLIST.forEach(function (h, i) { KIT.spr(HEROES[h].A.win[Math.floor(G.t * 3 + i) % 2], W / 2 + (i - 1.5) * 56, 112, {}); });
+  else HEROLIST.forEach(function (h, i) { KIT.spr(HEROES[h].A.win[Math.floor(G.t * 3 + i) % 2], W / 2 + (i - (HEROLIST.length - 1) / 2) * 50, 112, {}); });
   var lines = G.endArc ? [P.hero.n + ' beat all ten.', 'Blumhead crawls back to his throne, minus a crown.', 'The Clubhouse puts your name on the wall.', 'ARCADE CLEAR', 'Thanks for playing.']
     : ['Blumhead is down. The goo drains out of the city.', 'Every homunculus on Clubhouse Row wakes up in their own colours.', 'They go home. The Clubhouse gets the first round in.', 'SKEET FIGHTER', 'Thanks for playing.'];
   lines.forEach(function (l, i) { if (t < 1 + i * 1.4) return; var big = l === 'SKEET FIGHTER' || l === 'ARCADE CLEAR'; T(l, W / 2, 120 + i * 15 + (i >= 3 ? 4 : 0), { size: big ? 16 : 8, align: 'center', col: big ? '#ff2630' : '#f1e7d0', font: big ? 'title' : 'px', max: W - 16 }); });
@@ -227,9 +228,9 @@ function drawSelect() {
   R('#070405', 0, 0, W, HH); for (var i = 0; i < 12; i++) R(i % 2 ? '#0e0708' : '#120809', 0, i * 20, W, 20);
   moon(W * 0.24, 104, 40);
   T('CHOOSE YOUR FIGHTER', W / 2, 2, { size: 16, align: 'center', col: '#ff2630', outline: true, font: 'title' });
-  var cw = 44, gap = 6, x0 = W / 2 - (cw * 4 + gap * 3) / 2; G.selBox = [];
+  var NH = HEROLIST.length, cw = 40, gap = 5, x0 = W / 2 - (cw * NH + gap * (NH - 1)) / 2; G.selBox = [];
   HEROLIST.forEach(function (id, i) { var h = HEROES[id], x = x0 + i * (cw + gap), y = 22, on = i === sel;
-    KIT.panel(x, y, cw, 40, { edge: on ? '#ffe36a' : '#4a1a1c', fill: on ? 'rgba(90,10,16,0.95)' : 'solid' }); KIT.spr(h.face, x + cw / 2, y + 36, { sc: 1.15 }); G.selBox[i] = [x, y, cw, 40]; });
+    KIT.panel(x, y, cw, 40, { edge: on ? '#ffe36a' : '#4a1a1c', fill: on ? 'rgba(90,10,16,0.95)' : 'solid' }); KIT.spr(h.face, x + cw / 2, y + 36, { sc: 1.05 }); G.selBox[i] = [x, y, cw, 40]; });
   var cyc = ['idle', 'idle', 'jab', 'cross', 'kick', 'rh', 'fire', 'idle', 'win'], an = cyc[Math.floor(G.t / 0.9) % cyc.length], L = H.A[an], ph = (G.t / 0.9) % 1;
   KIT.spr(an === 'idle' ? L[Math.floor(G.t * 4) % 4] : L[Math.min(L.length - 1, Math.floor(ph * (L.length + 1)))], W * 0.24, HH - 6, { sc: H.ht > 48 ? 2 : 2.2 });
   T(G.pickKind === 'arcade' ? 'ARCADE' : 'STORY', 8, 8, { size: 8, col: '#ffe36a' });
@@ -240,7 +241,7 @@ function drawSelect() {
   var room = HH - 22 - yy, gapL = Math.max(9, Math.min(10, Math.floor(room / 8)));
   ['POWER', 'SPEED', 'RANGE'].forEach(function (s, i) { var y2 = yy + i * gapL; T(s, tx, y2, { size: 8, col: '#f1e7d0' }); for (var j = 0; j < 5; j++) R(j < H.stats[i] ? '#ff2630' : '#2a0a0e', tx + 50 + j * 10, y2, 8, 7); }); yy += gapL * 3 + 4;
   var sp = H.sp; [['X', sp.fire.n], ['UP+X', sp.rise.n], ['FWD+X', sp.dash.n], ['DOWN+X', sp.ground.n], ['Y', sp.sup.n]].forEach(function (r, i) { T(r[0], tx, yy + i * gapL, { size: 8, col: '#ffe36a' }); T(r[1], tx + 50, yy + i * gapL, { size: 8, col: '#f1e7d0', max: W - tx - 56 }); });
-  if (G.pickKind === 'arcade' && SV.arc && SV.arc[HEROLIST[sel]]) T((SV.arcClear && SV.arcClear[HEROLIST[sel]] ? 'CLEARED' : 'BEST ' + SV.arc[HEROLIST[sel]] + '/10'), x0 + cw * 4 + gap * 3 + 8, 36, { size: 8, col: '#9aff5a' });
-  else if (SV.best[HEROLIST[sel]]) T('BEST ' + SV.best[HEROLIST[sel]], x0 + cw * 4 + gap * 3 + 8, 36, { size: 8, col: '#9aff5a' });
+  if (G.pickKind === 'arcade' && SV.arc && SV.arc[HEROLIST[sel]]) T((SV.arcClear && SV.arcClear[HEROLIST[sel]] ? 'CLEARED' : 'BEST ' + SV.arc[HEROLIST[sel]] + '/10'), x0 + cw * NH + gap * (NH - 1) + 6, 36, { size: 8, col: '#9aff5a' });
+  else if (SV.best[HEROLIST[sel]]) T('BEST ' + SV.best[HEROLIST[sel]], x0 + cw * NH + gap * (NH - 1) + 6, 36, { size: 8, col: '#9aff5a' });
   if (Math.floor(G.t * 2) % 2) T('A: FIGHT   B: BACK', W / 2, HH - 10, { size: 8, align: 'center', col: '#a6968f' });
 }

@@ -100,7 +100,7 @@ var LAYOUTS = [
 var DOORPOS = { u: { x: IW / 2, y: -WALL / 2 }, d: { x: IW / 2, y: IH + WALL / 2 }, l: { x: -WALL / 2, y: IH / 2 }, r: { x: IW + WALL / 2, y: IH / 2 } };
 var DV = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] }, OPP = { u: 'd', d: 'u', l: 'r', r: 'l' };
 
-var G = { mode: 'title' }, P, S, run, room, foes, tears, eshots, pickups, bombs, fx, pops, pets, banner;
+var G = { mode: 'title' }, burns = [], P, S, run, room, foes, tears, eshots, pickups, bombs, fx, pops, pets, banner;
 
 /* ---------- a run and its floors ---------- */
 function newRun() {
@@ -169,7 +169,7 @@ function spawnPet() { var br = pick(['gloop', 'ember', 'frost', 'volt', 'blood',
 /* ---------- rooms ---------- */
 function enterRoom(c, fromDir) {
   room = c; c.visited = true; c.seen = true; for (var d in c.doors) c.doors[d].seen = true;
-  foes = []; tears = []; eshots = []; bombs = []; fx = []; pops = []; P.wardUsed = false;
+  foes = []; tears = []; eshots = []; bombs = []; fx = []; pops = []; burns = []; P.wardUsed = false;
   if (!pets) pets = [];
   if (fromDir) { var dp = DOORPOS[OPP[fromDir]]; P.x = clamp(dp.x, 14, IW - 14) - DV[OPP[fromDir]][0] * 22; P.y = clamp(dp.y, 14, IH - 10) - DV[OPP[fromDir]][1] * 26; if (OPP[fromDir] === 'd') P.y = IH - 22; if (OPP[fromDir] === 'u') P.y = 30; }
   P.vx = P.vy = 0; P.inv = Math.max(P.inv, 0.3);
@@ -271,7 +271,7 @@ function fire(d) {
   var shots = [[vx, vy, 0]];
   if (S.double) { var px = -d[1] * 5, py = d[0] * 5; shots = [[vx, vy, 1, px, py], [vx, vy, 1, -px, -py]]; }
   if (S.triple) { var a = Math.atan2(vy, vx); shots = shots.concat([[Math.cos(a - 0.22) * sp, Math.sin(a - 0.22) * sp], [Math.cos(a + 0.22) * sp, Math.sin(a + 0.22) * sp]]); }
-  shots.forEach(function (s) { tears.push({ x: ox + (s[3] || 0), y: oy + (s[4] || 0), vx: s[0], vy: s[1], life: S.life, dmg: S.dmg, r: S.big ? 6 : 4, hit: {}, mine: 1 }); });
+  shots.forEach(function (s) { tears.push({ x: ox + (s[3] || 0), y: oy + (s[4] || 0), vx: s[0], vy: s[1], life: S.life, dmg: S.dmg, r: S.big ? 6 : 4, hit: {}, mine: 1, bag: SV.who === 'lab' ? 1 : 0 }); });
   sfx.play('shoot');
 }
 function hurtP(n, by) {
@@ -384,13 +384,15 @@ function updShots(dt) {
       if (e.dead || t.life <= 0 || t.hit[e.id || (e.id = Math.random())] || e.ghost) return;
       var ey = e.boss ? e.y - e.h * 0.4 - (e.z || 0) : e.y - 8 - (e.z || 0);
       if (Math.hypot(e.x - t.x, ey - t.y) < e.r + t.r) {
-        t.hit[e.id] = 1; dmgFoe(e, t.dmg); if (S.burn) e.burn = 3; if (S.poison) e.poison = 3; if (S.charm && !e.boss && Math.random() < 0.12) e.charm = 2.5;
+        t.hit[e.id] = 1; dmgFoe(e, t.dmg); if (S.burn) e.burn = 3; if (S.poison || t.bag) e.poison = t.bag ? 5 : 3; if (t.bag) t.splat = 1; if (S.charm && !e.boss && Math.random() < 0.12) e.charm = 2.5;
         if (!e.boss) { e.x += t.vx * 0.04; e.y += t.vy * 0.04; }
         if (!S.pierce) t.life = 0;
       }
     });
-    if (t.life <= 0) fxPuff(t.x, t.y, S.red ? '#ff2630' : '#f1e7d0', 3);
+    if (t.life <= 0) fxPuff(t.x, t.y, t.bag ? '#6e3e14' : S.red ? '#ff2630' : '#f1e7d0', 3);
+    if (t.life <= 0 && t.bag && !t.splat) { burns.push({ x: t.x, y: t.y + 12, t: 8 }); sfx.play('splat'); } // Laboozie's bag: where it lands the floor burns for 8 s
   });
+  burns = burns.filter(function (b) { b.t -= dt; foes.forEach(function (e) { if (!e.dead && !e.ghost && Math.hypot(e.x - b.x, e.y - b.y) < 16 + (e.r || 8)) { e.burnTick = (e.burnTick || 0) - dt; if (e.burnTick <= 0) { e.burnTick = 0.4; dmgFoe(e, Math.max(0.6, S.dmg * 0.3)); e.burn = 1; } } }); return b.t > 0; });
   tears = tears.filter(function (t) { return t.life > 0; });
   eshots.forEach(function (s) {
     if (s.delay > 0) { s.delay -= dt; return; }
@@ -492,7 +494,8 @@ function drawWorld() {
   list.push({ y: P.y, d: drawPlayer });
   list.sort(function (a, b) { return a.y - b.y; }).forEach(function (o) { o.d(); });
   // shots over everything
-  tears.forEach(function (t) { var n = t.pet ? 'gr_tearg' : S.red ? 'gr_tearr' : S.poison ? 'gr_tearg' : S.burn ? 'gr_tearf' : 'gr_tearc'; R('rgba(0,0,0,0.3)', IX0 + t.x - 3, IY0 + t.y + 12, 6, 2); spr(n, IX0 + t.x, IY0 + t.y, { anchor: 'c', sc: t.r / 4 }); });
+  burns.forEach(function (b) { var x = IX0 + b.x, y = IY0 + b.y, k = Math.min(1, b.t / 1.5); R('rgba(60,30,10,0.7)', x - 14, y - 3, 28, 6); for (var i = 0; i < 5; i++) spr('lab_burn' + ((Math.floor(KIT.t * 10) + i) % 4), x - 12 + i * 6, y + 2, { sc: 0.35 * k + 0.1 }); });
+  tears.forEach(function (t) { if (t.bag) { R('rgba(0,0,0,0.3)', IX0 + t.x - 3, IY0 + t.y + 12, 6, 2); spr('lab_bag' + (Math.floor(KIT.t * 10) % 4), IX0 + t.x, IY0 + t.y, { anchor: 'c', sc: 0.5 * t.r / 4 }); return; } var n = t.pet ? 'gr_tearg' : S.red ? 'gr_tearr' : S.poison ? 'gr_tearg' : S.burn ? 'gr_tearf' : 'gr_tearc'; R('rgba(0,0,0,0.3)', IX0 + t.x - 3, IY0 + t.y + 12, 6, 2); spr(n, IX0 + t.x, IY0 + t.y, { anchor: 'c', sc: t.r / 4 }); });
   eshots.forEach(function (s) {
     if (s.puddle || s.delay > 0) return; var x = IX0 + s.x, y = IY0 + s.y;
     if (s.k === 'drop') { var k = 1 - s.life / s.fall; R('rgba(0,0,0,0.4)', x - s.r * k, y - 2, s.r * 2 * k, 4); spr('gr_tearr', x, y - (1 - k) * 120, { anchor: 'c', sc: 1.6 }); return; }
@@ -520,7 +523,7 @@ function drawPlayer() {
   var x = IX0 + P.x, y = IY0 + P.y, moving = Math.hypot(P.vx, P.vy) > 20, f = moving ? Math.floor(P.walk * 9) % 4 : 0;
   var d = P.face === 'sup' ? 'u' : P.face === 'sdown' ? 'd' : 's', open = P.shootT > 0 && d !== 'u' && P.cd > 1 / S.fire * 0.4;
   R('rgba(0,0,0,0.35)', x - 9, y - 2, 18, 4);
-  spr('chb_' + d + f + (open ? '_o' : ''), x, y + 2, { flip: P.face === 'sleft', sc: open ? 1.04 : 1 });
+  spr((SV.who === 'lab' ? 'chl_' : 'chb_') + d + f + (open ? '_o' : ''), x, y + 2, { flip: P.face === 'sleft', sc: open ? 1.04 : 1 });
 }
 function drawHud() {
   // hearts
@@ -564,7 +567,7 @@ function drawTitle() {
 function titleMenu() {
   G.mode = 'title'; run = null; music.play('grtitle');
   KIT.menu({ cls: 'clear', logo: '../assets/gr-logo.webp', title: 'The Grinding of Cumhead', sub: "Six floors of Blumhead's Lair. A boss at the end of every one. Blumhead at the bottom.",
-    items: [{ label: 'START A RUN', fn: function () { KIT.closeMenu(); pets = []; newRun(); }, cls: 'hot', def: true }, { label: 'ITEMS FOUND', sub: Object.keys(SV.seen).length + ' of ' + ITEMS.length, fn: itemsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }],
+    items: [{ label: 'START A RUN', fn: function () { KIT.closeMenu(); pets = []; newRun(); }, cls: 'hot', def: true }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), sub: SV.who === 'lab' ? 'Flaming Bags of Shit: a hit poisons, the floor burns for 8 seconds' : 'Cream tears', fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'ITEMS FOUND', sub: Object.keys(SV.seen).length + ' of ' + ITEMS.length, fn: itemsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }],
     note: 'Best floor ' + SV.best + '  ·  Runs ' + SV.runs + '  ·  Wins ' + SV.wins });
 }
 function itemsMenu() {

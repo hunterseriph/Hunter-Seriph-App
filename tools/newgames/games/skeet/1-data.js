@@ -70,9 +70,23 @@ var HEROES = {
       dash: { n: 'HEADBUTT', an: 'cross', st: 0.08, lunge: 360, dur: 0.3, dmg: 13, kd: true, kb: 240, box: [0, 28, 4, 36] },
       ground: { n: 'OOZE SHIELD', an: 'pound', st: 0.08, ring: 40, dmg: 8, shield: 2.5, kd: false, kb: 160 },
       sup: { n: 'OOZE FLOOD', kind: 'flood', dmg: 52, col: '#9aff5a' } },
-    quote: 'Gloop. (He means you are dead.)' }
+    quote: 'Gloop. (He means you are dead.)' },
+  laboozie: { n: 'LABOOZIE', k: 'lb', hp: 120, spd: 76, run: 160, jump: 330, w: 20, ht: 48, scale: 1, col: '#8a5020',
+    blurb: 'Shithead Laboozie. Flaming bags of shit: a hit poisons them, the floor burns for 8 seconds.', stats: [3, 3, 5],
+    face: 'hud_lb',
+    combo: [MV({ an: 'jab', dmg: 6, box: [6, 30, 24, 44] }), MV({ an: 'cross', dmg: 7, box: [6, 32, 24, 44] }), MV({ an: 'kick', dmg: 9, st: 0.08, ac: 0.08, rc: 0.18, kb: 60, box: [4, 32, 10, 34], arc: '#ff7a1a' }),
+      MV({ an: 'upper', n: 'STINK UPPER', dmg: 13, st: 0.1, ac: 0.1, rc: 0.3, kb: 110, lift: 280, kd: true, hs: 0.09, box: [2, 28, 20, 64], sfx: 'heavy', arc: '#ff7a1a', meter: 8 })],
+    air: MV({ an: 'kick', n: 'FLYING STOMP', dmg: 12, st: 0.05, ac: 0.6, rc: 0.1, kb: 150, kd: true, box: [2, 30, 4, 32], hs: 0.07 }),
+    dash: MV({ an: 'kick', n: 'BOOT TO THE FACE', dmg: 13, st: 0.04, ac: 0.22, rc: 0.22, kb: 180, kd: true, lunge: 250, box: [2, 30, 8, 36], hs: 0.08, arc: '#ff7a1a' }),
+    knee: MV({ an: 'cross', dmg: 7, st: 0.06, ac: 0.06, rc: 0.16, kb: 0, stun: 0.4 }),
+    sp: { fire: { n: 'FLAMING BAG OF SHIT', an: 'fire', st: 0.16, rc: 0.3, shot: { spr: 's_bag', spd: 170, arc: 210, dmg: 10, puddle: 8, fire: 1, poison: 6 }, ex: { spr: 's_bag', spd: 200, arc: 230, dmg: 14, puddle: 8, fire: 1, poison: 8, triple: 1 } },
+      rise: { n: 'HOT HOOK', an: 'upper', st: 0.04, inv: true, vh: 340, fwd: 70, hits: 3, dmg: 7, kd: true, lift: 320, box: [0, 26, 10, 66] },
+      dash: { n: 'SKID MARK', an: 'dash', st: 0.06, lunge: 330, dur: 0.32, dmg: 12, kd: true, kb: 220, box: [0, 28, 6, 44] },
+      ground: { n: 'FLAMING STOMP', an: 'pound', st: 0.2, ring: 52, dmg: 11, kd: true, lift: 220, fx: 'fx_cream', fire: 1 },
+      sup: { n: 'SHIT STORM', kind: 'pies', dmg: 64, col: '#ff7a1a' } },
+    quote: 'Smell that? That is you losing.' }
 };
-var HEROLIST = ['cumhead', 'spermaid', 'greebo', 'homunculus'];
+var HEROLIST = ['cumhead', 'spermaid', 'greebo', 'homunculus', 'laboozie'];
 /* every fighter's frames come from the rig (art.py: rig.py + fighters.py): sk_<k>_<anim><i>, ANIMN frames each */
 var ANIMN = { idle: 4, walk: 8, run: 6, jab: 3, cross: 3, kick: 3, rh: 3, upper: 3, sweep: 3, crouch: 1, cjab: 1, block: 1, cblock: 1, jump: 3, jkick: 1, jpunch: 1,
   hurt: 2, fall: 1, lie: 1, getup: 1, grab: 1, knee: 2, throw: 2, fire: 3, rise: 2, dash: 1, pound: 2, super: 1, win: 2, dizzy: 2 };

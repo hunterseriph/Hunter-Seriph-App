@@ -2,7 +2,7 @@
 the door, decor and the little icons (hearts, tickets, coins). Same outline and shading as the rest."""
 import math
 from pixelkit import Grid
-USE = ['npc_*', 'greebo_s0', 'spermaid_s0', 'ch_idle0', 'ch_idle1', 'ch_icon0', 'cumface', 'steve0', 'steve1', 'h_*_adult_idle0', 'h_*_teen_idle0']
+USE = ['lab_s0', 'lab_pwalk*', 'npc_*', 'greebo_s0', 'spermaid_s0', 'ch_idle0', 'ch_idle1', 'ch_icon0', 'cumface', 'steve0', 'steve1', 'h_*_adult_idle0', 'h_*_teen_idle0']
 WOOD = ('#a8643a', '#6e3a1e', '#3a1a0c'); WOOD2 = ('#8a4e2c', '#5a2e16', '#2e1408'); RED = ('#ff3a44', '#c4121c', '#6a0a10'); IRON = ('#9a929a', '#5a545c', '#2a262c')
 CLOTH = ('#e8303a', '#b0141e', '#5a0810'); WHITE = ('#ffffff', '#e8dcc8', '#a8987a'); BLACK = ('#3a2a30', '#1a1014', '#0c0608'); CHILLI = ('#ff6a3a', '#c4301a', '#6a1208')
 
@@ -319,3 +319,11 @@ def sp_pineapple():
     return g, {'p': PINE, 'leaf': GREEN, 'd': '#8a6008', 'plinth': RED}
 ART.update({'wn_sconce0': lambda: sconce(False), 'wn_sconce1': lambda: sconce(True), 'wn_sp_amy': sp_chilli, 'wn_sp_cafe': sp_urn, 'wn_sp_greebo': sp_pies,
             'wn_sp_beebs': sp_barrel, 'wn_sp_ali': sp_garlic, 'wn_sp_joff': sp_pineapple})
+
+# Shithead Laboozie as a host: his own walk, scaled to the other hosts
+def _lab(n):
+    im = _A.base()[n] if hasattr(_A, 'base') else None
+    from PIL import Image as _I
+    return im.resize((max(1, round(im.width * 0.8)), max(1, round(im.height * 0.8))), _I.NEAREST)
+ART['lab_host'] = lambda: _lab('lab_s0')
+for _f in range(4): ART['lab_w' + str(_f)] = (lambda f=_f: _lab('lab_pwalk' + str(f * 2)))

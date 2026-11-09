@@ -7,7 +7,7 @@ from PIL import Image
 from pixelkit import Grid
 import art as _A
 
-USE = ['f_kraken_0', 'f_cultist_0', 'f_ratking_0', 'f_boner_0', 'f_bonehound_0', 'f_magmaslug_0', 'f_emberbat_0', 'f_hotload_0', 'f_blumspore_*', 'f_execu_0', 'f_gravehand_0', 'f_vampire_0', 'f_ghoul_0', 'f_queen_0', 'f_rollingpin_0', 'f_cake_0', 'f_clockmouse_0', 'f_slime_0', 'f_slimeB_0', 'f_demon_0', 'f_cowpig_0', 'f_stormling_0', 'f_harpy_0', 'f_jailer_0', 'h_gloop_egg0', 'h_gloop_baby_idle0', 'h_gloop_baby_idle1', 'ch_idle0', 'ch_rn2', 'ch_icon0', 'npc_*', 'greebo_s0', 'spermaid_s0', 'h_gloop_adult_idle0', 'h_*_adult_idle0', 'boss_blum', 'f_kingblum_0', 'f_sirj_0', 'cat', 'cumface',
+USE = ['lab_s0', 'lab_pwalk0', 'lab_bag*', 'lab_burn*', 'f_kraken_0', 'f_cultist_0', 'f_ratking_0', 'f_boner_0', 'f_bonehound_0', 'f_magmaslug_0', 'f_emberbat_0', 'f_hotload_0', 'f_blumspore_*', 'f_execu_0', 'f_gravehand_0', 'f_vampire_0', 'f_ghoul_0', 'f_queen_0', 'f_rollingpin_0', 'f_cake_0', 'f_clockmouse_0', 'f_slime_0', 'f_slimeB_0', 'f_demon_0', 'f_cowpig_0', 'f_stormling_0', 'f_harpy_0', 'f_jailer_0', 'h_gloop_egg0', 'h_gloop_baby_idle0', 'h_gloop_baby_idle1', 'ch_idle0', 'ch_rn2', 'ch_icon0', 'npc_*', 'greebo_s0', 'spermaid_s0', 'h_gloop_adult_idle0', 'h_*_adult_idle0', 'boss_blum', 'f_kingblum_0', 'f_sirj_0', 'cat', 'cumface',
        'fac_*', 'steve0', 'steve1', 'throne', 'f_blumling_*', 'f_blumeye_*', 'f_blumguard_*', 'f_rat_*', 'f_ant_*', 'f_wasp_*', 'f_skeleton_*', 'f_mummy_*', 'f_balloon_*', 'f_clown_*',
        'f_creamblob_*', 'f_cultrat_*', 'f_bat_*', 'f_crow_*', 'f_gargoyle_*', 'f_pieling_*', 'f_jelly_*', 'f_feather_*', 'f_toymouse_*', 'f_moon_*', 'f_ghost_*', 'f_imp_*', 'f_wraith_*',
        'p_*', 'f_knight_*', 'f_mega_*', 'f_lheart_*']
@@ -116,3 +116,7 @@ def back(cid):
             if solid(x, neck) and not edge(x, neck) and solid(x, neck - 1): po[x, neck] = (18, 4, 10, 255)
     return out
 for _c in BACKS: ART['ckb_' + _c] = (lambda c=_c: back(c))
+def _labback():
+    import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'laboozie'))
+    import back as _bk; return _bk.back(_A.base()['lab_s0'], 0)
+ART['ckb_lab'] = _labback

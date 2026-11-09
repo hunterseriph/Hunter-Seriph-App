@@ -18,7 +18,7 @@ function specialMove(s, kind, ex) {
   if (kind === 'fire') { m.ac = 0.05; m.shot = ex && s.ex ? s.ex : s.shot; m.triple = ex && s.ex && s.ex.triple; }
   if (kind === 'rise') { m.ac = 0.7; m.rc = 0.16; m.box = s.box; m.vh = s.vh * (ex ? 1.12 : 1); m.fwd = s.fwd; m.hits = s.hits + (ex ? 2 : 0); m.spin = s.spin; m.heal = s.heal; m.rise = 1; }
   if (kind === 'dash') { m.ac = s.dur; m.rc = 0.2; m.lunge = s.lunge * (ex ? 1.15 : 1); m.box = s.box; m.ghost = s.ghost; m.fx = s.fx; m.lift = s.lift || 160; }
-  if (kind === 'ground') { m.ac = 0.06; m.rc = 0.3; m.ring = (s.ring || 0) * (ex ? 1.3 : 1); m.shield = s.shield; m.quake = s.quake; m.fx = s.fx; m.shot = s.shot; m.lift = s.lift || 200; }
+  if (kind === 'ground') { m.ac = 0.06; m.rc = 0.3; m.ring = (s.ring || 0) * (ex ? 1.3 : 1); m.shield = s.shield; m.quake = s.quake; m.fx = s.fx; m.fire = s.fire; m.shot = s.shot; m.lift = s.lift || 200; }
   return m;
 }
 /* the direction history, for motions: numpad style, relative to the way you face (6 = forwards) */
@@ -87,7 +87,7 @@ function stepMove(e, dt) {
     if (m.triple) [-14, 0, 14].forEach(function (dz) { shoot(e, m.shot, { h: hh, dz: dz, vz: dz * 2 }); }); else shoot(e, m.shot, { h: hh });
     if (m.kind === 'fire' && m.ex) KIT.flash(0.05); }
   if (m.ring && t >= m.st && !f.ring) { f.ring = 1; G.fx.push({ k: 'ring', x: e.x, z: e.z, t: 0, life: 0.35, r: m.ring, col: H.col }); KIT.shake(m.quake ? 7 : 4); sfx.play(m.quake ? 'boom' : 'heavy');
-    hitArea(e.x, e.z, m.ring, m.ring * 0.4, { dmg: m.dmg, kd: m.kd, kb: m.kb || 140, lift: m.lift, from: e, team: e.team, hs: 0.08, meter: 6, low: G.duel ? 1 : 0 }); if (m.fx) for (var i = 0; i < 6; i++) G.fx.push({ k: 'spr', spr: m.fx, x: e.x + rnd(-m.ring, m.ring), z: e.z + rnd(-8, 8), h: 0, t: 0, life: 0.4 }); if (m.shield) e.shieldT = m.shield; }
+    hitArea(e.x, e.z, m.ring, m.ring * 0.4, { dmg: m.dmg, kd: m.kd, kb: m.kb || 140, lift: m.lift, from: e, team: e.team, hs: 0.08, meter: 6, low: G.duel ? 1 : 0 }); if (m.fx) for (var i = 0; i < 6; i++) G.fx.push({ k: 'spr', spr: m.fx, x: e.x + rnd(-m.ring, m.ring), z: e.z + rnd(-8, 8), h: 0, t: 0, life: 0.4 }); if (m.shield) e.shieldT = m.shield; if (m.fire) G.puddles.push({ x: e.x, z: e.z, r: m.ring * 0.7, t: 0, life: 8, team: e.team, dmg: 4, col: '#5a3010', fire: 1, owner: e }); }
   var act = t >= m.st && t < m.st + m.ac && m.box && m.dmg > 0 && !m.shot;
   if (m.rise && f.rose) act = e.h > 0 || e.vh > 0;
   if (act) { if (m.hits > 1 && t - (f.lastReset || 0) > m.ac / m.hits * 0.9) { f.lastReset = t; e.hit = {}; } var n = hitWith(e, m); if (n) { f.landed = 1; if (e.weapon && m.weap) weaponWear(e, n); } }

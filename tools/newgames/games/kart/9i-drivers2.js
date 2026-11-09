@@ -54,6 +54,9 @@ var FACEPAINT = {
     fShape(g, [[34, 82], [50, 74, 64, 82], [78, 74, 94, 82], [78, 90, 64, 86], [50, 90, 34, 82]], '#a85a20', K0, 2.5); for (var s = 0; s < 6; s++) fLine(g, [[22 + s * 17, 96], [26 + s * 17, 120]], 2.5, '#a85a20'); } },
   ali: { bg: '#d8a880', f: function (g) { fEye(g, 46, 62, 10, 13, '#2a1a10', 0.2); fEye(g, 82, 62, 10, 13, '#2a1a10', 0.2); fLine(g, [[34, 46], [46, 42, 58, 46]], 4, '#2a1a10'); fLine(g, [[70, 46], [82, 42, 94, 46]], 4, '#2a1a10'); fLine(g, [[62, 70], [60, 77], [66, 79]], 2.5, '#9a6a4a'); fSmile(g, 64, 86, 15, true, true); } },
   potbelly: { bg: '#ff9ab4', f: function (g) { fEye(g, 44, 56, 9, 11, '#2a1418', 0.1); fEye(g, 84, 56, 9, 11, '#2a1418', 0.1); fLine(g, [[34, 42], [44, 38, 54, 42]], 3.5, '#c4506a'); fLine(g, [[74, 42], [84, 38, 94, 42]], 3.5, '#c4506a'); fSmile(g, 64, 96, 14, false); fBlush(g, 30, 78, '#ff5a80'); fBlush(g, 98, 78, '#ff5a80'); } },
+  lab: { bg: '#57300f', f: function (g) { // Shithead Laboozie: big cartoon eyes and a grin on a swirl of poop
+    fLine(g, [[10, 30], [64, 20, 118, 30]], 3, '#3a1e08'); fEye(g, 46, 60, 15, 18, '#2a1a14', 0.2); fEye(g, 82, 60, 15, 18, '#2a1a14', 0.2); fLine(g, [[32, 38], [46, 33, 58, 39]], 3.5, '#2a1408'); fLine(g, [[70, 39], [82, 33, 96, 38]], 3.5, '#2a1408');
+    fSmile(g, 64, 92, 18, true, true); } },
   kingblum: { bg: '#c4121c', f: function (g) { [[44, 1], [84, -1]].forEach(function (e) { fEll(g, e[0], 60, 13, 10, '#ffe36a', K0, 3); fEll(g, e[0], 62, 4, 7, K0); fShape(g, [[e[0] - 18 * e[1], 40], [e[0] + 16 * e[1], 50], [e[0] + 16 * e[1], 44], [e[0] - 18 * e[1], 34]], K0); });
     fShape(g, [[24, 80], [64, 118, 104, 80], [64, 94, 24, 80]], K0); g.fillStyle = '#f1e7d0'; for (var t = 0; t < 8; t++) g.fillRect(33 + t * 8, 84 + Math.abs(t - 3.5) * 0.8, 5, 7); } }
 };
@@ -106,6 +109,16 @@ function driver3D(m, k, fr) {
     ball(m, fr, W, -0.16, 0, 1.1, 0.32, 0.34, 0.29, '#1a1418', 12, { rings: 8, face: { T: DRVT.cat, fz: 0.3, w: 0.9, h: 0.9 } });
     [-1, 1].forEach(function (sd) { tube(m, fr, W, [-0.2, sd * 0.17, 1.3], [-0.24, sd * 0.24, 1.62], 0.11, 0.0, '#1a1418', 6); tube(m, fr, W, [-0.18, sd * 0.18, 1.33], [-0.21, sd * 0.23, 1.54], 0.05, 0.0, '#c86a8a', 6); });
     var sw = Math.sin(t * 3) * 0.2; tube(m, fr, W, [-0.66, 0, 0.62], [-0.9, sw, 0.9], 0.07, 0.06, '#1a1418', 7); tube(m, fr, W, [-0.9, sw, 0.9], [-0.96, sw * 1.6, 1.22], 0.06, 0.04, '#1a1418', 7); return;
+  }
+  if (id === 'lab') { // Shithead Laboozie: black hoodie, white gloves, a swirl of poop for a head with his painted face on the bottom coil
+    var PB = '#57300f', PB2 = '#6e3e14';
+    ball2(m, fr, W, -0.26, 0, 0.7, 0.21, 0.28, 0.3, '#1e1a20', 12, { rings: 6 }); ball2(m, fr, W, -0.4, 0, 0.96, 0.12, 0.22, 0.12, '#262228', 10, { rings: 4 }); // body and the hood down his back
+    hull(m, fr, W, bx(-0.06, -0.04, -0.06, -0.04, 0.72, 0.94), '#d8d0c0'); hull(m, fr, W, bx(-0.06, -0.04, 0.04, 0.06, 0.72, 0.94), '#d8d0c0');
+    arms(m, fr, W, 0.28, '#1e1a20', '#1e1a20', '#f4f0ec', wob);
+    var lf = -0.22, lu = 1.28; tube(m, fr, W, [lf, 0, 0.98], [lf, 0, 1.08], 0.12, 0.12, PB, 9);
+    ball(m, fr, W, lf, 0, lu, 0.44, 0.46, 0.3, PB, DLOD < 1 ? 8 : 12, { rings: DLOD < 1 ? 5 : 8, face: FT ? { T: FT, fz: 0.15, w: 0.92, h: 0.9 } : null });
+    ball2(m, fr, W, lf - 0.04, 0, lu + 0.3, 0.32, 0.34, 0.2, PB2, 12, { rings: 6 }); ball2(m, fr, W, lf - 0.06, 0, lu + 0.52, 0.22, 0.23, 0.15, PB, 10, { rings: 5 });
+    tube(m, fr, W, [lf - 0.06, 0, lu + 0.6], [lf - 0.12, 0.05, lu + 0.82], 0.12, 0.0, PB2, 8); return;
   }
   if (id === 'greebo') { // the cream pie, with his painted face now
     var CR = '#d8943a', CR2 = '#b8742a';

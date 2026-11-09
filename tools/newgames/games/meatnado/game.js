@@ -29,10 +29,11 @@ var CHARS = [
   { id: 'greebo', n: 'Greebo', cost: 250, jumps: 2, shot: 'pie', cd: 0.62, hitK: 0.67, d: 'Throws a big cream pie that flattens every foe in a row. Tough: hits cost him a third less.' },
   { id: 'amy', n: 'Amy', cost: 450, jumps: 2, shot: 'swing', cd: 0.36, d: 'Swings the Sausage: smacks every foe in front of her and knocks thrown bones and pies out of the air.' },
   { id: 'hom', n: 'The Homunculus', cost: 700, jumps: 2, shot: 'hom', cd: 0.3, d: 'Hatches from an egg every run: usually a Gloop, sometimes another breed, now and then a Bloodmoon. Each breed has its own attack, and he grows from baby to adult as you grab drops and squash foes.' },
+  { id: 'lab', n: 'Shithead Laboozie', cost: 350, jumps: 2, shot: 'bag', cd: 0.62, d: 'Lobs a Flaming Bag of Shit: whoever it hits is covered in it and done for, and where it lands the road burns for 8 seconds.' },
   { id: 'tb', n: 'TB', cost: 1200, jumps: 2, shot: 'pill', cd: 0.5, d: "Lobs TB's Silly Pills that bounce down the road and flatten everything they hit. He has a lot to say." }
 ];
 /* TB says ONE of his lines when the run starts and each time he gets hit (same lines as Load Legacy, kept exact) */
-var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is someone plaything"'];
+var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"'];
 function tbSay() { G.say = { t: 2.6, s: pick(TBQUOTES) }; }
 /* the Homunculus: same breeds, odds and growth as Load Legacy (tools/homunculus art), each breed with its own attack */
 var HOMB = { gloop: ['Gloop', '#3fb43a', 'Acid Spit: fast acid.'], guard: ['Bulwark', '#6a8aff', 'Headbutt: smashes what is in front. Bone plates: hits cost a quarter less.'],
@@ -97,7 +98,7 @@ function maxGap() { return 235 + headStart() - Math.min(75, G.time * 0.9); }
 function resetPlayer(x) {
   P = { x: x || 0, y: GY, vy: 0, onGround: true, coyote: 0, jumpBuf: 0, jumpHeld: false, jumps: 0, state: 'normal', wasG: true, lsf: 0, hurtT: 0, inv: 0, deadT: 0, attackT: 0, atkCd: 0, anim: 0, jumpStartT: 0, prevJump: false, shield: 0, regrow: 0, revive: 0, floatT: 0 };
 }
-resetPlayer(0); pits = []; obs = []; drops = []; ledges = []; shots = []; eshots = []; parts = []; pups = [];
+resetPlayer(0); pits = []; obs = []; drops = []; ledges = []; shots = []; G.fires = []; eshots = []; parts = []; pups = [];
 
 /* ---------- sound ---------- */
 var st = sfx.tone, sn = sfx.noise, lastPick = -9, combo = 0, lastStep = 0;
@@ -161,7 +162,7 @@ function cull() {
 function startRun() {
   KIT.closeMenu(); var c = me();
   G.mode = 'play'; G.ride = 0; G.time = 0; G.drops = 0; G.total = 0; G.kills = 0; G.dist = 0; G.score = 0; G.nextMark = 500; G.v = 150; G.gap = 175 + headStart(); G.stumble = 0; G.caught = false; G.rainT = 9;
-  G.pupT = 8; G.pw = {}; rain = []; pits = []; obs = []; drops = []; ledges = []; shots = []; eshots = []; parts = []; pups = []; lastMix = '';
+  G.pupT = 8; G.pw = {}; rain = []; pits = []; obs = []; drops = []; ledges = []; shots = []; G.fires = []; eshots = []; parts = []; pups = []; lastMix = '';
   resetPlayer(0); P.shield = U('shield') ? 1 : 0; P.regrow = U('shield') >= 2 ? 1 : 0; P.revive = U('revive');
   if (U('launch')) G.pw.rocket = U('launch') * 2;
   G.cam = P.x - PXS; genX = P.x + 260; G.banner = 1.8; G.bannerTxt = 'RUN!';
@@ -211,7 +212,13 @@ function fire() {
   else if (k === 'swing') { shots.push({ k: 'swing', x: P.x + 22, y: P.y - 18, follow: 22, vx: 0, vy: 0, life: 0.16, w: 30, h: 30, pierce: 1, deflect: 1 }); sfx.play('stomp'); }
   else if (k === 'pill') shots.push({ k: k, x: P.x + 10, y: P.y - 26, vx: G.v + 170, vy: -170, grav: 650, life: 1.6, pierce: 1, bounce: 2 });
   else if (k === 'hom') homFire();
+  else if (k === 'bag') shots.push({ k: k, x: P.x + 10, y: P.y - 28, vx: G.v + 190, vy: -150, grav: 620, life: 1.8 });
 }
+/* Laboozie's fires on the road: 8 seconds, anything that walks into one is done */
+function stepFires(dt) { G.fires = (G.fires || []).filter(function (f) { f.t -= dt; obs.forEach(function (o) { if (o.k === 'f' && o.alive && !o.F.air && Math.abs(o.x - f.x) < 18 && o.y > GY - 30) killFoe(o, 'shot'); }); return f.t > 0; }); }
+function drawFires() { var c = KIT.ctx; (G.fires || []).forEach(function (f) { var x = Math.round(f.x - G.cam); if (x < -30 || x > W + 30) return; var k = Math.min(1, f.t / 1.5); R('#3a1e0a', x - 16, GY - 2, 32, 3);
+  for (var i = 0; i < 6; i++) { var fx = x - 14 + i * 5.6, fh = (6 + Math.abs(Math.sin(G.t * 10 + i * 1.9)) * 9) * k; c.fillStyle = i % 2 ? '#ff7a1a' : '#ffd23a'; c.beginPath(); c.moveTo(fx - 3, GY); c.lineTo(fx, GY - fh); c.lineTo(fx + 3, GY); c.fill(); }
+  if (Math.floor(G.t * 3 + f.x) % 3 === 0) R('#8acf4a', x - 4 + Math.sin(G.t * 2 + f.x) * 5, GY - 22 - (G.t * 12 % 10), 2, 2); }); }
 var HOMCD = { gloop: 0.7, guard: 1.1, ember: 1.25, frost: 1, volt: 1.4, medic: 1.1, leech: 1.1, scout: 1.6, goldie: 1.1, titan: 1.5, blood: 0.9 };
 function homFire() {
   var h = G.hom, b = h.b, st = h.st, col = HOMB[b][1], y = P.y - 18, big = 1 + st * 0.35;
@@ -288,6 +295,7 @@ function updateWorld(dt) {
   }
   for (i = 0; i < shots.length; i++) {
     s = shots[i]; s.life -= dt; if (s.follow !== undefined) { s.x = P.x + s.follow; s.y = P.y - 18; } else { s.x += s.vx * dt; s.y += s.vy * dt; if (s.grav) s.vy += s.grav * dt; }
+    if (s.k === 'bag' && s.y > GY - 5 && s.vy > 0 && s.life > 0) { s.life = 0; (G.fires = G.fires || []).push({ x: s.x, t: 8 }); sfx.play('stomp'); poof(s.x, GY - 4, 8, ['#5a3010', '#ff7a1a', '#ffd23a']); }
     if (s.bounce !== undefined && s.y > GY - 5 && s.vy > 0) { if (s.bounce > 0) { s.bounce--; s.y = GY - 5; s.vy = -s.vy * 0.6; } else s.life = 0; }
     if (s.deflect) for (j = 0; j < eshots.length; j++) { var e2 = eshots[j]; if (e2.life > 0 && Math.abs(e2.x - s.x) < s.w / 2 + 6 && Math.abs(e2.y - s.y) < s.h / 2 + 6) { e2.life = 0; poof(e2.x, e2.y, 5, ['#f1e7d0']); sfx.play('tink'); } }
     if (s.hit === undefined) s.hit = [];
@@ -303,7 +311,7 @@ function updateWorld(dt) {
       }
     }
   }
-  shots = shots.filter(function (q) { return q.life > 0; });
+  shots = shots.filter(function (q) { return q.life > 0; }); stepFires(dt);
   obs = obs.filter(function (q) { return q.k === 's' || q.alive; });
   for (i = 0; i < eshots.length; i++) {
     s = eshots[i]; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += (s.grav || 0) * dt; s.life -= dt; s.spin = (s.spin || 0) + dt * 10;
@@ -458,6 +466,10 @@ function drawRunner(id, x, y, o) {
     if (dead) f2 = base + 'hurt'; else if (P.attackT > 0) f2 = base + 'atk'; else if (air) f2 = base + 'jump'; else f2 = base + 'run' + (Math.floor(P.anim * 0.7) % 4);
     spr(f2, x, y + 1, { flash: fl, rot: P.state === 'dead' ? P.deadT * 3 : 0 }); return;
   }
+  if (id === 'lab') {
+    var lf = dead ? 'lab_hurt0' : P.attackT > 0 ? 'lab_toss' + Math.min(2, Math.floor((0.2 - P.attackT) / 0.07)) : air ? (P.vy < 0 ? 'lab_pjump0' : 'lab_pjump1') : 'lab_pwalk' + (Math.floor(P.anim) % 8);
+    spr(lf, x, y + 1, { sc: 1.1, flash: fl, rot: P.state === 'dead' ? P.deadT * 4 : 0 }); return;
+  }
   if (id === 'amy' || id === 'tb') {
     var nm = 'npc_' + id, w = air || dead ? nm : nm + '_w' + (Math.floor(P.anim * 0.7) % 4);
     spr(w, x, y + 1, { sc: 1.35, flash: fl, rot: dead ? 0.5 : air ? -0.12 : 0 });
@@ -481,11 +493,12 @@ function draw() {
     for (var k = 0; k < o.w; k += 8) { c.fillStyle = '#2a0509'; c.beginPath(); c.moveTo(ox + k - 1, GY); c.lineTo(ox + k + 4, GY - 9); c.lineTo(ox + k + 9, GY); c.fill(); c.fillStyle = '#e0202a'; c.beginPath(); c.moveTo(ox + k, GY); c.lineTo(ox + k + 4, GY - 8); c.lineTo(ox + k + 8, GY); c.fill(); } });
   drops.forEach(function (d) { var bob = d.fly ? 0 : Math.sin(G.t * 4 + d.x * 0.05) * 1.5, x = d.x - G.cam; if (x < -12 || x > W + 12) return; if (d.fly && d.age > 3.2 && Math.floor(G.t * 14) % 2 === 0) return; spr('mn_drop', x, d.y + bob + 6); });
   pups.forEach(function (p) { var x = p.x - G.cam, y = p.y + Math.sin(p.t * 4) * 4; R('rgba(255,227,106,' + (0.12 + 0.08 * Math.sin(p.t * 8)).toFixed(2) + ')', x - 13, y - 13, 26, 26); spr('mn_p_' + p.k, x, y, { anchor: 'c' }); });
-  obs.forEach(function (o) { if (o.k === 'f' && o.alive) drawFoe(o); });
+  drawFires(); obs.forEach(function (o) { if (o.k === 'f' && o.alive) drawFoe(o); });
   shots.forEach(function (s) { var x = s.x - G.cam;
     if (s.k === 'fire') { c.save(); c.translate(Math.round(x), Math.round(s.y)); c.shadowColor = '#ff2630'; c.shadowBlur = 10; c.fillStyle = '#ff3a44'; c.beginPath(); c.arc(-3, 0, 8, -1.05, 1.05); c.arc(-7, 0, 7, 1.0, -1.0, true); c.closePath(); c.fill(); c.restore(); }
     else if (s.k === 'swing') { var k2 = 1 - s.life / 0.16; c.save(); c.strokeStyle = s.col || '#ff9a80'; c.globalAlpha = 0.8 * (1 - k2); c.lineWidth = 3; c.beginPath(); c.arc(Math.round(x - s.w / 2), Math.round(s.y), s.w, -1.2, 1.0); c.stroke(); c.restore(); }
     else if (s.k === 'pill') spr('mn_pill', x, s.y, { anchor: 'c', rot: G.t * 14 });
+    else if (s.k === 'bag') { spr('lab_bag' + (Math.floor(G.t * 10) % 4), x, s.y, { anchor: 'c', rot: G.t * 6 }); }
     else if (s.k === 'coin') { var cr = s.r; R('#12040a', x - cr - 1, s.y - cr - 1, cr * 2 + 2, cr * 2 + 2); R('#ffc840', x - cr, s.y - cr, cr * 2, cr * 2); R('#fff09a', x - cr, s.y - cr, cr, 1); }
     else if (s.k === 'blob' || s.k === 'cres') { var rr = s.r; c.save(); c.fillStyle = '#12040a'; c.beginPath(); c.arc(x, s.y, rr + 1, 0, 6.28); c.fill(); c.fillStyle = s.col; c.beginPath(); if (s.k === 'cres') { c.arc(x, s.y, rr + 2, -1.3, 1.3); c.arc(x - 3, s.y, rr, 1.3, -1.3, true); } else c.arc(x, s.y, rr, 0, 6.28); c.fill(); c.restore(); }
     else if (s.k === 'ice') { R('#12040a', x - 9, s.y - 3, 18, 6); R(s.col, x - 8, s.y - 2, 16, 4); R('#ffffff', x - 2, s.y - 2, 9, 1); }
@@ -531,14 +544,14 @@ function drawHud() {
 
 /* ---------- menus ---------- */
 function titleMenu() {
-  G.mode = 'title'; G.char = me(); music.play('mntitle'); resetPlayer(G.cam + PXS); pits = []; obs = []; drops = []; ledges = []; shots = []; eshots = []; pups = []; rain = [];
+  G.mode = 'title'; G.char = me(); music.play('mntitle'); resetPlayer(G.cam + PXS); pits = []; obs = []; drops = []; ledges = []; shots = []; G.fires = []; eshots = []; pups = []; rain = [];
   KIT.menu({ cls: 'clear', logo: '../assets/meat-logo.webp', title: 'Meatnado Escape', sub: 'The meatnado is right behind you. Run, grab drops, spend them at Saba\'s.',
     items: [{ label: 'RUN', sub: 'As ' + me().n + (SV.best ? '  ·  best ' + SV.best + ' pts, ' + SV.bestm + 'm' : ''), cls: 'hot', def: true, fn: startRun },
       { label: 'RUNNERS', sub: CHARS.filter(function (c) { return SV.chars[c.id]; }).length + ' of ' + CHARS.length + ' unlocked', fn: function () { charsMenu(titleMenu); } },
       { label: "SABA'S", sub: 'Spend your drops: ' + SV.bank, fn: function () { shopMenu(titleMenu); } },
       { label: 'HOW TO PLAY', fn: helpMenu }] });
 }
-var RUNSPR = { cumhead: 'ch_idle0', greebo: 'greebo_s0', amy: 'npc_amy', hom: 'h_gloop_adult_idle0', tb: 'npc_tb' };
+var RUNSPR = { cumhead: 'ch_idle0', greebo: 'greebo_s0', amy: 'npc_amy', hom: 'h_gloop_adult_idle0', lab: 'lab_s0', tb: 'npc_tb' };
 function charsMenu(back, focus) {
   KIT.menu({ title: 'Runners', sub: 'Drops in the bank: ' + SV.bank,
     items: CHARS.map(function (c) { var own = SV.chars[c.id], on = SV.ch === c.id;

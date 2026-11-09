@@ -66,7 +66,9 @@ var PLACES = [
     th: { wall: '#2a0a0a', brick: '#3a1010', hi: '#4a1818', fl: ['#f1e7d0', '#c4121c'], sign: '#ffe36a' }, song: 'wnpizza', twist: 'Top the dough (plain or pineapple), then bake it. Pineapple fans tip big.', perk: 'Everything cooks faster' }
 ];
 var PLACE = {}; PLACES.forEach(function (p, i) { p.i = i; PLACE[p.id] = p; });
-var PERK = { amy: { burn: 1.5 }, cafe: { speed: 1.15 }, greebo: { hands: 1 }, beebs: { pat: 0.88 }, ali: { tip: 1.2 }, joff: { cook: 0.88 } };
+var HOSTLAB = { id: 'lab', host: 'lab_host', who: 'Shithead Laboozie', perk: 'Lights a Flaming Bag of Shit under every hob: everything cooks faster' };
+function hostDef() { return SV.host === 'lab' ? HOSTLAB : PLACE[SV.host] || PLACES[0]; }
+var PERK = { lab: { cook: 0.85 }, amy: { burn: 1.5 }, cafe: { speed: 1.15 }, greebo: { hands: 1 }, beebs: { pat: 0.88 }, ali: { tip: 1.2 }, joff: { cook: 0.88 } };
 var NDAYS = 20, UNLOCK_AT = 5;
 /* three shifts of 20 days at every place: beat day 20 for the night shift, night 20 for the nightmare shift */
 var SHIFTS = [
@@ -557,7 +559,7 @@ function draw() {
     var tw2 = KIT.wrap(G.lv % NDAYS === 0 && G.L.sh ? SHIFTS[G.L.sh].d : G.lv === 0 ? G.pl.twist : '"' + G.pl.quote + '"', 290, 10, 'body'); tw2.slice(0, 2).forEach(function (l, i) { text(l, W / 2, 158 + i * 12, { align: 'center', size: 10, font: 'body', col: '#a6968f' }); }); }
 }
 function drawHost() {
-  var walking = host.q.length && host.actT <= 0, f = walking ? Math.floor(host.walkT * 8) % 4 : 0, name = PLACE[SV.host].host, wk = name + '_w' + f;
+  var walking = host.q.length && host.actT <= 0, f = walking ? Math.floor(host.walkT * 8) % 4 : 0, name = hostDef().host, wk = (name === 'lab_host' ? 'lab' : name) + '_w' + f;
   R('rgba(0,0,0,0.35)', host.x - 10, host.y - 1, 20, 3);
   var busy = host.actT > 0 ? Math.round(Math.sin(KIT.t * 30)) : 0;
   spr(walking && KIT.has(wk) ? wk : name, host.x + busy, host.y, { flip: host.face < 0 });
@@ -589,7 +591,7 @@ function titleMenu() {
   G.mode = 'title'; G.pl = null; music.play('wntitle'); var last = PLACE[SV.last] || PLACES[0], pd = SV.places[last.id];
   KIT.menu({ cls: 'clear', logo: '../assets/wn-logo.webp', title: 'Willy Nilly', sub: 'Six places to run: a day shift, a night shift and a nightmare shift each. Seat them, feed them, take their money.',
     items: [{ label: 'PLAY', sub: last.name + ' · ' + lvName(Math.min(pd.unl, TOTAL) - 1), fn: function () { KIT.closeMenu(); startLevel(last.id, Math.min(pd.unl, TOTAL) - 1); }, cls: 'hot', def: true },
-      { label: 'PLACES', sub: Object.keys(SV.open).length + ' of ' + PLACES.length + ' open', fn: placesMenu }, { label: 'WHO IS WORKING', sub: PLACE[SV.host].who + ': ' + PLACE[SV.host].perk, fn: hostsMenu },
+      { label: 'PLACES', sub: Object.keys(SV.open).length + ' of ' + PLACES.length + ' open', fn: placesMenu }, { label: 'WHO IS WORKING', sub: hostDef().who + ': ' + hostDef().perk, fn: hostsMenu },
       { label: 'SHOP', sub: 'Tips in the jar: ' + SV.coins, fn: function () { upgradesMenu(titleMenu); } }, { label: 'HOW TO PLAY', fn: helpMenu }] });
 }
 function placesMenu() {
@@ -609,7 +611,7 @@ function daysMenu(pid, sh) {
     .concat([{ label: 'BACK', back: true, fn: function () { if (pd.unl > NDAYS) shiftsMenu(pid); else placesMenu(); } }]) });
 }
 function hostsMenu() {
-  KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) });
+  KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'SHITHEAD LABOOZIE' + (SV.host === 'lab' ? '  ✓' : ''), sub: HOSTLAB.perk, cls: SV.host === 'lab' ? 'done' : '', fn: function () { SV.host = 'lab'; persist(); sfx.play('select'); hostsMenu(); } }, { label: 'BACK', back: true, fn: titleMenu }]) });
 }
 var shopBack = null;
 function keepScroll(fn) { var box = document.querySelector('#menu .mbox'), y = box ? box.scrollTop : 0; fn(); box = document.querySelector('#menu .mbox'); if (box) box.scrollTop = y; }

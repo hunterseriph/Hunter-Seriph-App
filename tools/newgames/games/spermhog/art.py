@@ -3,7 +3,7 @@ the foes and bosses come from tools/foes (Load Legacy's), the saws and logs are 
 from pixelkit import Grid
 FOES = ['crawler', 'clown', 'rat', 'bat', 'balloon', 'cultrat', 'creamblob', 'crow', 'slime', 'toymouse', 'pieling', 'skeleton', 'bonehound', 'gravehand', 'wraith', 'mummy',
         'magmaslug', 'golem', 'corkbot', 'emberbat', 'imp', 'blumguard', 'blumling', 'blumeye', 'blumspore', 'knight', 'beast', 'kraken', 'pig', 'boner', 'hotload', 'blum', 'blum2']
-USE = ['ch_*', 'cumface'] + ['f_%s_*' % f for f in FOES] + ['p_saw0', 'p_saw1', 'p_logboat', 'h_gloop_baby_idle*', 'h_*_adult_*', 'f_pig_*', 'f_cowpig_*', 'h_*_baby_idle0', 'greebo_*', 'npc_greebo', 'cat', 'fac_*', 'steve0', 'steve1', 'p_ribs', 'p_skulls', 'p_crucible', 'p_chandelier']
+USE = ['ch_*', 'cumface', 'lab_pwalk*', 'lab_pjump*', 'lab_pidle*', 'lab_toss*', 'lab_hurt0', 'lab_lie0', 'lab_s0', 'lab_bag*', 'lab_face'] + ['f_%s_*' % f for f in FOES] + ['p_saw0', 'p_saw1', 'p_logboat', 'h_gloop_baby_idle*', 'h_*_adult_*', 'f_pig_*', 'f_cowpig_*', 'h_*_baby_idle0', 'greebo_*', 'npc_greebo', 'cat', 'fac_*', 'steve0', 'steve1', 'p_ribs', 'p_skulls', 'p_crucible', 'p_chandelier']
 CREAM = ('#fffbe8', '#f1e0b0', '#b8a070'); RED = ('#ff3a44', '#c4121c', '#6a0a10'); GOLD = ('#fff09a', '#ffc840', '#a8741a'); BLUE = ('#9adfff', '#3a8ac8', '#14406a')
 
 def drop():
@@ -370,3 +370,9 @@ def _backs():
     for i, f in enumerate(run(back(crop(ll, LJ, 'npc_greebo'), keep_top=0.42))): out['bk_greebo%d' % i] = f
     return out
 for _k, _v in _backs().items(): ART[_k] = (lambda v: (lambda: v))(_v)
+
+# Shithead Laboozie from behind, for the special stage (tools/laboozie/back.py)
+def _labback(i):
+    import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'laboozie'))
+    import back as _bk, art as _A; return _bk.back(_A.base()['lab_s0'], i)
+for _i in range(4): ART['bk_lab%d' % _i] = (lambda i=_i: _labback(i))

@@ -555,7 +555,7 @@ function titleMenu() {
   G.mode = 'title'; music.play('swtitle'); var cont = KIT.load('sw-run', null);
   KIT.menu({ cls: 'clear', logo: '../assets/sw-logo.webp', title: "Spuzzworld: Cum's Oddysee", sub: "Blumhead has Cumhead in his dungeon with a bear trap on his leg. Execution at dawn. The homunculi are down here too, waiting for the mincer. Limp out alone, or take them with you.",
     items: [cont ? { label: 'CARRY ON', sub: 'From the last screen you reached', fn: function () { KIT.closeMenu(); continueGame(); }, cls: 'hot', def: true } : null,
-      { label: cont ? 'START OVER' : 'BEGIN', fn: function () { KIT.closeMenu(); newGame(); }, cls: cont ? '' : 'hot', def: !cont }, { label: 'HOW TO PLAY', fn: helpMenu }].filter(Boolean),
+      { label: cont ? 'START OVER' : 'BEGIN', fn: function () { KIT.closeMenu(); newGame(); }, cls: cont ? '' : 'hot', def: !cont }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'HOW TO PLAY', fn: helpMenu }].filter(Boolean),
     note: SV.done ? 'Escapes ' + SV.done + '  ·  Most saved ' + SV.best + ' of ' + SCREENS.reduce(function (n, s) { return n + s.rows.join('').split('H').length - 1; }, 0) : '' });
 }
 function helpMenu() {
@@ -578,3 +578,9 @@ KIT.start({ w: SW, h: SH, update: update, draw: draw, onPause: pauseMenu,
 titleMenu();
 window.__sw = { G: G, get P() { return P; }, get homs() { return homs; }, SC: function () { return SC; }, newGame: function () { newGame(); STORY = null; startEscape(); }, story: newGame, ending: ending, get total() { return total; }, finish: finish, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, restore: restore, speak: speak, useUp: useUp, useDown: useDown, die: die,
   tp: function (key, tx, ty) { var s = SC[key]; P.x = s.sx * SW + tx * TT + 8; P.y = s.sy * SH + (ty + 1) * TT; P.st = 'stand'; P.ground = true; P.fallFrom = P.y; } };
+
+/* Shithead Laboozie can do the escape too: his own frames in place of Cumhead's (he limps on the same trap) */
+spr = function (n, x, y, o) { if (SV.who === 'lab' && typeof n === 'string' && G.mode !== 'title') { var m = /^(sw_lidle|sw_limp|sw_hob|ch_jump|ch_hurt|ch_death)(\d*)$/.exec(n);
+  if (m) { var k = +(m[2] || 0), n2 = m[1] === 'sw_lidle' ? 'lab_pidle' + (k % 4) : m[1] === 'sw_limp' || m[1] === 'sw_hob' ? 'lab_pwalk' + (k % 8) : m[1] === 'ch_jump' ? 'lab_pjump' + (k < 2 ? 0 : 1) : m[1] === 'ch_hurt' ? 'lab_hurt0' : 'lab_lie0';
+    o = Object.assign({}, o || {}); o.sc = (o.sc || 1) * 1.05; KIT.spr(n2, x, y, o); if (m[1] === 'sw_limp' || m[1] === 'sw_lidle' || m[1] === 'sw_hob') KIT.spr('sw_trap', x + 3 * (o.flip ? -1 : 1), y, { sc: 0.5 * (o.sc || 1) }); return; } }
+  return KIT.spr(n, x, y, o); };

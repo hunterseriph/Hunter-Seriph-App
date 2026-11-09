@@ -11,7 +11,9 @@ var CLASSES = {
   homunculus: { name: 'Homunculus', hp: 100, mana: 70, dmg: 8, spd: 1.1, jumps: 3, atk: 'acid', cd: 0.2, spec: 'ooze', specCost: 25,
     pas: 'Little Legs', pd: 'Triple jump and a smaller body. Hatches at the Hatchery in town and grows up during the run.', ad: 'Attack: depends on the breed that hatches.', sd: 'Special: every breed has its own.' }
 };
-var CLASSORDER = ['cumhead', 'spermaid', 'greebo', 'homunculus'];
+CLASSES.laboozie = { name: 'Shithead Laboozie', hp: 125, mana: 55, dmg: 11, spd: 1, jumps: 2, atk: 'bag', cd: 0.55, spec: 'storm', specCost: 32,
+  pas: 'Covered In It', pd: 'Foes covered in his shit take a third more damage from everything.', ad: 'Flaming Bag of Shit: lobbed in an arc. A hit covers them (poison); where it lands the floor burns for 8 seconds.', sd: 'Shit Storm: five flaming bags at once.' };
+var CLASSORDER = ['cumhead', 'spermaid', 'greebo', 'homunculus', 'laboozie'];
 
 /* areas: grid offsets are in room cells. The castle is the hub of the map; the roof is above it, the dungeon below, the city to the right. */
 var AREAS = {

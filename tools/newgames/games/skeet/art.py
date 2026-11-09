@@ -126,6 +126,11 @@ for _k in ('cu', 'sp', 'gr', 'ho'):
     for _a, _L in FT.anims(_k).items():
         for _i in range(len(_L)): ART['sk_%s_%s%d' % (_k, _a, _i)] = _fighter('sk_%s_%s%d' % (_k, _a, _i))
 
+# ---- SHITHEAD LABOOZIE: his frames are posed by the same rig from Hunter's drawing (tools/laboozie/make.py, lab_*)
+for _a, _L in FT.anims('cu').items():
+    for _i in range(len(_L)): ART['sk_lb_%s%d' % (_a, _i)] = (lambda n: lambda: B(n))('lab_%s%d' % (_a, _i))
+ART['s_bag'] = lambda: B('lab_bag0')
+
 # ---- BLUMWASHED HOMUNCULI: Blumhead's goo got into them. Real breed art, dyed his purple
 WASHED = ['gloop', 'frost', 'volt', 'ember', 'titan', 'leech', 'goldie', 'blood', 'scout', 'guard', 'medic']
 for br in WASHED:
@@ -238,4 +243,4 @@ def face(n, box, size=26):
         im = im.resize((max(1, int(round(w * s))), max(1, int(round(h * s)))), Image.NEAREST)
         out = Image.new('RGBA', (size, size), (0, 0, 0, 0)); out.paste(im, ((size - im.width) // 2, size - im.height), im); return out
     return go
-ART['hud_cu'] = face('ch_idle0', (0, 0, 30, 30)); ART['hud_sp'] = face('spermaid_d', (4, 0, 30, 26)); ART['hud_gr'] = face('greebo_d', (2, 0, 34, 30)); ART['hud_ho'] = face('h_gloop_adult_idle0', (4, 0, 30, 22))
+ART['hud_cu'] = face('ch_idle0', (0, 0, 30, 30)); ART['hud_sp'] = face('spermaid_d', (4, 0, 30, 26)); ART['hud_gr'] = face('greebo_d', (2, 0, 34, 30)); ART['hud_ho'] = face('h_gloop_adult_idle0', (4, 0, 30, 22)); ART['hud_lb'] = face('lab_s0', (2, 0, 29, 24))

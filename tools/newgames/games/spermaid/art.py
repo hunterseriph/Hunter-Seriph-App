@@ -3,7 +3,7 @@ Same outline and bevel shading as everything else (tools/pixelkit.py). Spermaid 
 the homunculus breeds, Sir Johnathan and the props come from the other games (USE)."""
 import math
 from pixelkit import Grid
-USE = ['spermaid_*', 'npc_spermaid', 'cat', 'coin', 'steve0', 'steve1', 'cumface',
+USE = ['lab_pwalk*', 'lab_pidle*', 'lab_toss*', 'lab_bag*', 'lab_burn*', 'spermaid_*', 'npc_spermaid', 'cat', 'coin', 'steve0', 'steve1', 'cumface',
        'npc_tb', 'npc_greebo', 'npc_pulsar', 'npc_saba', 'npc_amy', 'npc_ali', 'npc_joff', 'npc_beebs', 'npc_kaya', 'npc_potbelly',
        'f_*', 'p_chest', 'p_chestopen', 'p_bigchest', 'p_bigchestopen', 'p_skulls', 'p_ribs', 'p_creampool', 'p_crucible', 'p_cell', 'p_cellopen',
        'p_walleyeshut', 'p_saw0', 'p_saw1', 'p_vent', 'p_shrinedry', 'p_tallsign',

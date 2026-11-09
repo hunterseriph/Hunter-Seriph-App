@@ -53,7 +53,7 @@ function draw() {
   if (G.mode === 'select') return drawSelect();
   if (G.mode === 'vs') return drawVS();
   if (G.mode === 'end') return drawEnd();
-  if (G.mode === 'title') { G.S = STAGES[0]; drawBack(); HEROLIST.forEach(function (id, i) { var H = HEROES[id]; var hx = W * 0.1 + i * 30; shadow(hx, 60, H.w, 0); KIT.spr(H.idle[Math.floor(G.t * H.idleF + i) % H.idle.length], hx, FLOOR + 60, {}); }); drawFront(); return; }
+  if (G.mode === 'title') { G.S = STAGES[0]; drawBack(); HEROLIST.forEach(function (id, i) { var H = HEROES[id]; var hx = W * 0.08 + i * 26; shadow(hx, 60, H.w, 0); KIT.spr(H.idle[Math.floor(G.t * H.idleF + i) % H.idle.length], hx, FLOOR + 60, {}); }); drawFront(); return; }
   var zoomed = G.mode === 'duel' || G.mode === 'won' || (G.mode === 'over' && G.duel), g = KIT.ctx;
   if (zoomed) { var z = G.zoom || 1.5; g.save(); g.translate(0, KIT.H - 22); g.scale(z, z); g.translate(0, -(FLOOR + LANE)); }
   drawWorld();
@@ -86,7 +86,7 @@ function optionsMenu(back) {
 }
 function toSelect(kind) { KIT.closeMenu(); G.mode = 'select'; G.pickKind = kind; G.rushPick = false; G.sel = G.sel || 0; G.selBox = []; music.play('sktitle'); }
 function stepSelect() {
-  if (KIT.pressed('right')) { G.sel = (G.sel + 1) % 4; sfx.play('blip'); } if (KIT.pressed('left')) { G.sel = (G.sel + 3) % 4; sfx.play('blip'); }
+  var NH = HEROLIST.length; if (KIT.pressed('right')) { G.sel = (G.sel + 1) % NH; sfx.play('blip'); } if (KIT.pressed('left')) { G.sel = (G.sel + NH - 1) % NH; sfx.play('blip'); }
   if (KIT.ptr.tap && G.selBox) G.selBox.forEach(function (b, i) { var p = KIT.ptr; if (p.x > b[0] && p.x < b[0] + b[2] && p.y > b[1] && p.y < b[1] + b[3]) { if (G.sel === i) pickFighter(); else { G.sel = i; sfx.play('blip'); } } });
   if (KIT.pressed('a') || KIT.pressed('start')) pickFighter();
   if (KIT.pressed('b')) titleMenu();

@@ -1,7 +1,7 @@
 """Spuzzworld's art: mines, levers, the lift, the exit door, sign plates and the cell bars. The characters come from
 the shared sheets (Cumhead, the Lair Guards, Blumlings and the homunculus breeds)."""
 from pixelkit import Grid
-USE = ['ch_idle*', 'ch_walk*', 'ch_run*', 'ch_jump*', 'ch_hurt0', 'ch_death*', 'ch_icon0', 'f_blumguard_*', 'f_blumling_*', 'f_blum_0', 'f_blum_1',
+USE = ['lab_pidle*', 'lab_pwalk*', 'lab_pjump*', 'lab_hurt0', 'lab_lie0', 'ch_idle*', 'ch_walk*', 'ch_run*', 'ch_jump*', 'ch_hurt0', 'ch_death*', 'ch_icon0', 'f_blumguard_*', 'f_blumling_*', 'f_blum_0', 'f_blum_1',
        'h_gloop_teen_*', 'h_ember_teen_*', 'h_frost_teen_*', 'h_volt_teen_*', 'h_scout_teen_*', 'h_goldie_teen_*', 'h_blood_teen_*', 'h_medic_teen_*', 'h_titan_teen_*', 'h_leech_teen_*']
 RED = ('#ff3a44', '#c4121c', '#6a0a10'); IRON = ('#9a929a', '#5a545c', '#2a262c'); BLACK = ('#4a3a40', '#221a1e', '#0c0608'); GOLD = ('#fff09a', '#ffc840', '#a8741a')
 def mine(lit):

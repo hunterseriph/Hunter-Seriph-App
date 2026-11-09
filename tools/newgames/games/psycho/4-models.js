@@ -79,16 +79,32 @@ function buildRigs() {
     P.head = hd.upload(); var dr = M(); ell(dr, 0, 0, 0, 0.06, 0.06, 0.06, '#f0c070', 8, 5); tub(dr, [0, 0.04, 0], [0, 0.13, 0], 0.05, 0.0, '#f0c070', 8); P.drip = dr.upload();
     limbs(P, D, c); RIGS.cumhead = { P: P, D: D, eyeY: 1.5, drip: 1 }; })();
   /* TB: tall, cowboy hat, eye patch, that grin, his brown jacket and red scarf, a bottle of Silly Pills in his left hand */
-  function tbRig(fc) { var D = { lu: 0.46, ll: 0.46, tor: 0.6, shW: 0.27, hipW: 0.13, au: 0.33, al: 0.3, arm: 0.07, hand: 0.075, leg: 0.085, neck: 0.08 }, P = {}, c = { sleeve: '#5a3a20', hand: '#e8c0a0', legs: '#2a3048', boot: '#2a1a10' };
+  function tbRig(fc, clown) { var D = { lu: 0.46, ll: 0.46, tor: 0.6, shW: 0.27, hipW: 0.13, au: 0.33, al: 0.3, arm: 0.07, hand: 0.075, leg: 0.085, neck: 0.08 }, P = {}, c = { sleeve: '#5a3a20', hand: '#e8c0a0', legs: '#2a3048', boot: '#2a1a10' };
     var hp = M(); ell(hp, 0, 0, 0, 0.21, 0.13, 0.15, '#2a3048', 8, 4); tub(hp, [-0.2, 0.06, 0], [0.2, 0.06, 0], 0.03, 0.03, '#3a2412', 6); ell(hp, 0, 0.06, 0.15, 0.05, 0.035, 0.02, '#c8a040', 6, 3); P.hips = hp.upload();
-    var to = M(); ell(to, 0, D.tor * 0.5, 0, 0.28, D.tor * 0.55, 0.18, '#5a3a20', 10, 6); ell(to, 0, D.tor * 0.55, 0.06, 0.13, D.tor * 0.42, 0.14, '#c8b8a0', 8, 5, { b0: 0.4 });
-    tub(to, [0, D.tor * 0.9, 0], [0, D.tor * 1.02, 0], 0.15, 0.13, '#8a1a1a', 10, { cap: 1 }); tub(to, [0.05, D.tor * 0.92, 0.12], [0.1, D.tor * 0.6, 0.2], 0.04, 0.02, '#8a1a1a', 6); P.torso = to.upload();
-    var hd = M(); ell(hd, 0, 0.2, 0, 0.19, 0.22, 0.2, '#e8c0a0', 12, 8, { face: fc, fz: 0.2, fw: 0.82, fh: 0.82, fdv: 0.06 }); ell(hd, 0, 0.27, -0.03, 0.2, 0.17, 0.19, '#4a2e18', 10, 5, { only: 'back' });
-    tub(hd, [0, 0.36, 0], [0, 0.38, 0], 0.38, 0.38, '#5a3a20', 14, { cap: 1, cap0: 1 }); tub(hd, [0, 0.38, 0], [0, 0.56, 0], 0.18, 0.15, '#5a3a20', 10, { cap: 1 }); tub(hd, [0, 0.39, 0], [0, 0.44, 0], 0.185, 0.18, '#3a2412', 10);
+    if (clown) { c.sleeve = '#ffffff'; c.legs = '#2a50c0'; c.boot = '#c4121c'; c.hand = '#f4f0e8'; }
+    var to = M(); if (clown) { ell(to, 0, D.tor * 0.5, 0, 0.3, D.tor * 0.56, 0.2, '#ffffff', 10, 6, { T: TL('polka') }); [0.3, 0.55, 0.8].forEach(function (y) { ell(to, 0, D.tor * y, 0.2, 0.045, 0.045, 0.03, '#ffe36a', 6, 3); }); }
+    else { ell(to, 0, D.tor * 0.5, 0, 0.28, D.tor * 0.55, 0.18, '#5a3a20', 10, 6); ell(to, 0, D.tor * 0.55, 0.06, 0.13, D.tor * 0.42, 0.14, '#c8b8a0', 8, 5, { b0: 0.4 }); }
+    if (clown) { tub(to, [0, D.tor * 0.92, 0], [0, D.tor * 1.0, 0], 0.26, 0.2, '#f1e7d0', 12, { cap: 1 }); tub(to, [0, D.tor * 0.97, 0], [0, D.tor * 1.03, 0], 0.22, 0.14, '#c4121c', 12, { cap: 1 }); }
+    else { tub(to, [0, D.tor * 0.9, 0], [0, D.tor * 1.02, 0], 0.15, 0.13, '#8a1a1a', 10, { cap: 1 }); tub(to, [0.05, D.tor * 0.92, 0.12], [0.1, D.tor * 0.6, 0.2], 0.04, 0.02, '#8a1a1a', 6); } P.torso = to.upload();
+    var hd = M(); ell(hd, 0, 0.2, 0, 0.19, 0.22, 0.2, clown ? '#f4f0e8' : '#e8c0a0', 12, 8, { face: fc, fz: 0.2, fw: 0.82, fh: 0.82, fdv: 0.06 });
+    if (clown) { [-1, 1].forEach(function (sd) { ell(hd, sd * 0.19, 0.28, -0.02, 0.12, 0.11, 0.13, '#ffffff', 8, 5, { T: TL('wigred') }); ell(hd, sd * 0.13, 0.36, -0.08, 0.09, 0.08, 0.1, '#ffffff', 8, 4, { T: TL('wigred') }); }); ell(hd, 0, 0.17, 0.205, 0.045, 0.045, 0.04, '#e01010', 8, 5);
+      tub(hd, [0.04, 0.4, 0], [0.04, 0.42, 0], 0.13, 0.13, '#1a1a1e', 10, { cap: 1, cap0: 1 }); tub(hd, [0.04, 0.42, 0], [0.04, 0.55, 0], 0.07, 0.06, '#1a1a1e', 8, { cap: 1 }); tub(hd, [0.04, 0.43, 0], [0.04, 0.46, 0], 0.072, 0.072, '#c4121c', 8); }
+    else { ell(hd, 0, 0.27, -0.03, 0.2, 0.17, 0.19, '#4a2e18', 10, 5, { only: 'back' });
+    tub(hd, [0, 0.36, 0], [0, 0.38, 0], 0.38, 0.38, '#5a3a20', 14, { cap: 1, cap0: 1 }); tub(hd, [0, 0.38, 0], [0, 0.56, 0], 0.18, 0.15, '#5a3a20', 10, { cap: 1 }); tub(hd, [0, 0.39, 0], [0, 0.44, 0], 0.185, 0.18, '#3a2412', 10); }
     ell(hd, -0.19, 0.2, 0, 0.04, 0.06, 0.04, '#e0b090', 6, 3); ell(hd, 0.19, 0.2, 0, 0.04, 0.06, 0.04, '#e0b090', 6, 3); P.head = hd.upload();
     limbs(P, D, c); var bt = M(); tub(bt, [0, 0, 0], [0, 0.13, 0], 0.045, 0.045, '#f1e7d0', 8, { cap0: 1 }); tub(bt, [0, 0.13, 0], [0, 0.17, 0], 0.048, 0.048, '#c4121c', 8, { cap: 1 }); P.bottle = bt.upload();
     return { P: P, D: D, eyeY: 1.75 }; }
-  RIGS.tb = tbRig('f_tb'); RIGS.tbmad = tbRig('f_tbmad');
+  RIGS.tb = tbRig('f_tb'); RIGS.tbmad = tbRig('f_tbmad'); RIGS.tbclown = tbRig('f_tbclown', 1);
+  /* SHITHEAD LABOOZIE (from Hunter's drawing): a swirled poop of a head with big cartoon eyes and a grin, black hoodie,
+     white gloves, camo cargo trousers, tan boots */
+  (function () { var D = { lu: 0.4, ll: 0.4, tor: 0.5, shW: 0.23, hipW: 0.11, au: 0.29, al: 0.27, arm: 0.068, hand: 0.075, leg: 0.085, neck: 0.04 }, P = {}, c = { sleeve: '#1e1a20', fore: '#1e1a20', hand: '#f4f0ec', legs: '#5a5a38', boot: '#b08850' };
+    var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, '#4a4a30', 8, 4); ell(hp, 0.17, -0.06, 0.02, 0.06, 0.08, 0.07, '#4a4a30', 6, 3); ell(hp, -0.17, -0.06, 0.02, 0.06, 0.08, 0.07, '#4a4a30', 6, 3); P.hips = hp.upload();
+    var to = M(); ell(to, 0, D.tor * 0.5, 0, 0.26, D.tor * 0.58, 0.18, '#1e1a20', 10, 6); ell(to, 0, D.tor * 0.92, -0.1, 0.2, 0.12, 0.12, '#262228', 8, 4); // the hood down his back
+    ell(to, 0, D.tor * 0.3, 0.15, 0.15, 0.08, 0.05, '#2a262c', 8, 3); tub(to, [0.05, D.tor * 0.9, 0.14], [0.06, D.tor * 0.62, 0.17], 0.01, 0.01, '#d8d0c0', 4); tub(to, [-0.05, D.tor * 0.9, 0.14], [-0.06, D.tor * 0.62, 0.17], 0.01, 0.01, '#d8d0c0', 4); P.torso = to.upload();
+    var hd = M(), B = '#57300f'; ell(hd, 0, 0.17, 0, 0.27, 0.17, 0.25, B, 12, 7, { face: 'f_lab', fz: 0.25, fw: 0.9, fh: 0.95, fdv: -0.02 });
+    ell(hd, 0.02, 0.34, -0.02, 0.21, 0.11, 0.2, '#653812', 12, 5); ell(hd, -0.01, 0.46, -0.03, 0.14, 0.08, 0.13, '#57300f', 10, 5); tub(hd, [0, 0.52, -0.03], [0.05, 0.64, -0.06], 0.07, 0.0, '#653812', 8);
+    tub(hd, [-0.25, 0.25, 0], [0.24, 0.29, 0.02], 0.025, 0.025, '#4a2408', 6); tub(hd, [0.2, 0.39, 0.0], [-0.19, 0.42, -0.02], 0.02, 0.02, '#4a2408', 6); P.head = hd.upload();
+    limbs(P, D, c); RIGS.laboozie = { P: P, D: D, eyeY: 1.45 }; })();
   /* the GIMP: black leather head to toe, zipped mouth, studded belts */
   (function () { var D = { lu: 0.44, ll: 0.44, tor: 0.56, shW: 0.25, hipW: 0.12, au: 0.31, al: 0.29, arm: 0.062, hand: 0.07, leg: 0.078, neck: 0.07 }, P = {}, c = { sleeve: '#1e1e22', hand: '#141416', legs: '#1e1e22', boot: '#0a0a0c' };
     var hp = M(); ell(hp, 0, 0, 0, 0.19, 0.12, 0.14, '#1e1e22', 8, 4); P.hips = hp.upload();
@@ -115,9 +131,13 @@ function buildRigs() {
   var W = {};
   var pl = M(); bxp(pl, -0.03, -0.05, -0.045, 0.03, 0.85, 0.045, '#a07a48', TL('wood')); tub(pl, [0, 0.72, 0.045], [0, 0.72, 0.15], 0.006, 0.004, '#c8c8c0', 4); ell(pl, 0, 0.72, 0.05, 0.015, 0.015, 0.006, '#8a3a1a', 5, 3); W.plank = pl.upload();
   var bt = M(); tub(bt, [0, -0.06, 0], [0, 0.3, 0], 0.022, 0.03, '#2a1a10', 8, { cap0: 1 }); tub(bt, [0, 0.3, 0], [0, 0.82, 0], 0.03, 0.055, '#c8a070', 8); ell(bt, 0, 0.82, 0, 0.055, 0.03, 0.055, '#c8a070', 8, 4); W.bat = bt.upload();
+  var kn = M(); tub(kn, [0, -0.04, 0], [0, 0.1, 0], 0.018, 0.018, '#2a1a10', 6, { cap0: 1 }); bxp(kn, -0.03, 0.1, -0.01, 0.03, 0.115, 0.01, '#7a7a70'); bxp(kn, -0.006, 0.115, -0.02, 0.006, 0.33, 0.022, '#d8d8d0', TL('steel')); W.knife = kn.upload();
+  var hm = M(); tub(hm, [0, -0.05, 0], [0, 0.42, 0], 0.017, 0.02, '#8a5a30', 6, { cap0: 1 }); bxp(hm, -0.028, 0.38, -0.05, 0.028, 0.47, 0.07, '#5a5a60', TL('steel')); bxp(hm, -0.02, 0.4, -0.12, 0.02, 0.45, -0.05, '#4a4a50', TL('steel')); W.hammer = hm.upload();
+  var ax = M(); tub(ax, [0, -0.08, 0], [0, 0.88, 0], 0.022, 0.022, '#c4121c', 6, { cap0: 1 }); tub(ax, [0, -0.08, 0], [0, 0.02, 0], 0.026, 0.026, '#ffe36a', 6); bxp(ax, -0.012, 0.7, 0.0, 0.012, 0.92, 0.22, '#a0a0a8', TL('steel')); bxp(ax, -0.014, 0.74, 0.18, 0.014, 0.9, 0.24, '#e0e0e8'); bxp(ax, -0.016, 0.78, -0.16, 0.016, 0.84, 0.0, '#c4121c'); W.fireaxe = ax.upload();
   var hg = M(); bxp(hg, -0.022, -0.02, -0.03, 0.022, 0.05, 0.08, '#2a2a2e'); bxp(hg, -0.024, 0.05, -0.04, 0.024, 0.09, 0.24, '#3a3a40'); W.handgun = hg.upload();
   var sg = M(); bxp(sg, -0.03, -0.06, -0.24, 0.03, 0.04, 0.04, '#5a3a20', TL('wood')); tub(sg, [0, 0.06, 0.0], [0, 0.06, 0.62], 0.022, 0.022, '#2a2a2e', 6); tub(sg, [0, 0.025, 0.08], [0, 0.025, 0.42], 0.03, 0.03, '#6a4a28', 6); W.shotgun = sg.upload();
   var rf = M(); bxp(rf, -0.028, -0.06, -0.3, 0.028, 0.04, 0.05, '#4a3018', TL('wood')); tub(rf, [0, 0.055, 0.0], [0, 0.055, 0.7], 0.016, 0.014, '#2a2a2e', 6); tub(rf, [0, 0.11, 0.02], [0, 0.11, 0.24], 0.024, 0.024, '#1a1a1e', 6, { cap: 1, cap0: 1 }); bxp(rf, -0.025, 0.0, 0.05, 0.025, 0.05, 0.4, '#4a3018', TL('wood')); W.rifle = rf.upload();
+  var bg = M(); bxp(bg, -0.07, -0.02, -0.06, 0.07, 0.16, 0.06, '#a07a48', TL('wood')); ell(bg, 0, 0.18, 0, 0.06, 0.04, 0.05, '#5a3010', 6, 3); W.bag = bg.upload(); // the flaming bag of shit
   RIGS.weap = W;
   var sh = M(); var T = TL('shadow'); sh.quad([-0.5, 0.015, -0.5], [0.5, 0.015, -0.5], [0.5, 0.015, 0.5], [-0.5, 0.015, 0.5], [0, 0, 1, 0, 1, 1, 0, 1], T, [0.5, 0.5, 0.5], [0, 1, 0]); RIGS.shadow = sh.upload();
   var dm = M(); dm.quad([0, 0, -0.04], [TSZ * 0.92, 0, -0.04], [TSZ * 0.92, 2.25, -0.04], [0, 2.25, -0.04], [0, 1, 1, 1, 1, 0, 0, 0], TL('door'), [0.5, 0.5, 0.5], [0, 0, -1]); dm.quad([0, 0, 0.04], [TSZ * 0.92, 0, 0.04], [TSZ * 0.92, 2.25, 0.04], [0, 2.25, 0.04], [0, 1, 1, 1, 1, 0, 0, 0], TL('door'), [0.5, 0.5, 0.5], [0, 0, 1]);
