@@ -458,15 +458,7 @@ function win() {
 var R = KIT.R, spr = KIT.spr, text = KIT.text;
 function drawRoom() {
   var F = run.F;
-  R('#070405', 0, 0, W, H);
-  // walls
-  R(F.wall, RX, RY, IW + WALL * 2, IH + WALL * 2); R('#12040a', RX, RY, IW + WALL * 2, 2); R('rgba(0,0,0,0.35)', RX, RY + IH + WALL * 2 - 4, IW + WALL * 2, 4);
-  for (var bx = RX; bx < RX + IW + WALL * 2; bx += 12) { R('rgba(0,0,0,0.22)', bx, RY, 1, WALL); R('rgba(0,0,0,0.22)', bx + 6, RY + IH + WALL, 1, WALL); }
-  for (var by = RY; by < RY + IH + WALL * 2; by += 12) { R('rgba(0,0,0,0.22)', RX, by, WALL, 1); R('rgba(0,0,0,0.22)', RX + IW + WALL, by + 6, WALL, 1); }
-  // floor
-  R(F.floor, IX0, IY0, IW, IH);
-  for (var cy = 0; cy < ROWS; cy++) for (var cx = 0; cx < COLS; cx++) { if ((cx + cy) % 2) R(F.tile, IX0 + cx * TS, IY0 + cy * TS, TS, TS); R('rgba(255,255,255,0.03)', IX0 + cx * TS, IY0 + cy * TS, TS, 1); }
-  R('rgba(0,0,0,0.3)', IX0, IY0, IW, 4); R('rgba(0,0,0,0.3)', IX0, IY0, 4, IH);
+  roomBack(); // the painted room (game3.js)
   // doors
   for (var d in room.doors) {
     var nb = room.doors[d], kind = nb.type === 'boss' || room.type === 'boss' ? 'boss' : nb.type === 'treasure' ? 'gold' : nb.type === 'shop' ? 'shop' : 'n', open = room.cleared && !nb.locked;

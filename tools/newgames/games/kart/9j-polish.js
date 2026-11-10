@@ -30,7 +30,7 @@ function hull(m, fr, T, pts, col, bev) {
   for (var v = 0; v < 8; v++) { var fs = []; for (var k = 0; k < 6; k++) if (F[k].ix.indexOf(v) >= 0) fs.push(k); if (fs.length === 3) m.tri(at(fs[0], v), at(fs[1], v), at(fs[2], v), [0.5, 0.5, 0.1, 0.1, 0.9, 0.1], T, F[fs[0]].hi); }
 }
 kart3D = (function (orig) { return function (m, A, k, fr) {
-  var me = typeof RACE !== 'undefined' && RACE && RACE.me, far = !!(me && k !== me && k.x !== undefined && Math.hypot(k.x - me.x, k.z - me.z) > 26);
+  var me = typeof RACE !== 'undefined' && RACE && RACE.me, far = !!(me && k !== me && RACE.karts && RACE.karts.indexOf(k) >= 0 && Math.hypot(k.x - me.x, k.z - me.z) > 26); // only karts out on the track; the turntable always gets the full kart
   HULLFAR = far; try { orig(m, A, k, fr); } finally { HULLFAR = false; } if (far) return;
   var W = A.tile('white'), cu = k.cust || {}, base = k.c.kart, col = [cu.c0 || base[0], cu.c1 || base[1], cu.c2 || base[2]], body = cu.body || 'classic', chrome = '#d8d0d8', lamp = '#fff6d8', wh = cu.wheel || 'std';
   if (body === 'classic') {

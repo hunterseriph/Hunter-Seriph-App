@@ -1375,14 +1375,25 @@ function drawWorldTile(ch, px, py, x, y, ents) {
   if (pl) { R(WTILE['.'], px, py, TS, TS); ents.push({ y: py + 16, d: function () { spr(pl, px + 8, py + 18); } }); }
 }
 /* the town: the ground is drawn once into a layer (it never changes), the things with height are sorted with the people */
-var TTHEME = { red: { grass: ['#2a120e', '#30160f', '#26100c'], cob: ['#5a4a42', '#4a3c36', '#6a5a50'], fence: '#3a2416', water: '#e8d8b0' }, park: { grass: ['#1a0a14', '#200c18', '#160810'], cob: ['#3a1a2a', '#2a1020', '#4a2234'], fence: '#c4121c', water: '#f1e0b0' } };
+var TTHEME = { red: { grass: ['#2a120e', '#30160f', '#26100c'], cob: ['#5a4a42', '#4a3c36', '#6a5a50'], fence: '#3a2416', water: '#e8d8b0' }, park: { tuft: '#3a1430', mort: '#12060e', kerb: '#6a3048', grass: ['#1a0a14', '#200c18', '#160810'], cob: ['#3a1a2a', '#2a1020', '#4a2234'], fence: '#c4121c', water: '#f1e0b0' } };
 function drawTownLayer(c) {
   var T = buildTown(G.mid), th = TTHEME[T.sp.theme];
-  var L = KIT.layer('jv-town-' + G.mid, T.w * TS, T.h * TS, function () {
+  var L = KIT.layer('jv-town2-' + G.mid, T.w * TS, T.h * TS, function () {
     for (var y = 0; y < T.h; y++) for (var x = 0; x < T.w; x++) {
       var ch = T.rows[y][x], px = x * TS, py = y * TS, hsh = (x * 73 + y * 151) % 7;
-      R(th.grass[hsh % 3], px, py, TS, TS); if (hsh === 0) { R('#3a1a12', px + 3, py + 5, 1, 2); R('#3a1a12', px + 5, py + 4, 1, 3); }
-      if (ch === ',' || ch === 'F' || ch === 'b' || ch === 'L' || ch === 'D') { R(th.cob[1], px, py, TS, TS); R(th.cob[0], px + 1, py + 1, 6, 6); R(th.cob[0], px + 9, py + 1, 6, 6); R(th.cob[2], px + 5, py + 9, 6, 6); R(th.cob[0], px - 3 + 16, py + 9, 3, 6); R(th.cob[0], px, py + 9, 4, 6); }
+      var hs = function (n) { var v = Math.sin(x * 127.1 + y * 311.7 + n * 74.7) * 43758.5453; return v - Math.floor(v); }, pave = function (q) { return q === ',' || q === 'F' || q === 'b' || q === 'L' || q === 'D'; }, at = function (dx, dy) { return (T.rows[y + dy] || [])[x + dx]; };
+      R(th.grass[hsh % 3], px, py, TS, TS); // the ground: patches, tufts of dead grass, grit
+      if (hs(1) < 0.5) R(th.grass[(hsh + 1) % 3], px + Math.floor(hs(2) * 8), py + Math.floor(hs(3) * 8), 7, 5);
+      for (var tf = 0; tf < 3; tf++) { var gx = px + 1 + Math.floor(hs(4 + tf) * 13), gy = py + 3 + Math.floor(hs(8 + tf) * 11); R(th.tuft || '#4a2418', gx, gy, 1, 3); R(th.tuft || '#4a2418', gx + 2, gy + 1, 1, 2); R('rgba(0,0,0,0.25)', gx, gy + 3, 3, 1); }
+      if (hs(12) < 0.12) { R('#12040a', px + 5, py + 8, 5, 4); R('#5a4a44', px + 6, py + 8, 3, 3); R('#8a7a70', px + 6, py + 8, 2, 1); }
+      if (pave(ch)) { // the paving: stones of different sizes, each with a lit top and a shaded foot, dark mortar between
+        R(th.mort || '#1c1214', px, py, TS, TS);
+        var rows = [[0, 5], [5, 6], [11, 5]]; rows.forEach(function (rw, ri) { var off = Math.floor(hs(20 + ri + y * 0.01) * 6) - 3 + (ri % 2 ? 4 : 0), sx = px + off - 8; while (sx < px + TS) { var w = 5 + Math.floor(hs(30 + ri * 9 + (sx - px)) * 5), a0 = Math.max(px, sx), a1 = Math.min(px + TS, sx + w - 1);
+            if (a1 > a0) { var cc = th.cob[Math.floor(hs(50 + ri * 5 + (sx - px)) * 3)]; R(cc, a0, py + rw[0], a1 - a0, rw[1] - 1); R('rgba(255,255,255,0.1)', a0, py + rw[0], a1 - a0, 1); R('rgba(0,0,0,0.22)', a0, py + rw[0] + rw[1] - 2, a1 - a0, 1); if (hs(70 + sx) < 0.12) R('rgba(0,0,0,0.3)', a0 + 1, py + rw[0] + 2, 2, 1); }
+            sx += w; } });
+        if (!pave(at(0, -1))) { R('#12040a', px, py, TS, 2); R(th.kerb || '#7a6a60', px, py + 2, TS, 1); } if (!pave(at(0, 1))) { R('#12040a', px, py + TS - 2, TS, 2); for (var e1 = 0; e1 < 3; e1++) R(th.tuft || '#4a2418', px + 2 + e1 * 5 + Math.floor(hs(80 + e1) * 3), py + TS - 4, 1, 3); }
+        if (!pave(at(-1, 0))) R('#12040a', px, py, 2, TS); if (!pave(at(1, 0))) R('#12040a', px + TS - 2, py, 2, TS);
+        if (hs(90) < 0.05) { var cc2 = KIT.ctx; cc2.fillStyle = 'rgba(90,6,12,0.5)'; cc2.beginPath(); cc2.ellipse(px + 8, py + 9, 6, 3, 0, 0, 6.29); cc2.fill(); R('rgba(255,255,255,0.2)', px + 5, py + 8, 3, 1); } } // a red puddle
       if (ch === '#') { R(th.fence, px, py + 6, TS, 3); R(th.fence, px + 2, py + 2, 3, 12); R(th.fence, px + 11, py + 2, 3, 12); R('rgba(0,0,0,0.3)', px, py + 14, TS, 2); }
       if (ch === '~') { R('#5a060c', px, py, TS, TS); if ((x + y) % 2) R('#8a1018', px + 3, py + 6, 8, 1); }
       if (ch === 'f') { R('#1a2a10', px + 1, py + 2, 14, 12); for (var k = 0; k < 4; k++) { var fx = px + 2 + ((x * 5 + k * 7) % 11), fy = py + 3 + ((y * 3 + k * 5) % 9); R(['#ff2630', '#ffe36a', '#ff6aa0', '#ffffff'][k], fx, fy, 2, 2); } }

@@ -1136,23 +1136,27 @@ function drawMama() {
 function drawRoom() {
   var fr = floorRect(), th = G.pl.th, pl = G.pl;
   var dec = SV.decor[pl.id] || 0;
-  KIT.blit(KIT.layer('wn-room-' + pl.id + '-' + G.L.t + '-' + dec, W, H, function () {
+  KIT.blit(KIT.layer('wn-room2-' + pl.id + '-' + G.L.t + '-' + dec, W, H, function () {
     R('#0a0506', 0, 0, W, H);
     R(th.wall, 0, 0, W, 110);
     if (th.planks) { for (var y0 = 0; y0 < 110; y0 += 12) { R(th.brick, 0, y0 + 1, W, 10); R(th.hi, 0, y0 + 1, W, 1); } for (var bx = 20; bx < W; bx += 90) R('#1a0e04', bx, 0, 10, 110); }
     else for (var y = 0; y < 110; y += 8) for (var x = (y / 8) % 2 ? -8 : 0; x < W; x += 16) { R(th.brick, x + 1, y + 1, 14, 6); R(th.hi, x + 1, y + 1, 14, 1); }
-    R('rgba(0,0,0,0.3)', 0, 102, W, 8);
+    wnWall(th, pl);
     for (var ty = fr.y0; ty < fr.y1; ty += 16) for (var tx = fr.x0; tx < fr.x1; tx += 16) {
       if (th.planks) { R(((ty - fr.y0) / 16) % 2 ? th.fl[0] : th.fl[1], tx, ty, 16, 16); R('rgba(0,0,0,0.25)', tx, ty + 15, 16, 1); if (((tx + ty * 3) / 16) % 5 === 0) R('rgba(0,0,0,0.3)', tx + 15, ty, 1, 16); }
-      else { var on = ((tx - fr.x0) / 16 + (ty - fr.y0) / 16) % 2 === 0; R(on ? th.fl[0] : th.fl[1], tx, ty, 16, 16); R('rgba(255,255,255,0.04)', tx, ty, 16, 1); } }
-    R('rgba(0,0,0,0.25)', fr.x0, fr.y0, fr.x1 - fr.x0, 4);
-    if (fr.x1 < 476) { R('#140808', fr.x1, 110, W - fr.x1, H - 110); for (var bx2 = fr.x1 + 4; bx2 < W; bx2 += 30) { R('#5a3a24', bx2, 126, 24, 120); R('#3a2416', bx2, 126, 2, 120); } text('CLOSED FOR', fr.x1 + (W - fr.x1) / 2, 166, { align: 'center', size: 8, col: '#a6968f' }); text('EXPANSION', fr.x1 + (W - fr.x1) / 2, 178, { align: 'center', size: 8, col: '#a6968f' }); }
-    if (fr.y1 < 268) { R('#140808', 0, fr.y1, W, H - fr.y1); for (var by2 = fr.y1 + 6; by2 < H; by2 += 18) { R('#5a3a24', 70, by2, W - 80, 12); R('#3a2416', 70, by2, W - 80, 2); } text('MORE TABLES SOON', W / 2 + 30, fr.y1 + 26, { align: 'center', size: 8, col: '#a6968f' }); }
-    R('#12040a', 0, 110, 60, H - 110); R('#1e0a0c', 4, 110, 52, H - 110); for (var q = 0; q < 4; q++) R('#2a0e10', 8, 158 + q * 26, 44, 2); // the waiting area
+      else { var on = ((tx - fr.x0) / 16 + (ty - fr.y0) / 16) % 2 === 0; R(on ? th.fl[0] : th.fl[1], tx, ty, 16, 16); R('rgba(255,255,255,0.07)', tx, ty, 16, 1); R('rgba(255,255,255,0.04)', tx, ty, 1, 16); R('rgba(0,0,0,0.22)', tx, ty + 15, 16, 1); R('rgba(0,0,0,0.16)', tx + 15, ty, 1, 16);
+        var hsh = (tx * 7 + ty * 13) % 11; if (hsh === 0) { R('rgba(255,255,255,0.06)', tx + 4, ty + 3, 6, 1); R('rgba(255,255,255,0.06)', tx + 3, ty + 4, 1, 4); } else if (hsh === 5) { R('rgba(0,0,0,0.2)', tx + 5, ty + 8, 4, 1); R('rgba(0,0,0,0.2)', tx + 8, ty + 9, 3, 1); } } }
+    R('rgba(0,0,0,0.34)', fr.x0, fr.y0, fr.x1 - fr.x0, 3); R('rgba(0,0,0,0.18)', fr.x0, fr.y0 + 3, fr.x1 - fr.x0, 4); R('rgba(0,0,0,0.08)', fr.x0, fr.y0 + 7, fr.x1 - fr.x0, 5);
+    if (fr.x1 < 476) wnClosed(fr.x1, 110, W - fr.x1, H - 110, ['CLOSED FOR', 'EXPANSION']);
+    if (fr.y1 < 268) wnClosed(60, fr.y1, W - 60, H - fr.y1, ['MORE TABLES SOON']);
+    R('#12040a', 0, 110, 60, H - 110); R('#1e0a0c', 4, 110, 52, H - 110); wnWait(th); // the waiting area
     // the kitchen counter along the back
     R('#1a0a0c', 282, 50, W - 282, 60); R('#2a0e10', 282, 50, W - 282, 2); R('#5a4a3a', 282, 104, W - 282, 6); R('#8a7a6a', 282, 104, W - 282, 2);
+    wnCounter(th);
     // the sign
+    R('#12040a', 124, 4, 3, 12); R('#12040a', 229, 4, 3, 12); R('#8a7a6a', 125, 4, 1, 12); R('#8a7a6a', 230, 4, 1, 12); // the sign hangs on two rods
     R('#12040a', 108, 14, 140, 28); R(th.sign, 110, 16, 136, 24); R('#0a0204', 113, 19, 130, 18);
+    R('rgba(255,255,255,0.25)', 110, 16, 136, 1); R('rgba(0,0,0,0.3)', 110, 39, 136, 1);
     if (dec >= 1) { // the wall poster
       R('#12040a', 254, 4, 40, 42); R('#6e3a1e', 255, 5, 38, 40); R('#a8643a', 255, 5, 38, 1); R('#1a0a0c', 258, 8, 32, 34); R(th.sign, 258, 8, 32, 3);
       spr(DISH[pl.mains[pl.mains.length - 1]].s, 274, 34, { sc: 1.2 }); text('NO.1', 274, 35, { align: 'center', size: 6, col: th.sign });
@@ -1361,6 +1365,47 @@ KIT.start({ w: W, h: H, pad: 'none', update: update, draw: draw, onPause: pauseM
 titleMenu();
 window.__wn = { get cursor() { return cursor; }, get sel() { return sel; }, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, G: G, get host() { return host; }, get amy() { return host; }, get groups() { return groups; }, get tables() { return tables; }, get sts() { return sts; }, get queue() { return queue; },
   get takeaways() { return takeaways; }, startLevel: function (a, b) { if (typeof a === 'number') return startLevel('amy', a); startLevel(a, b); }, doJob: doJob, seat: seat, newGroup: newGroup, endLevel: endLevel, SV: SV, PLACES: PLACES, levelFor: levelFor, activate: activate, hotspots: hotspots, usePopper: usePopper, startMama: function () { G.result = { st: 2, pass: true, bonus: 0 }; startMama(); }, get MM() { return MM; } };
+
+/* ---------- update 129: the rooms dressed (he said it all looked basic) ---------- */
+function wnWall(th, pl) {
+  var c = KIT.ctx, x, y;
+  R('rgba(255,255,255,0.05)', 0, 0, W, 26); R('rgba(0,0,0,0.12)', 0, 52, W, 26); // light from the lamps above, fading down the wall
+  R('#12040a', 0, 6, W, 3); R(th.hi, 0, 6, W, 1); // the picture rail
+  /* two tall windows on the night outside, a red moon in one */
+  [66, 304].forEach(function (wx, n) { if (wx > 282 && n) return; R('#12040a', wx - 2, 18, 30, 54); R('#3a2416', wx - 1, 19, 28, 52); R('#0a0612', wx + 1, 21, 24, 48); R('#140a1e', wx + 1, 45, 24, 24);
+    if (!n) { c.fillStyle = '#c4121c'; c.beginPath(); c.arc(wx + 16, 34, 7, 0, 6.29); c.fill(); c.fillStyle = '#ff2630'; c.beginPath(); c.arc(wx + 15, 33, 5, 0, 6.29); c.fill(); R('#8e0c14', wx + 13, 35, 3, 2); }
+    for (x = 0; x < 5; x++) { var bh = 6 + ((x * 7 + n * 3) % 4) * 4; R('#07040a', wx + 1 + x * 5, 69 - bh, 5, bh); if (x % 2) R('#ffe36a', wx + 2 + x * 5, 69 - bh + 2, 1, 1); }
+    R('#3a2416', wx + 12, 21, 2, 48); R('#3a2416', wx + 1, 44, 24, 2); R('#5a3a24', wx - 3, 70, 32, 3); R('#8a5a3a', wx - 3, 70, 32, 1); R('rgba(255,255,255,0.08)', wx + 2, 22, 3, 20); });
+  /* wainscot: dark panels under a rail, a skirting board at the floor */
+  R('#12040a', 0, 78, W, 32); R('#2a1210', 0, 80, W, 28); R('#5a2a1c', 0, 79, W, 2); R('#8a4a2c', 0, 79, W, 1);
+  for (x = 4; x < W; x += 34) { R('#1c0b0a', x, 84, 28, 18); R('#3a1a14', x, 84, 28, 1); R('#3a1a14', x, 84, 1, 18); R('#12040a', x + 27, 84, 1, 18); R('#12040a', x, 101, 28, 1); }
+  R('#12040a', 0, 105, W, 5); R('#3a1a14', 0, 105, W, 1);
+}
+function wnClosed(x, y, w, h, lines) { // a part of the room not opened yet: dust sheets, stacked chairs in the dark, tape across it
+  var c = KIT.ctx, i; R('#0c0607', x, y, w, h); R('#12040a', x, y, 2, h);
+  c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
+  for (i = 0; i < w; i += 16) for (var j = 0; j < h; j += 16) if (((i + j) / 16) % 2) R('#100809', x + i, y + j, 16, 16);
+  for (i = 0; i < Math.max(1, Math.floor(w / 46)); i++) { var cx = x + 24 + i * 46, cy = y + h - 10; if (h < 60) cy = y + h - 4; // a table under a dust sheet with chairs stacked on it
+    R('#12040a', cx - 15, cy - 23, 30, 22); R('#4a4448', cx - 14, cy - 22, 28, 20); R('#6a6468', cx - 14, cy - 22, 28, 3); R('#3a3438', cx - 8, cy - 18, 1, 16); R('#3a3438', cx + 5, cy - 19, 1, 17); R('#2a2428', cx - 14, cy - 3, 28, 1);
+    if (h >= 60) { R('#12040a', cx - 7, cy - 37, 14, 15); R('#3a1a14', cx - 6, cy - 36, 12, 4); R('#3a1a14', cx - 6, cy - 36, 2, 13); R('#3a1a14', cx + 4, cy - 36, 2, 13); } }
+  /* hazard tape, sagging across */
+  c.lineWidth = 5; c.strokeStyle = '#12040a'; c.beginPath(); c.moveTo(x, y + Math.min(26, h * 0.3)); c.quadraticCurveTo(x + w / 2, y + Math.min(44, h * 0.55), x + w, y + Math.min(24, h * 0.28)); c.stroke();
+  c.lineWidth = 3; c.strokeStyle = '#ffe36a'; c.setLineDash([6, 6]); c.stroke(); c.strokeStyle = '#1a1208'; c.lineDashOffset = 6; c.stroke(); c.setLineDash([]); c.lineDashOffset = 0;
+  c.restore();
+  var tw = 0; lines.forEach(function (l) { tw = Math.max(tw, KIT.tw(l, 8)); }); var bw = tw + 14, bh = lines.length * 11 + 8, bx = Math.round(x + w / 2 - bw / 2), by = Math.round(y + Math.min(h - bh - 4, Math.max(8, h * 0.5 - bh / 2 + 8)));
+  R('#12040a', bx - 1, by - 1, bw + 2, bh + 2); R('#5a3a24', bx, by, bw, bh); R('#8a5a3a', bx, by, bw, 1); R('#3a2416', bx, by + bh - 2, bw, 2); R('#12040a', bx + 3, by + 3, 2, 2); R('#12040a', bx + bw - 5, by + 3, 2, 2);
+  lines.forEach(function (l, n) { text(l, bx + bw / 2, by + 5 + n * 11, { align: 'center', size: 8, col: '#f1e7d0' }); });
+}
+function wnWait(th) { // the waiting area: a red runner with gold edges and rope posts
+  R('#6a0a10', 12, 114, 36, H - 114); R('#8e0c14', 16, 114, 28, H - 114); R('#ffe36a', 13, 114, 1, H - 114); R('#ffe36a', 46, 114, 1, H - 114);
+  for (var y = 122; y < H; y += 14) { R('#6a0a10', 28, y, 4, 4); R('#c4121c', 29, y + 1, 2, 2); }
+  for (var q = 0; q < 4; q++) { var py = 158 + q * 26; R('rgba(0,0,0,0.3)', 5, py + 2, 8, 2); R('#12040a', 6, py - 14, 5, 16); R('#c8a050', 7, py - 13, 3, 14); R('#ffe36a', 7, py - 13, 1, 14); R('#12040a', 5, py - 16, 7, 4); R('#ffe36a', 6, py - 15, 5, 2);
+    if (q < 3) for (var k = 0; k < 6; k++) R('#8e0c14', 8, py + 1 + k * 2 + (k === 2 || k === 3 ? 0 : 0), 2, 2); }
+}
+function wnCounter(th) { // the counter front: panels, a kick board, a shine along the top
+  for (var x = 286; x < W - 4; x += 32) { R('#12040a', x, 56, 28, 44); R('#241012', x + 1, 57, 26, 42); R('#3a181a', x + 1, 57, 26, 1); R('#3a181a', x + 1, 57, 1, 42); R('#160809', x + 5, 62, 18, 32); R('#2e1214', x + 5, 62, 18, 1); }
+  R('#12040a', 282, 100, W - 282, 4); R('#a89a8a', 282, 104, W - 282, 1); R('rgba(255,255,255,0.18)', 300, 105, 40, 1); R('rgba(255,255,255,0.18)', 380, 105, 22, 1); R('rgba(0,0,0,0.35)', 282, 110, W - 282, 3);
+}
 
 </script>
 </body></html>

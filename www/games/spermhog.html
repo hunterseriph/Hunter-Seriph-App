@@ -3748,11 +3748,18 @@ function drawFx(g, f, x, y) {
   else if (f.k === 'cage') { spr('h_gloop_baby_idle' + (Math.floor(G.t * 4) % 2), x, y - Math.max(0, 3 - f.t) * 20, {}); }
 }
 /* ---------- the HUD ---------- */
+var HUDD = { n: 0, pop: 0 };
 function drawHud() {
   var t = G.time, m = Math.floor(t / 60), s = Math.floor(t % 60), low = G.drops === 0 && Math.floor(G.t * 3) % 2;
-  text('SCORE', 10, 8, { size: 8, col: '#ffe36a', outline: true }); text(String(G.score), 66, 8, { size: 8, outline: true });
-  text('TIME', 10, 22, { size: 8, col: '#ffe36a', outline: true }); text(m + ':' + (s < 10 ? '0' : '') + s, 66, 22, { size: 8, outline: true });
-  text('DROPS', 10, 36, { size: 8, col: low ? '#ff2630' : '#ffe36a', outline: true }); text(String(G.drops), 66, 36, { size: 8, outline: true });
+  var c = KIT.ctx, rows = [['SCORE', String(G.score), '#ffe36a'], ['TIME', m + ':' + (s < 10 ? '0' : '') + s, t > 540 && Math.floor(G.t * 3) % 2 ? '#ff2630' : '#ffe36a'], ['DROPS', String(G.drops), low ? '#ff2630' : '#ffe36a']];
+  if (HUDD.n !== G.drops) { if (G.drops > HUDD.n) HUDD.pop = 1; HUDD.n = G.drops; } HUDD.pop = Math.max(0, HUDD.pop - 0.08);
+  rows.forEach(function (r, i) { var y = 5 + i * 15, w = 104 - i * 8; // three slanted plates, red edge, getting shorter: his black and red
+    c.fillStyle = '#12040a'; c.beginPath(); c.moveTo(0, y - 1); c.lineTo(w + 8, y - 1); c.lineTo(w, y + 13); c.lineTo(0, y + 13); c.fill();
+    c.fillStyle = 'rgba(14,7,8,0.82)'; c.beginPath(); c.moveTo(0, y); c.lineTo(w + 6, y); c.lineTo(w - 1, y + 12); c.lineTo(0, y + 12); c.fill();
+    c.fillStyle = i === 2 && low ? '#ff2630' : '#c4121c'; c.beginPath(); c.moveTo(w + 1, y); c.lineTo(w + 6, y); c.lineTo(w - 1, y + 12); c.lineTo(w - 6, y + 12); c.fill(); c.fillRect(0, y, 3, 12);
+    text(r[0], 8, y + 3, { size: 6, col: r[2] }); var pop = i === 2 ? HUDD.pop : 0; if (i === 2) spr('hog_drop', 50, y + 11, { sc: 0.8 + pop * 0.35 });
+    text(r[1], i === 2 ? 58 : 46, y + 2, { size: 8, col: pop > 0.3 ? '#ffe36a' : '#f1e7d0', outline: true }); });
+  c.fillStyle = '#12040a'; c.beginPath(); c.moveTo(0, KIT.H - 25); c.lineTo(58, KIT.H - 25); c.lineTo(50, KIT.H - 3); c.lineTo(0, KIT.H - 3); c.fill(); c.fillStyle = 'rgba(14,7,8,0.82)'; c.beginPath(); c.moveTo(0, KIT.H - 24); c.lineTo(56, KIT.H - 24); c.lineTo(49, KIT.H - 4); c.lineTo(0, KIT.H - 4); c.fill(); c.fillStyle = '#c4121c'; c.fillRect(0, KIT.H - 24, 3, 20);
   drawLifeIcon(16, KIT.H - 6); text('x' + G.lives, 28, KIT.H - 16, { size: 8, outline: true });
   var ic = 10; if (PL && PL.shield) { spr('hog_ishield', KIT.W - ic - 10, 14, { anchor: 'c' }); ic += 20; } if (G.shoes > 0) { spr('hog_ishoes', KIT.W - ic - 10, 14, { anchor: 'c' }); ic += 20; } if (G.star > 0) spr('hog_istar', KIT.W - ic - 10, 14, { anchor: 'c' });
   bossList().forEach(function (b, i) { var w = 120; KIT.bar(KIT.W / 2 - w / 2, 10 + i * 10, w, 5, b.hp / b.B.hp, '#ff2630', '#2a0509'); });

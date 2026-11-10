@@ -169,6 +169,8 @@ function pose0() { return { y: 0, lean: 0, twist: 0, roll: 0, hp: 0, hy: 0, hr: 
 var MM = R3.ok ? R3.mul : null, MD = R3.ok ? R3.model : null;
 function drawRig(rig, x, y, z, yaw, P, o) {
   o = o || {}; var D = rig.D, S = rig.P, sc = o.sc || 1, fl = o.flash, tint = o.tint, al = o.alpha;
+  if (!P.bp && !o.still) { var lt = KIT.t, sd0 = x * 1.7 + z * 2.3, br = Math.sin(lt * 1.7 + sd0); // everyone breathes and shifts a little, so nobody stands like a statue
+    P.lean += br * 0.012; P.y += br * 0.004; P.sh[0][1] = (P.sh[0][1] || 0) + br * 0.018; P.sh[1][1] = (P.sh[1][1] || 0) + br * 0.018; P.hy += Math.sin(lt * 0.63 + sd0) * 0.05; P.hp += Math.sin(lt * 0.9 + sd0 * 2) * 0.02; P.roll += Math.sin(lt * 0.5 + sd0) * 0.008; }
   var hipY = D.lu + D.ll + P.y, body = MD(x, y + (P.bodyY || 0), z, yaw, P.bp || 0, P.br || 0, sc);
   function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: 1 }); }
   var hips = MM(body, MD(0, hipY, 0, P.twist * 0.3, 0, P.roll * 0.5)); dr(S.hips, hips);
@@ -189,11 +191,14 @@ function drawRig(rig, x, y, z, yaw, P, o) {
   return out;
 }
 /* the moves: walking, running, sneaking, aiming, swinging, getting hit, falling down */
-function poseWalk(P, ph, amt, run) {
-  var s = Math.sin(ph), c = Math.cos(ph), k = amt * (run ? 1.25 : 1);
-  P.hip[0] = s * 0.55 * k; P.hip[1] = -s * 0.55 * k; P.kn[0] = Math.max(0, -c) * 0.9 * k + 0.05; P.kn[1] = Math.max(0, c) * 0.9 * k + 0.05;
-  P.sh[0][0] = -s * 0.45 * k; P.sh[1][0] = s * 0.45 * k; P.el[0] = P.el[1] = 0.2 + (run ? 0.9 : 0.25) * amt;
-  P.y = -Math.abs(Math.sin(ph)) * 0.035 * k + 0.0; P.lean = (run ? 0.22 : 0.05) * amt; P.twist = s * 0.08 * k;
+function poseWalk(P, ph, amt, run) { // update 129: a real gait. Hips roll over the planted foot, the shoulders turn against them, the elbow folds on the back swing, the head stays level, two bobs a stride
+  var s = Math.sin(ph), c = Math.cos(ph), k = amt * (run ? 1.25 : 1), st = run ? 0.72 : 0.5;
+  P.hip[0] = s * st * k + (run ? 0.12 * amt : 0); P.hip[1] = -s * st * k + (run ? 0.12 * amt : 0);
+  P.kn[0] = (Math.max(0, -c) * (run ? 1.35 : 0.85) + Math.max(0, s) * 0.18) * k + 0.06; P.kn[1] = (Math.max(0, c) * (run ? 1.35 : 0.85) + Math.max(0, -s) * 0.18) * k + 0.06;
+  P.sh[0][0] = -s * (run ? 0.75 : 0.42) * k; P.sh[1][0] = s * (run ? 0.75 : 0.42) * k; P.sh[0][1] = (P.sh[0][1] || 0) + 0.04 * amt; P.sh[1][1] = (P.sh[1][1] || 0) + 0.04 * amt;
+  P.el[0] = 0.18 + (run ? 1.0 : 0.22) * amt + Math.max(0, s) * (run ? 0.5 : 0.35) * k; P.el[1] = 0.18 + (run ? 1.0 : 0.22) * amt + Math.max(0, -s) * (run ? 0.5 : 0.35) * k;
+  P.y = -(0.5 - 0.5 * Math.cos(ph * 2)) * (run ? 0.06 : 0.035) * k; P.lean = (run ? 0.26 : 0.06) * amt + Math.cos(ph * 2) * 0.015 * k;
+  P.twist = s * (run ? 0.16 : 0.1) * k; P.roll = c * 0.045 * k; P.hy = (P.hy || 0) - P.twist * 0.8; P.hr = (P.hr || 0) - P.roll * 0.9; P.hp = (P.hp || 0) - (run ? 0.12 : 0.02) * amt;
 }
 function poseCrouch(P, ph, amt) { P.y = -0.3; P.lean = 0.45; P.hip[0] = 1.0 + Math.sin(ph) * 0.3 * amt; P.hip[1] = 1.0 - Math.sin(ph) * 0.3 * amt; P.kn[0] = 1.5; P.kn[1] = 1.5; P.hp = -0.35; P.sh[0][0] = 0.4; P.sh[1][0] = 0.4; P.el[0] = P.el[1] = 0.9; }
 function poseAim(P, gun, kick) { P.sh[1] = [1.45 - kick * 0.25, -0.05, -0.15]; P.el[1] = 0.08 + kick * 0.2; P.sh[0] = gun === 'handgun' ? [1.35, 0.25, 0.4] : [1.2, 0.3, 0.55]; P.el[0] = gun === 'handgun' ? 0.25 : 0.6; P.twist = gun === 'handgun' ? 0 : -0.25; P.lean = 0.05; }
