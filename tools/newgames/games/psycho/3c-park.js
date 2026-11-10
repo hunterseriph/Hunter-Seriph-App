@@ -7,6 +7,7 @@
 function setMapSize(n) { MW = MH = n || 41; }
 function buildFloorMesh(F) {
   var kind = FLOORS[F.fi].kind; if (!kind) return buildIndoorMesh(F);
+  if (F.arena && kind === 'park') kind = 'yard';
   buildFronts(F); var m = new R3.Mesh();
   if (F.rooms.some(function (r) { return r.shop; })) { F.indoorOnly = 1; buildIndoorMesh(F, m); F.indoorOnly = 0; }
   buildOutdoorMesh(F, m); return m.upload();

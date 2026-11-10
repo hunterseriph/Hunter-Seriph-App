@@ -29,9 +29,10 @@ function henchSpot(F) {
 function placeHench(F, fi) { var k = FLOORS[fi].hench; if (!k) return; var s = henchSpot(F); if (!s) return; F.foes.push({ i: s.i, j: s.j, k: k, boss: 1 }); }
 function stepHench(f, dt) {
   var d = f.d, H = HENCH[f.k], P = nearestPlayer(f); if (!P) return; var pd = dist2(f, P); f.spd = 0; f.wind = 0;
+  if (f.woke && f.st !== 'fight') f.st = 'fight'; // once awake it stays awake (shots made it 'alert' and it introduced itself again every time)
   if (f.st !== 'fight') { // waiting by the way on: wakes when it sees you, or when you hurt it
     f.a += angDiff(Math.atan2(P.x - f.x, P.z - f.z), f.a) * Math.min(1, dt * 0.6);
-    if ((pd < 12 && canSee(f.x, f.z, P.x, P.z) && !P.hide) || f.hp < f.max || f.st === 'chase') { f.st = 'fight'; f.cd = 1.6; if (G.botIn || G.noScenes) { G.banner = { s: d.n.toUpperCase(), t: 3.5 }; subtitle(d.n, H.wake, 4); sfx.play('sting'); } else sceneHench(f); sfx.play('shout'); }
+    if ((pd < (FL.arena ? 40 : 12) && canSee(f.x, f.z, P.x, P.z) && !P.hide) || f.hp < f.max || f.st === 'chase') { f.st = 'fight'; f.woke = 1; f.cd = 1.6; if (G.botIn || G.noScenes) { G.banner = { s: d.n.toUpperCase(), t: 3.5 }; subtitle(d.n, H.wake, 4); sfx.play('sting'); } else sceneHench(f); sfx.play('shout'); }
     return;
   }
   if (!f.p2 && f.hp < f.max * 0.5) { f.p2 = 1; subtitle(d.n, H.p2, 3.5); sfx.play('scream'); (H.summon || []).forEach(function (k, n) { var g = randomNear(tileOf(f.x), tileOf(f.z), 6), fd = FOES[k]; if (!g) return; G.foes.push({ id: G.foes.length, k: k, d: fd, x: tx(g.i), z: tx(g.j), a: 0, hp: fd.hp, st: 'chase', sus: 1, home: { i: g.i, j: g.j }, ph: 0, t: 0, atk: -1, cool: 1, ko: 0, bleed: 0, poison: 0, daze: 0, goal: null, spd: 0, hurt: 0, wait: 0, tgt: nearestPlayer({ x: tx(g.i), z: tx(g.j) }) }); }); }

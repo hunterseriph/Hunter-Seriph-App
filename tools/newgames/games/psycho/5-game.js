@@ -22,8 +22,10 @@ function loadFloor(fi, how) {
   var th = FLOORS[fi], seed = (G.seed * 7919 + fi * 104729) >>> 0; setMapSize(th.size); G.crash = null; G.R && (G.R.gone = 0);
   if (th.kind === 'drive') { startDrive(fi, how); return; }
   if (th.kind === 'ride') { startRide(fi, how); return; }
-  FL = th.kind === 'woods' ? genWoods(fi, seed) : th.kind === 'park' ? genPark(fi, seed) : th.kind === 'district' ? genDistrict(fi, seed) : th.kind === 'cemetery' ? genCemetery(fi, seed) : th.kind === 'site' ? genSite(fi, seed) : th.kind === 'boss' ? genArena(fi, seed) : genFloor(fi, seed);
-  placeHench(FL, fi); G.hazards = []; G.splatT = 0;
+  if (how === 'arena') setMapSize(ARENASIZE);
+  FL = how === 'arena' ? genHenchArena(fi, seed) : th.kind === 'woods' ? genWoods(fi, seed) : th.kind === 'park' ? genPark(fi, seed) : th.kind === 'district' ? genDistrict(fi, seed) : th.kind === 'cemetery' ? genCemetery(fi, seed) : th.kind === 'site' ? genSite(fi, seed) : th.kind === 'boss' ? genArena(fi, seed) : genFloor(fi, seed);
+  clearDoors(FL);
+  G.inArena = how === 'arena' ? 1 : 0; G.hazards = []; G.splatT = 0;
   FL.cellLocked = th.kind ? 0 : how === 'cell' || (fi === 0 && how === 'new');
   FL.propAt = {}; FL.props.forEach(function (p) { FL.propAt[idx(p.i, p.j)] = p; }); FL.lockerAt = {}; FL.lockers.forEach(function (L) { FL.lockerAt[idx(L.i, L.j)] = L; });
   FL.doorAt = {}; FL.doors = []; FL.rooms.forEach(function (r) { if (r.cell || r.open) return; r.doors.forEach(function (d) { if (FL.K[idx(d.i, d.j)] !== KD || FL.doorAt[idx(d.i, d.j)]) return; var D = { i: d.i, j: d.j, ax: d.di ? 'x' : 'z', open: 0, idle: 0, side: ((d.i + d.j) % 2) ? 1 : -1 }; FL.doors.push(D); FL.doorAt[idx(d.i, d.j)] = D; }); });
@@ -37,11 +39,11 @@ function loadFloor(fi, how) {
   var P = G.P, st = how === 'cell' ? FL.cellIn : FL.start; placeAt(P, st, how === 'cell' ? Math.atan2(FL.cellDoor.di, FL.cellDoor.dj) : st.a);
   if (G.R && !isGuest()) placeAt(G.R, FL.start2 || FL.start, FL.start.a, 0.9);
   if (isGuest()) placeAt(P, FL.start2 || FL.start, FL.start.a, 0.9);
-  var tbOn = th.kind === 'woods' || th.kind === 'park' || th.kind === 'cemetery' || th.kind === 'site' ? 'away' : th.kind === 'district' ? (th.city && th.city.hussy ? 'gone' : 'away') : th.kind === 'boss' ? 'boss' : fi === 0 && how === 'new' ? 'roam' : 'away';
+  var tbOn = how === 'arena' ? 'gone' : th.kind === 'woods' || th.kind === 'park' || th.kind === 'cemetery' || th.kind === 'site' ? 'away' : th.kind === 'district' ? (th.city && th.city.hussy ? 'gone' : 'away') : th.kind === 'boss' ? 'boss' : fi === 0 && how === 'new' ? 'roam' : 'away';
   var tb = G.tb = { x: tx(FL.tb.i), z: tx(FL.tb.j), a: 0, st: tbOn, t: fi === 0 ? 0 : th.kind === 'woods' ? 30 : th.kind === 'park' ? 26 : th.burnt ? 26 + Math.random() * 14 : 22 + Math.random() * 18, sus: 0, ph: 0, spd: 0, grace: fi === 0 ? 25 : 8, pillT: TBK.gap[0] + Math.random() * (TBK.gap[1] - TBK.gap[0]), goal: null, flow: null, flowKey: -1, lost: 0, flinch: 0, rage: 0, laughT: 0, angry: th.kind === 'boss' || th.burnt ? 1 : 0, tgt: null, said: 0, clown: th.kind === 'park' ? 1 : 0, fire: th.kind === 'boss' || th.burnt ? 1 : 0 };
   if (tb.st === 'away' || tb.st === 'gone') { tb.x = -50; tb.z = -50; }
   if (tb.st === 'boss') bossInit(tb);
-  G.banner = { s: (th.n ? th.n + '  ·  ' : '') + th.name, t: 4 };
+  G.banner = { s: how === 'arena' ? (ARENA[th.id] || ARENA.bar).n : (th.n ? th.n + '  ·  ' : '') + th.name, t: 4 };
   G.trans = 0; G.mode = 'play'; G.bossIntro = 0;
   if (isHost()) netFloor(how);
   floorScene(fi, how);
@@ -79,7 +81,7 @@ function makeNoise(x, z, r, src) { // TB and his boys hear it
   G.noises.push({ x: x, z: z, r: r, src: src, t: 0.1 });
   var tb = G.tb; if (tb && (tb.st === 'roam' || tb.st === 'search' || tb.st === 'investigate') && Math.hypot(tb.x - x, tb.z - z) < r * (src === 'shout' ? 1.4 : 1)) { tb.st = 'investigate'; tb.goal = { x: x, z: z }; tb.t = 0; }
   if (tb && tb.st === 'out' && src === 'gun' && Math.hypot(tb.x - x, tb.z - z) < 7) { tb.st = 'investigate'; tb.goal = { x: x, z: z }; tb.rage = 8; subtitle('TB', tbLine()); sfx.play('tblaugh'); }
-  G.foes.forEach(function (f) { if (f.st === 'dead' || f.st === 'ko' || f.st === 'chase') return; if (Math.hypot(f.x - x, f.z - z) < r) { f.st = 'alert'; f.goal = { x: x, z: z }; f.t = 0; } });
+  G.foes.forEach(function (f) { if (f.st === 'dead' || f.st === 'ko' || f.st === 'chase' || f.d.boss) return; if (Math.hypot(f.x - x, f.z - z) < r) { f.st = 'alert'; f.goal = { x: x, z: z }; f.t = 0; } });
 }
 /* ---------- the player on this machine ---------- */
 function inputs() {
@@ -232,7 +234,7 @@ function hurtTB(dmg, a, w) {
   if (!tb.tgt) tb.tgt = nearestPlayer(tb); if (Math.random() < 0.5) subtitle('TB', tbLine());
 }
 function killFoe(f) {
-  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; if (H && (G.botIn || G.noScenes)) subtitle(f.d.n, H.die, 3.5); else if (H) setTimeout(function () { if (G && G.mode === 'play') sceneHenchDie(f); }, 400); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
+  if (f.d && f.d.boss) { f.mv = null; f.under = 0; f.y = 0; var H = HENCH[f.k]; G.henchDone = G.henchDone || {}; G.henchDone[G.fi] = 1; if (H && (G.botIn || G.noScenes)) subtitle(f.d.n, H.die, 3.5); else if (H) setTimeout(function () { if (G && G.mode === 'play') sceneHenchDie(f); }, 400); sayAll(f.d.n + ' is dead. The way on is open.', 4, '#ffe36a'); KIT.shake(8); addLoot(f.x + 0.6, f.z, 'cracker'); addLoot(f.x - 0.6, f.z, 'cuppa'); G.hazards = []; }
   f.st = 'dead'; f.t = 0; f.hp = 0; G.kills++; sfx.play('scream'); blood(f.x, 1, f.z, 14, 1.4); netEv({ k: 'blood', x: f.x, z: f.z, n: 14 });
   if (Math.random() < 0.55) { var P = G.P, guns = ['handgun', 'shotgun', 'rifle'].filter(function (g) { return P.weaps[g]; }), k = Math.random() < 0.35 ? 'cracker' : guns.length ? { handgun: 'ammo9', shotgun: 'shells', rifle: 'riflea' }[guns[Math.floor(Math.random() * guns.length)]] : 'cracker'; addLoot(f.x, f.z, k); }
 }
@@ -392,4 +394,6 @@ function catchDone() {
   var where = outdoor ? 'He dumped you back where you started.' : 'Back in the cell. Force the door again.';
   if (G.stash) say('He took everything. Get your stuff back, and do NOT let him see you.', 5, '#c4121c'); else say(where, 4, '#c4121c');
 }
-function climb() { if (G.stash) say('You left your stuff behind.', 3, '#a6968f'); G.mode = 'trans'; G.trans = 0; G.transTo = G.fi + 1; music.stop(1); sfx.play('stairs'); netEv({ k: 'climb' }); }
+function climb() {
+  if (FLOORS[G.fi].hench && !G.inArena && !(G.henchDone || {})[G.fi]) { G.mode = 'trans'; G.trans = 0; G.transTo = G.fi; G.transArena = 1; G.transWord = 'SOMETHING IS WAITING...'; music.stop(1); sfx.play('sting'); netEv({ k: 'climb' }); return; } // the henchman's own room first
+  if (G.stash) say('You left your stuff behind.', 3, '#a6968f'); G.mode = 'trans'; G.trans = 0; G.transTo = G.fi + 1; music.stop(1); sfx.play('stairs'); netEv({ k: 'climb' }); }

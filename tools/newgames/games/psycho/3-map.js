@@ -77,7 +77,7 @@ function genFloor(fi, seed) {
   var cellR = rooms[0], F = { fi: fi, K: K, RM: RM, rooms: rooms, cell: cellR, lockers: [], props: [], loot: [], foes: [], lights: [], decals: [], pipes: [], notes: [] };
   F.cellIn = { i: cellR.x + 1, j: cellR.y + 1 }; F.cellDoor = cellR.doors[0];
   /* dead ends: the stairs, the way you came, lockers */
-  function deadEnds() { var out = []; for (var j = 1; j < MH - 1; j++) for (var i = 1; i < MW - 1; i++) { if (K[idx(i, j)] !== KC) continue; var n = 0, od = null; DIRS.forEach(function (q) { if (walk(K[idx(i + q[0], j + q[1])])) { n++; od = q; } }); if (n === 1) out.push({ i: i, j: j, di: od[0], dj: od[1] }); } return out; }
+  function deadEnds() { var out = []; for (var j = 1; j < MH - 1; j++) for (var i = 1; i < MW - 1; i++) { if (K[idx(i, j)] !== KC) continue; var n = 0, od = null; DIRS.forEach(function (q) { if (walk(K[idx(i + q[0], j + q[1])])) { n++; od = q; } }); if (n === 1 && K[idx(i + od[0], j + od[1])] !== KD && K[idx(i + od[0], j + od[1])] !== KB) out.push({ i: i, j: j, di: od[0], dj: od[1] }); } return out; } // never one that only opens onto a door (a locker or the stairs would block it)
   var dCell = dist(F.cellIn.i, F.cellIn.j), de = deadEnds();
   if (de.length < 3) { // a maze with no dead ends left: make some by walling off hall ends next to the outer wall
     for (var j3 = 1; j3 < MH - 1 && de.length < 6; j3 += 2) { var i3 = 1; if (K[idx(i3, j3)] === KC && K[idx(i3 + 1, j3)] === KC) { de.push({ i: i3, j: j3, di: 1, dj: 0 }); } }

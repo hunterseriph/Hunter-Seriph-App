@@ -29,7 +29,7 @@ function faceOpen(P) { if (rayWall(P.x, P.z, P.ca, 20) >= 9) return; var best = 
 function scene(id, shots, o) {
   if (!shots || !shots.length || !G) return; o = o || {};
   var tb = G.tb, keep = tb ? { x: tb.x, z: tb.z, a: tb.a, st: tb.st, pose: tb.pose, spd: tb.spd } : null;
-  SCN = { id: id, shots: shots, i: 0, t: 0, T: 0, after: o.after, back: o.back || 'play', restore: function () { if (tb && keep && !o.keepTB) { tb.x = keep.x; tb.z = keep.z; tb.a = keep.a; tb.st = keep.st; tb.pose = keep.pose; tb.spd = keep.spd; } } };
+  SCN = { id: id, shots: shots, i: 0, t: 0, T: 0, after: o.after, back: o.back || 'play', restore: function () { if (tb && keep && !o.keepTB && tb.st === 'cut') { tb.x = keep.x; tb.z = keep.z; tb.a = keep.a; tb.st = keep.st; tb.pose = keep.pose; tb.spd = keep.spd; } } };
   G.mode = 'scene'; G.prompt = null; document.documentElement.classList.add('hs-menu'); if (shots[0].enter) shots[0].enter(); stepScene(0);
 }
 function stepScene(dt) {

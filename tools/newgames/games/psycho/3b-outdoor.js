@@ -21,53 +21,55 @@ function addHides(F, rnd, n, used, D, keep) { // lockers by another name: thick 
     F.K[idx(p.i, p.j)] = KL; if (!keep()) { F.K[idx(p.i, p.j)] = KC; continue; } used[idx(p.i, p.j)] = 1; F.lockers.push({ i: p.i, j: p.j, di: -q[0], dj: -q[1] }); }
 }
 /* ---------- THE WOODS ---------- */
-function genWoods(fi, seed) {
-  var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], CN = 13, vis = new Uint8Array(CN * CN), links = new Uint8Array(CN * CN);
-  function cx0(c) { return 1 + 3 * c; }
-  function carveCell(cx, cy) { for (var y = 0; y < 2; y++) for (var x = 0; x < 2; x++) K[idx(cx0(cx) + x, cx0(cy) + y)] = KC; }
-  function link(cx, cy, d) { var x0 = cx0(cx), y0 = cx0(cy); for (var k = 0; k < 2; k++) { if (d === 0) K[idx(x0 + 2, y0 + k)] = KC; else if (d === 1) K[idx(x0 - 1, y0 + k)] = KC; else if (d === 2) K[idx(x0 + k, y0 + 2)] = KC; else K[idx(x0 + k, y0 - 1)] = KC; } links[cy * CN + cx]++; links[(cy + DIRS[d][1]) * CN + cx + DIRS[d][0]]++; }
-  var st = [{ x: 6, y: 12, d: -1 }]; vis[12 * CN + 6] = 1; carveCell(6, 12);
-  while (st.length) { var ci = rnd() < 0.75 ? st.length - 1 : Math.floor(rnd() * st.length), c = st[ci], ds = [];
-    for (var d = 0; d < 4; d++) { var nx = c.x + DIRS[d][0], ny = c.y + DIRS[d][1]; if (nx >= 0 && ny >= 0 && nx < CN && ny < CN && !vis[ny * CN + nx]) ds.push(d); }
-    if (!ds.length) { st.splice(ci, 1); continue; } var dd = ds.indexOf(c.d) >= 0 && rnd() < 0.6 ? c.d : ds[Math.floor(rnd() * ds.length)], nx2 = c.x + DIRS[dd][0], ny2 = c.y + DIRS[dd][1];
-    vis[ny2 * CN + nx2] = 1; carveCell(nx2, ny2); link(c.x, c.y, dd); st.push({ x: nx2, y: ny2, d: dd }); }
-  for (var cy = 0; cy < CN; cy++) for (var cx = 0; cx < CN; cx++) if (links[cy * CN + cx] === 1 && rnd() < 0.55) { var o = []; for (var d2 = 0; d2 < 4; d2++) { var a = cx + DIRS[d2][0], b = cy + DIRS[d2][1]; if (a >= 0 && b >= 0 && a < CN && b < CN) o.push(d2); } link(cx, cy, o[Math.floor(rnd() * o.length)]); }
-  // clearings
-  for (var r = 0, tries = 0; r < 7 && tries < 200; tries++) { var w = 5 + 2 * Math.floor(rnd() * 3), h = 5 + 2 * Math.floor(rnd() * 2), x = 2 + Math.floor(rnd() * (MW - w - 4)), y = 4 + Math.floor(rnd() * (MH - h - 10));
-    if (F.rooms.some(function (q) { return x < q.x + q.w + 2 && x + w + 2 > q.x && y < q.y + q.h + 2 && y + h + 2 > q.y; })) continue;
+function genWoods(fi, seed) { // open woods (his ask: only the basement is a maze): clumps of trees, clearings, and you head north
+  var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], mid = MW >> 1, last = MH - 2;
+  function ri(n) { return Math.floor(rnd() * n); }
+  for (var j0 = 1; j0 < MH - 1; j0++) for (var i0 = 1; i0 < MW - 1; i0++) K[idx(i0, j0)] = KC;
+  F.start = { i: mid, j: last, a: Math.PI }; F.start2 = { i: mid + 1, j: last }; F.respawn = F.start; F.cellIn = F.start; F.tb = { i: mid, j: last - 1 }; F.tbIn = { i: mid, j: last, di: 0, dj: -1 };
+  for (var e = 0; e <= 1; e++) { K[idx(mid + e, 0)] = KC; } F.exitIn = { i: mid, j: 1 }; F.exitZone = [mid - 1, 0, mid + 2, 1];
+  var used = {}; [[mid, last], [mid + 1, last], [mid, 1], [mid + 1, 1]].forEach(function (q) { used[idx(q[0], q[1])] = 1; });
+  function keep() { var D2 = bfs(F, mid, last); return D2[idx(mid, 1)] >= 0; }
+  // clearings, kept free of trees
+  for (var r = 0, tries = 0; r < 10 && tries < 300; tries++) { var w = 5 + 2 * ri(3), h = 5 + 2 * ri(2), x = 3 + ri(MW - w - 6), y = 4 + ri(MH - h - 9);
+    if (F.rooms.some(function (q) { return x < q.x + q.w + 3 && x + w + 3 > q.x && y < q.y + q.h + 3 && y + h + 3 > q.y; })) continue;
     var R = { id: F.rooms.length, x: x, y: y, w: w, h: h, open: 1, doors: [] }; for (var j = y; j < y + h; j++) for (var i = x; i < x + w; i++) { K[idx(i, j)] = KR; F.RM[idx(i, j)] = R.id; } F.rooms.push(R); r++; }
-  F.start = { i: 19, j: 38, a: Math.PI }; F.start2 = { i: 20, j: 38 }; F.respawn = F.start; F.tbIn = { i: 19, j: 38, di: 0, dj: -1 };
-  K[idx(19, 39)] = KC; K[idx(20, 39)] = KC; K[idx(19, 38)] = KC; K[idx(20, 38)] = KC; // the way you came in
-  for (var e = 0; e <= 1; e++) { K[idx(19 + e, 0)] = KC; K[idx(19 + e, 1)] = KC; } F.exitIn = { i: 19, j: 1 }; F.exitZone = [18, 0, 21, 2]; F.cellIn = F.start; F.tb = { i: 19, j: 37 };
-  var used = {}, D = bfs(F, 19, 38), keep = function () { var D2 = bfs(F, 19, 38); return D2[idx(19, 1)] >= 0; };
-  used[idx(19, 38)] = used[idx(20, 38)] = used[idx(19, 1)] = used[idx(20, 1)] = 1;
+  // clumps of trees everywhere else, never closing the way north
+  var target = Math.floor((MW - 2) * (MH - 2) * 0.24), placed = 0;
+  for (var t2 = 0; t2 < 900 && placed < target; t2++) { var cx = 1 + ri(MW - 2), cy = 2 + ri(MH - 4), rad = rnd() < 0.6 ? 1 : 2, cells = [];
+    for (var dy = -rad; dy <= rad; dy++) for (var dx = -rad; dx <= rad; dx++) { var a = cx + dx, b = cy + dy; if (a < 1 || b < 1 || a > MW - 2 || b > MH - 2) continue; if (dx * dx + dy * dy > rad * rad + rnd() * 1.5) continue; if (K[idx(a, b)] !== KC || used[idx(a, b)] || Math.abs(a - mid - 0.5) < 2 && (b > MH - 5 || b < 4)) continue; cells.push(idx(a, b)); }
+    if (!cells.length) continue; cells.forEach(function (k) { K[k] = KW; }); if (!keep()) { cells.forEach(function (k) { K[k] = KC; }); continue; } placed += cells.length; }
+  // the edge of the woods is thick
+  for (var q = 0; q < MW; q++) [[q, 1], [1, q], [MW - 2, q], [q, MH - 2]].forEach(function (p) { if (Math.abs(p[0] - mid - 0.5) < 2) return; if (inMap(p[0], p[1]) && rnd() < 0.7 && K[idx(p[0], p[1])] === KC && !used[idx(p[0], p[1])]) { K[idx(p[0], p[1])] = KW; if (!keep()) K[idx(p[0], p[1])] = KC; } });
   // campfires and camp junk in the clearings
   F.rooms.forEach(function (R) { var cxm = R.x + (R.w >> 1), cym = R.y + (R.h >> 1); K[idx(cxm, cym)] = KP; if (!keep()) K[idx(cxm, cym)] = KR; else { F.props.push({ i: cxm, j: cym, k: 'campfire', a: 0 }); used[idx(cxm, cym)] = 1; F.lights.push({ i: cxm, j: cym, k: 1.5, r: 9, fl: 2, c: [1, 0.5, 0.18], y: 0.8 }); F.fires.push({ x: tx(cxm), z: tx(cym), s: 0.6 }); }
-    for (var n = 0; n < 3; n++) { var px = R.x + Math.floor(rnd() * R.w), py = R.y + Math.floor(rnd() * R.h); if (used[idx(px, py)] || Math.abs(px - cxm) + Math.abs(py - cym) < 2) continue; K[idx(px, py)] = KP; if (!keep()) { K[idx(px, py)] = KR; continue; } used[idx(px, py)] = 1; F.props.push({ i: px, j: py, k: th.props[Math.floor(rnd() * th.props.length)], a: Math.floor(rnd() * 4) * Math.PI / 2 }); } });
-  D = bfs(F, 19, 38); addHides(F, rnd, 14, used, D, keep); F.hideWord = 'HIDE IN THE BUSHES';
-  // lanterns nailed to trees along the paths, and the glow of Clubhouse Row through the trees at the far edge
-  for (var j3 = 2; j3 < MH - 2; j3 += 3) for (var i3 = 2; i3 < MW - 2; i3 += 3) if (K[idx(i3, j3)] === KC && rnd() < 0.18) F.lights.push({ i: i3, j: j3, k: 0.7, r: 6, fl: 1, c: [1, 0.75, 0.4], y: 2.2, lantern: 1 });
-  F.lights.push({ i: 19.5, j: 0.2, k: 2.2, r: 12, fl: 0, c: [1, 0.1, 0.18], y: 3, exit: 1 });
-  lvlFill(F, rnd, th, used, bfs(F, 19, 38), 14);
+    for (var n = 0; n < 3; n++) { var px = R.x + ri(R.w), py = R.y + ri(R.h); if (used[idx(px, py)] || Math.abs(px - cxm) + Math.abs(py - cym) < 2) continue; K[idx(px, py)] = KP; if (!keep()) { K[idx(px, py)] = KR; continue; } used[idx(px, py)] = 1; F.props.push({ i: px, j: py, k: th.props[ri(th.props.length)], a: ri(4) * Math.PI / 2 }); } });
+  // logs and rocks out among the trees
+  for (var t3 = 0; t3 < 30; t3++) { var lx = 2 + ri(MW - 4), ly = 3 + ri(MH - 6); if (K[idx(lx, ly)] !== KC || used[idx(lx, ly)]) continue; K[idx(lx, ly)] = KP; if (!keep()) { K[idx(lx, ly)] = KC; continue; } used[idx(lx, ly)] = 1; F.props.push({ i: lx, j: ly, k: ['log', 'rock', 'stump'][t3 % 3], a: ri(4) * Math.PI / 2 }); }
+  var D = bfs(F, mid, last); addHides(F, rnd, 18, used, D, keep); F.hideWord = 'HIDE IN THE BUSHES';
+  for (var j3 = 2; j3 < MH - 2; j3 += 3) for (var i3 = 2; i3 < MW - 2; i3 += 3) if (K[idx(i3, j3)] === KC && rnd() < 0.14) F.lights.push({ i: i3, j: j3, k: 0.7, r: 6, fl: 1, c: [1, 0.75, 0.4], y: 2.2, lantern: 1 });
+  F.lights.push({ i: mid + 0.5, j: 0.2, k: 2.2, r: 12, fl: 0, c: [1, 0.1, 0.18], y: 3, exit: 1 });
+  lvlFill(F, rnd, th, used, bfs(F, mid, last), 14);
   return F;
 }
 /* ---------- CLUBHOUSE ROW: the red light district ---------- */
 var FRONTS = ['fac_cafe', 'fac_amy', 'fac_beebs', 'fac_bonjo', 'fac_joff', 'fac_saba', 'fac_greebo', 'fac_pulsar', 'fac_arcade', 'fac_sanct', 'fac_tb'];
 var NEONS = ['n_girls', 'n_xxx', 'n_live', 'n_peep', 'n_open', 'n_heart', 'n_lips', 'n_cum'];
-function streetGrid(F, rows, cols) { var K = F.K; rows.forEach(function (j) { for (var i = 1; i < MW - 1; i++) { K[idx(i, j)] = KC; K[idx(i, j + 1)] = KC; } }); cols.forEach(function (i) { for (var j = 1; j < MH - 1; j++) { K[idx(i, j)] = KC; K[idx(i + 1, j)] = KC; } }); }
+function streetGrid(F, rows, cols) { var K = F.K; rows.forEach(function (j) { for (var i = 1; i < MW - 1; i++) for (var w = 0; w < 3; w++) if (j + w < MH - 1) K[idx(i, j + w)] = KC; }); cols.forEach(function (i) { for (var j = 1; j < MH - 1; j++) for (var w = 0; w < 3; w++) if (i + w < MW - 1) K[idx(i + w, j)] = KC; }); } // streets three tiles wide (he wants it open)
 function genDistrict(fi, seed) {
   var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], CT = th.city || { fronts: FRONTS, hussy: 1, club: 1, closed: 10, neons: NEONS, lamps: [[1, 0.1, 0.18], [1, 0.3, 0.65]] }, rows = [], cols = [];
-  for (var r = 2; r + 1 < MH - 3; r += 7) rows.push(r); for (var c = 2; c + 1 < MW - 3; c += 8) cols.push(c);
+  for (var r = 2; r + 2 < MH - 3; r += 8) rows.push(r); for (var c = 2; c + 2 < MW - 3; c += 9) cols.push(c);
   streetGrid(F, rows, cols);
   for (var i0 = 1; i0 < MW - 1; i0++) K[idx(i0, 1)] = KW; // the top street is closed off on the north by the buildings
   var mid = cols[cols.length >> 1], last = rows[rows.length - 1] + 1;
+  // two blocks knocked flat into open squares, a statue in each
+  for (var pz = 0, ptry = 0; pz < 2 && ptry < 40; ptry++) { var br = 1 + Math.floor(rnd() * (rows.length - 2)), bc = Math.floor(rnd() * (cols.length - 1)), y0 = rows[br] + 3, x0 = cols[bc] + 3, y1 = rows[br + 1] - 1, x1 = cols[bc + 1] - 1; if (F.squares && F.squares.some(function (s) { return s[0] === br && s[1] === bc; })) continue; (F.squares = F.squares || []).push([br, bc]); for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) K[idx(xx, yy)] = KC; var sx = (x0 + x1) >> 1, sy = (y0 + y1) >> 1; K[idx(sx, sy)] = KP; F.props.push({ i: sx, j: sy, k: 'angel', a: 0 }); pz++; }
   F.start = { i: mid, j: last, a: Math.PI }; F.start2 = { i: mid + 1, j: last }; F.respawn = F.start; F.cellIn = F.start; F.tb = { i: mid, j: last - 1 };
   F.club = { i: mid, j: 2 }; F.exitIn = { i: mid, j: 2 }; F.exitZone = [mid - 1, 2, mid + 2, 3];
   var used = {}; used[idx(mid, last)] = used[idx(mid + 1, last)] = used[idx(mid, 2)] = used[idx(mid + 1, 2)] = 1;
   var keep = function () { var D = bfs(F, mid, last); return D[idx(mid, 2)] >= 0; };
   var scale = MW * MH / (41 * 41);
   // barricades close some stretches so it is a maze of streets, never a straight run
-  for (var t = 0; t < 40 * scale; t++) { var horiz = rnd() < 0.5, a, b, cells = [];
+  for (var t = 0; t < 7 * scale; t++) { var horiz = rnd() < 0.5, a, b, cells = [];
     if (horiz) { var row = rows[1 + Math.floor(rnd() * (rows.length - 2))], c0 = cols[Math.floor(rnd() * (cols.length - 1))]; a = c0 + 3 + Math.floor(rnd() * 3); cells = [[a, row], [a, row + 1]]; }
     else { var col = cols[Math.floor(rnd() * cols.length)], r0 = rows[Math.floor(rnd() * (rows.length - 1))]; b = r0 + 3 + Math.floor(rnd() * 2); cells = [[col, b], [col + 1, b]]; }
     if (cells.some(function (q) { return K[idx(q[0], q[1])] !== KC || used[idx(q[0], q[1])]; })) continue;
@@ -136,7 +138,7 @@ function genArena(fi, seed) {
 }
 /* ---------- the looks outside ---------- */
 function buildOutdoorMesh(F, mesh) {
-  var m = mesh || new R3.Mesh(), K = F.K, kind = FLOORS[F.fi].kind, rnd = srand(F.fi * 313 + 7);
+  var m = mesh || new R3.Mesh(), K = F.K, kind = F.meshKind || FLOORS[F.fi].kind, rnd = srand(F.fi * 313 + 7);
   function vc(k) { var v = 0.5 * k; return [v, v, v]; }
   function kk(i, j) { return inMap(i, j) ? K[idx(i, j)] : KW; }
   function boxM(x0, y0, z0, x1, y1, z1, T, k) { var c = vc(k || 1), cd = vc((k || 1) * 0.75), w = (x1 - x0) / TSZ * 2, h = (y1 - y0) / TSZ * 2, d = (z1 - z0) / TSZ * 2, uvw = [0, h, w, h, w, 0, 0, 0], uvd = [0, h, d, h, d, 0, 0, 0];

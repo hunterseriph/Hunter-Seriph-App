@@ -175,7 +175,7 @@ function hostStart(cont) {
   G = freshG(cont && r ? r.seed : (Math.random() * 1e9) >>> 0); G.net = 'host'; G.R = newPlayer('lab'); G.R.name = NET.mate ? NET.mate.name : 'LABOOZIE';
   if (cont && r) { var P = G.P; P.hp = Math.max(40, r.hp); P.weaps = r.weaps; P.weap = r.weap; P.ammo = r.ammo; P.inv = r.inv; P.buffs = r.buffs || []; G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; }
   netToGuest({ t: 'start', seed: G.seed, intro: cont && r ? 0 : 1, name: netMe().name });
-  if (cont && r) { loadFloor(r.fi, r.fi === 0 ? 'new' : 'up'); music.stop(1); } else { G.mode = 'intro'; G.introT = 0; music.stop(1); }
+  if (cont && r) { G.henchDone = r.done || {}; loadFloor(r.fi, r.arena ? 'arena' : r.fi === 0 ? 'new' : 'up'); music.stop(1); } else { G.mode = 'intro'; G.introT = 0; music.stop(1); }
 }
 function guestStart(m) {
   KIT.closeMenu(); G = freshG(m.seed); G.net = 'guest'; G.P = newPlayer('lab'); G.R = newPlayer('cum'); G.R.name = String(m.name || 'CUMHEAD').slice(0, 14);

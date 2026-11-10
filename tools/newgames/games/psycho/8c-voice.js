@@ -45,9 +45,25 @@ function growl(s, V, vol) {
   if (V.laugh && Math.random() < V.laugh) for (var h = 0; h < 4; h++) { var lt = t + h * 0.14, lf = V.f * 1.6 - h * 6, lo = A.createOscillator(), le = A.createGain(); lo.type = 'sawtooth'; lo.frequency.setValueAtTime(lf, lt); lo.frequency.exponentialRampToValueAtTime(lf * 0.8, lt + 0.1); le.gain.setValueAtTime(0.8, lt); le.gain.exponentialRampToValueAtTime(0.0001, lt + 0.11); var lb = A.createBiquadFilter(); lb.type = 'bandpass'; lb.frequency.value = 700; lb.Q.value = 4; lo.connect(le); le.connect(lb); lb.connect(sh); lo.start(lt); lo.stop(lt + 0.12); }
 }
 function noiseAt(A, nb, dest, t, dur, vol, freq) { var s = A.createBufferSource(), f = A.createBiquadFilter(), g = A.createGain(); s.buffer = nb; f.type = 'bandpass'; f.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02); }
+/* RECORDED LINES: real voice files win over everything. www/games/pn-voice/voices.js (written by
+   tools/psycho-voice/make.py from the recordings) sets window.PNVOICE = { id: 'pn-voice/<id>.mp3' }. The ids:
+   TB's quotes tb01..tb22 in TBQUOTES order, tbend, tbwoods, tbkid ('just kidding bro'), and each henchman's
+   <key>_wake / <key>_p2 / <key>_die, plus sissifier_pretty. A line with no file falls back to the settings below. */
+(function () { try { var s = document.createElement('script'); s.src = 'pn-voice/voices.js'; s.onerror = function () {}; document.head.appendChild(s); } catch (e) {} })();
+function voiceId(who, s) {
+  if (who === 'TB') { var i = TBQUOTES.indexOf(s); if (i >= 0) return 'tb' + ('0' + (i + 1)).slice(-2); if (s === TBEND) return 'tbend'; if (s === TBWOODS) return 'tbwoods'; if (s === 'just kidding bro') return 'tbkid'; return null; }
+  for (var k in HENCH) { var H = HENCH[k]; if (FOES[k].n !== who) continue; if (s === H.wake) return k + '_wake'; if (s === H.p2) return k + '_p2'; if (s === H.die) return k + '_die'; if (k === 'sissifier' && /^Pretty/.test(s)) return 'sissifier_pretty'; }
+  return null;
+}
+var VOICEAUD = null;
+function playRecorded(who, s) {
+  var id = voiceId(who, s), map = window.PNVOICE; if (!id || !map || !map[id] || sfx.muted) return false;
+  try { if (VOICEAUD) { VOICEAUD.pause(); } var a = VOICEAUD = new Audio(map[id]); a.volume = 1; var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); return true; } catch (e) { return false; }
+}
 /* who says it decides how it sounds */
 function voice(who, s) {
   var m = voiceMode(), V = VOICES[who]; if (!V || m === 'off' || !s) return;
+  if (playRecorded(who, s)) return;
   if (V.speech && m === 'spoken' && canSpeak() && speakLine(s)) { growl(s, V, 0.12); return; }
   growl(s, V, 0.55);
 }

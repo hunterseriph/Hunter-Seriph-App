@@ -8,13 +8,13 @@ function persist() { KIT.save(SAVE_KEY, SV); }
 var TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 function freshG(seed) { return { seed: seed, fi: 0, P: newPlayer(), trip: 0.25, tripKick: 0, evT: 30, ev: null, ghost: null, msgs: [], sub: null, banner: null, prompt: null, foes: [], tb: null, loot: [], fx: [], shots: [], noises: [], stash: null,
   read: {}, kills: 0, caught: 0, pills: 3, time: 0, notesRead: 0, spotted: 0, mode: 'title', cut: null, wake: 0, trans: 0, touchMode: TOUCH && SV.aim !== 'hold', touchAim: false }; }
-function snapshot() { var P = G.P; return { seed: G.seed, fi: G.fi, hp: P.hp, weaps: P.weaps, weap: P.weap, ammo: P.ammo, inv: P.inv, buffs: P.buffs, trip: G.trip, read: G.read, kills: G.kills, caught: G.caught, pills: G.pills, time: G.time, notesRead: G.notesRead, spotted: G.spotted }; }
+function snapshot() { var P = G.P; return { arena: G.inArena || 0, done: G.henchDone || {}, seed: G.seed, fi: G.fi, hp: P.hp, weaps: P.weaps, weap: P.weap, ammo: P.ammo, inv: P.inv, buffs: P.buffs, trip: G.trip, read: G.read, kills: G.kills, caught: G.caught, pills: G.pills, time: G.time, notesRead: G.notesRead, spotted: G.spotted }; }
 function saveRun() { if (isGuest()) return; SV.run = JSON.parse(JSON.stringify(snapshot())); persist(); }
 function newGame() { KIT.closeMenu(); SV.runs++; persist(); G = freshG((Math.random() * 1e9) >>> 0); G.mode = 'intro'; G.introT = 0; music.stop(1); }
 function continueGame() {
   var r = SV.run; if (!r) return newGame(); KIT.closeMenu(); G = freshG(r.seed); var P = G.P; P.hp = Math.max(40, r.hp); P.weaps = r.weaps; P.weap = r.weap; P.ammo = r.ammo; P.inv = r.inv; P.buffs = r.buffs || [];
   G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; G.notesRead = r.notesRead || 0; G.spotted = r.spotted || 0;
-  loadFloor(r.fi, r.fi === 0 ? 'new' : 'up'); music.stop(1);
+  G.henchDone = r.done || {}; loadFloor(r.fi, r.arena ? 'arena' : r.fi === 0 ? 'new' : 'up'); music.stop(1);
 }
 function startFloorOne() { if (isGuest()) { G.mode = 'wait'; return; } loadFloor(0, 'new'); saveRun(); if (!G.botIn) { sceneCell(); netEv({ k: 'scene', id: 'cell' }); } say('You wake up on a filthy bed. The cell door is rusted shut.', 5); say('Walk to it and keep pressing A to force it.', 6, '#a6968f'); }
 /* ---------- the loop ---------- */
@@ -35,7 +35,7 @@ function update(dt) {
   else if (G.mode === 'ride') { G.time += dt; stepRide(dt); }
   else if (G.mode === 'crash') { stepCrash(dt); stepFx(dt); }
   else if (G.mode === 'win') { stepWin(dt); stepFx(dt); stepBags(dt); }
-  else if (G.mode === 'trans') { G.trans += dt; if (G.trans > 1.4 && !isGuest()) { if (G.transTo >= BASEMENT && G.fi === BASEMENT - 1 && !G.outside) beginEnding(); else { G.outside = 0; loadFloor(G.transTo, 'up'); saveRun(); G.wake = 1.5; } } }
+  else if (G.mode === 'trans') { G.trans += dt; if (G.trans > 1.4 && !isGuest()) { if (G.transArena) { G.transArena = 0; G.transWord = null; loadFloor(G.fi, 'arena'); saveRun(); G.wake = 1.5; } else if (G.transTo >= BASEMENT && G.fi === BASEMENT - 1 && !G.outside) beginEnding(); else { G.outside = 0; loadFloor(G.transTo, 'up'); saveRun(); G.wake = 1.5; } } }
   else if (G.mode === 'end') stepEnding(dt);
   netStep(dt);
   ambience(dt);

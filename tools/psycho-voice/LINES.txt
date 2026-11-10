@@ -1,0 +1,44 @@
+Psycho Nightmare voice lines. Record each one and save it as <id>.<anything: mp3, wav, m4a, ogg> in tools/psycho-voice/recordings, then run python3 tools/psycho-voice/make.py
+TB has a southern American accent.
+
+tb01              TB                      Fuck muck
+tb02              TB                      Shithead Laboozie
+tb03              TB                      let me tighten that kynodesme
+tb04              TB                      dick skin
+tb05              TB                      whyma wimina
+tb06              TB                      suck your own and fuck your own
+tb07              TB                      suck me fuck me suck me fuck me
+tb08              TB                      I got lotion on my dick I'm out here shooting my shit I'm free man for real!
+tb09              TB                      Old geezer, Prick teaser
+tb10              TB                      I made muckies...
+tb11              TB                      a sissy doesn't deserve pleasure, a sissy is somebody's play thing
+tb12              TB                      you shoot real hard huh?
+tb13              TB                      Im a fuckin piggy
+tb14              TB                      who's ready for shithead pudding
+tb15              TB                      holy shit!
+tb16              TB                      Cock rinse
+tb17              TB                      you suck, ill spray
+tb18              TB                      where the fuck do you think you're goin? Prick!
+tb19              TB                      Oh god im pushing piss out of my dick
+tb20              TB                      im so fucked right now
+tb21              TB                      who's ready for sissification? I'll make you pretty, so pretty...
+tb22              TB                      Im a tucker fucker!
+tbend             TB                      take it easy bro, come back again soon!
+tbwoods           TB                      make me your pretty vocaloid pig
+tbkid             TB                      just kidding bro
+muckies_wake      Mama Muckies            Mama made muckies... and you get to EAT them.
+muckies_p2        Mama Muckies            Wahhh! Waaaahhh! MAMA WANTS HIS BOTTLE!
+muckies_die       Mama Muckies            Mama... Mama made... muckies...
+stag_wake         The Stitched Stag       *a scream that is half a man and half a deer*
+stag_p2           The Stitched Stag       *it tears at its own stitches and comes faster*
+stag_die          The Stitched Stag       *it lies down in the leaves and stops*
+smiles_wake       The Smiles Twins        Two heads are better than one! Let us make you SMILE, ear to ear!
+smiles_p2         The Smiles Twins        Hold still! We want to see your insides smile too!
+smiles_die        The Smiles Twins        Not... funny... any... more...
+bride_wake        The Gravedigger Bride   You will do. Till death do us part. Yours.
+bride_p2          The Gravedigger Bride   My husband is lonely down there. Go and keep him company!
+bride_die         The Gravedigger Bride   I... do...
+sissifier_wake    The Sissifier           TB said I could keep whatever is left of you. Lipstick on, pretty. Hold still.
+sissifier_p2      The Sissifier           Oh you made me SMUDGE it! Now I will make you pretty, so pretty...
+sissifier_die     The Sissifier           I was... so... pretty...
+sissifier_pretty  The Sissifier           Pretty, pretty, PRETTY!
