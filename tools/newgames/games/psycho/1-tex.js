@@ -45,10 +45,28 @@ function Atlas(seed, size) {
   return { canvas: c, add: add, tile: tile, slots: slots, g: g };
 }
 /* ---------- painters (32 px) ---------- */
-function pBricks(base, mort, h, w) { return function (p) { p.fill(mort); for (var r = 0; r < 32 / h; r++) for (var b = -1; b < 32 / w + 1; b++) { var x = b * w + (r % 2 ? w / 2 : 0); var col = shade(base, 0.8 + p.rnd() * 0.4); p.rect(x + 1, r * h + 1, w - 1, h - 1, col); p.rect(x + 1, r * h + 1, w - 1, 1, shade(base, 1.25)); } p.speck([shade(base, 0.5), shade(mort, 0.6)], 40); }; }
-function pTiles(base, grout, n, dirt) { return function (p) { var s = 32 / n; p.fill(grout); for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) { p.rect(x * s + 1, y * s + 1, s - 1, s - 1, shade(base, 0.9 + p.rnd() * 0.15)); p.rect(x * s + 1, y * s + 1, s - 1, 1, shade(base, 1.12)); }
-  for (var i = 0; i < (dirt || 0); i++) { var dx = Math.floor(p.rnd() * 32), dy = Math.floor(p.rnd() * 32), l = 2 + Math.floor(p.rnd() * 8); p.rect(dx, dy, 1, l, shade(base, 0.55)); } p.speck([shade(base, 0.6)], 30); }; }
-function pConcrete(base) { return function (p) { p.fill(base); p.speck([shade(base, 0.7), shade(base, 1.2), shade(base, 0.85)], 260); for (var i = 0; i < 3; i++) { var x = Math.floor(p.rnd() * 32), y = Math.floor(p.rnd() * 32); for (var k = 0; k < 10; k++) { p.px(x, y, shade(base, 0.5)); x += Math.round(p.rnd() * 2 - 1); y += 1; } } p.rect(0, 31, 32, 1, shade(base, 0.7)); }; }
+/* update 130: the wall and floor paints carry more wear. Bricks chip, lose their face and grow damp at the foot; tiles crack,
+   go missing and grow mould in the grout; concrete shows its shuttering lines, tie holes, rust runs and a tide mark */
+function pBricks(base, mort, h, w) { return function (p) { p.fill(mort); for (var r = 0; r < 32 / h; r++) for (var b = -1; b < 32 / w + 1; b++) { var x = b * w + (r % 2 ? w / 2 : 0), v = p.rnd(), col = shade(base, 0.74 + v * 0.46);
+      if (p.rnd() < 0.08) col = shade(base, 0.45); else if (p.rnd() < 0.07) col = shade(base, 1.3); // a burnt brick, a pale one
+      p.rect(x + 1, r * h + 1, w - 1, h - 1, col); p.rect(x + 1, r * h + 1, w - 1, 1, shade(base, 1.25)); p.rect(x + 1, r * h + h - 1, w - 1, 1, shade(base, 0.6));
+      if (p.rnd() < 0.12) { p.px(x + 1, r * h + 1, mort); p.px(x + 2, r * h + 1, mort); p.px(x + 1, r * h + 2, mort); } // a chipped corner
+      if (p.rnd() < 0.1) p.rect(x + 2 + Math.floor(p.rnd() * (w - 4)), r * h + 2, 2, 1, shade(base, 0.5)); }
+    for (var d = 0; d < 5; d++) { var dx = Math.floor(p.rnd() * 32), dl = 4 + Math.floor(p.rnd() * 9); for (var k = 0; k < dl; k++) p.px(dx + (p.rnd() < 0.2 ? 1 : 0), 31 - k, shade(mort, 0.55)); } // damp creeping up from the floor
+    p.speck([shade(base, 0.5), shade(mort, 0.6)], 46); }; }
+function pTiles(base, grout, n, dirt) { return function (p) { var s = 32 / n; p.fill(grout); for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) { var X = x * s, Y = y * s, q = p.rnd();
+      if (q < 0.06) { p.rect(X + 1, Y + 1, s - 1, s - 1, shade(grout, 0.7)); p.rect(X + 1, Y + 1, s - 1, 1, shade(grout, 0.45)); p.speck([shade(grout, 1.3)], 2); continue; } // a tile gone, the bed showing
+      var col = shade(base, 0.86 + p.rnd() * 0.2); p.rect(X + 1, Y + 1, s - 1, s - 1, col); p.rect(X + 1, Y + 1, s - 1, 1, shade(base, 1.14)); p.rect(X + 1, Y + 1, 1, s - 1, shade(base, 1.06)); p.rect(X + 1, Y + s - 1, s - 1, 1, shade(base, 0.72));
+      if (q > 0.86) { var cx = X + 2 + Math.floor(p.rnd() * (s - 4)), cy = Y + 1; while (cy < Y + s) { p.px(cx, cy, shade(base, 0.4)); cx += Math.round(p.rnd() * 2 - 1); cx = Math.max(X + 1, Math.min(X + s - 1, cx)); cy++; } } // cracked across
+      else if (q > 0.78) p.rect(X + 2, Y + s - 3, s - 3, 2, shade(base, 0.7)); } // a stain along its foot
+    for (var g2 = 0; g2 < n * 2; g2++) { var gx = Math.floor(p.rnd() * n) * s, gy = Math.floor(p.rnd() * 32); p.rect(gx, gy, 1, 2 + Math.floor(p.rnd() * 3), '#1c2414'); } // mould in the grout
+    for (var i = 0; i < (dirt || 0); i++) { var dx = Math.floor(p.rnd() * 32), dy = Math.floor(p.rnd() * 32), l = 2 + Math.floor(p.rnd() * 8); p.rect(dx, dy, 1, l, shade(base, 0.55)); } p.speck([shade(base, 0.6)], 30); }; }
+function pConcrete(base) { return function (p) { p.fill(base); p.speck([shade(base, 0.7), shade(base, 1.2), shade(base, 0.85), shade(base, 1.08)], 320);
+    p.rect(0, 10, 32, 1, shade(base, 0.78)); p.rect(0, 11, 32, 1, shade(base, 1.1)); p.rect(0, 21, 32, 1, shade(base, 0.78)); p.rect(0, 22, 32, 1, shade(base, 1.1)); // the lines the shuttering left
+    [[5, 5], [21, 5], [5, 16], [21, 16], [13, 27], [29, 27]].forEach(function (h) { p.px(h[0], h[1], shade(base, 0.35)); p.px(h[0] + 1, h[1], shade(base, 0.5)); p.px(h[0], h[1] + 1, shade(base, 1.2)); }); // tie holes
+    for (var r = 0; r < 2; r++) { var rx = [5, 21][Math.floor(p.rnd() * 2)] + (r ? 8 : 0), ry = 6 + Math.floor(p.rnd() * 10), rl = 5 + Math.floor(p.rnd() * 9); for (var k2 = 0; k2 < rl; k2++) p.px(rx, ry + k2, k2 < 3 ? '#5a2a14' : shade('#5a2a14', 0.8)); } // rust running from a tie
+    for (var i = 0; i < 3; i++) { var x = Math.floor(p.rnd() * 32), y = Math.floor(p.rnd() * 32); for (var k = 0; k < 12; k++) { p.px(x, y, shade(base, 0.45)); x += Math.round(p.rnd() * 2 - 1); y += 1; } }
+    for (var w = 0; w < 32; w++) { var wh = 2 + Math.floor(p.rnd() * 3); for (var j = 0; j < wh; j++) if (p.rnd() < 0.7) p.px(w, 31 - j, shade(base, 0.62)); } }; } // the tide mark at the foot
 function pPlanks(base, n) { return function (p) { var w = 32 / n; for (var i = 0; i < n; i++) { var col = shade(base, 0.8 + p.rnd() * 0.35); p.rect(i * w, 0, w, 32, col); p.rect(i * w, 0, 1, 32, shade(base, 0.45)); for (var k = 0; k < 6; k++) p.rect(i * w + 1 + Math.floor(p.rnd() * (w - 2)), Math.floor(p.rnd() * 32), 1, 3 + Math.floor(p.rnd() * 6), shade(base, 0.65)); p.px(i * w + 2, 3, '#1a1010'); p.px(i * w + 2, 28, '#1a1010'); } }; }
 var PAINT = {
   white: function (p) { p.fill('#ffffff'); },

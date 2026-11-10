@@ -496,7 +496,8 @@ function drawEnts(sc) {
     var base = 'h_' + h.breed + '_teen_', f = h.st === 'idle' ? base + 'hurt' : h.moving ? (Math.abs(h.vy) > 0.5 ? base + 'jump' : base + 'run' + (Math.floor(h.t * 10) % 4)) : base + 'idle' + (Math.floor(h.t * 2) % 2);
     if (!KIT.has(f)) f = base + 'idle0'; if (!KIT.has(f)) f = 'h_gloop_teen_idle0';
     var shake = h.st === 'idle' ? Math.round(Math.sin(h.t * 40) * 0.8) : 0;
-    spr(f, h.x - ox + shake, h.y - oy, { flip: h.face < 0, sc: 1.15 });
+    var hb = h.st === 'idle' ? Math.sin(h.t * 9) * 0.03 : h.moving ? Math.sin(h.t * 20) * 0.05 : Math.sin(h.t * 3 + h.x) * 0.035; // update 130: they pant when chained, bounce when they run, breathe when they wait
+    spr(f, h.x - ox + shake, h.y - oy, { flip: h.face < 0, sc: 1.15, sx: 1 - hb * 0.7, sy: 1 + hb });
     if (h.st === 'idle') { R('#3a343c', h.x - ox - 6, h.y - oy - 4, 12, 2); for (var c = 0; c < 4; c++) R('#5a545c', h.x - ox + 6 + c * 3, h.y - oy - 3 + (c % 2), 2, 2); } // shackled
     if (h.st === 'wait') text('W', h.x - ox, h.y - oy - 44, { align: 'center', size: 6, col: '#a6968f' });
   });
@@ -504,7 +505,8 @@ function drawEnts(sc) {
     var x = g.x - ox, y = g.y - oy;
     if (g.st === 'dead') { spr('f_blumguard_0', x, y + 6, { flip: g.face < 0, alpha: 0.4, rot: g.face * 1.4, sc: 1.35 }); return; }
     var f = g.st === 'patrol' ? 'f_blumguard_' + (Math.floor(g.t * 6) % 3) : g.st === 'alert' || g.st === 'shoot' ? 'f_blumguard_3' : 'f_blumguard_0';
-    spr(f, x, y, { flip: g.face < 0, sc: 1.35 });
+    var gb = g.st === 'sleep' ? Math.sin(G.t * 1.4 + g.x) * 0.045 : g.st === 'alert' || g.st === 'shoot' ? 0.03 : Math.sin(g.t * 3) * 0.02; // a sleeping guard's chest rises slowly, an alert one draws himself up
+    spr(f, x, y, { flip: g.face < 0, sc: 1.35, sx: 1 - gb * 0.6, sy: 1 + gb });
     if (g.st !== 'sleep' && g.st !== 'dead') { KIT.ctx.fillStyle = g.st === 'alert' ? 'rgba(255,38,48,0.16)' : 'rgba(255,200,120,0.05)'; KIT.ctx.beginPath(); KIT.ctx.moveTo(x + g.face * 8, y - 36); KIT.ctx.lineTo(x + g.face * 200, y - 60); KIT.ctx.lineTo(x + g.face * 200, y); KIT.ctx.fill(); } // the guard's torch beam
     if (g.st === 'sleep') text('z' + (Math.floor(G.t * 2) % 2 ? 'Z' : ''), x + 8, y - 46 - (G.t * 10) % 6, { size: 6, col: '#a6968f' });
     if (g.st === 'shoot' && g.t < 0.12) { R('#ffe36a', Math.min(x, g.shotX - ox), y - 22, Math.abs(g.shotX - ox - x), 2); }

@@ -61,7 +61,11 @@ function drawFighter(e) {
   if (e.shade) KIT.ctx.filter = e.shade; // Blumhead's goo in a mirror match
   if (rot && e.hero) KIT.spr(name, x, y - 12, { flip: flip, rot: rot, anchor: 'c', flash: o.flash });
   else if (rot) { var sz = KIT.size(name); KIT.spr(name, x, y - sz.w * sc * 0.5 + sz.h * sc * 0.1, { flip: flip, sc: sc, rot: rot, anchor: 'c', flash: o.flash }); }
-  else KIT.spr(name, x, y, o);
+  else { // update 130: bodies give. A hit flattens them for a moment, a landing squashes, a jump stretches, and anyone standing or walking breathes
+    var q = 0; if (e.flash > 0) q = -0.1; else if (e.st === 'air' || (e.hero && e.h > 2)) q = Math.max(-0.05, Math.min(0.07, (e.vh || 0) / 2600)); else if (!e.hero && !lying && e.hp > 0) q = Math.sin(G.t * (e.boss ? 2.2 : 3.2) + e.x * 0.05 + (e.z || 0) * 0.3) * (e.boss ? 0.014 : 0.02);
+    if (e.h <= 0 && e.landT === undefined) e.landT = 0; if (e.h > 4) e.wasAir = 1; else if (e.wasAir) { e.wasAir = 0; e.landT = 0.12; } if (e.landT > 0) { e.landT -= 1 / 60; q = -0.09 * (e.landT / 0.12); }
+    if (q) { o.sx = 1 - q * 0.8; o.sy = 1 + q; }
+    KIT.spr(name, x, y, o); }
   if (e.shade) KIT.ctx.filter = 'none';
   // the goo on a brainwashed one: drips and two glowing eyes of light
   if (e.washed && e.hp > 0 && Math.random() < 0.08) G.fx.push({ k: 'drip', x: e.x + rnd(-6, 6), z: e.z, h: e.h + e.ht * rnd(0.4, 0.9), t: 0, life: 0.5 });

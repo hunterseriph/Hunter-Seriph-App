@@ -66,9 +66,10 @@ var KIT = (function () {
     var f = SPR[n]; if (!f || !ready) return; o = o || {};
     var sc = o.sc || 1, w = f[2] * sc, h = f[3] * sc, an = o.anchor || 'b';
     var dx = an === 'tl' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' ? -h / 2 : 0;
-    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
+    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined && !o.sx && !o.sy) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.translate(Math.round(x), Math.round(y)); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1);
+    if (o.sx || o.sy) ctx.scale(o.sx || 1, o.sy || 1); // squash and stretch round the anchor (the feet by default), for life in a still frame
     if (o.flash) ctx.drawImage(white(n), Math.round(dx), Math.round(dy), w, h); else ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(dx), Math.round(dy), w, h);
     ctx.restore();
   }

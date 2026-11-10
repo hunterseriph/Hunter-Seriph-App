@@ -388,6 +388,8 @@ function drawEnemy(e, cx) {
   if (e.fade > 0 && Math.floor(G.t * 30) % 2) return;
   var im = enemyImg(e), sc = (e.d.sc || 1) * (e.mini ? 0.7 : 1), white = e.flash > 0 && Math.floor(G.t * 40) % 2 === 0;
   ctx.save(); if (white) ctx.filter = 'brightness(3)'; if (e.d.ai === 'phase') ctx.globalAlpha = e.ghost ? 0.22 : 0.85;
+  var eq = e.flash > 0 ? -0.1 : e.stun > 0 ? Math.sin(G.t * 14) * 0.03 : Math.sin(G.t * 5 + e.x * 0.07) * 0.022; // foes flatten when struck, wobble when dizzy, and breathe the rest of the time
+  ctx.translate(x, Math.round(e.y)); ctx.scale(1 - eq * 0.8, 1 + eq); ctx.translate(-x, -Math.round(e.y));
   if (im.c) { ctx.translate(x, Math.round(e.y)); if (e.face < 0) ctx.scale(-1, 1); var c = im.c, ps = e.d.sc || 1; ctx.drawImage(c, Math.round(-c.width * ps / 2), Math.round(-c.height * ps), Math.round(c.width * ps), Math.round(c.height * ps)); }
   else spr(im.s, x, Math.round(e.y), e.face < 0, sc);
   ctx.restore(); drawFoeExtra(e, x);
@@ -401,6 +403,7 @@ function drawBoss(b, cx) {
   if (!face && SPR[name + 'L']) { name += 'L'; flip = false; } // the Piggy brothers' shirts never read backwards
   ctx.save(); if (white) ctx.filter = 'brightness(3)'; if (b.ph === 2 && b.id !== 'demon') { ctx.shadowColor = '#ff2630'; ctx.shadowBlur = 14; } if (b.lair || b.id === 'mega') { ctx.shadowColor = '#9a4aff'; ctx.shadowBlur = 12 + Math.sin(G.t * 5) * 4; }
   var bob = b.fly ? Math.sin(G.t * 3 + (b.slot || 0)) * 3 : 0;
+  var bq = white ? -0.05 : b.st === 'tell' ? 0.04 : Math.sin(G.t * 2.4 + (b.slot || 0)) * 0.014, by0 = Math.round(b.y + bob); ctx.translate(x, by0); ctx.scale(1 - bq * 0.8, 1 + bq); ctx.translate(-x, -by0); // bosses breathe, draw themselves up before a move, and give when hit
   if (b.st === 'tell' && Math.floor(G.t * 30) % 2) x += 2;
   spr(name, x, Math.round(b.y + bob), flip, d.sc); ctx.restore();
   if (b.stun > 0) for (var s = 0; s < 4; s++) { var a = G.t * 6 + s * 1.6; R(ctx, '#ffe36a', x + Math.cos(a) * 16 - 1, b.y - b.h - 8 + Math.sin(a) * 3, 3, 3); }
@@ -411,6 +414,9 @@ function drawPlayer(cx) {
   var small = ST.small && RUN && RUN.card === 'tiny';
   ctx.save(); if (P.ooze > 0) { ctx.shadowColor = '#7dff3a'; ctx.shadowBlur = 16; }
   if (small) { ctx.translate(x, y); ctx.scale(0.75, 0.75); ctx.translate(-x, -y); }
+  if (P.state !== 'dead') { // update 130: the body gives. It stretches going up, flattens on landing, sinks a little into a hit, and the heirs who only had one standing frame breathe
+    var jq = 0; if (!P.onGround) { P.wasAir = 1; jq = clamp(-P.vy / 4200, -0.05, 0.085); } else { if (P.wasAir) { P.wasAir = 0; P.landT = 0.13; } if (P.landT > 0) { P.landT -= 1 / 60; jq = -0.11 * Math.max(0, P.landT) / 0.13; } else if (P.state === 'hurt') jq = -0.07; else if (sp < 10 && cls !== 'cumhead' && cls !== 'laboozie') jq = Math.sin(G.t * 2.6) * 0.018; }
+    if (jq) { ctx.translate(x, y); ctx.scale(1 - jq * 0.75, 1 + jq); ctx.translate(-x, -y); } }
   if (cls === 'cumhead') {
     var name;
     if (P.state === 'hurt' || P.state === 'dead') name = 'hurt0';

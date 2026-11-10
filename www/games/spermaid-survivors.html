@@ -185,9 +185,10 @@ var KIT = (function () {
     var f = SPR[n]; if (!f || !ready) return; o = o || {};
     var sc = o.sc || 1, w = f[2] * sc, h = f[3] * sc, an = o.anchor || 'b';
     var dx = an === 'tl' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' ? -h / 2 : 0;
-    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
+    if (!o.rot && !o.flip && !o.flash && o.alpha === undefined && !o.sx && !o.sy) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.translate(Math.round(x), Math.round(y)); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1);
+    if (o.sx || o.sy) ctx.scale(o.sx || 1, o.sy || 1); // squash and stretch round the anchor (the feet by default), for life in a still frame
     if (o.flash) ctx.drawImage(white(n), Math.round(dx), Math.round(dy), w, h); else ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(dx), Math.round(dy), w, h);
     ctx.restore();
   }
@@ -1666,7 +1667,9 @@ function drawPlayer(o, cx, cy) {
   if (P.inv > 0 && P.dashT <= 0 && Math.floor(KIT.t * 20) % 2) return;
   var f = P.moving ? 'spermaid_s' + (Math.floor(P.walk) % 3) : 'spermaid_s' + (Math.floor(KIT.t * 3) % 3);
   if (G.mode === 'dead') f = 'spermaid_dead';
-  spr(f, x, y + bob - 2, { flip: P.face < 0, flash: P.hurtT > 0, rot: P.dashT > 0 ? P.face * 0.5 : P.moving ? P.face * 0.08 : 0 });
+  var st = P.moving ? Math.sin(P.walk * 2.1) : Math.sin(KIT.t * 2.2) * 0.4, psx = 1 - st * 0.045, psy = 1 + st * 0.06; // update 130: she swims: the body pulls long on the stroke and gathers after it, breathes when still, flattens when hit, stretches out in a dash
+  if (P.hurtT > 0) { psx = 1.14; psy = 0.88; } else if (P.dashT > 0) { psx = 1.2; psy = 0.86; }
+  spr(f, x, y + bob - 2, { flip: P.face < 0, flash: P.hurtT > 0, rot: P.dashT > 0 ? P.face * 0.5 : P.moving ? P.face * 0.08 : 0, sx: G.mode === 'dead' ? 1 : psx, sy: G.mode === 'dead' ? 1 : psy });
   // health under her feet
   if (P.hp < P.max) { R('#12040a', x - 16, y + 5, 32, 4); R('#4a0a10', x - 15, y + 6, 30, 2); R('#ff2630', x - 15, y + 6, 30 * P.hp / P.max, 2); }
   if (P.dashCd > 0) R('rgba(42,160,168,0.8)', x - 15, y + 10, 30 * (1 - P.dashCd / 1.8), 1);
@@ -1683,7 +1686,9 @@ function drawFoe(e, cx, cy) {
   if (G.freeze > 0) ell(x, y, e.r * 1.2, e.r * 0.5, 'rgba(154,223,255,0.6)');
   var alpha = e.f.ghost ? 0.55 : 1;
   if (e.boss && e.act && e.act.k === 'charge' && e.act.t < 0.6) alpha = Math.floor(KIT.t * 16) % 2 ? 0.6 : 1;
-  spr(name, x, y + wb + 2, { flip: e.face < 0, sc: sc, flash: e.flash > 0, alpha: alpha });
+  var ph = e.t * (e.boss ? 3 : 9) + (e.x * 0.13 + e.y * 0.07), wob = Math.sin(ph) * (e.boss ? 0.025 : 0.055), fsx = 1 - wob, fsy = 1 + wob, born = Math.min(1, e.t * 5); // every foe squashes along with its step, pops up out of the ground when it arrives, and flattens when it is hit
+  if (e.flash > 0) { fsx = 1.16; fsy = 0.86; } if (born < 1) { fsx *= 0.6 + born * 0.4; fsy *= born * (2 - born) * 1.08; }
+  spr(name, x, y + wb + 2, { flip: e.face < 0, sc: sc, flash: e.flash > 0, alpha: alpha, sx: fsx, sy: Math.max(0.05, fsy) });
   if (e.confT > 0) text('?', x, y - e.r * 2 - 14, { size: 8, col: '#ffe36a', align: 'center' });
   if (e.elite) { var w = 30; R('#12040a', x - w / 2 - 1, y + 6, w + 2, 4); R('#ff2630', x - w / 2, y + 7, w * Math.max(0, e.hp / e.mhp), 2); }
   if (e.boss && e.beams !== null && e.beams !== undefined || e.beamWarn !== null && e.beamWarn !== undefined) {

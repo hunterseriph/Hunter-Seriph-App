@@ -126,3 +126,26 @@ function hudMapBack(x, y, w, h) { var ctx = KIT.ctx; ctx.fillStyle = 'rgba(7,4,5
   '.ckbk:hover,.ckbk:focus-visible{background:#2a0a0e;box-shadow:inset 0 0 0 2px #ff2630}',
   '@media (prefers-reduced-motion:reduce){.ckt .logo{animation:none}.ckbtn,.ckc,.ckch .p{transition:none}}'
 ].join('\n'); document.head.appendChild(s); })();
+
+/* ---------- update 130: driver bodies. Arms with a shoulder, a bicep, a proper elbow, a forearm that tapers to a cuff,
+   and gloves with four fingers wrapped round the wheel and a thumb on top (they were tubes ending in a ball) ---------- */
+function mitt(m, fr, W, f, s, u, col, sd) {
+  ball2(m, fr, W, f, s, u, 0.08, 0.07, 0.066, col, 8, { rings: 4 }); // the palm
+  if (DLOD < 1) { ball2(m, fr, W, f + 0.05, s, u - 0.01, 0.05, 0.065, 0.05, col, 6, { rings: 3 }); return; }
+  for (var i = 0; i < 4; i++) { var o = (i - 1.5) * 0.034, a = [f + 0.035, s + o, u + 0.035], b = [f + 0.085, s + o, u + 0.0], c = [f + 0.06, s + o, u - 0.05]; tube(m, fr, W, a, b, 0.021, 0.019, col, 5); tube(m, fr, W, b, c, 0.019, 0.015, col, 5, { cap: shade3(col, 0.8) }); } // fingers curl over and under the rim
+  tube(m, fr, W, [f - 0.01, s - sd * 0.055, u + 0.02], [f + 0.045, s - sd * 0.075, u + 0.06], 0.024, 0.018, col, 5, { cap: shade3(col, 0.8) }); // the thumb
+}
+function shade3(col, k) { var c = rgb01(col), h = function (v) { var s = Math.max(0, Math.min(255, Math.round(v * 255 * k))).toString(16); return s.length < 2 ? '0' + s : s; }; return '#' + h(c[0]) + h(c[1]) + h(c[2]); }
+function arms(m, fr, W, sh, up, fore, hand, wob, thick) {
+  thick = thick || 1;
+  [-1, 1].forEach(function (sd) {
+    var S = [-0.24, sd * sh, 0.88], E = [0.04, sd * (sh - 0.02), 0.66], H = [0.4, sd * 0.15 + sd * wob, 0.64 + sd * wob], M1 = [(S[0] + E[0]) / 2 - 0.01, (S[1] + E[1]) / 2 + sd * 0.012, (S[2] + E[2]) / 2 + 0.012], M2 = [E[0] + (H[0] - E[0]) * 0.3, E[1] + (H[1] - E[1]) * 0.3, E[2] + (H[2] - E[2]) * 0.3 + 0.008], WR = [E[0] + (H[0] - E[0]) * 0.86, E[1] + (H[1] - E[1]) * 0.86, E[2] + (H[2] - E[2]) * 0.86];
+    ball2(m, fr, W, S[0], S[1], S[2], 0.118 * thick, 0.118 * thick, 0.108 * thick, up, 8, { rings: 5 }); // the shoulder
+    tube(m, fr, W, S, M1, 0.088 * thick, 0.096 * thick, up, 8); tube(m, fr, W, M1, E, 0.096 * thick, 0.074 * thick, up, 8); // upper arm, fuller in the middle
+    ball2(m, fr, W, E[0], E[1], E[2], 0.078 * thick, 0.078 * thick, 0.078 * thick, up, 7, { rings: 4 });
+    tube(m, fr, W, E, M2, 0.072 * thick, 0.078 * thick, fore, 8); tube(m, fr, W, M2, WR, 0.078 * thick, 0.056 * thick, fore, 8); // forearm, tapering to the wrist
+    if (fore !== hand) tube(m, fr, W, WR, [WR[0] + (H[0] - WR[0]) * 0.5, WR[1] + (H[1] - WR[1]) * 0.5, WR[2] + (H[2] - WR[2]) * 0.5], 0.066 * thick, 0.07 * thick, shade3(fore, 0.72), 8); // the cuff
+    else tube(m, fr, W, WR, H, 0.056 * thick, 0.058 * thick, hand, 6);
+    mitt(m, fr, W, H[0] + 0.02, H[1], H[2], hand, sd);
+  });
+}
