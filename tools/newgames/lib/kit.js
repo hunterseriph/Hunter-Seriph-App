@@ -101,9 +101,12 @@ var KIT = (function () {
     R('#12040a', x + 2, y, w - 4, h); R('#12040a', x, y + 2, w, h - 4); R('#12040a', x + 1, y + 1, w - 2, h - 2);
     R(edge, x + 3, y + 1, w - 6, h - 2); R(edge, x + 1, y + 3, w - 2, h - 6); R(edge, x + 2, y + 2, w - 4, h - 4);
     R(fill === 'solid' ? '#0e0708' : fill, x + 3, y + 3, w - 6, h - 6);
-    R(o.line || '#4a1a1c', x + 4, y + 4, w - 8, 1); R('rgba(0,0,0,0.35)', x + 4, y + h - 5, w - 8, 1);
+    if (h > 14 && w > 14) { // depth: lighter at the top, darker at the foot, a lit inner line and little corner studs
+      R('rgba(255,90,90,0.07)', x + 3, y + 3, w - 6, Math.max(2, Math.round((h - 6) * 0.35))); R('rgba(0,0,0,0.28)', x + 3, y + h - 3 - Math.max(2, Math.round((h - 6) * 0.3)), w - 6, Math.max(2, Math.round((h - 6) * 0.3)));
+      R(o.stud || '#ffe36a', x + 4, y + 4, 1, 1); R(o.stud || '#ffe36a', x + w - 5, y + 4, 1, 1); R(o.stud || '#ffe36a', x + 4, y + h - 5, 1, 1); R(o.stud || '#ffe36a', x + w - 5, y + h - 5, 1, 1); }
+    R(o.line || '#4a1a1c', x + 6, y + 4, w - 12, 1); R('rgba(0,0,0,0.35)', x + 4, y + h - 5, w - 8, 1); R('rgba(255,255,255,0.14)', x + 3, y + 1, w - 6, 1);
   }
-  function bar(x, y, w, h, k, col, back) { R('#12040a', x - 1, y - 1, w + 2, h + 2); R(back || '#2a0a0e', x, y, w, h); R(col || '#c4121c', x, y, Math.max(0, Math.min(1, k)) * w, h); R('rgba(255,255,255,0.25)', x, y, Math.max(0, Math.min(1, k)) * w, 1); }
+  function bar(x, y, w, h, k, col, back) { k = Math.max(0, Math.min(1, k)); var f = Math.round(k * w); R('#12040a', x - 1, y - 1, w + 2, h + 2); R(back || '#2a0a0e', x, y, w, h); R('rgba(0,0,0,0.35)', x, y, w, 1); R(col || '#c4121c', x, y, f, h); R('rgba(255,255,255,0.3)', x, y, f, 1); if (h >= 4) { R('rgba(0,0,0,0.28)', x, y + h - Math.max(1, h >> 2), f, Math.max(1, h >> 2)); if (f > 1 && f < w) R('rgba(255,255,255,0.7)', x + f - 1, y, 1, h); } }
   /* ---------- input: keyboard (padkit presses keys for the controller), on-screen buttons, taps ---------- */
   var KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
     KeyZ: 'a', Space: 'a', KeyJ: 'a', KeyX: 'b', KeyK: 'b', KeyC: 'x', KeyL: 'x', KeyV: 'y', KeyI: 'y', Enter: 'start', Escape: 'pause', KeyP: 'pause', KeyQ: 'lb', KeyE: 'rb', ShiftLeft: 'run', ShiftRight: 'run' };

@@ -88,7 +88,7 @@ function drawCrash() {
 }
 /* ---------- the boss fight's bar ---------- */
 function drawBossHud() { var tb = G.tb; if (!tb || tb.st !== 'boss' && tb.st !== 'dead' || !tb.max) return; var W = KIT.W, w = Math.min(300, W - 40);
-  var by = 8; if (W - 280 < 160) { w = W - 40; by = 84; } else w = Math.min(w, W - 280); KIT.panel(W / 2 - w / 2 - 6, by, w + 12, 26); KIT.text('TB', W / 2, by + 4, { align: 'center', size: 8, col: '#ff2630' }); KIT.bar(W / 2 - w / 2, by + 16, w, 6, Math.max(0, tb.hp) / tb.max, tb.phase > 1 ? '#ff4a8a' : '#c4121c');
+  var by = 8; if (W - 280 < 160) { w = W - 40; by = 84; } else w = Math.min(w, W - 280); w -= 20; hudBoss('TB', Math.max(0, tb.hp) / tb.max, tb.phase > 1 ? '#ff4a8a' : '#c4121c', W / 2 - w / 2, by + 2, w);
   if (G.bossIntro > 0) KIT.text("HE'S HERE", W / 2, KIT.H * 0.3, { align: 'center', font: 'title', size: 34, col: '#c4121c', outline: 1, alpha: Math.min(1, G.bossIntro) }); }
 /* ---------- the real ending ---------- */
 function finalEnding() {

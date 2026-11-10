@@ -3,7 +3,7 @@
    planks, the cell bars, crates, kegs, pill shelves, TB's posters and graffiti, blood) and a 512 sheet of faces and
    clothes for the people. Painted at 32 px with a seeded random and finished at 64 with a wash of grime, PS1 style.
    ===================================================================================================== */
-var TS = 32, TT = 64, TA = 1024;
+var TS = 32, TT = 64, TA = 2048; // 2048 since update 128: faces get a 128 px slot each (o.big)
 function srand(seed) { var s = seed >>> 0 || 1; return function () { s = (s + 0x6D2B79F5) | 0; var t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function hexrgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
 function rgb01(h) { var c = hexrgb(h); return [c[0] / 255, c[1] / 255, c[2] / 255]; }
@@ -13,7 +13,7 @@ function tileNoise(rnd, cells) { var g = []; for (var i = 0; i < cells * cells; 
 function Atlas(seed, size) {
   var SZ = size || TA, c = document.createElement('canvas'); c.width = c.height = SZ; var g = c.getContext('2d');
   var t = document.createElement('canvas'); t.width = t.height = TS; var tg = t.getContext('2d'); tg.imageSmoothingEnabled = false;
-  var slots = {}, next = 0, rnd = srand(seed || 7), per = SZ / TT;
+  var slots = {}, next = 0, nbig = 0, rnd = srand(seed || 7), per = SZ / TT;
   var P = { rnd: rnd,
     px: function (x, y, col) { tg.fillStyle = col; tg.fillRect(((x % TS) + TS) % TS, ((y % TS) + TS) % TS, 1, 1); },
     rect: function (x, y, w, h, col) { tg.fillStyle = col; for (var yy = y; yy < y + h; yy++) for (var xx = x; xx < x + w; xx++) tg.fillRect(((xx % TS) + TS) % TS, ((yy % TS) + TS) % TS, 1, 1); },
@@ -24,7 +24,12 @@ function Atlas(seed, size) {
   function slotXY(i) { return [(i % per) * TT, Math.floor(i / per) * TT]; }
   /* o.flat: no grime; o.hi: painted straight at 64 px with the canvas (text, faces); o.soft: keeps see-through edges */
   function add(name, fn, o) {
-    o = o || {}; var i = next++, xy = slotXY(i), ox = xy[0], oy = xy[1];
+    o = o || {};
+    if (o.big || fn.big) { // a face: a 2x2 slot from the bottom of the sheet, painted at twice the size
+      var bi = nbig++, B = TT * 2, bx = (bi % (SZ / B)) * B, by = SZ - B * (1 + Math.floor(bi / (SZ / B)));
+      g.clearRect(bx, by, B, B); g.save(); g.beginPath(); g.rect(bx, by, B, B); g.clip(); g.translate(bx, by); g.scale(2, 2); fn(g, rnd); g.restore();
+      slots[name] = [(bx + 1) / SZ, (by + 1) / SZ, (B - 2) / SZ, (B - 2) / SZ]; return slots[name]; }
+    var i = next++, xy = slotXY(i), ox = xy[0], oy = xy[1];
     g.clearRect(ox, oy, TT, TT);
     if (o.hi) { g.save(); g.beginPath(); g.rect(ox, oy, TT, TT); g.clip(); g.translate(ox, oy); fn(g, rnd); g.restore(); }
     else { tg.clearRect(0, 0, TS, TS); fn(P); g.imageSmoothingEnabled = !o.crisp; g.drawImage(t, 0, 0, TS, TS, ox, oy, TT, TT); g.imageSmoothingEnabled = false; }

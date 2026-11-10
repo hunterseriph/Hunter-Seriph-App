@@ -8,7 +8,10 @@
    The 3D resolution setting is the same one Kart uses ('hs-gl').
    ===================================================================================================== */
 var GLW = 400, GLH = 225;
-var GLRES = '1'; try { GLRES = localStorage.getItem('hs-gl') || '1'; } catch (e) {}
+var GLRES = '2', GLAUTO = true; try { var _gs = localStorage.getItem('hs-gl'); if (_gs) { GLRES = _gs; GLAUTO = false; } } catch (e) {}
+/* nobody has picked a resolution: start SHARP (it looked too basic at 225p) and drop to PS1 by itself if this device can't keep up */
+var _glT = 0, _glN = 0, _glSlow = 0;
+function glAuto() { if (!GLAUTO) return; var now = (window.performance || Date).now(); if (_glT) { var d = now - _glT; if (d < 250) { _glN++; if (d > 30) _glSlow++; if (_glN >= 150) { if (_glSlow > 80) { GLRES = '1'; GLAUTO = false; } _glN = 0; _glSlow = 0; } } } _glT = now; }
 var GLRESNAME = { '1': 'PS1 (225p)', '2': 'SHARP (450p)', '3': 'SHARPER (675p)', native: 'FULL (SCREEN)' }, GLRESORDER = ['1', '2', '3', 'native'];
 var NL = 8; // lamps lighting the picture at once
 var R3 = (function () {
@@ -22,13 +25,13 @@ var R3 = (function () {
   var VS = [
     'attribute vec3 aP; attribute vec2 aU; attribute vec4 aT; attribute vec3 aC; attribute vec3 aN; attribute float aG;',
     'uniform mat4 uVP; uniform mat4 uW; uniform float uTime; uniform float uWarp; uniform vec3 uEye;',
-    'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF;',
+    'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF; varying vec3 vV;',
     'void main() {',
     '  vec4 w = uW * vec4(aP, 1.0);',
     '  if (uWarp > 0.001) { float d = length(w.xz - uEye.xz), k = uWarp * smoothstep(1.2, 5.0, d);', // the walls breathe and swim (never right in your face)
     '    w.x += k * sin(w.z * 0.55 + uTime * 1.7) * 0.35; w.z += k * sin(w.x * 0.5 + uTime * 1.3) * 0.35; w.y += k * sin(w.x * 0.4 + w.z * 0.45 + uTime * 2.3) * 0.22 * (w.y + 0.3); }',
     '  gl_Position = uVP * w; vW = w.xyz; vN = normalize((uW * vec4(aN, 0.0)).xyz + vec3(0.0, 0.0001, 0.0));',
-    '  vU = aU; vT = aT; vC = aC; vG = aG; vF = gl_Position.w;',
+    '  vU = aU; vT = aT; vC = aC; vG = aG; vF = gl_Position.w; vV = uEye - w.xyz;',
     '}'].join('\n');
   var MIP = !!(gl.getExtension('OES_standard_derivatives') && gl.getExtension('EXT_shader_texture_lod'));
   var FS = [
@@ -36,8 +39,8 @@ var R3 = (function () {
     '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
     'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uSoft; uniform float uMip; uniform vec2 uTexSize;',
     'uniform vec3 uAmb; uniform vec4 uLP[' + NL + ']; uniform vec3 uLC[' + NL + ']; uniform vec3 uTP; uniform vec3 uTD; uniform vec3 uTC; uniform float uLit;',
-    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd;',
-    'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF;',
+    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd; uniform float uRim;',
+    'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF; varying vec3 vV;',
     'float b2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }',
     'float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }',
     'vec3 hue(vec3 c, float a) { const vec3 k = vec3(0.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca); }',
@@ -52,6 +55,7 @@ var R3 = (function () {
     '    for (int i = 0; i < ' + NL + '; i++) { vec3 d = uLP[i].xyz - vW; float ln = length(d) + 0.001; float a = max(0.0, 1.0 - ln / max(uLP[i].w, 0.01)); a *= a; L += uLC[i] * a * (0.3 + 0.7 * max(0.0, dot(vN, d / ln))); }',
     '    vec3 td = vW - uTP; float tl = length(td) + 0.001; vec3 tn = td / tl; float sp = smoothstep(0.82, 0.97, dot(tn, uTD)) + 0.12 * smoothstep(0.5, 0.82, dot(tn, uTD));',
     '    L += uTC * sp / (1.0 + 0.05 * tl * tl) * (0.35 + 0.65 * max(0.0, dot(vN, -tn)));',
+    '    if (uRim > 0.001) { float fr = 1.0 - max(0.0, dot(normalize(vN), normalize(vV))); L *= 0.6 + 0.4 * smoothstep(-0.7, 0.6, vN.y); L += uRim * fr * fr * (uAmb * 3.5 + L * 0.35 + vec3(0.05, 0.02, 0.02)); }', // people: shaded from above, a rim of light round the edge so they stand out from the dark
     '  } else L = vec3(1.0);',
     '  vec3 c = base * L + uAdd;',
     '  if (uHue > 0.001) { float a = uHue * (uTime * 0.9 + vW.x * 0.35 + vW.z * 0.25 + vW.y * 0.8); vec3 h = hue(c, a) * (1.0 + 0.6 * uHue); c = mix(c, h, min(1.0, uHue * 1.4)); }',
@@ -72,7 +76,7 @@ var R3 = (function () {
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     gl.useProgram(pr);
     var A = { p: gl.getAttribLocation(pr, 'aP'), u: gl.getAttribLocation(pr, 'aU'), t: gl.getAttribLocation(pr, 'aT'), c: gl.getAttribLocation(pr, 'aC'), n: gl.getAttribLocation(pr, 'aN'), g: gl.getAttribLocation(pr, 'aG') };
-    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd', 'uRim'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
     var ID = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     gl.uniform1i(U.uTex, 0); gl.uniform1f(U.uAlpha, 1); gl.uniformMatrix4fv(U.uW, false, ID); gl.uniform3f(U.uTint, 1, 1, 1); gl.uniform3f(U.uAdd, 0, 0, 0); gl.uniform1f(U.uLit, 1);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
@@ -122,7 +126,7 @@ var R3 = (function () {
       attribs(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniformMatrix4fv(U.uW, false, o.m || ID);
       gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0); gl.uniform1f(U.uMip, tex.mip ? 1 : 0); gl.uniform2f(U.uTexSize, tex.w, tex.h);
-      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
+      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uRim, o.rim || 0); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
       var tn = o.tint; gl.uniform3f(U.uTint, tn ? tn[0] : 1, tn ? tn[1] : 1, tn ? tn[2] : 1); var fl = o.flash; gl.uniform3f(U.uAdd, fl ? fl[0] : 0, fl ? fl[1] : 0, fl ? fl[2] : 0);
       if ((o.alpha !== undefined && o.alpha < 1) || (o.soft && !o.add)) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
       if (o.add) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false); }
@@ -165,9 +169,9 @@ var R3 = (function () {
       gl.uniform1f(U.uTime, o.t); gl.uniform1f(U.uHue, o.hue || 0); gl.uniform1f(U.uMeat, o.meat || 0); gl.uniform1f(U.uNeg, o.neg || 0); warpNow = o.warp || 0;
     }
     function lines() { if (GLRES === 'native') { var r = cv.getBoundingClientRect(); return Math.max(225, Math.min(1440, Math.round((Math.min(r.height, r.width) || 225) * (window.devicePixelRatio || 1)))); } return 225 * (+GLRES || 1); } // the short side
-    function setRes(v) { GLRES = v; try { localStorage.setItem('hs-gl', v); } catch (e) {} }
+    function setRes(v) { GLRES = v; GLAUTO = false; try { localStorage.setItem('hs-gl', v); } catch (e) {} }
     function resItem(back) { return { label: '3D RESOLUTION: ' + GLRESNAME[GLRES], fn: function () { setRes(GLRESORDER[(GLRESORDER.indexOf(GLRES) + 1) % GLRESORDER.length]); if (back) back(); } }; }
-    function begin(clear) { var sd = lines(), up = KIT.W < KIT.H, hh = up ? Math.round(sd * KIT.H / KIT.W) : sd, ww = up ? sd : Math.round(sd * KIT.W / KIT.H); if (ww !== GLW || hh !== GLH) { GLW = ww; GLH = hh; cv.width = GLW; cv.height = GLH; } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
+    function begin(clear) { glAuto(); var sd = lines(), up = KIT.W < KIT.H, hh = up ? Math.round(sd * KIT.H / KIT.W) : sd, ww = up ? sd : Math.round(sd * KIT.W / KIT.H); if (ww !== GLW || hh !== GLH) { GLW = ww; GLH = hh; cv.width = GLW; cv.height = GLH; } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
     function clearDepth() { gl.clear(gl.DEPTH_BUFFER_BIT); }
     function project(x, y, z) {
       var m = cam.m; if (!m) return null; var cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];

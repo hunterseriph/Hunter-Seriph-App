@@ -9,7 +9,10 @@
 var GLW = 400, GLH = 225;
 /* 3D resolution (setting 'hs-gl', shared by anything built on this renderer): 1 = the PS1 picture (225 lines), 2 and 3 = two and three times sharper,
    'native' = as many lines as the screen has (up to 1440). Higher costs more for the graphics chip. */
-var GLRES = '1'; try { GLRES = localStorage.getItem('hs-gl') || '1'; } catch (e) {}
+var GLRES = '2', GLAUTO = true; try { var _gs = localStorage.getItem('hs-gl'); if (_gs) { GLRES = _gs; GLAUTO = false; } } catch (e) {}
+/* nobody has picked a resolution: start SHARP (it looked too basic at 225p) and drop to PS1 by itself if this device can't keep up */
+var _glT = 0, _glN = 0, _glSlow = 0;
+function glAuto() { if (!GLAUTO) return; var now = (window.performance || Date).now(); if (_glT) { var d = now - _glT; if (d < 250) { _glN++; if (d > 30) _glSlow++; if (_glN >= 150) { if (_glSlow > 80) { GLRES = '1'; GLAUTO = false; } _glN = 0; _glSlow = 0; } } } _glT = now; }
 var GLRESNAME = { '1': 'PS1 (225p)', '2': 'SHARP (450p)', '3': 'SHARPER (675p)', native: 'FULL (SCREEN)' }, GLRESORDER = ['1', '2', '3', 'native'];
 var R3 = (function () {
   var view = document.getElementById('view'), hud = document.getElementById('c');
@@ -131,9 +134,9 @@ var R3 = (function () {
   }
   function setMatrix(m) { gl.uniformMatrix4fv(U.uM, false, m); }
   function lines() { if (GLRES === 'native') { var r = cv.getBoundingClientRect(); return Math.max(225, Math.min(1440, Math.round((r.height || 225) * (window.devicePixelRatio || 1)))); } return 225 * (+GLRES || 1); }
-  function setRes(v) { GLRES = v; try { localStorage.setItem('hs-gl', v); } catch (e) {} }
+  function setRes(v) { GLRES = v; GLAUTO = false; try { localStorage.setItem('hs-gl', v); } catch (e) {} }
   function resItem(back) { return { label: '3D RESOLUTION: ' + GLRESNAME[GLRES], fn: function () { setRes(GLRESORDER[(GLRESORDER.indexOf(GLRES) + 1) % GLRESORDER.length]); if (back) back(); } }; }
-  function begin(clear) { var hh = lines(), ww = Math.round(hh * KIT.W / KIT.H); if (ww !== GLW || hh !== GLH) { GLW = ww; GLH = hh; cv.width = GLW; cv.height = GLH; gl.useProgram(pr); gl.uniform2f(U.uRes, GLW, GLH); } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
+  function begin(clear) { glAuto(); var hh = lines(), ww = Math.round(hh * KIT.W / KIT.H); if (ww !== GLW || hh !== GLH) { GLW = ww; GLH = hh; cv.width = GLW; cv.height = GLH; gl.useProgram(pr); gl.uniform2f(U.uRes, GLW, GLH); } gl.viewport(0, 0, GLW, GLH); gl.clearColor(clear[0], clear[1], clear[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
   function setTime(t) { gl.uniform1f(U.uTime, t); }
   function snap(on) { gl.uniform1f(U.uSnap, 0); } // no vertex snapping: the PS1 jitter looked bad, so polygons stay put
   function bright(b) { gl.uniform1f(U.uBright, b); }

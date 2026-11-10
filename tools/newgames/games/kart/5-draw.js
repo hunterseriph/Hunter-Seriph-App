@@ -217,22 +217,19 @@ function hudBody(R, ctx, k, C) {
   }
   // lap and time (left corner)
   ctx.save(); ctx.translate(-C, 0);
-  KIT.panel(6, 6, 104, 34); text('LAP', 14, 13, { size: 8, col: '#a6968f' }); text(Math.max(1, Math.min(R.laps, k.lap)) + '/' + R.laps, 46, 12, { size: 16, col: '#f1e7d0' });
-  text(fmtTime(k.time), 14, 28, { size: 8, col: '#ffe36a' });
-  // drops
-  spr('mn_drop', 124, 30, { sc: 1.4 }); text('×' + k.drops, 134, 20, { size: 8, col: k.drops >= 10 ? '#ffe36a' : '#f1e7d0' });
+  hudLap(R, k);
   if (R.chain) chainHud(R);
   ctx.restore();
   // item slot
-  KIT.panel(214, 4, 52, 44); var it = k.item;
+  hudItemBox(R, k); var it = k.item;
   if (k.roul > 0) { var keys = Object.keys(ITEMS), ik = ITEMS[keys[Math.floor(R.t * 14) % keys.length]].ic; spr(ik, 240, 40, { sc: 1.5 }); sfx.play && Math.floor(R.t * 14) !== Math.floor((R.t - 1 / 60) * 14) && sfx.play('tick'); }
   else if (it) { spr(ITEMS[it].ic, 240, 40, { sc: it === 'sirj' ? 1.4 : 1.5 }); if (k.itemN > 1) text('×' + k.itemN, 258, 36, { size: 8, col: '#ffe36a' }); }
   if (k.shieldT > 0) { R2('#f08ab0', 216, 47, 48 * k.shieldT / 14, 2); }
   // place and map (right corner), kept clear of the on-screen buttons when they are showing
   ctx.save(); ctx.translate(Math.min(C, padEdge() - 480 - C), 0);
-  if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; text(String(pl), 404, 140, { size: 48, col: col, font: 'title', outline: true }); text(ordinal(pl).slice(-2).toUpperCase(), 436, 148, { size: 16, col: col, font: 'title', outline: true }); }
+  if (!R.tt) { var pl = R.chain && k.team ? k.team.place || 1 : k.place, col = pl === 1 ? '#ffe36a' : pl === 2 ? '#d0c8d0' : pl === 3 ? '#e09a5a' : '#ff2630'; hudPlace(R, k, pl, col); }
   // map
-  drawMap(392, 54, 84, 84);
+  hudMapBack(390, 52, 88, 88); drawMap(392, 54, 84, 84);
   ctx.restore();
   ctx.save(); ctx.translate(-C, 0);
   if (R.net) R.karts.forEach(function (o) { if (!isHuman(R, o) || o === k || !o.tag) return; var p = R3.project(o.x, o.y + (o.floatY || 0) + 2.7, o.z); if (!p || p.w > 140) return; var w = KIT.tw(o.tag, 6) + 8; R2('rgba(7,4,5,0.8)', p.x - w / 2, p.y - 9, w, 11); text(o.tag, p.x, p.y - 7, { size: 6, align: 'center', col: '#ffe36a' }); }); // other players' names over their karts

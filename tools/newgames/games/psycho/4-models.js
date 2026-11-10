@@ -15,7 +15,7 @@ function fEye(g, x, y, rx, ry, iris, look, white) {
   fEll(g, ix, y + ry * 0.12, rx * 0.62, ry * 0.72, iris || '#2a1a14'); fEll(g, ix, y + ry * 0.15, rx * 0.34, ry * 0.42, K0);
   fEll(g, ix - rx * 0.25, y - ry * 0.22, rx * 0.2, ry * 0.18, '#ffffff'); fEll(g, ix + rx * 0.22, y + ry * 0.35, rx * 0.09, ry * 0.08, '#ffffff');
 }
-function face(fn, bg) { return function (g) { g.fillStyle = bg; g.fillRect(0, 0, 64, 64); g.scale(0.5, 0.5); fn(g); }; }
+function face(fn, bg) { var f = function (g) { g.fillStyle = bg; g.fillRect(0, 0, 64, 64); g.scale(0.5, 0.5); fn(g); }; f.big = true; return f; }
 function tbGrin(g, mad) { fShape(g, [[34, 86], [64, 112 + (mad ? 8 : 0), 94, 84], [64, 94, 34, 86]], '#3a0a0a', K0, 3); g.fillStyle = '#fffaf0'; for (var t = 0; t < 8; t++) g.fillRect(40 + t * 6.2, 87 + Math.abs(t - 3.5) * 0.7, 4.6, mad ? 7 : 5); if (mad) { g.fillStyle = '#fffaf0'; for (var b = 0; b < 7; b++) g.fillRect(43 + b * 6.2, 100 - Math.abs(b - 3) * 0.6, 4.4, 5); } }
 HIPAINT.f_cum = face(function (g) { fEye(g, 46, 62, 13, 16, '#2a1a14', 0.3); fEye(g, 82, 62, 13, 16, '#2a1a14', 0.3); fLine(g, [[34, 40], [46, 34, 58, 42]], 3.5); fLine(g, [[70, 42], [82, 34, 94, 40]], 3.5); fShape(g, [[52, 90], [64, 82, 76, 90], [64, 100, 52, 90]], '#5a0c14', K0, 3); g.globalAlpha = 0.45; fEll(g, 32, 82, 9, 5, '#e8905a'); fEll(g, 96, 82, 9, 5, '#e8905a'); g.globalAlpha = 1; fShape(g, [[100, 40], [96, 50, 100, 54], [104, 50, 100, 40]], '#cfe8ff', K0, 2); }, '#f0c070');
 HIPAINT.f_tb = face(function (g) { fLine(g, [[14, 44], [114, 58]], 4, '#1a1010'); fEll(g, 46, 60, 15, 13, '#1a1010', K0, 2); fEye(g, 82, 62, 11, 13, '#3a2412', -0.2); fLine(g, [[70, 44], [84, 40, 96, 46]], 4, '#3a2412'); fLine(g, [[62, 70], [58, 78], [66, 80]], 2.5, '#a87a5a'); tbGrin(g, 0); }, '#e8c0a0');
@@ -56,14 +56,33 @@ function bxp(m, x0, y0, z0, x1, y1, z1, col, T) { T = T || TL('white'); var c = 
 /* ---------- the bodies. D: sizes. Each part's mesh has its origin at its joint; limbs hang down -y ---------- */
 var RIGS = {};
 function M() { return new R3.Mesh(); }
-function limbs(P, D, c) { // upper and lower arms (with a hand) and legs (with a foot), in the colours c
-  ['L', 'R'].forEach(function (sd) {
-    var au = M(); ell(au, 0, -0.03, 0, D.arm * 1.15, D.arm * 1.15, D.arm * 1.1, c.sleeve, 8, 4); tub(au, [0, 0, 0], [0, -D.au, 0], D.arm, D.arm * 0.88, c.sleeve, 8); P['au' + sd] = au.upload();
-    var al = M(); ell(al, 0, 0, 0, D.arm * 0.9, D.arm * 0.9, D.arm * 0.9, c.fore || c.sleeve, 7, 4); tub(al, [0, 0, 0], [0, -D.al, 0], D.arm * 0.86, D.arm * 0.72, c.fore || c.sleeve, 8);
-    ell(al, 0, -D.al - D.hand * 0.6, 0.01, D.hand * 0.9, D.hand, D.hand * 0.8, c.hand, 8, 4); ell(al, (sd === 'L' ? 1 : -1) * D.hand * 0.55, -D.al - D.hand * 0.3, D.hand * 0.4, D.hand * 0.4, D.hand * 0.45, D.hand * 0.4, c.hand, 6, 3); P['al' + sd] = al.upload();
-    var lu = M(); ell(lu, 0, -0.02, 0, D.leg * 1.1, D.leg * 1.1, D.leg * 1.1, c.legs, 8, 4); tub(lu, [0, 0, 0], [0, -D.lu, 0], D.leg, D.leg * 0.86, c.legs, 8); P['lu' + sd] = lu.upload();
-    var ll = M(); ell(ll, 0, 0, 0, D.leg * 0.88, D.leg * 0.88, D.leg * 0.88, c.legs, 7, 4); tub(ll, [0, 0, 0], [0, -D.ll + 0.06, 0], D.leg * 0.84, D.leg * 0.74, c.legs, 8);
-    tub(ll, [0, -D.ll + 0.1, 0], [0, -D.ll + 0.03, 0], D.leg * 0.9, D.leg * 0.95, c.boot, 8); ell(ll, 0, -D.ll + 0.05, 0.06, D.leg * 0.95, 0.06, D.leg * 1.9, c.boot, 8, 4); P['ll' + sd] = ll.upload();
+/* a limb turned on a lathe: rings [y, rx, rz, cx, cz] down its length with smooth normals, so arms and legs have
+   muscle, taper, wrists and ankles instead of being plain tubes */
+function lathe(m, P, col, seg, o) {
+  o = o || {}; seg = seg || 10; var T = o.T || TL('white'), c = C(col), n = P.length;
+  function V(k, a) { var p = P[k], rx = p[1], rz = p[2] === undefined ? p[1] : p[2], pn = P[Math.min(n - 1, k + 1)], pp = P[Math.max(0, k - 1)], dy = Math.abs(pn[0] - pp[0]) || 0.001, sl = (pn[1] - pp[1]) / dy, sn = Math.sin(a), cs = Math.cos(a), l = Math.hypot(1, sl);
+    return { p: [(p[3] || 0) + sn * rx, p[0], (p[4] || 0) + cs * rz], n: [sn / l, sl / l, cs / l] }; }
+  for (var k = 0; k < n - 1; k++) for (var i = 0; i < seg; i++) { var a0 = i / seg * 6.2832, a1 = (i + 1) / seg * 6.2832, v = [V(k, a0), V(k, a1), V(k + 1, a1), V(k + 1, a0)];
+    m.quadN(v.map(function (z) { return z.p; }), [0.1, 0.1, 0.9, 0.1, 0.9, 0.9, 0.1, 0.9], T, c, v.map(function (z) { return z.n; })); }
+  if (o.cap) { var b = P[n - 1]; for (var j = 0; j < seg; j++) { var b0 = j / seg * 6.2832, b1 = (j + 1) / seg * 6.2832; m.tri([b[3] || 0, b[0], b[4] || 0], V(n - 1, b1).p, V(n - 1, b0).p, [0.5, 0.5, 0, 0, 1, 0], T, c, [0, -1, 0]); } }
+}
+function limbs(P, D, c) { // upper and lower arms (elbow, wrist, cuff, a hand with fingers and a thumb) and legs (knee, calf, ankle, a proper shoe with a sole)
+  var A = D.arm, L = D.leg, H = D.hand, fore = c.fore || c.sleeve, cuff = fore !== c.hand, hem = c.legs !== c.boot;
+  ['L', 'R'].forEach(function (sd) { var s = sd === 'L' ? 1 : -1;
+    var au = M(); ell(au, 0, -0.02, 0, A * 1.22, A * 1.18, A * 1.16, c.sleeve, 10, 5); lathe(au, [[0, A * 1.05], [-D.au * 0.28, A * 1.12], [-D.au * 0.62, A * 0.98], [-D.au, A * 0.86]], c.sleeve, 10); P['au' + sd] = au.upload();
+    var al = M(); ell(al, 0, 0, -0.005, A * 0.94, A * 0.94, A * 0.94, fore, 8, 4); lathe(al, [[0, A * 0.88], [-D.al * 0.28, A * 0.96], [-D.al * 0.7, A * 0.76], [-D.al, A * 0.64]], fore, 10);
+    if (cuff) tub(al, [0, -D.al + 0.035, 0], [0, -D.al - 0.005, 0], A * 0.8, A * 0.84, shade(fore, 0.72), 10, { cap: 1 });
+    var hy = -D.al - H * 0.62; ell(al, 0, hy, 0.005, H * 0.82, H * 0.9, H * 0.5, c.hand, 8, 5); // the palm
+    for (var f = 0; f < 4; f++) { var fx = (f - 1.5) * H * 0.4, fy = hy - H * 0.62, fl = H * (f === 0 || f === 3 ? 0.62 : 0.78); tub(al, [fx, fy + H * 0.1, 0.01], [fx, fy - fl * 0.55, 0.035], H * 0.2, H * 0.18, c.hand, 5); tub(al, [fx, fy - fl * 0.55, 0.035], [fx, fy - fl, 0.075], H * 0.18, H * 0.13, c.hand, 5, { cap: 1 }); }
+    tub(al, [s * H * 0.6, hy + H * 0.25, 0.02], [s * H * 1.05, hy - H * 0.3, 0.07], H * 0.24, H * 0.2, c.hand, 5); tub(al, [s * H * 1.05, hy - H * 0.3, 0.07], [s * H * 1.0, hy - H * 0.75, 0.11], H * 0.2, H * 0.13, c.hand, 5, { cap: 1 }); // the thumb
+    P['al' + sd] = al.upload();
+    var lu = M(); ell(lu, 0, -0.02, 0, L * 1.14, L * 1.12, L * 1.14, c.legs, 10, 5); lathe(lu, [[0, L * 1.08], [-D.lu * 0.3, L * 1.12, L * 1.16], [-D.lu * 0.78, L * 0.92], [-D.lu, L * 0.84]], c.legs, 10); P['lu' + sd] = lu.upload();
+    var ll = M(), ft = -D.ll; ell(ll, 0, 0, 0.012, L * 0.9, L * 0.9, L * 0.92, c.legs, 8, 4); // the knee
+    lathe(ll, [[0, L * 0.86], [-D.ll * 0.3, L * 0.92, L * 0.98, 0, -0.012], [-D.ll * 0.72, L * 0.72], [ft + 0.1, L * 0.66]], c.legs, 10);
+    if (hem) tub(ll, [0, ft + 0.13, 0], [0, ft + 0.09, 0], L * 0.74, L * 0.8, shade(c.legs, 0.75), 10);
+    ell(ll, 0, ft + 0.07, -0.012, L * 0.82, 0.07, L * 0.95, c.boot, 8, 4); ell(ll, 0, ft + 0.055, 0.085, L * 0.86, 0.052, L * 1.45, c.boot, 10, 5); // heel and toe
+    bxp(ll, -L * 0.82, ft, -L * 0.95, L * 0.82, ft + 0.022, L * 2.15, shade(c.boot, 0.45)); // the sole
+    P['ll' + sd] = ll.upload();
   });
 }
 function buildRigs() {
@@ -151,7 +170,7 @@ var MM = R3.ok ? R3.mul : null, MD = R3.ok ? R3.model : null;
 function drawRig(rig, x, y, z, yaw, P, o) {
   o = o || {}; var D = rig.D, S = rig.P, sc = o.sc || 1, fl = o.flash, tint = o.tint, al = o.alpha;
   var hipY = D.lu + D.ll + P.y, body = MD(x, y + (P.bodyY || 0), z, yaw, P.bp || 0, P.br || 0, sc);
-  function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0 }); }
+  function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: 1 }); }
   var hips = MM(body, MD(0, hipY, 0, P.twist * 0.3, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.02, 0, P.twist, P.lean, P.roll)); dr(S.torso, tor);
   var head = MM(tor, MD(0, D.tor + D.neck, 0, P.hy, P.hp, P.hr)); dr(o.head || S.head, head);

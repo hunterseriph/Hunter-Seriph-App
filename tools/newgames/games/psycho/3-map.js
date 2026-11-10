@@ -243,8 +243,8 @@ function buildIndoorMesh(F, mesh) { // the basement, and (with F.indoorOnly) the
     if (e.di) m.quad([gx, 0, gz - TSZ / 2], [gx, 0, gz + TSZ / 2], [gx, 2.3, gz + TSZ / 2], [gx, 2.3, gz - TSZ / 2], [0, 1, 1.5, 1, 1.5, 0, 0, 0], TL('bars'), vc(1), [e.di, 0, 0]);
     else m.quad([gx - TSZ / 2, 0, gz], [gx + TSZ / 2, 0, gz], [gx + TSZ / 2, 2.3, gz], [gx - TSZ / 2, 2.3, gz], [0, 1, 1.5, 1, 1.5, 0, 0, 0], TL('bars'), vc(1), [0, 0, e.dj]);
     if (up > 0) { var sx = cx + e.di * (TSZ / 2 + 0.02), sz = cz + e.dj * (TSZ / 2 + 0.02); // the EXIT sign over the gate, lit from inside
-      if (e.di) m.quad([sx, 2.35, sz - 0.4], [sx, 2.35, sz + 0.4], [sx, 2.75, sz + 0.4], [sx, 2.75, sz - 0.4], [0, 1, 1, 1, 1, 0, 0, 0], TL('neon'), vc(1), [e.di, 0, 0], 1.4);
-      else m.quad([sx - 0.4, 2.35, sz], [sx + 0.4, 2.35, sz], [sx + 0.4, 2.75, sz], [sx - 0.4, 2.75, sz], [0, 1, 1, 1, 1, 0, 0, 0], TL('neon'), vc(1), [0, 0, e.dj], 1.4); }
+      if (e.di) m.quad([sx, 2.35, sz - 0.4], [sx, 2.35, sz + 0.4], [sx, 2.75, sz + 0.4], [sx, 2.75, sz - 0.4], e.di > 0 ? [1, 1, 0, 1, 0, 0, 1, 0] : [0, 1, 1, 1, 1, 0, 0, 0], TL('neon'), vc(1), [e.di, 0, 0], 1.4);
+      else m.quad([sx - 0.4, 2.35, sz], [sx + 0.4, 2.35, sz], [sx + 0.4, 2.75, sz], [sx - 0.4, 2.75, sz], e.dj < 0 ? [1, 1, 0, 1, 0, 0, 1, 0] : [0, 1, 1, 1, 1, 0, 0, 0], TL('neon'), vc(1), [0, 0, e.dj], 1.4); }
   });
   /* blood and graffiti */
   var dm0 = m; m = F._dm || (F._dm = new R3.Mesh()); // decals go in their own mesh, drawn after the walls with a depth offset (they flickered)

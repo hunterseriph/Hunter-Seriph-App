@@ -124,22 +124,9 @@ function drawHud() {
   if (L > 0.5) { ctx.save(); ctx.globalAlpha = Math.min(0.5, L * 0.07); for (var i = 0; i < 5; i++) { ctx.strokeStyle = ['#ff4a8a', '#ffe36a', '#4adfff', '#7aff6a', '#c04aff'][(i + Math.floor(t * 2)) % 5]; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(W / 2, H / 2, W * (0.56 + i * 0.03 + Math.sin(t + i) * 0.02), H * (0.62 + i * 0.04), Math.sin(t * 0.3) * 0.1, 0, 6.28); ctx.stroke(); } ctx.restore(); }
   if (P.hurtT > 0 || P.hp < 25) { ctx.fillStyle = 'rgba(160,0,10,' + Math.max(P.hurtT * 0.9, P.hp < 25 ? 0.12 + Math.sin(t * 6) * 0.06 : 0) + ')'; ctx.fillRect(0, 0, W, H); }
   if (P.hide) { ctx.fillStyle = '#050304'; for (var y = 0; y < H; y += 24) { ctx.fillRect(0, y, W, 12); } ctx.fillRect(0, 0, W * 0.14, H); ctx.fillRect(W * 0.86, 0, W * 0.14, H); KIT.text('HIDING', W / 2, H - 28, { align: 'center', col: '#a6968f' }); KIT.text('A  CLIMB OUT', W / 2, H - 16, { align: 'center', col: '#f1e7d0', size: 8 }); }
-  /* condition: an ECG line, green, yellow, red */
-  var k = P.hp / maxHp(), col = k > 0.6 ? '#4adf6a' : k > 0.3 ? '#ffe36a' : '#ff2630', word = k > 0.6 ? 'FINE' : k > 0.3 ? 'CAUTION' : 'DANGER';
-  KIT.panel(8, 8, 112, 40); ctx.save(); ctx.beginPath(); ctx.rect(14, 14, 100, 22); ctx.clip(); ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); var rate = k > 0.6 ? 1.2 : k > 0.3 ? 1.8 : 2.6;
-  for (var x = 0; x <= 100; x += 2) { var ph = ((x / 100) * 2 - t * rate) % 1, u = ph < 0 ? ph + 1 : ph, yv = u > 0.42 && u < 0.46 ? -8 : u > 0.46 && u < 0.5 ? 7 : u > 0.5 && u < 0.53 ? -3 : 0; if (x === 0) ctx.moveTo(14 + x, 26 + yv); else ctx.lineTo(14 + x, 26 + yv); } ctx.stroke(); ctx.restore();
-  KIT.text(word, 16, 36, { col: col, size: 8 }); KIT.text(Math.ceil(P.hp) + '', 112, 36, { col: '#a6968f', size: 8, align: 'right' });
-  if (P.st < 99) KIT.bar(14, 45, 100, 2, P.st / 100, P.stLock ? '#6a3a3a' : '#c8c0a0');
-  /* the trip */
-  var tl = Math.floor(L + 1e-6), TY = 32; KIT.panel(W - 120, TY, 112, 30); for (var p = 0; p < TRIPMAX; p++) { var f = Math.max(0, Math.min(1, L - p)); ctx.fillStyle = '#2a0a12'; ctx.fillRect(W - 112 + p * 16, TY + 6, 12, 7); if (f > 0) { ctx.fillStyle = ['#ff4a8a', '#ffe36a', '#4adfff', '#7aff6a', '#c04aff', '#ff7a2a'][p]; ctx.fillRect(W - 112 + p * 16, TY + 6, 12 * f, 7); } }
-  KIT.text(TRIPNAME[Math.min(TRIPMAX, tl)], W - 64, TY + 17, { align: 'center', size: 8, col: L > 3 ? ['#ff4a8a', '#ffe36a', '#4adfff'][Math.floor(t * 4) % 3] : '#a6968f' });
-  /* weapon, ammo, food */
-  var Wp = WEAP[P.weap], wx = Math.round(W / 2 - 60), wy = H - 40; KIT.panel(wx, wy, 120, 34); var ic = ICONS[P.weap]; if (ic) ctx.drawImage(ic, wx + 3, wy - 2, 38, 38);
-  KIT.text(Wp.short || 'FISTS', wx + 44, wy + 7, { size: 8, col: '#f1e7d0', max: 70 }); KIT.text(Wp.gun ? P.ammo[Wp.ammo] + ' ' + AMMO[Wp.ammo].n : Wp.throw ? 'THROW' : 'MELEE', wx + 44, wy + 20, { size: 8, col: Wp.gun && !P.ammo[Wp.ammo] ? '#ff2630' : '#ffe36a', max: 70 });
-  var items = [['cracker', 'i_cracker'], ['cuppa', 'i_cuppa'], ['pill', 'i_pill']];
-  KIT.panel(8, 50, 112, 24); items.forEach(function (q, n) { drawTile(q[1], 11 + n * 36, 51, 20); KIT.text('' + P.inv[q[0]], 32 + n * 36, 59, { size: 8, col: P.inv[q[0]] ? '#f1e7d0' : '#4a3a3a' }); });
-  if (P.keys[G.fi]) drawTile('i_key', 122, 50, 24);
-  P.buffs.forEach(function (b, n) { KIT.text(BUFFS[b].n, 10, 78 + n * 9, { size: 6, col: '#ff4a8a' }); });
+  hudCond(P, t);
+  hudTrip(L, t);
+  var Wp = WEAP[P.weap]; hudWeapon(P);
   /* crosshair */
   if (Wp.gun && !P.hide && G.mode === 'play') { var tg = aimTarget(P.aim ? 0.22 : 0.42), q = tg ? R3.project(tg.x, 1.3, tg.z) : null, cx = q ? q.x : W / 2 + (P.aim ? 0 : 0), cy = q ? q.y : H * 0.46;
     ctx.strokeStyle = tg ? '#ff2630' : 'rgba(241,231,208,0.6)'; ctx.lineWidth = 1.5; var s = P.aim ? 5 : 8; ctx.beginPath(); ctx.moveTo(cx - s - 4, cy); ctx.lineTo(cx - 3, cy); ctx.moveTo(cx + 3, cy); ctx.lineTo(cx + s + 4, cy); ctx.moveTo(cx, cy - s - 4); ctx.lineTo(cx, cy - 3); ctx.moveTo(cx, cy + 3); ctx.lineTo(cx, cy + s + 4); ctx.stroke(); }
@@ -152,8 +139,8 @@ function drawHud() {
   if (G.stash) { var sa = angDiff(Math.atan2(G.stash.x - P.x, G.stash.z - P.z), P.ca), sd = Math.hypot(G.stash.x - P.x, G.stash.z - P.z); KIT.text('YOUR STUFF  ' + Math.round(sd) + 'M', W / 2, 10, { align: 'center', size: 8, col: '#ffe36a' });
     ctx.save(); ctx.translate(W / 2, 30); ctx.rotate(-sa); ctx.fillStyle = '#ffe36a'; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(6, 4); ctx.lineTo(-6, 4); ctx.fill(); ctx.restore(); KIT.text("DON'T LET TB SEE YOU", W / 2, 40, { align: 'center', size: 6, col: '#c4121c' }); }
   /* prompt, messages, subtitles */
-  if (G.prompt && !P.hide && G.mode === 'play') { var pt = promptText(G.prompt); if (pt) { var pw = KIT.tw('A  ' + pt, 8) + 16; KIT.panel(W / 2 - pw / 2, H - 66, pw, 20); KIT.text('A  ' + pt, W / 2, H - 60, { align: 'center', size: 8, col: '#f1e7d0' }); } }
-  G.msgs.forEach(function (m, n) { KIT.text(m.s, W / 2, H - 82 - (G.msgs.length - 1 - n) * 11, { size: 8, col: m.col, alpha: Math.min(1, m.t), max: W - 40, align: 'center' }); });
+  if (G.prompt && !P.hide && G.mode === 'play') { var pt = promptText(G.prompt); if (pt) { hudPrompt(pt); } }
+  G.msgs.forEach(function (m, n) { KIT.text(m.s, W / 2, H - 86 - (G.msgs.length - 1 - n) * 11, { size: 8, col: m.col, alpha: Math.min(1, m.t), max: W - 40, align: 'center', outline: 1 }); });
   if (G.sub && G.mode !== 'end') { var lines = KIT.wrap(G.sub.s, W - 80, 14, 'body'); lines.forEach(function (s, n) { KIT.text((n ? '' : G.sub.who + ':  ') + s, W / 2, H * 0.52 + n * 15 - (lines.length - 1) * 15, { align: 'center', size: 14, font: 'body', col: G.sub.who === 'TB' ? '#ff2630' : '#f1e7d0', outline: 1, alpha: Math.min(1, G.sub.t * 2) }); }); }
   if (G.mode === 'end' && G.endSaid && G.sub) { var bl = KIT.wrap(G.sub.s, W - 40, 30, 'title'); bl.forEach(function (s, n) { KIT.text(s, W / 2 + Math.sin(t * 30) * 1.5, H * 0.24 + n * 32, { align: 'center', font: 'title', size: 30, col: '#ff2630', outline: 1 }); }); }
   if (G.banner && G.banner.t > 0) { var ba = Math.min(1, G.banner.t, (4 - G.banner.t) * 2); KIT.text(G.banner.s, W / 2, H * 0.3, { align: 'center', font: 'title', size: 30, col: '#c4121c', alpha: ba, outline: 1 }); }

@@ -89,5 +89,4 @@ function drawHazards(m, add) { // add: the glowing pass (telegraph rings); else 
 /* the henchman's bar along the top of the screen while you fight it */
 function drawHenchHud() { var f = (G.foes || []).filter(function (f) { return f.d && f.d.boss && (f.st === 'fight' || f.st === 'chase') && f.hp > 0; })[0]; if (!f || G.mode !== 'play') return;
   var W = KIT.W, w = Math.min(280, W - 60), x = (W - w) / 2, y = W < 600 ? 104 : 30, ctx = KIT.ctx, k = Math.max(0, f.hp / (f.max || f.d.hp));
-  ctx.fillStyle = 'rgba(7,4,5,0.85)'; ctx.fillRect(x - 3, y - 3, w + 6, 14); ctx.fillStyle = '#4a1a1c'; ctx.fillRect(x, y, w, 8); ctx.fillStyle = f.p2 ? '#ff2630' : '#c4121c'; ctx.fillRect(x, y, w * k, 8);
-  KIT.text(f.d.n.toUpperCase(), W / 2, y + 12, { size: 8, col: '#f1e7d0', align: 'center' }); }
+  hudBoss(f.d.n, k, f.p2 ? '#ff2630' : '#c4121c', x, y - 6, w); }
