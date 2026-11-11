@@ -165,6 +165,13 @@ function stepBoss(dt) {
 function hitBoss(dmg, stun) { var b = BOSS; if (stun) { b.stun = 1.2; sfx.play('tick'); return; } b.hp -= dmg; b.hurt = 0.2; sfx.play('hit'); if (b.hp <= 0) { b.hp = 0; BOSS = null; KIT.shake(12); sfx.play('win'); for (var i = 0; i < 30; i++) FX.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 240, vy: (Math.random() - 0.5) * 240, t: 0.8, col: '#ff2630' }); FOE.forEach(function (f) { f.hp = 0; }); markClear(ROOM); if (DG.di === DUNGEONS.length - 1) setTimeout(ending, 2500); } }
 /* ---------- Cumhead ---------- */
 var DIRV = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+function swordHit(hx, hy, r, dmg, offs) { var p = P;
+  FOE.forEach(function (f) { if (f.hp > 0 && Math.hypot(f.x - hx, f.y - hy) < r) hitFoe(f, dmg, p.x, p.y); }); if (BOSS && Math.hypot(BOSS.x - hx, BOSS.y - hy) < BOSS.r + r - 12) hitBoss(dmg);
+  offs.forEach(function (o) { var bi = Math.floor((hx + o[0]) / TS), bj = Math.floor((hy + o[1]) / TS), bt2 = tAt(bi, bj); if (bt2 === 5 || bt2 === 30) cutBush(bi, bj, bt2); if (bt2 === 20 || bt2 === 96) shotHitsTile({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, t: 1, back: 0 }); }); }
+/* the spin attack: a full turn with the Sausage out, double damage, cuts everything round you */
+function spinAttack() { var p = P; p.spin = 0.4; p.atk = 0; sfx.play('magic'); sfx.tone('sawtooth', 220, 660, 0.3, 0.05); KIT.shake(3);
+  var offs = []; for (var a = 0; a < 8; a++) offs.push([Math.cos(a / 8 * 6.283) * 26, Math.sin(a / 8 * 6.283) * 26]); offs.push([0, 0]);
+  swordHit(p.x, p.y, 38, swingDmg() * 2, offs); }
 function swingDmg() { return 1 + (SV.items.sharp ? 1 : 0) + (SV.won ? 1 : 0); }
 function stepPlayer(dt) {
   var p = P, mv = KIT.stick(0); p.inv = Math.max(0, p.inv - dt); p.atk = Math.max(0, p.atk - dt); p.hover = Math.max(0, p.hover - dt); G.pillInv = Math.max(0, (G.pillInv || 0) - dt); G.pillFast = Math.max(0, (G.pillFast || 0) - dt);
@@ -174,8 +181,8 @@ function stepPlayer(dt) {
   if (p.fall > 0) { p.fall -= dt; if (p.fall <= 0) { p.x = p.safeX; p.y = p.safeY; p.hp -= 1; p.inv = 1.2; sfx.play('hurt'); if (p.hp <= 0) die(); } return; }
   if (p.kb > 0) { p.kb -= dt; moveBox(p, p.kx * dt, p.ky * dt, 7); return; }
   var vx = Math.abs(mv.x) > 0.3 ? Math.sign(mv.x) : 0, vy = Math.abs(mv.y) > 0.3 ? Math.sign(mv.y) : 0; p.moving = !!(vx || vy);
-  if (p.atk <= 0) { if (vx || vy) { if (vx && (!vy || Math.abs(mv.x) > Math.abs(mv.y))) p.dir = vx > 0 ? 'r' : 'l'; else p.dir = vy > 0 ? 'd' : 'u'; }
-    var sp = SPEED * (G.pillFast > 0 ? 1.4 : 1) * dt * (vx && vy ? 0.74 : 1);
+  if (p.atk <= 0 && !(p.spin > 0)) { if ((vx || vy) && !(p.chg > 0)) { if (vx && (!vy || Math.abs(mv.x) > Math.abs(mv.y))) p.dir = vx > 0 ? 'r' : 'l'; else p.dir = vy > 0 ? 'd' : 'u'; }
+    var sp = SPEED * (G.pillFast > 0 ? 1.4 : 1) * dt * (vx && vy ? 0.74 : 1) * (p.chg > 0 ? 0.5 : 1);
     moveBox(p, vx * sp, vy * sp, 7); if (vx || vy) p.anim += dt * 9;
     // a ledge under your feet when you walk down: hop it
     if (vy > 0 && !vx) { var li = Math.floor(p.x / TS), lj = Math.floor((p.y + 12) / TS); if (tAt(li, lj) === 9 && walkable(tAt(li, lj + 1)) && walkable(tAt(li, lj + 2))) { p.hop = { t: 0, y0: p.y, y1: (lj + 1.6) * TS }; sfx.play('blip'); return; } }
@@ -187,11 +194,14 @@ function stepPlayer(dt) {
   if ((isPit(tt) || isWater(tt)) && p.hover <= 0) { p.fall = 0.45; p.fallK = isWater(tt) ? 'water' : 'pit'; sfx.play(isWater(tt) ? 'splat' : 'lose'); return; }
   if (!isPit(tt) && !isWater(tt) && p.hover <= 0) { var ok = true; for (var a = -1; a <= 1; a += 2) for (var b = -1; b <= 1; b += 2) { var t2 = tAt(Math.floor((p.x + a * 9) / TS), Math.floor((p.y + b * 9) / TS)); if (isPit(t2) || isWater(t2)) ok = false; } if (ok) { p.safeX = p.x; p.safeY = p.y; } }
   if (tt === 98 && p.inv <= 0) hurtP(1, p.x, p.y - 20);
-  if (KIT.pressed('a') && p.atk <= 0 && interact()) {} else if (KIT.pressed('a') && SV.items.sword && p.atk <= 0) { p.atk = 0.24; sfx.play('step'); sfx.tone('triangle', 400, 150, 0.1, 0.04); var v = DIRV[p.dir], hx = p.x + v[0] * 18, hy = p.y + v[1] * 18;
-    FOE.forEach(function (f) { if (f.hp > 0 && Math.hypot(f.x - hx, f.y - hy) < 22) hitFoe(f, swingDmg(), p.x, p.y); }); if (BOSS && Math.hypot(BOSS.x - hx, BOSS.y - hy) < BOSS.r + 10) hitBoss(swingDmg());
-    [[0, 0], [v[1] * 10, v[0] * 10], [-v[1] * 10, -v[0] * 10]].forEach(function (o) { var bi = Math.floor((hx + o[0]) / TS), bj = Math.floor((hy + o[1]) / TS), bt2 = tAt(bi, bj); if (bt2 === 5 || bt2 === 30) cutBush(bi, bj, bt2); if (bt2 === 20 || bt2 === 96) shotHitsTile({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, t: 1, back: 0 }); }); }
+  if (KIT.pressed('a') && p.atk <= 0 && !(p.spin > 0) && interact()) {} else if (KIT.pressed('a') && SV.items.sword && p.atk <= 0 && !(p.spin > 0)) { p.atk = 0.24; p.chgArm = 1; p.chg = 0; p.chgDone = 0; sfx.play('step'); sfx.tone('triangle', 400, 150, 0.1, 0.04); var v = DIRV[p.dir];
+    swordHit(p.x + v[0] * 18, p.y + v[1] * 18, 22, swingDmg(), [[0, 0], [v[1] * 10, v[0] * 10], [-v[1] * 10, -v[0] * 10]]); }
   else if (KIT.pressed('a') && !SV.items.sword && p.atk <= 0) { if (!MSGBOX) say("Cumhead has nothing to swing. Amy's Willy Chilli is on the same street as the Clubhouse.", ''); }
-  if (KIT.pressed('b') && p.atk <= 0) useItem();
+  // hold A after a swing to charge the spin attack; let go when the Sausage glows
+  if (p.chgArm && SV.items.sword) { if (KIT.held('a')) { if (p.atk <= 0) { p.chg += dt; if (p.chg >= 0.75 && !p.chgDone) { p.chgDone = 1; sfx.play('power'); } } }
+    else { if (p.chg >= 0.75) spinAttack(); p.chg = 0; p.chgArm = 0; p.chgDone = 0; } }
+  if (p.spin > 0) p.spin = Math.max(0, p.spin - dt);
+  if (KIT.pressed('b') && p.atk <= 0 && !(p.spin > 0)) useItem();
   if (KIT.pressed('y') || KIT.pressed('x')) cycleItem();
   // pickups
   PICK.forEach(function (k) { if (k.t !== undefined) { k.t -= dt; } if (k.got || Math.hypot(k.x - p.x, k.y - p.y) > 16) return;

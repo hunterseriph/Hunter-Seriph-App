@@ -93,19 +93,34 @@ function draw() {
 function flame(x, y) { var fl = Math.sin(G.t * 14 + x) * 1.5; R('#12040a', x - 4, y - 10 + fl, 8, 9); R('#ff7a2a', x - 3, y - 9 + fl, 6, 7); R('#ffe36a', x - 2, y - 6 + fl, 4, 4); R('#ffffff', x - 1, y - 4 + fl, 2, 2); }
 function drawChest(i, j) { var c = DG.chests.filter(function (c) { return c.i === i && c.j === j; })[0]; if (!c) return; var st = dgState(DG.di), open = st.chests[c.room + c.kind]; KIT.spr(c.big ? (open ? 'pr_bigchesto' : 'pr_bigchest') : (open ? 'pr_chesto' : 'pr_chest'), (i + 0.5) * TS, (j + 1) * TS); }
 function shadow(x, y, r) { var g = KIT.ctx; g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, y, r, r * 0.4, 0, 0, 6.3); g.fill(); }
-function drawPlayer() { var p = P, d = p.dir === 'l' || p.dir === 'r' ? 's' : p.dir, fr2 = 'chb_' + d + (p.moving ? Math.floor(p.anim) % 4 : 0), flip = p.dir === 'l', z = p.z || 0;
-  if (p.fall > 0) { var k = p.fall / 0.45; if (p.fallK === 'water') { R('#f1e7d0', p.x - 8 * k, p.y + 4, 16 * k, 2); } else KIT.spr(fr2, p.x, p.y + 12, { sx: k, sy: k, alpha: k }); return; }
+/* Cumhead swings with his whole body: a lunge into the swing, a lean, a squash on the way down; the Sausage is drawn
+   behind him whenever it points up (he said swinging upwards drew it over his face), and the spin turns him round */
+var SPINORD = ['r', 'd', 'l', 'u'];
+function drawPlayer() { var p = P, dir = p.dir, z = p.z || 0, blink = (p.inv > 0 && Math.floor(G.t * 20) % 2) || (G.pillInv > 0 && Math.floor(G.t * 10) % 2);
+  var fn = function (d2, f) { return 'chb_' + (d2 === 'l' || d2 === 'r' ? 's' : d2) + f; };
+  if (p.fall > 0) { var k = p.fall / 0.45; if (p.fallK === 'water') { R('#f1e7d0', p.x - 8 * k, p.y + 4, 16 * k, 2); } else KIT.spr(fn(dir, 0), p.x, p.y + 12, { sx: k, sy: k, alpha: k }); return; }
   shadow(p.x, p.y + 11, 8 - z / 4); if (p.hover > 0) KIT.spr('steve0', p.x, p.y - 20, { alpha: 0.95 });
-  var blink = (p.inv > 0 && Math.floor(G.t * 20) % 2) || (G.pillInv > 0 && Math.floor(G.t * 10) % 2);
-  if (!blink) KIT.spr(fr2, p.x, p.y + 12 - (p.hover > 0 ? 6 : 0) - z, { flip: flip });
-  if (SV.items.condom && !blink) KIT.condom && KIT.condom(p.x, p.y + 12 - z, 26, 38, G.t);
-  if (p.atk > 0) drawSwing(p, z); }
-/* the Sausage swings in an arc from the hand, like Link's sword: it starts out to one side, sweeps through the front and
-   ends on the other side, with a pale swoosh behind it (the old version spun on its own middle: he said it looked wrong) */
-function drawSwing(p, z) { var g = KIT.ctx, v = DIRV[p.dir], k = 1 - p.atk / 0.24, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, base = Math.atan2(v[1], v[0]), side = p.dir === 'l' || p.dir === 'd' ? -1 : 1,
-    a0 = base - side * 1.4, a = a0 + side * 2.8 * e, hx = p.x + v[0] * 3, hy = p.y - 4 - (z || 0) + v[1] * 3;
-  g.save(); g.lineCap = 'round'; for (var n = 0; n < 6; n++) { var t = Math.max(0, e - n * 0.07), aa = a0 + side * 2.8 * t; g.strokeStyle = 'rgba(255,240,220,' + (0.32 - n * 0.05) * (1 - k * 0.6) + ')'; g.lineWidth = 5 - n * 0.6; g.beginPath(); g.arc(hx, hy, 19, Math.min(aa, a), Math.max(aa, a)); g.stroke(); }
-  g.translate(hx, hy); g.rotate(a); KIT.spr('lc_sausage', 3, -4.5, { anchor: 'tl' }); g.restore(); }
+  var bx = p.x, by = p.y + 12 - (p.hover > 0 ? 6 : 0) - z, o = { flip: dir === 'l' }, frame = fn(dir, p.moving ? Math.floor(p.anim) % 4 : 0), sw = null;
+  if (p.atk > 0) { var kk = 1 - p.atk / 0.24, bump = Math.sin(kk * Math.PI), v = DIRV[dir]; bx += v[0] * 5 * bump; by += v[1] * 4 * bump; frame = fn(dir, 2);
+    if (dir === 'l' || dir === 'r') o.rot = (dir === 'r' ? 1 : -1) * 0.22 * bump; else { o.sx = 1 + 0.08 * bump; o.sy = 1 - 0.1 * bump; }
+    sw = swingAngle(p, kk); }
+  else if (p.spin > 0) { var s = 1 - p.spin / 0.4, st = SPINORD.indexOf(dir); dir = SPINORD[(st + Math.floor(s * 4)) % 4]; frame = fn(dir, 0); o = { flip: dir === 'l', sx: 1 - 0.06 * Math.sin(s * Math.PI), sy: 1 + 0.06 * Math.sin(s * Math.PI) };
+    var base = Math.atan2(DIRV[p.dir][1], DIRV[p.dir][0]); sw = { a: base + s * 6.283, trail: [base + Math.max(0, s - 0.35) * 6.283, base + s * 6.283], k: s }; }
+  else if (p.chg > 0) { frame = fn(dir, 0); var vv = DIRV[dir]; sw = { a: Math.atan2(vv[1], vv[0]), hold: 1, ready: p.chg >= 0.75 }; bx += (Math.random() - 0.5) * (p.chgDone ? 1 : 0); }
+  var behind = sw && (Math.sin(sw.a) < -0.25 || dir === 'u');
+  if (sw && behind) drawSausage(p, sw, bx, by);
+  if (!blink) KIT.spr(frame, bx, by, o);
+  if (SV.items.condom && !blink) KIT.condom && KIT.condom(bx, by, 26, 38, G.t);
+  if (sw && !behind) drawSausage(p, sw, bx, by); }
+/* where the Sausage points during a swing: from one side, through the front, to the other side, eased */
+function swingAngle(p, k) { var v = DIRV[p.dir], e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, base = Math.atan2(v[1], v[0]), side = p.dir === 'l' || p.dir === 'd' ? -1 : 1, a0 = base - side * 1.4;
+  return { a: a0 + side * 2.8 * e, trail: [a0 + side * 2.8 * Math.max(0, e - 0.4), a0 + side * 2.8 * e], k: k }; }
+function drawSausage(p, sw, bx, by) { var g = KIT.ctx, hx = bx + Math.cos(sw.a) * 3, hy = by - 16 + Math.sin(sw.a) * 3;
+  g.save(); g.lineCap = 'round';
+  if (sw.trail) { var t0 = Math.min(sw.trail[0], sw.trail[1]), t1 = Math.max(sw.trail[0], sw.trail[1]); for (var n = 0; n < 4; n++) { g.strokeStyle = 'rgba(255,240,220,' + (0.34 - n * 0.07) * (1 - sw.k * 0.5) + ')'; g.lineWidth = 6 - n * 1.2; g.beginPath(); g.arc(hx, hy, 18 - n * 2, t0, t1); g.stroke(); } }
+  g.translate(hx, hy); g.rotate(sw.a); KIT.spr('lc_sausage', 3, -4.5, { anchor: 'tl', flash: sw.ready && Math.floor(G.t * 16) % 2 === 0 });
+  if (sw.hold && P.chg > 0) { var c = Math.min(1, P.chg / 0.75); g.fillStyle = sw.ready ? '#ffe36a' : 'rgba(255,240,220,' + c + ')'; var r = sw.ready ? 2 + Math.floor(G.t * 12) % 2 : 1; g.fillRect(28 - r, -r, r * 2, r * 2); }
+  g.restore(); }
 function drawNpc(n) { shadow(n.x, n.y + 1, 9); KIT.spr(n.spr, n.x, n.y + 2, { flip: !!n.face }); }
 function drawPiece(x, y) { var b = Math.round(Math.sin(G.t * 3) * 2); shadow(x, y + 8, 6); KIT.spr('gr_heart', x, y + b, { anchor: 'c' }); if (Math.floor(G.t * 3) % 2) R('#ffe36a', x - 1, y - 8 + b, 2, 2); }
 function drawPick(k) { var x = k.x, y = Math.round(k.y + Math.sin(G.t * 4 + x) * 1.5); if (k.t !== undefined && k.t < 2 && Math.floor(G.t * 10) % 2) return;
