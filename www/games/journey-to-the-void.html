@@ -110,6 +110,35 @@ body{background:var(--bg);color:var(--bone);overflow:hidden;touch-action:none;-w
 .pbtn.gold{box-shadow:inset 0 0 0 2px rgba(255,227,106,0.8),inset 0 0 0 5px rgba(18,4,10,0.55),0 2px 6px rgba(0,0,0,0.5)}
 .dpad{background:radial-gradient(circle at 50% 40%,rgba(50,14,18,0.7),rgba(14,7,8,0.6) 70%);box-shadow:inset 0 0 0 2px rgba(255,38,48,0.6),inset 0 0 0 6px rgba(18,4,10,0.5),0 2px 6px rgba(0,0,0,0.5)}
 .dpad b{background:radial-gradient(circle,#c4121c,rgba(122,10,16,0.4))}
+/* ---- update 132: inventories that look like a bag (KIT.inv) ---- */
+#menu.inv{align-items:safe center}
+.ibox{position:relative;width:min(760px,96vw);margin:auto 0;padding:18px 18px 14px;background:linear-gradient(180deg,#170a0c,#0b0506);box-shadow:inset 0 0 0 2px #c4121c,inset 0 0 0 3px #12040a,inset 0 0 0 4px rgba(255,38,48,0.22),inset 0 0 46px rgba(196,18,28,0.16),0 10px 40px rgba(0,0,0,0.7);color:#f1e7d0;font-family:'Archivo Narrow',sans-serif}
+.ibox .mclose{position:absolute;top:8px;right:8px}
+.ihead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 40px 10px 2px}
+.ihead h2{margin:0;font-family:'Pirata One',serif;font-weight:400;font-size:30px;color:#f1e7d0;text-shadow:0 0 14px rgba(255,38,48,0.5),2px 2px 0 #3a0a0e}
+.itabs{display:flex;gap:6px;flex-wrap:wrap}
+.itab{font:inherit;font-family:'Press Start 2P',monospace;font-size:9px;color:#a6968f;padding:8px 10px;background:#110708;border:0;box-shadow:inset 0 0 0 1px #4a1a1c;cursor:pointer}
+.itab.on{color:#12040a;background:linear-gradient(180deg,#ffe36a,#c8a020);box-shadow:none}
+.itab:hover,.itab:focus-visible,.itab.hs-focus{color:#fff6dc;box-shadow:inset 0 0 0 2px #ff2630}
+.ibody{display:flex;gap:14px;align-items:stretch}
+.igrid{flex:1.4;display:grid;gap:6px;align-content:start;padding:8px;background:repeating-linear-gradient(45deg,#0c0506 0 6px,#0f0607 6px 12px);box-shadow:inset 0 0 0 1px #4a1a1c,inset 0 0 20px rgba(0,0,0,0.8)}
+.islot{position:relative;aspect-ratio:1;min-width:0;padding:0;border:0;cursor:pointer;background:radial-gradient(circle at 50% 40%,#2a1013,#140809 70%);box-shadow:inset 0 0 0 2px #3a1416,inset 0 0 0 3px #0a0304,inset 0 4px 10px rgba(255,255,255,0.04);transition:transform .08s,box-shadow .08s}
+.islot canvas{width:84%;height:84%;margin:8%;image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(0,0,0,0.6))}
+.islot.empty{background:#0d0607;box-shadow:inset 0 0 0 1px #2a0d10;cursor:default}
+.islot.dim canvas{opacity:0.35;filter:grayscale(1)}
+.islot.gold{box-shadow:inset 0 0 0 2px #ffe36a,inset 0 0 14px rgba(255,227,106,0.25)}
+.islot:not(.empty):hover,.islot:focus-visible,.islot.hs-focus{transform:scale(1.06);box-shadow:inset 0 0 0 2px #ff2630,0 0 14px rgba(255,38,48,0.5);z-index:1;outline:none}
+.islot i{position:absolute;right:4px;bottom:3px;font-style:normal;font-family:'Press Start 2P',monospace;font-size:9px;color:#ffe36a;text-shadow:1px 1px 0 #000,-1px -1px 0 #000}
+.islot em{position:absolute;left:3px;top:3px;font-style:normal;font-family:'Press Start 2P',monospace;font-size:7px;color:#12040a;background:#ffe36a;padding:2px 3px}
+.idet{flex:1;min-width:150px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;background:linear-gradient(180deg,#1a0a0d,#0d0607);box-shadow:inset 0 0 0 1px #4a1a1c}
+.iart{width:112px;height:112px;image-rendering:pixelated;background:radial-gradient(circle,rgba(196,18,28,0.35),transparent 70%);filter:drop-shadow(0 0 10px rgba(196,18,28,0.4))}
+.idet h3{margin:0;font-family:'Pirata One',serif;font-weight:400;font-size:24px;text-align:center;color:#ffe36a}
+.idet p{margin:0;font-size:15px;line-height:1.35;text-align:center;color:#d8cabc}
+.istats{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:14px;width:100%}.istats span{color:#a6968f}.istats b{color:#f1e7d0;text-align:right}
+.iact{margin-top:auto;width:100%;justify-content:center;text-align:center}
+.ifoot{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;padding-top:8px;border-top:1px solid #4a1a1c;font-size:15px;color:#a6968f}.ifoot b{color:#ffe36a;font-weight:400;font-family:'Press Start 2P',monospace;font-size:10px}
+@media (max-width:600px),(orientation:portrait){.ibody{flex-direction:column}.idet{min-width:0}.iart{width:80px;height:80px}.ihead h2{font-size:24px}}
+@media (max-height:440px) and (orientation:landscape){.ibox{padding:10px 12px}.ihead{margin-bottom:6px}.ihead h2{font-size:22px}.iart{width:64px;height:64px}.idet h3{font-size:19px}.idet p{font-size:13px}.igrid{gap:4px;padding:5px}}
 </style></head><body>
 <div id="app"><div id="view"><canvas id="amb" width="64" height="36" aria-hidden="true"></canvas><canvas id="c" width="480" height="270"></canvas><div id="scan"></div>
 <div id="top"><button id="mute" type="button" aria-label="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#f1e7d0"/><path class="wv" d="M16 8.5c1.5 1.8 1.5 5.2 0 7M18.5 6c3 3.2 3 8.8 0 12" fill="none" stroke-width="2"/><path class="xx" d="M16 9l5 6M21 9l-5 6" fill="none" stroke-width="2.2"/></svg></button><button id="pauseBtn" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="#f1e7d0"/><rect x="14" y="5" width="4" height="14" fill="#f1e7d0"/></svg></button></div>
@@ -234,7 +263,7 @@ var KIT = (function () {
   function setKeymap(m) { for (var k in m) KEYMAP[k] = m[k]; }
   window.addEventListener('keydown', function (e) {
     var k = KEYMAP[e.code] || KEYMAP[e.key]; if (!k) return; if (menuOpen()) return; e.preventDefault(); down[k] = true; audioInit();
-    if (k === 'pause' || (k === 'start' && cfg.startPauses)) { if (cfg.onPause) cfg.onPause(); }
+    if (k === 'pause' || (k === 'start' && cfg.startPauses)) { if (cfg.onPause && !menuOpen()) cfg.onPause(); }
   });
   window.addEventListener('keyup', function (e) { var k = KEYMAP[e.code] || KEYMAP[e.key]; if (!k) return; down[k] = false; });
   window.addEventListener('blur', function () { down = {}; touchDown = {}; });
@@ -394,6 +423,46 @@ var KIT = (function () {
         { label: o.noLabel || 'No', back: true, def: true, fn: function () { if (o.no) o.no(); else closeMenu(); } }] });
     if (o.spr) { var cv = menuEl.querySelector('.mprev'), f = SPR[o.spr]; if (cv && f) { var sc = o.sc || Math.max(2, Math.floor(110 / Math.max(f[2], f[3]))); cv.width = f[2] * sc; cv.height = f[3] * sc; var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; var draw = function () { if (ready) g.drawImage(SHEET, f[0], f[1], f[2], f[3], 0, 0, f[2] * sc, f[3] * sc); else setTimeout(draw, 100); }; draw(); } }
   }
+  /* inv({ title, tabs:[{label, on, fn}], cols, min, slots:[{spr | draw(g,w,h), name, count, desc, tag, gold, dis, act, fn}], stats:[[k, v]], foot, close }):
+     a real inventory (update 132, his ask: inventories looked like menus): a grid of square slots with the things drawn in them,
+     counts in the corner, the one picked in gold, and a panel beside it with the thing drawn big, its name, what it does and the button for it.
+     Empty slots fill the grid so it reads as a bag, not a list. Controller: the stick moves between slots, A uses, B closes. */
+  function invIcon(cv, sl, big) { var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
+    if (sl.draw) { sl.draw(g, cv.width, cv.height); return; } var f = SPR[sl.spr]; if (!f) return;
+    var go = function () { if (!ready) { setTimeout(go, 100); return; } var k = Math.max(1, Math.floor(Math.min((cv.width - 8) / f[2], (cv.height - 8) / f[3]))); if (f[2] * k > cv.width || f[3] * k > cv.height) k = Math.min(cv.width / f[2], cv.height / f[3]);
+      g.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round((cv.width - f[2] * k) / 2), Math.round((cv.height - f[3] * k) / 2), f[2] * k, f[3] * k); }; go(); }
+  function inv(o) {
+    menuEl.innerHTML = ''; menuEl.hidden = false; menuEl.className = 'inv ' + (o.cls || ''); document.documentElement.classList.add('hs-menu');
+    var box = document.createElement('div'); box.className = 'ibox'; menuEl.appendChild(box);
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'mclose'; x.setAttribute('data-back', ''); x.setAttribute('data-pad-skip', ''); x.textContent = '✕'; x.addEventListener('click', function () { audioInit(); sfx.play('back'); if (o.close) o.close(); else closeMenu(); }); box.appendChild(x);
+    var hd = document.createElement('div'); hd.className = 'ihead'; hd.innerHTML = '<h2>' + (o.title || 'Inventory') + '</h2>'; box.appendChild(hd);
+    if (o.tabs) { var tb = document.createElement('div'); tb.className = 'itabs'; o.tabs.forEach(function (t) { var b = document.createElement('button'); b.type = 'button'; b.className = 'itab' + (t.on ? ' on' : ''); b.textContent = t.label; b.addEventListener('click', function () { audioInit(); sfx.play('select'); t.fn(); }); tb.appendChild(b); }); hd.appendChild(tb); }
+    var body = document.createElement('div'); body.className = 'ibody'; box.appendChild(body);
+    var grid = document.createElement('div'); grid.className = 'igrid'; grid.style.gridTemplateColumns = 'repeat(' + (o.cols || 5) + ', 1fr)'; body.appendChild(grid);
+    var det = document.createElement('div'); det.className = 'idet'; body.appendChild(det);
+    var dcv = document.createElement('canvas'); dcv.width = 96; dcv.height = 96; dcv.className = 'iart'; var dn = document.createElement('h3'), dd = document.createElement('p'), ds = document.createElement('div'), da = document.createElement('button');
+    ds.className = 'istats'; da.type = 'button'; da.className = 'mbtn hot iact'; det.appendChild(dcv); det.appendChild(dn); det.appendChild(dd); det.appendChild(ds); det.appendChild(da);
+    var cur = null;
+    function show(sl) { cur = sl; if (!sl) { dn.textContent = ''; dd.textContent = o.emptyText || ''; ds.innerHTML = ''; da.hidden = true; dcv.getContext('2d').clearRect(0, 0, 96, 96); return; }
+      invIcon(dcv, sl, 1); dn.textContent = sl.name || ''; dd.textContent = sl.desc || ''; ds.innerHTML = (sl.stats || []).map(function (r) { return '<span>' + r[0] + '</span><b>' + r[1] + '</b>'; }).join('');
+      da.hidden = !sl.fn; da.disabled = !!sl.dis; da.innerHTML = '<span>' + (sl.act || 'USE') + '</span>'; }
+    da.addEventListener('click', function () { if (cur && cur.fn && !cur.dis) { audioInit(); sfx.play('select'); cur.fn(); } });
+    var slots = (o.slots || []).map(function (x) { return x || null; }), n = Math.max(o.min || 0, Math.ceil(Math.max(slots.length, 1) / (o.cols || 5)) * (o.cols || 5)), first = null;
+    for (var i = 0; i < n; i++) (function (sl) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'islot' + (sl ? '' : ' empty') + (sl && sl.gold ? ' gold' : '') + (sl && (sl.dim || (sl.dis && !sl.gold)) ? ' dim' : '');
+      if (!sl) { b.disabled = true; grid.appendChild(b); return; }
+      var c = document.createElement('canvas'); c.width = 48; c.height = 48; b.appendChild(c); invIcon(c, sl);
+      if (sl.count !== undefined && sl.count !== null) { var q = document.createElement('i'); q.textContent = sl.count; b.appendChild(q); }
+      if (sl.tag) { var t = document.createElement('em'); t.textContent = sl.tag; b.appendChild(t); }
+      b.addEventListener('focus', function () { show(sl); }); b.addEventListener('mouseenter', function () { show(sl); });
+      b.addEventListener('click', function () { audioInit(); if (cur !== sl) { show(sl); sfx.play('tick'); return; } if (sl.fn && !sl.dis) { sfx.play('select'); sl.fn(); } });
+      if (!first || (sl.def && !first.isDef)) { first = b; first.isDef = !!sl.def; }
+      grid.appendChild(b); })(slots[i]);
+    if (o.stats) { var st = document.createElement('div'); st.className = 'ifoot'; st.innerHTML = o.stats.map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b></span>'; }).join(''); box.appendChild(st); }
+    if (o.foot) { var ft = document.createElement('p'); ft.className = 'mnote'; ft.textContent = o.foot; box.appendChild(ft); }
+    if (first) { first.setAttribute('data-pad-default', ''); show(slots.filter(function (s) { return s && s.def; })[0] || slots.filter(Boolean)[0]); } else show(null);
+    down = {}; touchDown = {};
+  }
   function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
@@ -418,9 +487,9 @@ var KIT = (function () {
     cfg = o; W = o.w || 480; H = o.h || 270; S = 0; fit();
     buildPad(o.pad);
     if (window.HSPad) HSPad.setup({ menu: function () { return menuOpen() ? menuEl : null; }, keys: o.padKeys || { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' },
-      onStart: function () { if (o.onPause) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
+      onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
     var mb = document.getElementById('mute'); if (mb) { mb.classList.toggle('off', muted); mb.addEventListener('click', function () { sfx.setMuted(!muted); mb.classList.toggle('off', muted); if (!muted) audioInit(); }); }
-    var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
+    var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause && !menuOpen()) o.onPause(); });
     requestAnimationFrame(frame);
   }
   /* the CONDOM worn over someone (his ask: every shield is a condom): see-through latex, a dome with the little teat on
@@ -437,7 +506,7 @@ var KIT = (function () {
   return { confirm: confirm, condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
-    sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,
+    sfx: sfx, save: save, load: load, menu: menu, inv: inv, closeMenu: closeMenu, menuOpen: menuOpen,
     shake: function (n) { shake = Math.max(shake, n); }, flash: function (n) { flash = Math.max(flash, n || 0.12); },
     get SPR() { return SPR; }, get sheet() { return SHEET; }, get sheetReady() { return ready; }, tick: function () { readPad(); snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
 })();

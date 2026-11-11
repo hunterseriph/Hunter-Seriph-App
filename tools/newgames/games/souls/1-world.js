@@ -203,6 +203,7 @@ function buildMesh() {
     if (t.k === 'candle') { bx3(m, cx - 0.35, h, cz - 0.35, cx + 0.35, h + 0.2, cz + 0.35, TL('wood'), 0.7); cyl(m, cx, cz, h + 0.2, h + 1.0, 0.11, TL('candlewax'), 1); }
     else if (t.k === 'torch') { bx3(m, cx - 0.05, h, cz - 0.05, cx + 0.05, h + 2.4, cz + 0.05, TL('steel'), 0.5); bx3(m, cx - 0.15, h + 2.4, cz - 0.15, cx + 0.15, h + 2.55, cz + 0.15, TL('steel'), 0.6); }
   });
+  dressArea(m);
   return m.upload();
 }
 function bx3(m, x0, y0, z0, x1, y1, z1, T, k) { var c = [0.5 * k, 0.5 * k, 0.5 * k], w = (x1 - x0) / TSZ, hh = (y1 - y0) / TSZ, d = (z1 - z0) / TSZ;

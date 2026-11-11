@@ -565,7 +565,7 @@ function helpMenu() {
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] });
 }
 function pauseMenu() {
-  if (G.mode !== 'play' || KIT.menuOpen()) return;
+  if (G.mode !== 'play') return;
   KIT.menu({ cls: 'clear', title: 'Paused', sub: 'Saved ' + G.saved + ' of ' + total + '  ·  Lost ' + G.lost, items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'RESTART THIS SCREEN', fn: function () { KIT.closeMenu(); restore(G.snap); } }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', sub: 'Your place is kept', fn: titleMenu }] });
 }
 music.songs.swtitle = { bpm: 70, beats: 4, vol: 0.95, wet: 0.6, lead: 'soft', bass: 'drone', acc: 'bell', drums: null, chords: 'Dm Dm Bb A Dm Gm A A', mel: 'a4 - - - d5 - - - | f5 - e5 - d5 - - - | f5 - - - bb5 - - - | a5 - - - - - . . | d6 - - - a5 - - - | bb5 - a5 - g5 - - - | e5 - - - c#5 - - - | a4 - - - - - . .' };

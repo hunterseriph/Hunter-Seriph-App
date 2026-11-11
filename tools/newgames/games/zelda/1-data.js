@@ -35,7 +35,7 @@ var BOSSES = {
   blum: { n: 'BLUMHEAD', s: 'f_blum_', hp: 48, moves: ['ring', 'aim', 'charge', 'spears', 'summon'], song: 'blum', sc: 0.75 }
 };
 var ITEMS = {
-  sword: { n: "Amy's Sausage", d: 'Swing it with A.', icon: 'it_sword' },
+  sword: { n: "Amy's Sausage", d: 'Swing it with A.', icon: 'lc_sausage' },
   bombs: { n: 'Bombs', d: 'Blow open cracked rocks and walls.', icon: 'gr_bomb' },
   bread: { n: "Ali's Garlic Bread", d: 'Throw it and it comes back. Stuns, and grabs drops.', icon: 'it_bread' },
   pistol: { n: 'Cream Pistol', d: 'Shoots cream. Each shot costs a drop.', icon: 'it_cup' },

@@ -50,6 +50,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(OrientPlugin.class); // update 132: games can keep the phone upright (Octobeats)
         super.onCreate(savedInstanceState);
         // landscape: the app runs right up to the camera notch. Only the status bar, the navigation bar and the
         // keyboard push the page in; the notch does not (it used to leave a grey, then black, strip down that side).
@@ -73,6 +74,33 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         super.onPause();
         CookieManager.getInstance().flush();
+    }
+}
+`);
+// 3b. (update 132) OrientPlugin: Octobeats asks to be held upright; closing the game lets the screen turn again
+write(path.join(javaDir, 'OrientPlugin.java'), `package com.hunterseriph.app;
+
+import android.content.pm.ActivityInfo;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+@CapacitorPlugin(name = "Orient")
+public class OrientPlugin extends Plugin {
+    @PluginMethod
+    public void lock(PluginCall call) {
+        final String mode = call.getString("mode", "any");
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                int o = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
+                if ("portrait".equals(mode)) o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
+                else if ("landscape".equals(mode)) o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+                getActivity().setRequestedOrientation(o);
+            }
+        });
+        call.resolve();
     }
 }
 `);

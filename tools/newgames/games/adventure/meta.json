@@ -1,1 +1,1 @@
-{"title": "Spermhog Adventure", "file": "spermhog-adventure.html", "libs": ["gl3d.js"]}
+{"title": "Spermhog Adventure", "file": "spermhog-adventure.html", "libs": ["hom3d.js"], "borrow": ["psycho/0-gl.js", "psycho/1-tex.js", "psycho/1b-tex2.js", "psycho/4-models.js", "psycho/4b-models2.js", "psycho/4c-tb.js"]}

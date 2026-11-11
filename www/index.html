@@ -1007,7 +1007,10 @@ document.addEventListener('click',function(e){
 });
 /* a brand new iframe each time: changing an iframe's src adds a history entry, which made Back need two presses */
 function freshFrame(id,src){ var old=$(id), f=old.cloneNode(false); if(src) f.setAttribute('src',src); else f.removeAttribute('src'); old.parentNode.replaceChild(f,old); return f; }
-function closeGame(){ if($('gameWrap').hidden) return; $('gameWrap').hidden=true; freshFrame('gameFrame'); }
+/* update 132: a game can ask the phone to stay upright (Octobeats). OrientPlugin is our own few lines in MainActivity's
+   package (tools/patch-android.js); without it the game asks you to turn the phone. Closing a game frees the screen again. */
+window.hsOrient=function(mode){ try{ var C=window.Capacitor, O=C&&((C.Plugins&&C.Plugins.Orient)||(C.registerPlugin&&C.registerPlugin('Orient'))); if(O&&O.lock) O.lock({mode:mode}).catch(function(){}); }catch(e){} };
+function closeGame(){ if($('gameWrap').hidden) return; $('gameWrap').hidden=true; freshFrame('gameFrame'); window.hsOrient('any'); }
 $('gameBack').addEventListener('click',function(){ history.back(); });
 /* ---------- the phone's own Back button: step back inside the app, never straight out of it ---------- */
 var backTap=0;

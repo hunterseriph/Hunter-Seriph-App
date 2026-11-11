@@ -11,7 +11,7 @@ function shade(h, k) { var c = hexrgb(h); return 'rgb(' + c.map(function (v) { r
 function tileNoise(rnd, cells) { var g = []; for (var i = 0; i < cells * cells; i++) g.push(rnd()); return function (x, y) { var fx = x / TT * cells, fy = y / TT * cells, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
   var a = g[(y0 % cells) * cells + (x0 % cells)], b = g[(y0 % cells) * cells + ((x0 + 1) % cells)], c = g[((y0 + 1) % cells) * cells + (x0 % cells)], d = g[((y0 + 1) % cells) * cells + ((x0 + 1) % cells)]; return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty; }; }
 function Atlas(seed, size) {
-  var SZ = size || TA, c = document.createElement('canvas'); c.width = c.height = SZ; var g = c.getContext('2d');
+  var SZ = size || TA, c = document.createElement('canvas'); c.width = c.height = SZ; var g = c.getContext('2d', { willReadFrequently: true });
   var t = document.createElement('canvas'); t.width = t.height = TS; var tg = t.getContext('2d'); tg.imageSmoothingEnabled = false;
   var slots = {}, next = 0, nbig = 0, rnd = srand(seed || 7), per = SZ / TT;
   var P = { rnd: rnd,

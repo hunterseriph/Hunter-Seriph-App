@@ -40,7 +40,8 @@ var NOTES = [
 ];
 var K = null, MW = 0, MH = 0, LV = null, MESH = null, G = { mode: 'title', t: 0 }, P = null, ENTS = [], ITEMS = [], LIGHTS = [], EXIT = null, MSG = [];
 function idx(i, j) { return j * MW + i; } function inMap(i, j) { return i >= 0 && j >= 0 && i < MW && j < MH; } function tileOf(x) { return Math.floor(x / TSZ); } function tx(i) { return (i + 0.5) * TSZ; }
-function solid(i, j) { if (!inMap(i, j)) return true; var k = K[idx(i, j)]; return k === 1 || k === 2; }
+function solid(i, j) { if (!inMap(i, j)) return true; var k = K[idx(i, j)]; return k === 1 || k === 2 || k === 4; }
+function isWall(i, j) { if (!inMap(i, j)) return true; var k = K[idx(i, j)]; return k === 1 || k === 2; }
 function srnd(seed) { return srand(seed); }
 
 /* ---------- the levels ---------- */
@@ -82,9 +83,10 @@ function genLevel(n, seed) {
   // things to find
   var D2 = bfsFrom(G.start.i, G.start.j), free = []; for (var q3 = 0; q3 < MW * MH; q3++) if (D2[q3] > 6 && K[q3] === 0) free.push(q3);
   function takeFree(minD) { for (var t = 0; t < 60; t++) { var c = free[ri(free.length)]; if (c !== undefined && D2[c] >= (minD || 0)) { free.splice(free.indexOf(c), 1); return { i: c % MW, j: (c / MW) | 0 }; } } return null; }
-  for (var it = 0; it < L.items; it++) { var p = takeFree(); if (p) ITEMS.push({ x: tx(p.i), z: tx(p.j), k: ['cuppa', 'cuppa', 'battery', 'note', 'tissue'][it % 5], n: ri(NOTES.length) }); }
+  for (var it = 0; it < L.items; it++) { var p = takeFree(); if (p) ITEMS.push({ x: tx(p.i), z: tx(p.j), k: ['battery', 'cuppa', 'note', 'battery', 'tissue', 'almond'][it % 6], n: ri(NOTES.length) }); }
   Object.keys(L.ents).forEach(function (k) { for (var e = 0; e < L.ents[k]; e++) { var p2 = k === 'chaser' ? { i: 4, j: MH - 2 } : takeFree(14); if (!p2) continue; ENTS.push({ k: k, x: tx(p2.i), z: tx(p2.j), a: 0, st: 'idle', t: 0, spd: 0, seen: 0, cd: 0, path: null }); } });
   if (L.gen === 'run') ENTS.forEach(function (e) { e.z = tx(MH - 1) + 6; e.x = tx(4); });
+  placeDecor(rnd);
 }
 function buildMesh() {
   var m = new R3.Mesh(), L = LV, rnd = srnd(77);
@@ -92,7 +94,7 @@ function buildMesh() {
   for (var j = 0; j < MH; j++) for (var i = 0; i < MW; i++) {
     var x0 = i * TSZ, z0 = j * TSZ, x1 = x0 + TSZ, z1 = z0 + TSZ, k = K[idx(i, j)];
     if (k === 1 || k === 2) { var T = TL(k === 2 ? L.wall2 : (i * 3 + j) % 4 ? L.wall : L.wall2);
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { if (solid(i + d[0], j + d[1])) return; var a, b; if (d[0] > 0) { a = [x1, z1]; b = [x1, z0]; } else if (d[0] < 0) { a = [x0, z0]; b = [x0, z1]; } else if (d[1] > 0) { a = [x0, z1]; b = [x1, z1]; } else { a = [x1, z0]; b = [x0, z0]; }
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { if (isWall(i + d[0], j + d[1])) return; var a, b; if (d[0] > 0) { a = [x1, z1]; b = [x1, z0]; } else if (d[0] < 0) { a = [x0, z0]; b = [x0, z1]; } else if (d[1] > 0) { a = [x0, z1]; b = [x1, z1]; } else { a = [x1, z0]; b = [x0, z0]; }
         m.quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], WH, b[1]], [a[0], WH, a[1]], [0, WH / TSZ, 1, WH / TSZ, 1, 0, 0, 0], T, vc(0.9 + rnd() * 0.1), [d[0], 0, d[1]]); });
       continue; }
     var water = k === 3, fy = water ? -0.35 : 0;
@@ -105,7 +107,7 @@ function buildMesh() {
   var e = EXIT, dx = e.d[0], dz = e.d[1], w = 0.6, sx = -dz, sz = dx, cx = e.x - dx * 0.01, cz = e.z - dz * 0.01;
   m.quad([cx - sx * w, 0, cz - sz * w], [cx + sx * w, 0, cz + sz * w], [cx + sx * w, 2.1, cz + sz * w], [cx - sx * w, 2.1, cz - sz * w], [1, 1, 0, 1, 0, 0, 1, 0], TL('exit'), vc(1), [-dx, 0, -dz]);
   m.quad([cx - sx * 0.4 - dx * 0.02, 2.2, cz - sz * 0.4 - dz * 0.02], [cx + sx * 0.4 - dx * 0.02, 2.2, cz + sz * 0.4 - dz * 0.02], [cx + sx * 0.4 - dx * 0.02, 2.6, cz + sz * 0.4 - dz * 0.02], [cx - sx * 0.4 - dx * 0.02, 2.6, cz - sz * 0.4 - dz * 0.02], (dx + dz > 0) ? [0, 1, 1, 1, 1, 0, 0, 0] : [1, 1, 0, 1, 0, 0, 1, 0], TL('exitsign'), vc(1), [-dx, 0, -dz], 2);
-  MESH = m.upload();
+  buildDecor(m); MESH = m.upload(); if (DECOMESH) DECOMESH.free(); DECOMESH = buildDecals();
 }
 
 /* ---------- moving about ---------- */
@@ -114,7 +116,7 @@ function collide(o, r) {
   for (var j = j0; j <= j1; j++) for (var i = i0; i <= i1; i++) { if (!solid(i, j)) continue; var bx0 = i * TSZ, bz0 = j * TSZ, bx1 = bx0 + TSZ, bz1 = bz0 + TSZ, nx = Math.max(bx0, Math.min(o.x, bx1)), nz = Math.max(bz0, Math.min(o.z, bz1)), dx = o.x - nx, dz = o.z - nz, d = Math.hypot(dx, dz);
     if (d < r) { if (d < 1e-5) { o.x = tx(i) + (o.x > tx(i) ? 1 : -1) * (TSZ / 2 + r); } else { o.x = nx + dx / d * r; o.z = nz + dz / d * r; } } }
 }
-function canSee(ax, az, bx, bz, range) { var dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz); if (range && d > range) return false; var n = Math.ceil(d / 0.6); for (var s = 1; s < n; s++) { var t = s / n; if (solid(tileOf(ax + dx * t), tileOf(az + dz * t))) return false; } return true; }
+function canSee(ax, az, bx, bz, range) { var dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz); if (range && d > range) return false; var n = Math.ceil(d / 0.6); for (var s = 1; s < n; s++) { var t = s / n; if (isWall(tileOf(ax + dx * t), tileOf(az + dz * t))) return false; } return true; }
 function flow(ti, tj) { var D = bfsFrom(ti, tj); return D; }
 function stepToward(e, D, spd, dt) { // roll downhill on a distance field towards the player
   var i = tileOf(e.x), j = tileOf(e.z), best = null, bd = D[idx(i, j)]; if (bd < 0) return;
@@ -127,7 +129,7 @@ function msg(s, col) { MSG.push({ s: s, t: 4, col: col || '#f1e7d0' }); if (MSG.
 function startLevel(n, fresh) {
   if (!R3.ok) { G.mode = 'nogl'; return; }
   buildAtlas(); G.lv = n; G.seed = (fresh || !G.seed ? (Math.random() * 1e9) | 0 : G.seed); genLevel(n, G.seed); if (MESH) MESH.free(); buildMesh();
-  P = { x: tx(G.start.i), z: tx(G.start.j), a: Math.PI, p: 0, hp: P && !fresh && P.hp > 0 ? Math.max(P.hp, 60) : 100, san: P && !fresh && P.san > 0 ? Math.max(P.san, 60) : 100, sta: 100, bat: P && !fresh ? Math.max(P.bat, 50) : 100, torch: 1, cups: P && !fresh ? P.cups : 1, bob: 0, hurt: 0, scare: 0 };
+  P = { x: tx(G.start.i), z: tx(G.start.j), a: Math.PI, p: 0, hp: P && !fresh && P.hp > 0 ? Math.max(P.hp, 60) : 100, san: P && !fresh && P.san > 0 ? Math.max(P.san, 60) : 100, sta: 100, bat: P && !fresh ? Math.max(P.bat, 50) : 100, batts: P && !fresh ? (P.batts || 0) : 1, almond: P && !fresh ? (P.almond || 0) : 0, torch: 1, cups: P && !fresh ? P.cups : 1, bob: 0, hurt: 0, scare: 0 };
   G.mode = 'play'; G.lvT = G.t; G.banner = { t: 4, a: LV.n, b: LV.name }; G.blk = 0; G.flowT = 0; MSG = []; KIT.closeMenu(); music.play(LV.gen === 'run' ? 'frrun' : 'frdrone'); hum(true);
   if (n > SV.best) SV.best = n; SV.lv = n; persist();
 }
@@ -154,7 +156,7 @@ function update(dt) {
   G.noise = run && moving ? 16 : moving ? 4 : 0;
   // torch
   if (KIT.pressed('x')) { P.torch = P.torch ? 0 : 1; sfx.play('tick'); }
-  if (P.torch) { P.bat = Math.max(0, P.bat - dt * 0.9); if (P.bat <= 0) { P.torch = 0; msg('THE TORCH IS DEAD. FIND BATTERIES.', '#ff2630'); } }
+  if (P.torch) { P.bat = Math.max(0, P.bat - dt * 0.33); if (P.bat <= 0) { if (P.batts > 0) { P.batts--; P.bat = 100; sfx.play('tick'); msg('YOU SWAP IN A SPARE BATTERY (' + P.batts + ' LEFT)', '#ffe36a'); } else { P.torch = 0; msg('THE TORCH IS DEAD. FIND BATTERIES.', '#ff2630'); } } }
   if (KIT.pressed('y') && P.cups > 0) { P.cups--; P.san = Math.min(100, P.san + 40); P.hp = Math.min(100, P.hp + 25); sfx.play('pour'); msg('A WARM CUMPUCCINO. YOU FEEL MORE REAL.', '#ffe36a'); }
   // sanity: the dark and the things in it
   var lit = lightAt(P.x, P.z), near = 99; ENTS.forEach(function (e) { near = Math.min(near, Math.hypot(e.x - P.x, e.z - P.z)); });
@@ -167,12 +169,13 @@ function update(dt) {
   LIGHTS.forEach(function (L) { L.off = G.blk > 0 || (L.fl && Math.sin(G.t * 9 + L.ph * 3) + Math.sin(G.t * 23 + L.ph) > 1.3); }); hum(true);
   // pickups
   ITEMS.forEach(function (it) { if (it.got || Math.hypot(it.x - P.x, it.z - P.z) > 0.9) return; it.got = 1; sfx.play('coin');
-    if (it.k === 'cuppa') { P.cups++; msg('CUMPUCCINO (Y TO DRINK)', '#ffe36a'); } else if (it.k === 'battery') { P.bat = 100; msg('BATTERIES. THE TORCH IS FULL.', '#ffe36a'); } else if (it.k === 'tissue') { P.hp = Math.min(100, P.hp + 15); msg('TISSUES. YOU CLEAN UP A BIT.', '#4adfff'); }
+    if (it.k === 'cuppa') { P.cups++; msg('CUMPUCCINO (Y TO DRINK)', '#ffe36a'); } else if (it.k === 'battery') { if (P.bat < 55) { P.bat = 100; msg('BATTERIES. THE TORCH IS FULL.', '#ffe36a'); } else { P.batts = Math.min(9, (P.batts || 0) + 1); msg('SPARE BATTERY (' + P.batts + ')', '#ffe36a'); } } else if (it.k === 'almond') { P.almond = (P.almond || 0) + 1; msg('ALMOND WATER (IN YOUR BAG)', '#4adfff'); } else if (it.k === 'tissue') { P.hp = Math.min(100, P.hp + 15); msg('TISSUES. YOU CLEAN UP A BIT.', '#4adfff'); }
     else { SV.notes[it.n] = 1; persist(); G.note = NOTES[it.n]; G.noteT = 6; } });
   if (G.noteT > 0) G.noteT -= dt;
   // the exit
   G.prompt = null; if (Math.hypot(EXIT.x - P.x, EXIT.z - P.z) < 1.5) { G.prompt = LV.gen === 'run' ? 'A  GET OUT' : 'A  OPEN THE EXIT'; if (KIT.pressed('a')) { if (G.lv >= LEVELS.length - 1) { ending(); return; } G.mode = 'fall'; G.fallT = 0; sfx.play('door'); sfx.play('magic'); music.stop(1); } }
   if (LV.gen === 'run' && P.z < tx(2)) { ending(); return; }
+  stepUncanny(dt); if (KIT.pressed('a') && !G.prompt) useProp(); if (G.stay > 0) G.stay -= dt;
   stepEnts(dt);
   if (P.hp <= 0) { G.mode = 'dead'; G.deadT = 0; SV.deaths++; persist(); sfx.play('lose'); music.stop(1); hum(false); setTimeout(deadMenu, 1600); }
 }
@@ -216,11 +219,12 @@ function draw() {
   lights.sort(function (a, b) { return a.d - b.d; });
   var amb = G.blk > 0 ? [0.01, 0.01, 0.01] : LV.amb, tk = P.torch && P.bat > 0 ? 1.5 * Math.min(1, P.bat / 15 + 0.3) : 0;
   R3.scene({ fog: G.blk > 0 ? [0, 0, 0] : fog, fogR: G.blk > 0 ? [2, 10] : LV.fogR, amb: amb, lights: G.blk > 0 ? [] : lights.slice(0, 8), torch: { p: [P.x, 1.45, P.z], d: f, c: [tk, tk * 0.95, tk * 0.8] }, t: G.t, hue: (1 - san) * 0.25, warp: san < 0.3 ? (0.3 - san) * 2 : 0, neg: P.scare > 0.4 ? 0.6 : 0, meat: LV.gen === 'run' ? 0.15 : 0 });
-  R3.draw(MESH, ATT);
+  R3.draw(MESH, ATT); if (DECOMESH) R3.draw(DECOMESH, ATT, { soft: true, offset: 2, decal: true });
   if (!DYN) DYN = new R3.Mesh(); DYN.clear();
   ITEMS.forEach(function (it) { if (it.got || Math.hypot(it.x - P.x, it.z - P.z) > 24) return; bill(DYN, it.x, 0.35 + Math.sin(G.t * 2 + it.x) * 0.05, it.z, 0.3, 0.3, TL(it.k), [0.6, 0.6, 0.6], 0.4); });
   ENTS.forEach(function (e) { var d = Math.hypot(e.x - P.x, e.z - P.z); if (d > 30) return; var T = TL(e.k), s = e.k === 'chaser' ? 1.6 : e.k === 'hound' ? 0.7 : e.k === 'steve' ? 0.75 : 0.95, y = e.k === 'hound' ? 0.6 : e.k === 'chaser' ? 1.5 : e.k === 'steve' ? 0.8 : 1.05;
     bill(DYN, e.x + (e.k === 'walker' ? Math.sin(G.t * 7) * 0.03 : 0), y, e.z, e.k === 'walker' ? 0.5 : s, e.k === 'walker' ? 1.05 : s, T, [0.5, 0.5, 0.5], e.k === 'grinner' ? 0.6 : 0); });
+  decoDyn(DYN); if (G.stay > 0 && EXIT) { var e = EXIT, dx = e.d[0], dz = e.d[1], sx = -dz, sz = dx, cx = e.x - dx * 0.04, cz = e.z - dz * 0.04; DYN.quad([cx - sx * 0.4, 2.2, cz - sz * 0.4], [cx + sx * 0.4, 2.2, cz + sz * 0.4], [cx + sx * 0.4, 2.6, cz + sz * 0.4], [cx - sx * 0.4, 2.6, cz - sz * 0.4], (dx + dz > 0) ? [0, 1, 1, 1, 1, 0, 0, 0] : [1, 1, 0, 1, 0, 0, 1, 0], TL('stay'), [0.5, 0.5, 0.5], [-dx, 0, -dz], 2); }
   R3.draw(DYN, ATT, { soft: true });
   hud();
 }
@@ -231,7 +235,7 @@ function hud() {
   if (P.hurt > 0) { ctx.fillStyle = 'rgba(160,0,0,' + P.hurt * 0.6 + ')'; ctx.fillRect(0, 0, Wd, Hd); }
   KIT.R('rgba(255,255,255,0.5)', Wd / 2 - 1, Hd / 2 - 1, 2, 2);
   var y = Hd - 34; KIT.panel(6, y - 6, 132, 36); KIT.text('HEALTH', 12, y, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 1, 78, 4, P.hp / 100, '#c4121c'); KIT.text('SANITY', 12, y + 9, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 10, 78, 4, P.san / 100, '#c04aff'); KIT.text('BREATH', 12, y + 18, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 19, 78, 4, P.sta / 100, '#4adfff');
-  KIT.panel(6, 6, 100, 34); KIT.text('TORCH ' + Math.round(P.bat) + '%' + (P.torch ? '' : ' OFF'), 14, 13, { size: 6, col: P.bat < 20 ? '#ff2630' : '#ffe36a' }); KIT.text('CUMPUCCINOS ' + P.cups, 14, 24, { size: 6, col: '#f1e7d0' });
+  KIT.panel(6, 6, 100, 34); KIT.text('TORCH ' + Math.round(P.bat) + '%' + (P.torch ? '' : ' OFF'), 14, 13, { size: 6, col: P.bat < 20 ? '#ff2630' : '#ffe36a' }); KIT.text('SPARES ' + (P.batts || 0) + '  CUPS ' + P.cups, 14, 24, { size: 6, col: '#f1e7d0' });
   KIT.text(LV.n, Wd - 8, 8, { align: 'right', size: 6, col: '#a6968f' });
   if (G.banner) { var a = Math.min(1, G.banner.t, 4 - G.banner.t); KIT.text(G.banner.a, Wd / 2, Hd * 0.3, { align: 'center', size: 8, col: '#a6968f', alpha: a }); KIT.text(G.banner.b, Wd / 2, Hd * 0.3 + 12, { align: 'center', font: 'title', size: 30, col: '#ffe36a', alpha: a, outline: 1 }); }
   if (G.prompt) KIT.text(G.prompt, Wd / 2, Hd * 0.62, { align: 'center', size: 8, col: '#7aff6a', outline: 1 });
@@ -249,12 +253,11 @@ function ending() {
     items: [{ label: 'GO BACK IN', def: true, fn: function () { P = null; startLevel(0, true); } }, { label: 'TITLE', back: true, fn: titleMenu }] });
 }
 function deadMenu() { KIT.menu({ title: 'Edged Out', sub: LV.n + ': ' + LV.name, items: [{ label: 'WAKE UP AGAIN', sub: 'Start this level over', def: true, fn: function () { var n = G.lv; P = null; startLevel(n, true); } }, { label: 'TITLE', back: true, fn: titleMenu }] }); }
-function notesMenu() { KIT.menu({ title: 'Notes Found', wide: true, html: NOTES.map(function (s, i) { return '<p style="margin:4px 0;color:' + (SV.notes[i] ? '#f1e7d0' : '#4a1a1c') + '">' + (SV.notes[i] ? s : '???') + '</p>'; }).join(''), items: [{ label: 'BACK', back: true, fn: titleMenu }] }); }
+function notesMenu() { var inPlay = G.mode === 'play'; KIT.menu({ title: 'Notes Found', wide: true, html: NOTES.map(function (s, i) { return '<p style="margin:4px 0;color:' + (SV.notes[i] ? '#f1e7d0' : '#4a1a1c') + '">' + (SV.notes[i] ? s : '???') + '</p>'; }).join(''), items: [{ label: 'BACK', back: true, fn: inPlay ? bagMenu : titleMenu }] }); }
 function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Move</b> left stick / WASD. <b>Look</b> right stick, the arrow keys or the mouse (click the picture). <b>B</b> or Shift sprint. <b>X</b> torch on and off. <b>Y</b> drink a Cumpuccino. <b>A</b> use.</p><p>Find the glowing EXIT door on each level. The Grinner only moves when you are not looking (keep your torch on it). Hounds hear you sprint. Steve moves when the lights go out. Sanity drains in the dark and near them: drink Cumpuccinos.</p>',
-  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function optsMenu() { KIT.menu({ title: 'Options', items: [{ label: 'LOOK SPEED: ' + (SV.sens || 1).toFixed(1), fn: function () { SV.sens = (SV.sens || 1) >= 2 ? 0.5 : Math.round(((SV.sens || 1) + 0.25) * 100) / 100; persist(); optsMenu(); } }, R3.ok ? R3.resItem(optsMenu) : null, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function pauseMenu() { if (G.mode !== 'play' || KIT.menuOpen()) return; if (document.exitPointerLock) try { document.exitPointerLock(); } catch (e) {}
-  KIT.menu({ cls: 'clear', title: 'Paused', sub: LV.n + ': ' + LV.name, items: [{ label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'OPTIONS', fn: optsMenu }, { label: 'QUIT', fn: titleMenu }] }); }
+  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') sysMenu(); else titleMenu(); } }] }); }
+function optsMenu() { KIT.menu({ title: 'Options', items: [{ label: 'LOOK SPEED: ' + (SV.sens || 1).toFixed(1), fn: function () { SV.sens = (SV.sens || 1) >= 2 ? 0.5 : Math.round(((SV.sens || 1) + 0.25) * 100) / 100; persist(); optsMenu(); } }, R3.ok ? R3.resItem(optsMenu) : null, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') sysMenu(); else titleMenu(); } }] }); }
+function pauseMenu() { if (G.mode !== 'play') return; bagMenu(); }
 function titleMenu() {
   G.mode = 'title'; P = null; hum(false); music.play('frdrone');
   KIT.menu({ cls: 'clear', logo: '../assets/fr-logo.webp', title: 'The Fap Rooms', items: [{ label: SV.lv > 0 ? 'CARRY ON: ' + LEVELS[SV.lv].n : 'NOCLIP IN', cls: 'hot', def: true, fn: function () { startLevel(SV.lv || 0, true); } }, SV.lv > 0 ? { label: 'START OVER', fn: function () { startLevel(0, true); } } : null, { label: 'NOTES FOUND', fn: notesMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'OPTIONS', fn: optsMenu }] });

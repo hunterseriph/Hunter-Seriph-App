@@ -42,7 +42,7 @@ function candleArea(id) { for (var a = 0; a < AREAS.length; a++) if (id.indexOf(
 var G = { mode: 'title', t: 0 }, P = null, FOE = [], SHOTS = [], FX = [], BOSS = null, MESH = null, CAMY = 0, LOCK = null, POP = [];
 function enterArea(ai, candleId) {
   if (!R3.ok) { G.mode = 'nogl'; return; }
-  buildAtlas(); buildRigs(); ownMeshes();
+  buildAtlas(); buildRigs(); ownMeshes(); moreMeshes(); G.piv = null;
   WORLD = parseArea(ai); SV.area = ai; if (MESH) MESH.free(); MESH = buildMesh(); KIT.closeMenu(); G.mode = 'play';
   var c = WORLD.things.filter(function (t) { return t.k === 'candle' && t.id === candleId; })[0] || WORLD.things.filter(function (t) { return t.k === 'start'; })[0];
   P = { x: tx(c.i) + 1.1, z: tx(c.j), y: th(c.i, c.j), vy: 0, a: Math.PI, hp: maxHp(), sta: maxSta(), flask: flaskMax(), st: 'idle', t: 0, inv: 0, atk: null, guard: 0, hurtT: 0, ph: 0, spd: 0, roll: 0 };

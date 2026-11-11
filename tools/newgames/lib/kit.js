@@ -115,7 +115,7 @@ var KIT = (function () {
   function setKeymap(m) { for (var k in m) KEYMAP[k] = m[k]; }
   window.addEventListener('keydown', function (e) {
     var k = KEYMAP[e.code] || KEYMAP[e.key]; if (!k) return; if (menuOpen()) return; e.preventDefault(); down[k] = true; audioInit();
-    if (k === 'pause' || (k === 'start' && cfg.startPauses)) { if (cfg.onPause) cfg.onPause(); }
+    if (k === 'pause' || (k === 'start' && cfg.startPauses)) { if (cfg.onPause && !menuOpen()) cfg.onPause(); }
   });
   window.addEventListener('keyup', function (e) { var k = KEYMAP[e.code] || KEYMAP[e.key]; if (!k) return; down[k] = false; });
   window.addEventListener('blur', function () { down = {}; touchDown = {}; });
@@ -275,6 +275,46 @@ var KIT = (function () {
         { label: o.noLabel || 'No', back: true, def: true, fn: function () { if (o.no) o.no(); else closeMenu(); } }] });
     if (o.spr) { var cv = menuEl.querySelector('.mprev'), f = SPR[o.spr]; if (cv && f) { var sc = o.sc || Math.max(2, Math.floor(110 / Math.max(f[2], f[3]))); cv.width = f[2] * sc; cv.height = f[3] * sc; var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; var draw = function () { if (ready) g.drawImage(SHEET, f[0], f[1], f[2], f[3], 0, 0, f[2] * sc, f[3] * sc); else setTimeout(draw, 100); }; draw(); } }
   }
+  /* inv({ title, tabs:[{label, on, fn}], cols, min, slots:[{spr | draw(g,w,h), name, count, desc, tag, gold, dis, act, fn}], stats:[[k, v]], foot, close }):
+     a real inventory (update 132, his ask: inventories looked like menus): a grid of square slots with the things drawn in them,
+     counts in the corner, the one picked in gold, and a panel beside it with the thing drawn big, its name, what it does and the button for it.
+     Empty slots fill the grid so it reads as a bag, not a list. Controller: the stick moves between slots, A uses, B closes. */
+  function invIcon(cv, sl, big) { var g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
+    if (sl.draw) { sl.draw(g, cv.width, cv.height); return; } var f = SPR[sl.spr]; if (!f) return;
+    var go = function () { if (!ready) { setTimeout(go, 100); return; } var k = Math.max(1, Math.floor(Math.min((cv.width - 8) / f[2], (cv.height - 8) / f[3]))); if (f[2] * k > cv.width || f[3] * k > cv.height) k = Math.min(cv.width / f[2], cv.height / f[3]);
+      g.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round((cv.width - f[2] * k) / 2), Math.round((cv.height - f[3] * k) / 2), f[2] * k, f[3] * k); }; go(); }
+  function inv(o) {
+    menuEl.innerHTML = ''; menuEl.hidden = false; menuEl.className = 'inv ' + (o.cls || ''); document.documentElement.classList.add('hs-menu');
+    var box = document.createElement('div'); box.className = 'ibox'; menuEl.appendChild(box);
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'mclose'; x.setAttribute('data-back', ''); x.setAttribute('data-pad-skip', ''); x.textContent = '✕'; x.addEventListener('click', function () { audioInit(); sfx.play('back'); if (o.close) o.close(); else closeMenu(); }); box.appendChild(x);
+    var hd = document.createElement('div'); hd.className = 'ihead'; hd.innerHTML = '<h2>' + (o.title || 'Inventory') + '</h2>'; box.appendChild(hd);
+    if (o.tabs) { var tb = document.createElement('div'); tb.className = 'itabs'; o.tabs.forEach(function (t) { var b = document.createElement('button'); b.type = 'button'; b.className = 'itab' + (t.on ? ' on' : ''); b.textContent = t.label; b.addEventListener('click', function () { audioInit(); sfx.play('select'); t.fn(); }); tb.appendChild(b); }); hd.appendChild(tb); }
+    var body = document.createElement('div'); body.className = 'ibody'; box.appendChild(body);
+    var grid = document.createElement('div'); grid.className = 'igrid'; grid.style.gridTemplateColumns = 'repeat(' + (o.cols || 5) + ', 1fr)'; body.appendChild(grid);
+    var det = document.createElement('div'); det.className = 'idet'; body.appendChild(det);
+    var dcv = document.createElement('canvas'); dcv.width = 96; dcv.height = 96; dcv.className = 'iart'; var dn = document.createElement('h3'), dd = document.createElement('p'), ds = document.createElement('div'), da = document.createElement('button');
+    ds.className = 'istats'; da.type = 'button'; da.className = 'mbtn hot iact'; det.appendChild(dcv); det.appendChild(dn); det.appendChild(dd); det.appendChild(ds); det.appendChild(da);
+    var cur = null;
+    function show(sl) { cur = sl; if (!sl) { dn.textContent = ''; dd.textContent = o.emptyText || ''; ds.innerHTML = ''; da.hidden = true; dcv.getContext('2d').clearRect(0, 0, 96, 96); return; }
+      invIcon(dcv, sl, 1); dn.textContent = sl.name || ''; dd.textContent = sl.desc || ''; ds.innerHTML = (sl.stats || []).map(function (r) { return '<span>' + r[0] + '</span><b>' + r[1] + '</b>'; }).join('');
+      da.hidden = !sl.fn; da.disabled = !!sl.dis; da.innerHTML = '<span>' + (sl.act || 'USE') + '</span>'; }
+    da.addEventListener('click', function () { if (cur && cur.fn && !cur.dis) { audioInit(); sfx.play('select'); cur.fn(); } });
+    var slots = (o.slots || []).map(function (x) { return x || null; }), n = Math.max(o.min || 0, Math.ceil(Math.max(slots.length, 1) / (o.cols || 5)) * (o.cols || 5)), first = null;
+    for (var i = 0; i < n; i++) (function (sl) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'islot' + (sl ? '' : ' empty') + (sl && sl.gold ? ' gold' : '') + (sl && (sl.dim || (sl.dis && !sl.gold)) ? ' dim' : '');
+      if (!sl) { b.disabled = true; grid.appendChild(b); return; }
+      var c = document.createElement('canvas'); c.width = 48; c.height = 48; b.appendChild(c); invIcon(c, sl);
+      if (sl.count !== undefined && sl.count !== null) { var q = document.createElement('i'); q.textContent = sl.count; b.appendChild(q); }
+      if (sl.tag) { var t = document.createElement('em'); t.textContent = sl.tag; b.appendChild(t); }
+      b.addEventListener('focus', function () { show(sl); }); b.addEventListener('mouseenter', function () { show(sl); });
+      b.addEventListener('click', function () { audioInit(); if (cur !== sl) { show(sl); sfx.play('tick'); return; } if (sl.fn && !sl.dis) { sfx.play('select'); sl.fn(); } });
+      if (!first || (sl.def && !first.isDef)) { first = b; first.isDef = !!sl.def; }
+      grid.appendChild(b); })(slots[i]);
+    if (o.stats) { var st = document.createElement('div'); st.className = 'ifoot'; st.innerHTML = o.stats.map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b></span>'; }).join(''); box.appendChild(st); }
+    if (o.foot) { var ft = document.createElement('p'); ft.className = 'mnote'; ft.textContent = o.foot; box.appendChild(ft); }
+    if (first) { first.setAttribute('data-pad-default', ''); show(slots.filter(function (s) { return s && s.def; })[0] || slots.filter(Boolean)[0]); } else show(null);
+    down = {}; touchDown = {};
+  }
   function closeMenu() { menuEl.hidden = true; menuEl.innerHTML = ''; down = {}; document.documentElement.classList.remove('hs-menu'); }
   /* ---------- the loop ---------- */
   var acc = 0, last = 0, T = 0, shake = 0, flash = 0, frameN = 0;
@@ -299,9 +339,9 @@ var KIT = (function () {
     cfg = o; W = o.w || 480; H = o.h || 270; S = 0; fit();
     buildPad(o.pad);
     if (window.HSPad) HSPad.setup({ menu: function () { return menuOpen() ? menuEl : null; }, keys: o.padKeys || { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' },
-      onStart: function () { if (o.onPause) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
+      onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
     var mb = document.getElementById('mute'); if (mb) { mb.classList.toggle('off', muted); mb.addEventListener('click', function () { sfx.setMuted(!muted); mb.classList.toggle('off', muted); if (!muted) audioInit(); }); }
-    var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause) o.onPause(); });
+    var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause && !menuOpen()) o.onPause(); });
     requestAnimationFrame(frame);
   }
   /* the CONDOM worn over someone (his ask: every shield is a condom): see-through latex, a dome with the little teat on
@@ -318,7 +358,7 @@ var KIT = (function () {
   return { confirm: confirm, condom: condom, start: start, get ctx() { return ctx; }, get S() { return S; }, layer: layer, blit: blit, dropLayer: dropLayer, stick: stick, get gamepad() { return GP; }, canvas: cv, get W() { return W; }, get H() { return H; }, get res() { return RES; }, setRes: setRes, resItem: resItem, get t() { return T; },
     spr: spr, has: has, size: size, R: R, text: text, tw: tw, wrap: wrap, panel: panel, bar: bar,
     held: held, pressed: pressed, consume: consume, ptr: ptr, setKeymap: setKeymap, buildPad: buildPad,
-    sfx: sfx, save: save, load: load, menu: menu, closeMenu: closeMenu, menuOpen: menuOpen,
+    sfx: sfx, save: save, load: load, menu: menu, inv: inv, closeMenu: closeMenu, menuOpen: menuOpen,
     shake: function (n) { shake = Math.max(shake, n); }, flash: function (n) { flash = Math.max(flash, n || 0.12); },
     get SPR() { return SPR; }, get sheet() { return SHEET; }, get sheetReady() { return ready; }, tick: function () { readPad(); snapEdges(); ptr.tap = !!ptr.tapQ; ptr.tapQ = false; } };
 })();

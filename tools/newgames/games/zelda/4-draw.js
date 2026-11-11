@@ -30,13 +30,13 @@ function screenLayer(S) {
 function drawScreen(S, ox, oy) { KIT.blit(screenLayer(S), ox, oy); if (S.kind === 'dg') for (var q = 0; q < S.T.length; q++) if (S.T[q] === 29) paintTile(29, ox + (q % COLS) * TS, oy + ((q / COLS) | 0) * TS, null, DG.D, q % COLS, (q / COLS) | 0); }
 function draw() {
   R('#070405', 0, 0, KIT.W, H); var ox = Math.round((KIT.W - COLS * TS) / 2);
-  if (!SCR || !P) { var g = KIT.ctx; g.fillStyle = '#2a4a1e'; g.fillRect(0, 0, KIT.W, H); g.fillStyle = '#c4121c'; g.beginPath(); g.arc(KIT.W / 2, 90, 40, 0, 6.3); g.fill(); return; }
+  if (!SCR || !P) { var g = KIT.ctx; g.fillStyle = '#12040a'; g.fillRect(0, 0, KIT.W, H); g.fillStyle = '#c4121c'; g.beginPath(); g.arc(KIT.W / 2, 90, 40, 0, 6.3); g.fill(); return; }
   if (TRANS) { TRANS.t += 1 / 60 * 3; var k = Math.min(1, TRANS.t), dx = TRANS.dx * COLS * TS, dy = TRANS.dy * ROWS * TS; drawScreen(TRANS.from, ox - dx * k, OY - dy * k); drawScreen(SCR, ox + dx * (1 - k), OY + dy * (1 - k)); if (k >= 1) TRANS = null; hud(ox); return; }
-  drawScreen(SCR, ox, OY);
+  drawScreen(SCR, ox, OY); drawLandBits(ox);
   var g2 = KIT.ctx; g2.save(); g2.beginPath(); g2.rect(ox, OY, COLS * TS, ROWS * TS); g2.clip(); g2.translate(ox, OY);
   if (SCR.kind === 'over' && SCR.feat) { var F = SCR.feat, npc = { amy: 'npc_amy', saba: 'npc_saba', harold: 'npc_harold', greebo: 'npc_greebo', spermaid: 'npc_spermaid' }[F.k]; if (npc) KIT.spr(npc, (F.i + 0.5) * TS - 26, (F.j + 2) * TS, { sc: 0.8 }); }
   PICK.forEach(function (k) { var x = k.x, y = k.y + Math.sin(G.t * 4 + x) * 1.5; if (k.t !== undefined && k.t < 2 && Math.floor(G.t * 10) % 2) return;
-    if (k.k === 'drop') KIT.spr(k.n > 1 ? 'gr_coin5' : 'gr_coin', x, y, { anchor: 'c' }); else if (k.k === 'heart' || k.k === 'heartc') KIT.spr('gr_heart', x, y, { anchor: 'c', sc: k.k === 'heartc' ? 2 : 1 }); else if (k.k === 'key') KIT.spr('gr_key', x, y, { anchor: 'c' }); else if (k.k === 'bomb') KIT.spr('gr_bomb', x, y, { anchor: 'c' });
+    if (k.k === 'drop') KIT.spr('lc_drop', x, y, { anchor: 'c', sc: k.n > 1 ? 1.5 : 1 }); else if (k.k === 'heart' || k.k === 'heartc') KIT.spr('gr_heart', x, y, { anchor: 'c', sc: k.k === 'heartc' ? 2 : 1 }); else if (k.k === 'key') KIT.spr('gr_key', x, y, { anchor: 'c' }); else if (k.k === 'bomb') KIT.spr('gr_bomb', x, y, { anchor: 'c' });
     else if (k.k === 'chest') KIT.spr('p_bigchest', x, y + 10); else if (k.k === 'chal') { var gg = KIT.ctx; gg.fillStyle = '#ffe36a'; gg.beginPath(); gg.moveTo(x - 8, y - 10); gg.lineTo(x + 8, y - 10); gg.lineTo(x + 4, y); gg.lineTo(x + 2, y + 6); gg.lineTo(x + 6, y + 10); gg.lineTo(x - 6, y + 10); gg.lineTo(x - 2, y + 6); gg.lineTo(x - 4, y); gg.fill(); R('#f1e0b0', x - 6, y - 9, 12, 3); } });
   FOE.forEach(function (f) { if (f.hp <= 0) return; var n = f.d.s + (Math.floor(G.t * 6 + f.x) % (f.d.nf || 4)); KIT.spr(n, f.x, f.y + 10, { flip: P.x > f.x, flash: f.hurt > 0, alpha: f.stun > 0 ? 0.7 : 1, sc: 0.85 }); if (f.stun > 0) R('#ffe36a', f.x - 1, f.y - 22 + Math.sin(G.t * 10) * 2, 2, 2); });
   if (BOSS) { var b = BOSS, bn = b.B.s + (Math.floor(G.t * 3) % 2); KIT.spr(bn, b.x, b.y + 24, { sc: b.B.sc, flip: P.x > b.x && !KIT.has(bn + 'L'), flash: b.hurt > 0 || (b.st !== 'idle' && b.t < 0.4 && Math.floor(G.t * 12) % 2 === 0) }); b.marks.forEach(function (m) { if (!m.done) { g2.fillStyle = 'rgba(255,38,48,' + (0.3 + Math.sin(G.t * 20) * 0.2) + ')'; g2.beginPath(); g2.ellipse(m.x, m.y, 16, 8, 0, 0, 6.3); g2.fill(); } }); }
@@ -49,12 +49,13 @@ function draw() {
   FX.forEach(function (f) { if (f.k === 'bomb') { if (!f.boom) KIT.spr(Math.floor(G.t * 8) % 2 ? 'gr_bombl' : 'gr_bomb', f.x, f.y, { anchor: 'c' }); return; } if (f.k === 'spear') { g2.fillStyle = '#e8dcc8'; g2.beginPath(); g2.moveTo(f.x - 6, f.y); g2.lineTo(f.x, f.y - 30); g2.lineTo(f.x + 6, f.y); g2.fill(); f.t -= 1 / 60; return; } f.t -= 1 / 60; f.x += f.vx / 60; f.y += f.vy / 60; R(f.col, f.x, f.y, 2, 2); });
   FX = FX.filter(function (f) { return f.k === 'bomb' ? !f.boom || f.t > -0.2 : f.t > 0; });
   g2.restore();
+  drawNight(ox);
   hud(ox);
 }
 function hud(ox) {
   R('#0e0708', 0, 0, KIT.W, OY); R('#4a1a1c', 0, OY - 1, KIT.W, 1);
   for (var i = 0; i < SV.hearts; i++) { var full = P.hp >= (i + 1) * 2, half = P.hp === i * 2 + 1; KIT.spr(full ? 'gr_heart' : half ? 'gr_hearth' : 'gr_hearte', ox + 8 + (i % 10) * 13, 6 + Math.floor(i / 10) * 12, { anchor: 'tl' }); }
-  KIT.spr('gr_coin', ox + 150, 9, { anchor: 'tl' }); KIT.text('' + SV.drops, ox + 164, 10, { size: 8, col: '#ffe36a' });
+  KIT.spr('lc_drop', ox + 150, 8, { anchor: 'tl' }); KIT.text('' + SV.drops, ox + 164, 10, { size: 8, col: '#ffe36a' });
   if (SV.items.bombs) { KIT.spr('gr_bomb', ox + 200, 8, { anchor: 'tl' }); KIT.text('' + SV.bombs, ox + 214, 10, { size: 8 }); }
   if (DG) { KIT.spr('gr_key', ox + 240, 8, { anchor: 'tl' }); KIT.text('' + (SV.dg[DG.di].keys || 0) + (SV.dg[DG.di].bk ? ' B' : ''), ox + 254, 10, { size: 8 }); }
   KIT.panel(ox + 290, 2, 40, 26); KIT.text('B', ox + 294, 4, { size: 6, col: '#a6968f' }); if (SV.sel) KIT.spr(ITEMS[SV.sel].icon, ox + 312, 15, { anchor: 'c' });

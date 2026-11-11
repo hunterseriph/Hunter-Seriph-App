@@ -19,8 +19,23 @@ function ending() {
     items: [{ label: 'SECOND QUEST', sub: 'Keep your things, foes hit harder, your sausage hits harder', def: true, fn: function () { var keep = { items: SV.items, sel: SV.sel, hearts: SV.hearts, won: SV.won, deaths: SV.deaths, drops: SV.drops, bombs: SV.bombs }; SV = freshSave(); for (var k in keep) SV[k] = keep[k]; DGN = {}; persist(); startGame(); } }, { label: 'TITLE', back: true, fn: titleMenu }] });
 }
 function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Move</b> left stick / d-pad / WASD. <b>A</b> swing Amy’s Sausage (get it from Amy in the cave on the first screen). <b>B</b> use your item. <b>X</b> or <b>Y</b> switch items.</p><p>Walk off the edge of a screen to go to the next. Cut bushes for drops and hearts. Saba sells bombs: they open cracked rocks with secrets inside. Each dungeon has a small key, a Boss Key and an item in its chests. Clear a room and its doors open. Beat the boss for a heart and a Cum Chalice. The Lair at the top of the land opens with four chalices.</p>',
-  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function pauseMenu() { if (G.mode !== 'play' || KIT.menuOpen()) return; KIT.menu({ cls: 'clear', title: 'Paused', sub: 'Chalices ' + SV.chal.length + ' of 5 · ' + (SV.sel ? 'B: ' + ITEMS[SV.sel].n : 'no item yet'), items: [{ label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }] }); }
+  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') sysMenu(); else titleMenu(); } }] }); }
+function pauseMenu() { if (G.mode !== 'play') return; invMenu(); }
+var CHALCOL = ['#f1e0b0', '#e8dcc8', '#ff2630', '#c4121c', '#a040ff'];
+function chalDraw(col, have) { return function (g, w, h) { var k = w / 24; g.save(); g.scale(k, k); g.globalAlpha = have ? 1 : 0.3; g.fillStyle = '#12040a'; g.fillRect(4, 3, 16, 3); g.fillRect(6, 5, 12, 7); g.fillRect(10, 12, 4, 5); g.fillRect(6, 17, 12, 3); g.fillStyle = have ? '#ffe36a' : '#5a4a3a'; g.fillRect(5, 4, 14, 2); g.fillRect(7, 6, 10, 5); g.fillRect(11, 11, 2, 6); g.fillRect(7, 17, 10, 2); g.fillStyle = col; g.fillRect(8, 6, 8, 3); g.fillStyle = '#fff6dc'; g.fillRect(7, 6, 1, 4); g.restore(); }; }
+function invMenu() {
+  var own = ['sword', 'bombs', 'bread', 'pistol', 'balloon', 'ring'], sl = own.map(function (k) { if (!SV.items[k]) return null; var I = ITEMS[k], b = k !== 'sword' && k !== 'ring';
+    return { spr: I.icon, name: I.n, desc: I.d + (k === 'sword' ? ' Always on A.' : k === 'ring' ? ' Always on.' : ''), count: k === 'bombs' ? SV.bombs : null, gold: SV.sel === k, tag: SV.sel === k ? 'B' : null, act: b ? (SV.sel === k ? 'ON B' : 'PUT ON B') : null, dis: SV.sel === k, fn: b ? function () { SV.sel = k; persist(); invMenu(); } : null }; });
+  while (sl.length < 10) sl.push(null);
+  for (var c = 0; c < 5; c++) { var hv = SV.chal.indexOf(c) >= 0; sl.push({ draw: chalDraw(CHALCOL[c], hv), name: hv ? 'Cum Chalice' : '???', desc: hv ? 'Taken back from ' + DUNGEONS[c].n + '.' : 'Still somewhere in ' + DUNGEONS[c].n + '.' }); }
+  sl = sl.map(function (x) { return x || { spr: null, name: '', desc: '', empty: 1 }; }).map(function (x) { return x.empty ? null : x; });
+  KIT.inv({ title: 'Your Things', cols: 5, slots: sl, min: 15, tabs: [{ label: 'THINGS', on: true, fn: invMenu }, { label: 'MAP', fn: mapMenu }, { label: 'SYSTEM', fn: sysMenu }],
+    stats: [['HEARTS', SV.hearts], ['PIECES', SV.pieces + '/2'], ['DROPS', SV.drops], ['CHALICES', SV.chal.length + '/5'], ['DEATHS', SV.deaths]], close: KIT.closeMenu }); }
+function mapMenu() { var h = '<div style="display:grid;grid-template-columns:repeat(' + MAPW + ',1fr);gap:3px;max-width:360px;margin:0 auto">';
+  for (var y = 0; y < MAPH; y++) for (var x = 0; x < MAPW; x++) { var b = biomeAt(x, y), here = x === SV.sx && y === SV.sy, dn = DUNGEONS.filter(function (D) { return D.at[0] === x && D.at[1] === y; })[0];
+    h += '<div style="aspect-ratio:1.6;background:' + BIOME[b].g2 + ';box-shadow:inset 0 0 0 1px ' + (here ? '#ffe36a' : '#4a1a1c') + ';display:flex;align-items:center;justify-content:center;font-family:\'Press Start 2P\';font-size:8px;color:' + (dn ? '#ff2630' : '#ffe36a') + '">' + (here ? '&#9679;' : dn ? '&#9760;' : '') + '</div>'; }
+  KIT.menu({ title: 'The Land', sub: SCR && SCR.kind === 'over' ? BIOME[SCR.b].n : DG ? DG.D.n : '', html: h + '</div>', items: [{ label: 'BACK', back: true, def: true, fn: invMenu }] }); }
+function sysMenu() { KIT.menu({ cls: 'clear', title: 'Paused', items: [{ label: 'CARRY ON', def: true, fn: KIT.closeMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'QUIT TO TITLE', fn: titleMenu }, { label: 'BACK', back: true, fn: invMenu }] }); }
 function titleMenu() {
   G.mode = 'title'; SCR = null; P = null; music.play('lctitle');
   var started = SV.items.sword || SV.deaths;

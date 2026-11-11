@@ -571,7 +571,7 @@ function helpMenu() {
     items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] });
 }
 function pauseMenu() {
-  if (G.mode !== 'play' || KIT.menuOpen()) return;
+  if (G.mode !== 'play') return;
   KIT.menu({ cls: 'clear', title: 'Paused', sub: 'Floor ' + (run.floor + 1) + ': ' + run.F.name, html: run.items.length ? '<p style="text-align:center;margin:0;color:#a6968f">' + run.items.map(function (id) { return ITEM[id].n; }).join(' · ') + '</p>' : '',
     items: [{ label: 'CARRY ON', fn: KIT.closeMenu, back: true, def: true }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'GIVE UP', sub: 'The run ends', fn: function () { KIT.closeMenu(); run.by = 'giving up'; die(); } }] });
 }

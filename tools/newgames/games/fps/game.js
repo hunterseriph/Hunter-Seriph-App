@@ -101,6 +101,7 @@ function buildMesh() {
     var T = TL(k === 4 ? 'crack' : k === 5 ? 'lift' : (i * 5 + j * 3) % 7 ? F.wall : F.wall2);
     [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var nk = inMap(i + d[0], j + d[1]) ? K[idx(i + d[0], j + d[1])] : 1; if (nk !== 0 && nk !== 2 && nk !== 3) return; var a, b; if (d[0] > 0) { a = [x1, z1]; b = [x1, z0]; } else if (d[0] < 0) { a = [x0, z0]; b = [x0, z1]; } else if (d[1] > 0) { a = [x0, z1]; b = [x1, z1]; } else { a = [x1, z0]; b = [x0, z0]; }
       m.quad([a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], WH, b[1]], [a[0], WH, a[1]], [0, 1, 1, 1, 1, 0, 0, 0], T, vc(d[0] ? 0.9 : 0.75), [d[0], 0, d[1]], k === 5 ? 0.6 : 0); }); }
+  decorate(m);
   return m.upload();
 }
 /* ---------- playing ---------- */
@@ -112,16 +113,16 @@ function startFloor(n, keep) {
   for (var t = 0; t < 8; t++) { var aa = t / 8 * 6.283; if (!solid(tileOf(P.x + Math.sin(aa) * 3), tileOf(P.z + Math.cos(aa) * 3))) { P.a = aa; break; } }
   SHOTS = []; FX = []; G.mode = 'play'; G.lvT = 0; G.banner = { t: 3, s: FLOORS[n].name, b: FLOORS[n].n }; music.play(FLOORS[n].boss ? 'c3boss' : n % 2 ? 'c3b' : 'c3a'); if (n > SV.reached) { SV.reached = n; persist(); }
 }
-var mouse = { dx: 0 };
-document.addEventListener('mousemove', function (e) { if (document.pointerLockElement) mouse.dx += e.movementX; });
+var mouse = { dx: 0, dy: 0 };
+document.addEventListener('mousemove', function (e) { if (document.pointerLockElement) { mouse.dx += e.movementX; mouse.dy += e.movementY; } });
 KIT.canvas.addEventListener('click', function () { if (G.mode === 'play' && !('ontouchstart' in window) && KIT.canvas.requestPointerLock) try { KIT.canvas.requestPointerLock(); } catch (e) {} });
 document.addEventListener('mousedown', function (e) { if (document.pointerLockElement && e.button === 0) G.mouseFire = 1; }); document.addEventListener('mouseup', function () { G.mouseFire = 0; });
 function update(dt) {
   G.t += dt; if (G.banner) { G.banner.t -= dt; if (G.banner.t <= 0) G.banner = null; }
   if (G.mode === 'dead') { G.deadT += dt; return; } if (G.mode !== 'play') return; G.lvT += dt;
-  var p = P, mv = KIT.stick(0), lk = KIT.stick(1); p.a -= (lk.x * 2.8 * dt + mouse.dx * 0.003) * (SV.sens || 1); mouse.dx = 0;
+  var p = P, mv = KIT.stick(0), lk = KIT.stick(1); p.a -= (lk.x * 2.8 * dt + mouse.dx * 0.003) * (SV.sens || 1); mouse.dx = 0; p.p = Math.max(-0.9, Math.min(0.9, (p.p || 0) - (lk.y * 1.9 * dt + mouse.dy * 0.003) * (SV.sens || 1))); mouse.dy = 0;
   var fx = Math.sin(p.a), fz = Math.cos(p.a), rx = -Math.cos(p.a), rz = Math.sin(p.a), sp = 5.2, ox = p.x, oz = p.z;
-  p.x += (fx * -mv.y + rx * mv.x) * sp * dt; p.z += (fz * -mv.y + rz * mv.x) * sp * dt; collide(p, 0.3); var moved = Math.hypot(p.x - ox, p.z - oz); p.bob += moved * 3; p.hurt = Math.max(0, p.hurt - dt); p.flash = Math.max(0, p.flash - dt); p.kick = Math.max(0, p.kick - dt * 5);
+  p.x += (fx * -mv.y + rx * mv.x) * sp * dt; p.z += (fz * -mv.y + rz * mv.x) * sp * dt; collide(p, 0.3); solidsPush(p, 0.3); collide(p, 0.3); var moved = Math.hypot(p.x - ox, p.z - oz); p.bob += moved * 3; p.hurt = Math.max(0, p.hurt - dt); p.flash = Math.max(0, p.flash - dt); p.kick = Math.max(0, p.kick - dt * 5);
   // doors open when you use them (A) or walk into them
   DOORS.forEach(function (D) { var d = Math.hypot(tx(D.i) - p.x, tx(D.j) - p.z); if (d < 1.9 && (KIT.pressed('a') || d < 1.5)) { if (D.gold && !p.key) { if (KIT.pressed('a') || !D.said) { msg('THE GOLD KEY OPENS THIS'); D.said = 1; } } else if (!D.want) { D.want = 1; sfx.play('door'); } } D.open = Math.max(0, Math.min(1, D.open + (D.want ? 1 : -1) * dt * 1.6)); if (D.want) { D.t += dt; if (D.t > 4 && !(Math.abs(tileOf(p.x) - D.i) + Math.abs(tileOf(p.z) - D.j) < 1) && !FOE.some(function (f) { return f.hp > 0 && tileOf(f.x) === D.i && tileOf(f.z) === D.j; })) { D.want = 0; D.t = 0; } } });
   if (KIT.pressed('a')) { var ti = tileOf(p.x + fx * 1.6), tj = tileOf(p.z + fz * 1.6); if (inMap(ti, tj) && K[idx(ti, tj)] === 4) { K[idx(ti, tj)] = 0; MESH.free(); MESH = buildMesh(); sfx.play('boom'); G.found++; msg('A SECRET!'); }
@@ -144,10 +145,11 @@ function fire(g) {
   var p = P; if (g.ammo && p.ammo[g.ammo] < g.use) { nextGun(-1); return; } p.cd = g.rate; if (g.ammo) p.ammo[g.ammo] -= g.use; p.kick = 1; G.noise = 1;
   if (g.id === 'sausage') { sfx.tone('triangle', 300, 100, 0.12, 0.05); FOE.forEach(function (f) { if (f.hp <= 0) return; var d = Math.hypot(f.x - p.x, f.z - p.z), a = Math.atan2(f.x - p.x, f.z - p.z); if (d < g.range && Math.abs(Math.atan2(Math.sin(a - p.a), Math.cos(a - p.a))) < 0.6) hurtFoe(f, g.dmg); }); return; }
   p.mflash = 0.06; sfx.play(g.id === 'nado' ? 'boom' : 'shoot'); if (g.id === 'shotgun') sfx.noise(0.2, 0.25, 600);
-  if (g.rocket) { SHOTS.push({ x: p.x + Math.sin(p.a) * 0.5, z: p.z + Math.cos(p.a) * 0.5, y: 1.2, vx: Math.sin(p.a) * 14, vz: Math.cos(p.a) * 14, t: 3, dmg: g.dmg, rocket: 1, mine: 1 }); return; }
+  var pp = p.p || 0, cp = Math.cos(pp), tp = Math.tan(pp);
+  if (g.rocket) { SHOTS.push({ x: p.x + Math.sin(p.a) * 0.5, z: p.z + Math.cos(p.a) * 0.5, y: 1.25, vy: Math.sin(pp) * 14, vx: Math.sin(p.a) * 14 * cp, vz: Math.cos(p.a) * 14 * cp, t: 3, dmg: g.dmg, rocket: 1, mine: 1 }); return; }
   for (var n = 0; n < (g.pellets || 1); n++) { var a = p.a + (Math.random() - 0.5) * g.spread * 2, best = null, bd = 30;
-    FOE.forEach(function (f) { if (f.hp <= 0) return; var dx = f.x - p.x, dz = f.z - p.z, d = Math.hypot(dx, dz), along = dx * Math.sin(a) + dz * Math.cos(a), side = Math.abs(dx * Math.cos(a) - dz * Math.sin(a)); if (along > 0 && side < (f.boss ? 1.4 : 0.45) && d < bd && clear(p.x, p.z, f.x, f.z)) { bd = d; best = f; } });
-    if (best) hurtFoe(best, g.dmg * (bd < 4 ? 1.2 : 1)); else { var k = 0; while (k < 30 && !solid(tileOf(p.x + Math.sin(a) * k), tileOf(p.z + Math.cos(a) * k))) k += 0.3; FX.push({ k: 'puff', x: p.x + Math.sin(a) * (k - 0.2), y: 1.1 + (Math.random() - 0.5) * 0.6, z: p.z + Math.cos(a) * (k - 0.2), t: 0.3 }); } }
+    FOE.forEach(function (f) { if (f.hp <= 0) return; var dx = f.x - p.x, dz = f.z - p.z, d = Math.hypot(dx, dz), along = dx * Math.sin(a) + dz * Math.cos(a), side = Math.abs(dx * Math.cos(a) - dz * Math.sin(a)); var yr = 1.35 + tp * along, y0 = f.d.fly ? 0.3 : 0, y1 = y0 + f.d.h, slack = 0.25 + along * 0.02; if (along > 0 && side < (f.boss ? 1.4 : 0.45) && yr > y0 - slack && yr < y1 + slack && d < bd && clear(p.x, p.z, f.x, f.z)) { bd = d; best = f; } });
+    if (best) hurtFoe(best, g.dmg * (bd < 4 ? 1.2 : 1)); else { var k = 0, yk = 1.35; while (k < 30 && !solid(tileOf(p.x + Math.sin(a) * k * cp), tileOf(p.z + Math.cos(a) * k * cp)) && yk > 0.02 && yk < WH - 0.02) { k += 0.3; yk = 1.35 + Math.sin(pp) * k; } FX.push({ k: 'puff', x: p.x + Math.sin(a) * (k - 0.2) * cp, y: Math.max(0.05, Math.min(WH - 0.05, yk)), z: p.z + Math.cos(a) * (k - 0.2) * cp, t: 0.3 }); } }
 }
 function hurtFoe(f, dmg) { f.hp -= dmg; f.pain = 0.15; if (f.st === 'idle') f.st = 'chase'; for (var i = 0; i < 4; i++) FX.push({ k: 'blood', x: f.x, y: 1.1 + Math.random() * 0.5, z: f.z, vx: (Math.random() - 0.5) * 3, vy: Math.random() * 3, vz: (Math.random() - 0.5) * 3, t: 0.5 }); sfx.play('hit');
   if (f.hp <= 0) { f.st = 'dead'; f.t = 0; G.kills++; P.score += f.d.pts; if (f.boss) { music.stop(2); sfx.play('win'); G.banner = { t: 4, s: f.B.n + ' IS DOWN', b: 'FIND THE LIFT' }; KIT.shake(12); } else if (Math.random() < 0.35) THINGS.push({ k: Math.random() < 0.5 ? 'cream' : 'cracker', x: f.x, z: f.z }); } }
@@ -156,7 +158,7 @@ function stepFoes(dt) {
   var p = P; FOE.forEach(function (f) { if (f.st === 'dead') { f.t += dt; return; } f.t += dt; f.cd -= dt; f.pain = Math.max(0, f.pain - dt); var d = f.d, dx = p.x - f.x, dz = p.z - f.z, dist = Math.hypot(dx, dz), sees = dist < 22 && clear(f.x, f.z, p.x, p.z);
     if (f.st === 'idle') { if (sees && dist < 14 || (G.noise && dist < 16)) { f.st = 'chase'; sfx.tone('sawtooth', 200, 120, 0.2, 0.03); } return; }
     if (f.pain > 0) return; f.a = Math.atan2(dx, dz);
-    var want = d.att === 'melee' ? 1.2 : 5; if (dist > want || !sees) { var ox = f.x, oz = f.z, sp2 = d.spd * (f.boss && f.hp < f.d.hp / 2 ? 1.4 : 1); f.x += dx / dist * sp2 * dt; f.z += dz / dist * sp2 * dt; collide(f, 0.35); if (Math.hypot(f.x - ox, f.z - oz) < 0.001) { f.x += Math.cos(f.t) * sp2 * dt; f.z += Math.sin(f.t) * sp2 * dt; collide(f, 0.35); } }
+    var want = d.att === 'melee' ? 1.2 : 5; if (dist > want || !sees) { var ox = f.x, oz = f.z, sp2 = d.spd * (f.boss && f.hp < f.d.hp / 2 ? 1.4 : 1); f.x += dx / dist * sp2 * dt; f.z += dz / dist * sp2 * dt; collide(f, 0.35); solidsPush(f, 0.35); collide(f, 0.35); if (Math.hypot(f.x - ox, f.z - oz) < 0.001) { f.x += Math.cos(f.t) * sp2 * dt; f.z += Math.sin(f.t) * sp2 * dt; collide(f, 0.35); } }
     if (f.cd <= 0 && sees && (d.att !== 'melee' || dist < 1.6)) { f.cd = d.rate * (0.8 + Math.random() * 0.5); f.flashT = 0.25;
       if (d.att === 'melee') { hurtP(d.dmg); sfx.play('hit'); }
       else if (d.att === 'hitscan') { if (Math.random() < Math.max(0.25, 0.85 - dist * 0.04)) hurtP(d.dmg); sfx.play('shoot'); }
@@ -165,7 +167,7 @@ function stepFoes(dt) {
   G.noise = 0;
 }
 function stepShots(dt) {
-  SHOTS.forEach(function (s) { s.t -= dt; s.x += s.vx * dt; s.z += s.vz * dt; var hit = solid(tileOf(s.x), tileOf(s.z));
+  SHOTS.forEach(function (s) { s.t -= dt; s.x += s.vx * dt; s.z += s.vz * dt; if (s.vy) s.y += s.vy * dt; var hit = solid(tileOf(s.x), tileOf(s.z)) || (!s.foe && (s.y < 0.05 || s.y > WH - 0.05));
     if (s.foe) { if (Math.hypot(s.x - P.x, s.z - P.z) < 0.5) { hurtP(s.dmg); s.t = 0; } }
     else FOE.forEach(function (f) { if (f.st !== 'dead' && Math.hypot(f.x - s.x, f.z - s.z) < (f.boss ? 1.3 : 0.5)) hit = true; });
     if (hit && s.t > 0) { s.t = 0; if (s.rocket) { sfx.play('boom'); KIT.shake(6); FX.push({ k: 'boom', x: s.x, y: 1.2, z: s.z, t: 0.4 }); FOE.forEach(function (f) { var d = Math.hypot(f.x - s.x, f.z - s.z); if (f.st !== 'dead' && d < 3) hurtFoe(f, s.dmg * (1 - d / 4)); }); var pd = Math.hypot(P.x - s.x, P.z - s.z); if (pd < 2.5) hurtP(Math.round(40 * (1 - pd / 3))); } } });
@@ -185,12 +187,13 @@ function draw() {
   var ctx = KIT.ctx; ctx.clearRect(0, 0, KIT.W, KIT.H);
   if (G.mode === 'nogl') { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, KIT.W, KIT.H); KIT.text('THIS DEVICE CANNOT DRAW 3D (NO WEBGL)', KIT.W / 2, KIT.H / 2, { align: 'center' }); return; }
   if (!P || !MESH) { if (R3.ok) R3.begin([0.05, 0, 0.01]); ctx.fillStyle = '#070405'; ctx.fillRect(0, 0, KIT.W, KIT.H); return; }
-  var F = FLOORS[G.fl], p = P, bob = Math.sin(p.bob) * 0.04, eye = [p.x, 1.35 + bob, p.z], at = [p.x + Math.sin(p.a), 1.35 + bob, p.z + Math.cos(p.a)];
-  R3.begin(F.fog); R3.setCam(eye, at, KIT.W < KIT.H ? 1.3 : 1.15);
-  var lights = ROOMS.map(function (R0) { return { x: R0.lamp.x, y: WH - 0.3, z: R0.lamp.z, r: 10, c: [1, 0.8, 0.6], k: 1.1, d: Math.hypot(R0.lamp.x - p.x, R0.lamp.z - p.z) }; }).sort(function (a, b) { return a.d - b.d; }).slice(0, 6);
+  var F = FLOORS[G.fl], p = P, bob = Math.sin(p.bob) * 0.04, eye = [p.x, 1.35 + bob, p.z], pp = p.p || 0, at = [p.x + Math.sin(p.a) * Math.cos(pp), 1.35 + bob + Math.sin(pp), p.z + Math.cos(p.a) * Math.cos(pp)];
+  var fogc = [F.fog[0] * 2.2 + 0.03, F.fog[1] * 2.2 + 0.02, F.fog[2] * 2.2 + 0.02]; R3.begin(fogc); R3.setCam(eye, at, KIT.W < KIT.H ? 1.3 : 1.15);
+  var lights = ROOMS.map(function (R0) { return { x: R0.lamp.x, y: WH - 0.3, z: R0.lamp.z, r: 14, c: [1, 0.85, 0.65], k: 1.6, d: Math.hypot(R0.lamp.x - p.x, R0.lamp.z - p.z) }; }).concat(TORCH.map(function (t, n) { return { x: t.x, y: t.y + 0.2, z: t.z, r: 9, c: [1, 0.6, 0.3], k: 1.4 * (0.92 + Math.sin(G.t * 11 + n) * 0.08), d: Math.hypot(t.x - p.x, t.z - p.z) + 2 }; })).sort(function (a, b) { return a.d - b.d; }).slice(0, 6);
+  lights.push({ x: p.x, y: 1.7, z: p.z, r: 9, c: [1, 0.92, 0.8], k: 0.9 });
   if (p.mflash > 0) { p.mflash -= 1 / 60; lights.push({ x: p.x + Math.sin(p.a), y: 1.3, z: p.z + Math.cos(p.a), r: 8, c: [1, 0.9, 0.6], k: 2.4 }); }
   FX.forEach(function (f) { if (f.k === 'boom') lights.push({ x: f.x, y: 1.4, z: f.z, r: 8, c: [1, 0.5, 0.2], k: 3 }); });
-  R3.scene({ fog: F.fog, fogR: [8, 30], amb: F.amb, lights: lights.slice(0, 8), torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
+  R3.scene({ fog: fogc, fogR: [14, 46], amb: [Math.min(0.62, F.amb[0] * 2.3), Math.min(0.62, F.amb[1] * 2.3), Math.min(0.62, F.amb[2] * 2.3)], lights: lights.slice(0, 8), torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
   R3.draw(MESH, ATT);
   // doors slide sideways into the wall
   if (!DYN) DYN = new R3.Mesh(); DYN.clear();
@@ -200,8 +203,9 @@ function draw() {
   R3.draw(DYN, ATT);
   // billboards from the sprite sheet
   var st = sheetTex(); if (st) { DYN.clear(); var R = R3.cam.right;
-    function bb(n, x, z, hgt, y0, alpha) { var r = sprRect(n); if (!r) return; var w = hgt * r.w / r.h / 2; DYN.quad([x - R[0] * w, y0, z - R[2] * w], [x + R[0] * w, y0, z + R[2] * w], [x + R[0] * w, y0 + hgt, z + R[2] * w], [x - R[0] * w, y0 + hgt, z - R[2] * w], [0, 1, 1, 1, 1, 0, 0, 0], r.t, [0.5, 0.5, 0.5], [-R3.cam.fwd[0], 0, -R3.cam.fwd[2]]); }
+    function bb(n, x, z, hgt, y0, alpha) { y0 = y0 || 0; var r = sprRect(n); if (!r) return; var w = hgt * r.w / r.h / 2; DYN.quad([x - R[0] * w, y0, z - R[2] * w], [x + R[0] * w, y0, z + R[2] * w], [x + R[0] * w, y0 + hgt, z + R[2] * w], [x - R[0] * w, y0 + hgt, z - R[2] * w], [0, 1, 1, 1, 1, 0, 0, 0], r.t, [0.5, 0.5, 0.5], [-R3.cam.fwd[0], 0, -R3.cam.fwd[2]]); }
     var ITEMSPR = { cracker: 'it_pizza', cuppa: 'it_espresso', condom: 'gr_shield', cream: 'it_cup', pies: 'it_pie', meat: 'it_chilli', key: 'gr_key', treasure: 'gr_coin5', w_shotgun: 'it_pie', w_swarm: 'it_charm', w_nado: 'it_moon' };
+    drawDeco(bb);
     THINGS.forEach(function (t) { if (t.got || Math.hypot(t.x - p.x, t.z - p.z) > 26) return; bb(ITEMSPR[t.k] || 'gr_coin', t.x, t.z, t.k.indexOf('w_') === 0 ? 0.6 : 0.4, 0.05 + Math.sin(G.t * 3 + t.x) * 0.04); });
     FOE.forEach(function (f) { var d = Math.hypot(f.x - p.x, f.z - p.z); if (d > 30) return; var nf = f.d.nf || 4, fr = f.d.s + (f.st === 'chase' ? Math.floor(G.t * 6 + f.x) % nf : 0); if (f.boss && f.hp < f.d.hp / 2 && f.B.s2) fr = f.B.s2 + (Math.floor(G.t * 3) % 2);
       var h = f.d.h * (f.boss ? 1 : 1), y0 = f.d.fly ? 0.3 + Math.sin(G.t * 3 + f.x) * 0.1 : 0; if (f.st === 'dead') { if (f.t > 1.2) return; h *= Math.max(0.15, 1 - f.t * 1.4); } bb(fr, f.x, f.z, h, y0); });
@@ -209,6 +213,7 @@ function draw() {
     // flashes on foes in pain or firing
     DYN.clear(); FOE.forEach(function (f) { if (f.st === 'dead' || !(f.pain > 0 || f.flashT > 0)) return; f.flashT = Math.max(0, (f.flashT || 0) - 1 / 60); var nf = f.d.nf || 4, fr = f.d.s + (Math.floor(G.t * 6 + f.x) % nf); bb(fr, f.x, f.z, f.d.h, f.d.fly ? 0.3 : 0); }); if (DYN.n) R3.draw(DYN, st, { flash: [0.5, 0.05, 0.05], alpha: 0.6 }); }
   DYN.clear(); var Rr = R3.cam.right; function sq(x, y, z, s, col) { DYN.quad([x - Rr[0] * s, y - s, z - Rr[2] * s], [x + Rr[0] * s, y - s, z + Rr[2] * s], [x + Rr[0] * s, y + s, z + Rr[2] * s], [x - Rr[0] * s, y + s, z - Rr[2] * s], [0, 1, 1, 1, 1, 0, 0, 0], TL('glow'), col, [0, 0, 1], 2); }
+  drawDecoGlow(sq);
   SHOTS.forEach(function (s) { sq(s.x, s.y, s.z, s.rocket ? 0.18 : 0.12, s.foe ? [0.6, 0.2, 0.6] : [0.6, 0.3, 0.2]); });
   FX.forEach(function (f) { f.t -= 1 / 60; if (f.k === 'blood') { f.vy -= 9 / 60; f.x += f.vx / 60; f.y += f.vy / 60; f.z += f.vz / 60; sq(f.x, f.y, f.z, 0.04, [0.5, 0.02, 0.02]); } else if (f.k === 'puff') sq(f.x, f.y, f.z, 0.08, [0.5, 0.5, 0.45]); else if (f.k === 'boom') sq(f.x, f.y, f.z, 1.2 * (1 - f.t), [0.6, 0.35, 0.1]); }); FX = FX.filter(function (f) { return f.t > 0; });
   R3.draw(DYN, ATT, { lit: false });
@@ -244,16 +249,16 @@ function hud() {
 function deadMenu() { KIT.menu({ title: 'You Died', sub: FLOORS[G.fl].n + ': ' + FLOORS[G.fl].name, items: [{ label: 'TRY THIS FLOOR AGAIN', def: true, fn: function () { var n = G.fl; P = null; startFloor(n); } }, { label: 'TITLE', back: true, fn: titleMenu }] }); }
 function ending() { G.mode = 'end'; music.play('c3a'); KIT.menu({ title: 'Castle Cleared', html: '<p>Blumhead pops like a bad zit and the whole castle goes quiet. Cumhead takes the lift all the way down, out of the front gate and into the red moonlight of Cum City, still holding the Meatnado Launcher. Nobody asks.</p><p style="color:#ffe36a;text-align:center">SCORE ' + P.score + '</p>', items: [{ label: 'TITLE', back: true, def: true, fn: titleMenu }] }); }
 function floorMenu() { KIT.menu({ title: 'Pick a Floor', items: FLOORS.map(function (F, n) { return { label: F.n + '  ' + F.name, dis: n > SV.reached, fn: function () { P = null; startFloor(n); } }; }).concat([{ label: 'BACK', back: true, fn: titleMenu }]) }); }
-function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Move</b> left stick / WASD. <b>Turn</b> right stick, the arrow keys or the mouse (click the picture). <b>Fire</b> X, RB, J or the left mouse button. <b>Use</b> A, Space or K: doors, the lift switch (the green light), cracked walls. <b>Next weapon</b> Y or L, 1 to 5 picks one.</p><p>Doors open as you walk at them. The gold door needs the gold key. Push cracked walls for secrets. Condoms soak up damage. The lift (a red panel with a green light) takes you up a floor.</p>',
-  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function optsMenu() { KIT.menu({ title: 'Options', items: [{ label: 'TURN SPEED: ' + (SV.sens || 1).toFixed(2), fn: function () { SV.sens = (SV.sens || 1) >= 2 ? 0.5 : Math.round(((SV.sens || 1) + 0.25) * 100) / 100; persist(); optsMenu(); } }, R3.ok ? R3.resItem(optsMenu) : null, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function pauseMenu() { if (G.mode !== 'play' || KIT.menuOpen()) return; if (document.exitPointerLock) try { document.exitPointerLock(); } catch (e) {} KIT.menu({ cls: 'clear', title: 'Paused', sub: FLOORS[G.fl].n + ': ' + FLOORS[G.fl].name, items: [{ label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'OPTIONS', fn: optsMenu }, { label: 'QUIT', fn: titleMenu }] }); }
+function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Move</b> left stick / WASD. <b>Look</b> (round, up and down) right stick or the mouse; on keys the arrows turn and R / F look up and down (click the picture). <b>Fire</b> X, RB, J or the left mouse button. <b>Use</b> A, Space or K: doors, the lift switch (the green light), cracked walls. <b>Next weapon</b> Y or L, 1 to 5 picks one.</p><p>Doors open as you walk at them. The gold door needs the gold key. Push cracked walls for secrets. Condoms soak up damage. The lift (a red panel with a green light) takes you up a floor.</p>',
+  items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') sysMenu(); else titleMenu(); } }] }); }
+function optsMenu() { KIT.menu({ title: 'Options', items: [{ label: 'TURN SPEED: ' + (SV.sens || 1).toFixed(2), fn: function () { SV.sens = (SV.sens || 1) >= 2 ? 0.5 : Math.round(((SV.sens || 1) + 0.25) * 100) / 100; persist(); optsMenu(); } }, R3.ok ? R3.resItem(optsMenu) : null, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') sysMenu(); else titleMenu(); } }] }); }
+function pauseMenu() { if (G.mode !== 'play') return; invMenu(); }
 function titleMenu() { G.mode = 'title'; P = null; music.play('c3a'); if (document.exitPointerLock) try { document.exitPointerLock(); } catch (e) {}
   KIT.menu({ cls: 'clear', logo: '../assets/c3-logo.webp', title: 'Cumstein 3D', items: [{ label: 'NEW GAME', cls: 'hot', def: true, fn: function () { P = null; startFloor(0); } }, SV.reached > 0 ? { label: 'PICK A FLOOR', fn: floorMenu } : null, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'OPTIONS', fn: optsMenu }] }); }
 music.songs.c3a = { bpm: 138, beats: 4, vol: 0.85, wet: 0.25, lead: 'fm', fmbass: 1, bass: 'drive', acc: 'stabs', drums: 'rock', chords: 'Am Am F G Am Am Dm E', mel: 'a4 . a4 c5 e5 . d5 c5 | a4 - g4 - e4 - - - | f4 . f4 a4 c5 . b4 a4 | g4 - b4 - d5 - - - | a4 . a4 c5 e5 . a5 g5 | e5 - c5 - a4 - - - | d5 - f5 - a5 - f5 - | e5 - g#5 - b5 - e5 -' };
 music.songs.c3b = { bpm: 120, beats: 4, vol: 0.85, wet: 0.3, lead: 'pulse', bass: 'gallop', acc: 'arp16', drums: 'boss', chords: 'Em C D B Em C Am B', mel: 'e5 - - g5 f#5 - e5 - | c5 - - - e5 - - - | d5 - - f#5 a5 - g5 f#5 | d#5 - - - b4 - - - | e5 g5 b5 - a5 - g5 - | c6 - b5 - g5 - e5 - | a5 - c6 - e6 - c6 - | b5 - d#6 - f#6 - b5 -' };
 music.songs.c3boss = music.songs.boss;
-KIT.setKeymap({ ArrowLeft: 'sleft', ArrowRight: 'sright', ArrowUp: 'up', ArrowDown: 'down', KeyJ: 'x', ControlLeft: 'x', KeyK: 'a', Space: 'a', KeyL: 'y', KeyE: 'a', Digit1: 'g1', Digit2: 'g2', Digit3: 'g3', Digit4: 'g4', Digit5: 'g5' });
+KIT.setKeymap({ ArrowLeft: 'sleft', ArrowRight: 'sright', ArrowUp: 'up', ArrowDown: 'down', KeyR: 'sup', KeyF: 'sdown', PageUp: 'sup', PageDown: 'sdown', KeyJ: 'x', ControlLeft: 'x', KeyK: 'a', Space: 'a', KeyL: 'y', KeyE: 'a', Digit1: 'g1', Digit2: 'g2', Digit3: 'g3', Digit4: 'g4', Digit5: 'g5' });
 KIT.start({ w: W, h: H, flex: 720, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
   pad: { sticks: true, btns: [{ k: 'x', label: 'X', sub: 'FIRE', cls: 'big' }, { k: 'a', label: 'A', sub: 'USE' }, { k: 'y', label: 'Y', sub: 'WEAPON' }] },
   padKeys: { l: 'a', r: 'd', u: 'w', d: 's', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' } });

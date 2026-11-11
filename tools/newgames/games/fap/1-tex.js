@@ -49,7 +49,7 @@ var ATL = null, ATT = null;
 function buildAtlas() {
   if (ATL) return; ATL = Atlas(77, 1024);
   Object.keys(PAINT).forEach(function (k) { ATL.add(k, PAINT[k], { flat: k === 'white' || k === 'glow' || k === 'panel' || k === 'black', wash: /pool|water|party/.test(k) ? 0.07 : undefined }); });
-  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: k === 'grinner' || k === 'halo' }); });
+  Object.keys(HIPAINT).forEach(function (k) { ATL.add(k, HIPAINT[k], { hi: true, flat: true, soft: /grinner|halo|stain|damp|puddle|smear|blood|handprint/.test(k) }); });
   ATT = R3.texture(ATL.canvas, true);
 }
 function TL(n) { return ATL.tile(n); }

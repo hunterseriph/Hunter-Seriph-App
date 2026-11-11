@@ -77,9 +77,9 @@ function stepPlayer(dt) {
     var save = SOLID[23]; if (p.hover > 0) { SOLID[23] = 0; SOLID[29] = 0; SOLID[3] = 0; } moveBox(p, vx * sp, vy * sp, 7); if (p.hover > 0) { SOLID[23] = 1; SOLID[29] = 1; SOLID[3] = 1; } if (vx || vy) p.anim += dt * 8; }
   // falling into a pit once the balloon runs out
   var ti = Math.floor(p.x / TS), tj = Math.floor(p.y / TS), tt = SCR.T[tj * COLS + ti]; if ((tt === 23 || tt === 29 || tt === 3) && p.hover <= 0) { p.hp -= 1; p.x = p.lastX; p.y = p.lastY; p.inv = 1; sfx.play('hurt'); if (p.hp <= 0) die(); } else if (tt !== 23 && tt !== 29 && tt !== 3) { p.lastX = p.x; p.lastY = p.y; }
-  if (KIT.pressed('a') && SV.items.sword && p.atk <= 0) { p.atk = 0.26; sfx.play('step'); sfx.tone('triangle', 400, 150, 0.1, 0.04); var v = DIRV[p.dir], hx = p.x + v[0] * 18, hy = p.y + v[1] * 18;
+  if (KIT.pressed('a') && p.atk <= 0 && talkNear()) {} else if (KIT.pressed('a') && SV.items.sword && p.atk <= 0) { p.atk = 0.26; sfx.play('step'); sfx.tone('triangle', 400, 150, 0.1, 0.04); var v = DIRV[p.dir], hx = p.x + v[0] * 18, hy = p.y + v[1] * 18;
     FOE.forEach(function (f) { if (f.hp > 0 && Math.hypot(f.x - hx, f.y - hy) < 20) hitFoe(f, 1 + (SV.won ? 1 : 0), p.x, p.y); }); if (BOSS && Math.hypot(BOSS.x - hx, BOSS.y - hy) < BOSS.r + 10) hitBoss(1);
-    var bi = Math.floor(hx / TS), bj = Math.floor(hy / TS); if (SCR.T[bj * COLS + bi] === 5) { SCR.T[bj * COLS + bi] = 0; sfx.play('step'); for (var i = 0; i < 6; i++) FX.push({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, t: 0.4, col: '#4aa82a' }); if (Math.random() < 0.3) PICK.push({ k: Math.random() < 0.5 ? 'drop' : 'heart', x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, n: 1, t: 8 }); } }
+    var bi = Math.floor(hx / TS), bj = Math.floor(hy / TS); if (SCR.T[bj * COLS + bi] === 5) { SCR.T[bj * COLS + bi] = 0; sfx.play('step'); for (var i = 0; i < 6; i++) FX.push({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, t: 0.4, col: ['#ff2630', '#2e1216'][i % 2] }); if (Math.random() < 0.3) PICK.push({ k: Math.random() < 0.5 ? 'drop' : 'heart', x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, n: 1, t: 8 }); } }
   if (KIT.pressed('b') && p.atk <= 0) useItem();
   if (KIT.pressed('y') || KIT.pressed('x')) cycleItem();
   // pickups

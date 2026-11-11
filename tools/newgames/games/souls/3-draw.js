@@ -5,7 +5,8 @@ function camPose() {
   if (LOCK && LOCK.hp > 0) { var la = Math.atan2(LOCK.x - p.x, LOCK.z - p.z); CAMY = turnTo(CAMY, la, 0.08); }
   else { CAMY -= lk.x * 0.045 + mouse.dx * 0.004; mouse.dx = 0; }
   G.camP = Math.max(-0.2, Math.min(0.7, (G.camP === undefined ? 0.28 : G.camP) + lk.y * 0.02 + mouse.dy * 0.003)); mouse.dy = 0;
-  var want = LOCK && LOCK.boss ? 7 : 4.6, piv = [p.x, p.y + 1.6, p.z], d = 0.5, dir = [-Math.sin(CAMY) * Math.cos(G.camP), Math.sin(G.camP), -Math.cos(CAMY) * Math.cos(G.camP)];
+  G.piv = G.piv || [p.x, p.y + 1.6, p.z]; G.piv[0] += (p.x - G.piv[0]) * 0.22; G.piv[1] += (p.y + 1.6 - G.piv[1]) * 0.12; G.piv[2] += (p.z - G.piv[2]) * 0.22; if (Math.hypot(p.x - G.piv[0], p.z - G.piv[2]) > 4) G.piv = [p.x, p.y + 1.6, p.z];
+  var want = LOCK && LOCK.boss ? 7 : 4.6, piv = G.piv, d = 0.5, dir = [-Math.sin(CAMY) * Math.cos(G.camP), Math.sin(G.camP), -Math.cos(CAMY) * Math.cos(G.camP)];
   while (d < want) { var ex = piv[0] + dir[0] * (d + 0.3), ez = piv[2] + dir[2] * (d + 0.3), ey = piv[1] + dir[1] * (d + 0.3), k = tk(tileOf(ex), tileOf(ez)); if (k === 1 || ey < floorAt(ex, ez) + 0.2) break; d += 0.1; }
   CAMD = d < CAMD ? d : CAMD + (d - CAMD) * 0.1;
   var lift = Math.max(0, 3.2 - CAMD) * 0.55, eye = [piv[0] + dir[0] * CAMD, piv[1] + dir[1] * CAMD + lift, piv[2] + dir[2] * CAMD], at = LOCK && LOCK.hp > 0 ? [(p.x + LOCK.x) / 2, p.y + 1.3, (p.z + LOCK.z) / 2] : [p.x - dir[0] * 2.5, p.y + 1.2, p.z - dir[2] * 2.5];
@@ -18,10 +19,12 @@ function poseOf(e, isP) {
   var Q = pose0(), run = e.spd > 4.5;
   poseWalk(Q, e.ph, Math.min(1, e.spd / 3), run);
   if (isP) {
-    if (e.st === 'roll') { Q.bp = (1 - e.roll / 0.42) * Math.PI * 2; Q.bodyY = 0.5; Q.y = -0.3; Q.hip = [1.4, 1.4]; Q.kn = [2, 2]; Q.sh = [[1.2, 0.2], [1.2, 0.2]]; Q.el = [2, 2]; }
-    else if (e.atk) { var A = e.atk, k = Math.min(1, A.t / A.len); poseSwing(Q, A.heavy ? Math.min(1, k * 1.1) : k); if (A.side) { Q.twist = -Q.twist; } if (A.heavy) Q.lean += 0.15; }
-    else if (e.st === 'drink') { Q.sh[1] = [2.4, -0.2, 0.2]; Q.el[1] = 1.8; Q.hp = -0.4; }
-    else if (e.guard) { Q.sh[0] = [1.3, 0.1, 0.5]; Q.el[0] = 1.5; Q.sh[1] = [1.0, -0.1, -0.2]; Q.el[1] = 0.9; Q.lean = 0.1; }
+    if (e.st === 'roll') { var rk = 1 - e.roll / 0.62; Q.bp = Math.min(1, rk / 0.7) * Math.PI * 2; Q.bodyY = 0.5 * Math.sin(Math.min(1, rk / 0.7) * Math.PI); Q.y = -0.3; Q.hip = [1.4, 1.4]; Q.kn = [2, 2]; Q.sh = [[1.2, 0.2], [1.2, 0.2]]; Q.el = [2, 2]; if (rk > 0.7) { Q.bp = 0; Q.bodyY = 0; Q.y = -0.25 * (1 - (rk - 0.7) / 0.3); Q.kn = [0.9, 0.6]; Q.hip = [0.8, 0.3]; Q.sh = [[0.6, 0.3], [0.6, 0.3]]; Q.el = [0.8, 0.8]; } }
+    else if (e.st === 'back') { Q.lean = -0.3; Q.hip = [-0.3, 0.6]; Q.kn = [0.2, 0.8]; Q.sh[1] = [0.8, 0.3, 0.2]; Q.el[1] = 0.9; }
+    else if (e.atk) poseMove(Q, e.atk);
+    else if (e.st === 'drink') { Q.sh[0] = [2.4, -0.2, 0.2]; Q.el[0] = 1.8; Q.hp = -0.4; Q.sh[1] = [0.5, 0.2, 0.1]; Q.el[1] = 0.5; }
+    else poseHold(Q, e);
+    if (!e.atk && e.st !== 'roll' && e.lean) Q.lean += Math.max(-0.25, Math.min(0.3, e.lean));
     if (e.hurtT > 0.3) poseHurt(Q, 1);
     if (e.hp <= 0) poseDown(Q, Math.min(1, G.deadT * 2), 0);
   } else {
@@ -41,6 +44,7 @@ function draw() {
   var A = WORLD.A, C = camPose(); R3.begin(A.fog); R3.setCam(C.eye, C.at, KIT.W < KIT.H ? 1.25 : 1.0);
   var lights = []; WORLD.things.forEach(function (t, n) { if (t.k !== 'candle' && t.k !== 'torch') return; var x = tx(t.i), z = tx(t.j), d = Math.hypot(x - P.x, z - P.z); if (d > 28) return; var lit = t.k === 'torch' || SV.lit[t.id], fl = 0.9 + Math.sin(G.t * 11 + n) * 0.08 + Math.sin(G.t * 23 + n * 3) * 0.05;
     if (lit) lights.push({ x: x, y: th(t.i, t.j) + (t.k === 'torch' ? 2.7 : 1.4), z: z, r: t.k === 'torch' ? 11 : 9, c: A.lamp, k: 1.25 * fl, d: d }); });
+  FLAMES.forEach(function (f, n) { if (n % 5) return; var d = Math.hypot(f.x - P.x, f.z - P.z); if (d < 16) lights.push({ x: f.x, y: f.y + 0.3, z: f.z, r: 5, c: [1, 0.6, 0.3], k: 0.9, d: d + 3 }); });
   lights.sort(function (a, b) { return a.d - b.d; }); lights = lights.slice(0, 6); lights.push({ x: P.x, y: P.y + 2.4, z: P.z, r: 7, c: [1, 0.85, 0.6], k: 0.5 }); // his own little glow so you can always see him
   R3.scene({ fog: A.fog, fogR: [10, 44], amb: [A.amb[0] * 1.5, A.amb[1] * 1.5, A.amb[2] * 1.5], lights: lights, torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
   R3.draw(MESH, ATT);
@@ -53,15 +57,16 @@ function draw() {
   // people
   var held = RIGS.weap[WEAPONS[SV.wpn].mesh] || OWN[WEAPONS[SV.wpn].mesh];
   var pa = P.inv > 0 && P.hurtT > 0 && Math.floor(G.t * 20) % 2 ? 0.5 : undefined;
-  drawRig(RIGS.cumhead, P.x, P.y, P.z, P.a, poseOf(P, 1), { held: held, heldP: Math.PI / 2, alpha: pa });
+  drawRig(RIGS.cumhead, P.x, P.y + (P.atk && P.atk.jy || 0), P.z, P.a + (P.atk && P.atk.spin || 0), poseOf(P, 1), { held: held, heldP: -Math.PI / 2 - 0.2, alpha: pa });
   FOE.forEach(function (f) { if (Math.hypot(f.x - P.x, f.z - P.z) > 32) return; if (f.st === 'dead' && f.t > 2) return; var rig = RIGS[f.d.rig] || RIGS.gimp, fl = f.hurt > 0 ? [0.6, 0.6, 0.6] : f.st === 'wind' && Math.floor(G.t * 14) % 2 ? [0.5, 0.05, 0.05] : null;
-    drawRig(rig, f.x, f.y, f.z, f.a, poseOf(f), { flash: fl, held: f.d.held && rig.P[f.d.held] ? rig.P[f.d.held] : null, alpha: f.st === 'dead' ? Math.max(0, 1 - (f.t - 1)) : undefined }); });
+    drawRig(rig, f.x, f.y, f.z, f.a, poseOf(f), { flash: fl, held: f.d.held && rig.P[f.d.held] ? rig.P[f.d.held] : null, heldP: -Math.PI / 2, alpha: f.st === 'dead' ? Math.max(0, 1 - (f.t - 1)) : undefined }); });
   if (BOSS && !(BOSS.st === 'dead' && BOSS.t > 3)) { var b = BOSS, brig = RIGS[b.B.rig] || RIGS.butcher, bf = b.hurt > 0 ? [0.6, 0.6, 0.6] : (b.st !== 'idle' && b.st !== 'stun' && b.st !== 'dead' && b.t < 0.6 && Math.floor(G.t * 12) % 2) ? [0.55, 0.05, 0.05] : null;
-    drawRig(brig, b.x, b.y + (b.jy || 0), b.z, b.a, poseOf(b), { sc: b.B.sc, flash: bf, held: brig.P.weapon || brig.P.bottle || null }); }
+    drawRig(brig, b.x, b.y + (b.jy || 0), b.z, b.a, poseOf(b), { sc: b.B.sc, flash: bf, held: brig.P.weapon || brig.P.bottle || null, heldP: -Math.PI / 2 }); }
   // billboards: flames, blood, sparks, shots, the bloodstain, tells
   if (!DYN) DYN = new R3.Mesh(); DYN.clear(); var R = R3.cam.right;
   function bb(x, y, z, w, h, T, g) { DYN.quad([x - R[0] * w, y - h, z - R[2] * w], [x + R[0] * w, y - h, z + R[2] * w], [x + R[0] * w, y + h, z + R[2] * w], [x - R[0] * w, y + h, z - R[2] * w], [0, 1, 1, 1, 1, 0, 0, 0], T, [0.5, 0.5, 0.5], [0, 0, 1], g || 1.5); }
   WORLD.things.forEach(function (t) { if ((t.k === 'candle' && SV.lit[t.id]) || t.k === 'torch') { var x = tx(t.i), z = tx(t.j); if (Math.hypot(x - P.x, z - P.z) > 30) return; var y = th(t.i, t.j) + (t.k === 'torch' ? 2.75 : 1.2), s = 0.22 + Math.sin(G.t * 13 + t.i) * 0.03; bb(x, y, z, s, s * 1.3, TL('flame'), 2); bb(x, y, z, s * 3, s * 3, TL('halo'), 1); } });
+  FLAMES.forEach(function (f, n) { if (Math.abs(f.x - P.x) > 24 || Math.abs(f.z - P.z) > 24) return; var s = 0.06 + Math.sin(G.t * 15 + n) * 0.012; bb(f.x, f.y, f.z, s, s * 1.5, TL('flame'), 2); bb(f.x, f.y, f.z, s * 4, s * 4, TL('halo'), 0.6); });
   FX.forEach(function (f) { if (f.k === 'blood') { f.vy -= 12 / 60; f.x += f.vx / 60; f.y += f.vy / 60; f.z += f.vz / 60; bb(f.x, f.y, f.z, 0.05, 0.05, TL('blood1'), 0.6); } else if (f.k === 'spark') bb(f.x, f.y, f.z, 0.25, 0.25, TL('spark'), 2); else if (f.k === 'heal') bb(f.x, f.y + (0.8 - f.t), f.z, 0.5, 0.5, TL('halo'), 2); });
   SHOTS.forEach(function (s) { bb(s.x, s.y, s.z, 0.18, 0.18, TL('spark'), 2); });
   if (SV.stain && SV.stain.area === SV.area) { var sy = floorAt(SV.stain.x, SV.stain.z) + 0.5 + Math.sin(G.t * 3) * 0.1; bb(SV.stain.x, sy, SV.stain.z, 0.3, 0.3, TL('blood1'), 2); bb(SV.stain.x, sy, SV.stain.z, 0.8, 0.8, TL('halo'), 1); }
