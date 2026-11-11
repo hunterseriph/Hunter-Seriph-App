@@ -45,6 +45,9 @@ function stepPlayer(dt) {
     case 'grab': return stepGrab(e, dt);
     case 'atk': stepMove(e, dt); if (e.mv && (KIT.pressed('a') || (G.bot && G.botA))) e.buf = 1; if (e.mv && KIT.pressed('x')) e.bufX = 1; return;
   }
+  // update 131: the BLOCK button (L / LB / Q). Hold it on the ground: he stands his guard, front hits only chip him, and he can still turn to face the other way
+  if (e.h <= 0 && e.st !== 'jump' && (KIT.held('lb') || (G.bot && G.botBlock))) { var bmx = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0); if (bmx) e.face = bmx; e.vx *= 0.6; e.vz = 0; e.st = 'guard'; e.guarding = true; e.running = false; return; }
+  e.guarding = false;
   // free: walking, running, jumping
   var air = e.h > 0 || e.st === 'jump';
   var mx = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0), mz = (KIT.held('down') ? 1 : 0) - (KIT.held('up') ? 1 : 0);

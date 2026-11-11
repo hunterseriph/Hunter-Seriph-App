@@ -37,3 +37,18 @@ for i in range(6): _hd.rectangle([8 + i * 3, 10 + i * 3, 50 - i * 3, 50 - i * 2]
 _hd.rectangle([26, 26, 32, 38], fill=(4, 2, 3, 255)); _hd.rectangle([27, 22, 31, 24], fill=(196, 18, 28, 255))
 _pill = mn['mn_pill'] if 'mn_pill' in mn else None
 card(((8, 3, 6, 255), [(0, 46, (18, 10, 12)), (47, 68, (30, 22, 20))]), [(_hall, 29, 69, 1, False), (B['npc_tb'], 42, 66, 1.25, True), (B['ch_idle0'].crop((0, 0, 30, 34)), 16, 68, 0.6, False)] + ([(_pill, 10, 20, 1, False), (_pill, 50, 14, 1, True), (_pill, 28, 10, 1, False)] if _pill else []), 'pn')
+# update 131: the eight new games
+_gr = ex('grinding')
+_ball = Image.new('RGBA', (34, 34)); _bd = ImageDraw.Draw(_ball); _bd.ellipse((1, 1, 32, 32), fill=(255, 255, 255, 70), outline=(18, 4, 10, 255)); _bd.ellipse((7, 5, 15, 11), fill=(255, 255, 255, 180))
+_bc = B['ch_idle0'].crop((0, 0, 30, 57)).resize((15, 28), Image.NEAREST); _ball.alpha_composite(_bc, (9, 4))
+card(((60, 20, 90, 255), [(0, 40, (40, 12, 70)), (41, 68, (20, 8, 30))]), [(B['npc_pulsar'], 29, 50, 1.0, False), (B['h_gloop_adult_idle0'], 10, 68, 0.6, False), (B['h_ember_adult_idle0'], 48, 68, 0.6, True)], 'ob')
+_yr = Image.new('RGBA', (59, 69), (0, 0, 0, 0)); _yd = ImageDraw.Draw(_yr)
+for i in range(5): _yd.rectangle([6 + i * 4, 8 + i * 4, 52 - i * 4, 52 - i * 2], outline=(200 - i * 25, 180 - i * 24, 80 - i * 10, 255))
+_yd.ellipse((24, 22, 34, 28), fill=(0, 0, 0, 255)); _yd.chord((22, 22, 36, 32), 20, 160, fill=(255, 255, 255, 255))
+card(((90, 80, 30, 255), [(0, 50, (110, 98, 40)), (51, 68, (80, 70, 30))]), [(_yr, 29, 69, 1, False)], 'fr')
+card(((10, 4, 8, 255), [(0, 46, (26, 10, 16)), (47, 68, (40, 30, 34))]), [(B['f_queen_0'] if 'f_queen_0' in B else B['f_knight_0'], 44, 64, 0.6, True), (B['ch_attack'], 18, 66, 0.55, False)], 'dk')
+card(((42, 74, 30, 255), [(0, 68, (52, 90, 36))]), [(_gr['chb_d0'], 29, 60, 1.2, False), (B['f_slime_0'], 46, 64, 1, True), (_gr['gr_heart'], 10, 16, 1, False), (_gr['gr_heart'], 20, 16, 1, False)], 'lc')
+card(((40, 30, 24, 255), [(0, 68, (58, 42, 36))]), [(B['h_gloop_baby_run0'], 18, 60, 1.2, False), (B['h_ember_baby_run1'], 40, 64, 1.1, True), (B['f_knight_0'], 48, 34, 0.7, True)], 'gk')
+card(((30, 26, 28, 255), [(0, 30, (40, 30, 34)), (31, 68, (24, 20, 22))]), [(B['f_cultist_0'], 29, 44, 0.9, False), (B['cumface'], 29, 68, 0.9, False)], 'c3')
+card(((90, 30, 70, 255), [(0, 44, (110, 40, 90)), (45, 68, (240, 120, 180))]), [(_ball, 29, 60, 1, False), (_gr['gr_coin'], 10, 30, 1, False), (_gr['gr_coin'], 48, 24, 1, False)], 'sb')
+card(((30, 8, 14, 255), [(0, 44, (60, 12, 24)), (45, 68, (40, 20, 24))]), [(B['spermaid_s0'], 10, 68, 0.6, False), (B['ch_rn2'], 30, 68, 0.6, False), (B['greebo_s0'], 48, 68, 0.6, True), (B['npc_tb'], 46, 30, 0.7, True)], 'sa')

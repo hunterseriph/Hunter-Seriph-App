@@ -62,8 +62,8 @@ function tbRig2(fc, clown) {
   if (clown) { [-1, 1].forEach(function (sd) { ell(hd, sd * 0.21, 0.28, -0.02, 0.13, 0.12, 0.14, '#ffffff', 8, 5, { T: TL('wigred') }); }); ell(hd, 0, 0.18, 0.22, 0.05, 0.05, 0.04, '#e01010', 8, 5);
     tub(hd, [0.05, 0.42, 0], [0.05, 0.44, 0], 0.14, 0.14, '#1a1a1e', 10, { cap: 1, cap0: 1 }); tub(hd, [0.05, 0.44, 0], [0.08, 0.6, 0.02], 0.07, 0.05, '#1a1a1e', 8, { cap: 1 }); }
   else { ell(hd, 0, 0.29, -0.04, 0.21, 0.17, 0.2, '#3a2412', 10, 5, { only: 'back' }); // greasy hair
-    tub(hd, [0, 0.43, -0.03], [0.02, 0.45, -0.01], 0.33, 0.3, '#4a2e18', 14, { cap: 1, cap0: 1 }); tub(hd, [0, 0.45, -0.03], [0.03, 0.62, -0.05], 0.18, 0.14, '#4a2e18', 10, { cap: 1 }); tub(hd, [0, 0.46, -0.03], [0, 0.5, -0.03], 0.185, 0.18, '#5a0a0a', 10); // a sweat-black hat with a blood band
-    [[-0.08, 0.55, 0.1], [0.1, 0.57, 0.08], [0.0, 0.6, -0.17]].forEach(function (n) { tub(hd, [n[0], n[1], n[2]], [n[0] * 1.6, n[1] + 0.12, n[2] * 1.3], 0.012, 0.008, '#9a9aa0', 4); ell(hd, n[0] * 1.6, n[1] + 0.12, n[2] * 1.3, 0.02, 0.012, 0.02, '#9a9aa0', 5, 2); }); } // nails through the crown
+    tub(hd, [0, 0.445, -0.045], [0, 0.468, -0.045], 0.29, 0.28, '#4a2e18', 16, { cap: 1, cap0: 1 }); tub(hd, [0, 0.468, -0.045], [0, 0.64, -0.05], 0.19, 0.16, '#4a2e18', 12, { cap: 1 }); tub(hd, [0, 0.47, -0.045], [0, 0.51, -0.045], 0.195, 0.19, '#5a0a0a', 12); // a sweat-black hat with a blood band. update 131: sat level on the crown (the brim was a sliver of tube on a slant, so it cut across his face)
+    [[-0.08, 0.56, 0.1], [0.1, 0.58, 0.08], [0.0, 0.6, -0.17]].forEach(function (n) { tub(hd, [n[0], n[1], n[2]], [n[0] * 1.6, n[1] + 0.12, n[2] * 1.3], 0.012, 0.008, '#9a9aa0', 4); ell(hd, n[0] * 1.6, n[1] + 0.12, n[2] * 1.3, 0.02, 0.012, 0.02, '#9a9aa0', 5, 2); }); } // nails through the crown
   P.head = hd.upload();
   limbs(P, D, c);
   // claws on the hands: re-upload the forearms with long black nails and a bandage on the right
@@ -77,4 +77,4 @@ function tbRig2(fc, clown) {
 }
 function buildTB2() { RIGS.tb = tbRig2('f_tb'); RIGS.tbmad = tbRig2('f_tbmad'); RIGS.tbclown = tbRig2('f_tbclown', 1); }
 /* he never stands straight: hunched, and his head jerks now and then */
-function tbTwitch(Q, tb) { var t = KIT.t + (tb.x || 0) * 0.37; Q.lean += 0.22; Q.hp -= 0.02; var j = Math.sin(t * 1.7) * Math.sin(t * 2.9); if (j > 0.82) { Q.hr += Math.sin(t * 47) * 0.35; Q.hy += Math.sin(t * 31) * 0.25; } Q.hr += 0.12; }
+function tbTwitch(Q, tb) { var t = KIT.t + (tb.x || 0) * 0.37; Q.lean += 0.22; Q.hp -= 0.02; var j = Math.sin(t * 1.7) * Math.sin(t * 2.9); if (j > 0.82) { Q.hr += Math.sin(t * 47) * 0.35; Q.hy += Math.sin(t * 31) * 0.25; } Q.hr += 0.05; }

@@ -108,7 +108,7 @@ function stepDuel(dt) {
     if (D.t > 3.6) duelRoundOver();
   }
 }
-function padInput() { return { l: KIT.held('left'), r: KIT.held('right'), u: KIT.held('up'), d: KIT.held('down'), a: KIT.pressed('a'), b: KIT.pressed('b'), x: KIT.pressed('x'), y: KIT.pressed('y') }; }
+function padInput() { return { l: KIT.held('left'), r: KIT.held('right'), u: KIT.held('up'), d: KIT.held('down'), a: KIT.pressed('a'), b: KIT.pressed('b'), x: KIT.pressed('x'), y: KIT.pressed('y'), g: KIT.held('lb') }; }
 /* Cowboy Load leans on the fence at the back and lobs his mugs in while his brother fights */
 function stepAssist(e, dt, live) { e.t += dt; e.z = 6; e.x = G.cam + VW() - 26; e.face = P.x < e.x ? -1 : 1; if (!live) return; e.cd -= dt; if (e.cd <= 0) { e.cd = rnd(3.2, 5) / (1 + G.duel.lvl * 0.5); e.flash = 0.1; var b = shoot(e, { spr: 's_mug', spd: 150, arc: 260, dmg: 7, boom: 18 }, { h: 40, k: clamp(Math.abs(P.x - e.x) / 150, 0.4, 1.6) }); b.vz = (LANE - 6) * 1.4; sfx.play('throw'); } }
 
@@ -148,6 +148,7 @@ function stepDuelHero(e, I, o, dt) {
   e.crouch = !!I.d;
   var threat = (o.mv && o.st === 'atk') || o.st === 'move' || o.st === 'leap' || (o.h > 0 && o.mv) || G.shots.some(function (b) { return b.team !== e.team && Math.abs(b.x - e.x) < 110; }) || (G.beam && !G.beam.warn) || (G.sup && G.sup.by !== e);
   if (bk && threat) e.guard = I.d ? 'lo' : 'hi';
+  e.guardHeld = false; if (I.g) { e.guard = I.d ? 'lo' : 'hi'; e.vx = 0; e.st = 'idle'; e.crouch = !!I.d; e.guardHeld = true; return; } // the BLOCK button: guard high, or low with down, no matter what is coming
   if (I.y && e.meter >= 100) return startSuper(e);
   // motions: quarter circle forward or a dragon punch with a button = the EX version (costs a quarter of the meter)
   if ((I.a || I.b || I.x) && e.spCd <= 0) {

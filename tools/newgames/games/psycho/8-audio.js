@@ -55,4 +55,9 @@ function ambience(dt) { // a low drone for the floor, wind in the pipes, your he
   // getting out: his bar's waltz, far too cheerful
   S.pnend = { bpm: 150, beats: 3, vol: 0.85, wet: 0.35, lead: 'calliope', bass: 'waltz', acc: 'stabs', drums: 'waltz', chords: 'C C G G G G C C F F C A Dm G C C',
     mel: 'e5 - - g5 - e5 | c6 - - g5 - - | d5 - - f5 - d5 | b5 - - g5 - - | d5 - f5 b5 - d6 | c6 - b5 a5 - g5 | g5 - e5 c5 - e5 | g5 - - - - - | a5 - - c6 - a5 | f5 - - a5 - - | g5 - - e5 - c5 | c#5 - e5 a5 - - | d5 - f5 a5 - d6 | b5 - a5 g5 - f5 | e5 - d5 c5 - - | c5 - - - - -' };
+  // update 131: "Shot Rope" by Brothers Load, the record on TB's bar radio (his ask). A two-step: walking bass, boom-chick, a twangy lead,
+  // and played through music.js's radio chain (radio: 1): thin, crackling, the tuning drifting. Heard faintly through the ceiling on B1.
+  S.shotrope = { bpm: 142, beats: 4, vol: 0.95, wet: 0, radio: 1, lead: 'pulse', bass: 'walk', acc: 'stabs', drums: 'shuffle', chords: 'G G C G D D G G C C G Em A A D D',
+    mel: 'd5 - g5 - b5 - a5 g5 | e5 - d5 - g4 - - - | e5 - g5 - c6 - b5 a5 | g5 - d5 - b4 - - - | a4 - d5 - f#5 - a5 - | g5 f#5 e5 - d5 - - - | b4 - d5 - g5 - b5 - | a5 g5 - - . . d5 - | ' +
+         'e5 - e5 - g5 - c6 - | b5 - a5 - g5 - e5 - | d5 - g5 - b5 - d6 - | b5 - g5 - e5 - - - | c#5 - e5 - a5 - c#6 - | b5 - a5 - e5 - c#5 - | d5 - f#5 - a5 - c6 - | b5 - a5 - f#5 - d5 -' };
 })();

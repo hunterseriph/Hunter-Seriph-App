@@ -646,7 +646,7 @@ var music = (function () {
     if (!A) { var a = sfx.audio && sfx.audio(); if (!a) return; setup(a); if (want) { var w = want; want = null; cur = null; play(w); } }
     if (!song || !tg || sfx.muted || A.state !== 'running') return;
     var sd = 60 / song.sp.bpm / 4;
-    if (nextT < A.currentTime - 0.4) nextT = A.currentTime + 0.05;
+    if (nextT < A.currentTime - 0.4) { nextT = A.currentTime + 0.05; T0 = nextT - stepI * sd; }
     while (nextT < A.currentTime + 0.3) { var evs = song.ev[stepI % song.len]; for (var i = 0; i < evs.length; i++) play1(evs[i], nextT, sd); nextT += sd; stepI++; }
   }
   var ALIAS = { b0: 'castle', b2: 'roof', b8: 'park', b6: 'dungeon', b7: 'town', b3: 'blum', b4: 'boss' };
@@ -658,10 +658,33 @@ var music = (function () {
     if (!cache[id]) cache[id] = compile(SONGS[id]);
     cur = id; song = cache[id];
     tg = A.createGain(); tg.gain.setValueAtTime(0.0001, A.currentTime); tg.gain.linearRampToValueAtTime(song.sp.vol || 1, A.currentTime + 0.8);
-    tg.connect(bus); send = A.createGain(); send.gain.value = song.sp.wet; tg.connect(send); send.connect(dl);
-    stepI = 0; nextT = A.currentTime + 0.12;
+    if (song.sp.radio) { radioChain(tg); send = A.createGain(); send.gain.value = 0; } // an old radio: no hall reverb, everything through the little speaker
+    else { tg.connect(bus); send = A.createGain(); send.gain.value = song.sp.wet; tg.connect(send); send.connect(dl); }
+    stepI = 0; nextT = A.currentTime + 0.12; T0 = nextT;
   }
+  /* update 131: a song played out of an old radio (Psycho Nightmare's bar). Thin (only the middle of the sound gets through
+     the tiny speaker), a little overdriven, a wobble in the tuning, and static hiss with crackles under it. radioLevel(v)
+     turns the whole radio up or down (how near you are to it). */
+  var RAD = null, T0 = 0;
+  /* update 131 (Pulsar's Octobeats): where the song is right now, in sixteenth-note steps from its first note (output latency allowed for) */
+  function pos() { if (!A || !song) return -1; var lat = (A.outputLatency || 0) + (A.baseLatency || 0); return (A.currentTime - lat - T0) / (60 / song.sp.bpm / 4); }
+  function radioChain(src) {
+    if (RAD) { try { RAD.hp.disconnect(); RAD.noise.stop(); } catch (e) {} RAD = null; }
+    var hp = A.createBiquadFilter(), lp = A.createBiquadFilter(), pk = A.createBiquadFilter(), ws = A.createWaveShaper(), out = A.createGain(), cur = new Float32Array(256);
+    hp.type = 'highpass'; hp.frequency.value = 420; hp.Q.value = 0.9; lp.type = 'lowpass'; lp.frequency.value = 2400; lp.Q.value = 1.4; pk.type = 'peaking'; pk.frequency.value = 1150; pk.gain.value = 7; pk.Q.value = 1.1;
+    for (var i = 0; i < 256; i++) { var x = i / 128 - 1; cur[i] = Math.tanh(x * 2.6) * 0.8; } ws.curve = cur;
+    src.connect(hp); hp.connect(pk); pk.connect(lp); lp.connect(ws); ws.connect(out); out.gain.value = RAD_LEVEL; out.connect(bus);
+    var len = A.sampleRate * 3, buf = A.createBuffer(1, len, A.sampleRate), d = buf.getChannelData(0), crackle = 0; // static: hiss, plus pops and crackle bursts
+    for (var j = 0; j < len; j++) { var h = (Math.random() * 2 - 1) * 0.07; if (Math.random() < 0.0009) crackle = 0.6 + Math.random() * 0.4; crackle *= 0.985; d[j] = h + (Math.random() < 0.08 ? (Math.random() * 2 - 1) * crackle : 0) + (Math.random() < 0.00012 ? (Math.random() < 0.5 ? -0.9 : 0.9) : 0); }
+    var ns = A.createBufferSource(), nf = A.createBiquadFilter(), ng = A.createGain(); ns.buffer = buf; ns.loop = true; nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 0.6; ng.gain.value = 0.32;
+    ns.connect(nf); nf.connect(ng); ng.connect(ws); ns.start();
+    var wob = A.createOscillator(), wg = A.createGain(); wob.frequency.value = 0.35; wg.gain.value = 140; wob.connect(wg); wg.connect(lp.frequency); wob.start(); // the tuning drifts
+    RAD = { hp: hp, out: out, noise: ns, wob: wob, src: src };
+  }
+  var RAD_LEVEL = 1;
+  function radioLevel(v) { RAD_LEVEL = v; if (RAD && A) RAD.out.gain.setTargetAtTime(v, A.currentTime, 0.15); }
   function fadeOut(sec) {
+    if (RAD && RAD.src === tg) { var rr = RAD; RAD = null; setTimeout(function () { try { rr.noise.stop(); rr.wob.stop(); rr.out.disconnect(); } catch (e) {} }, sec * 1000 + 200); rr.out.gain.setTargetAtTime(0.0001, A.currentTime, sec / 3); }
     if (!tg) return; var g = tg, sn = send, now = A.currentTime;
     g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now); g.gain.linearRampToValueAtTime(0.0001, now + sec);
     setTimeout(function () { try { g.disconnect(); sn.disconnect(); } catch (e) {} }, sec * 1000 + 3000);
@@ -669,7 +692,7 @@ var music = (function () {
   }
   function stop(sec) { want = null; if (A) fadeOut(sec || 1); cur = null; song = null; }
   setInterval(tick, 40);
-  return { play: play, stop: stop, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, get current() { return cur; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
+  return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
 })();
 
 /* =====================================================================================================
@@ -1097,6 +1120,8 @@ function strike(t, m, dir) {
   if (t.prop) { t.hp -= 1; spark(t.x, t.z, 22, 1); sfx.play('thud'); if (t.hp <= 0) breakProp(t); return true; }
   // the Hollow Knight blocks from the front unless he is busy attacking
   if (t.def && t.def.ai === 'shield' && !t.mv && t.st !== 'hurt' && t.st !== 'grabbed' && t.face === -dir && !m.guardBreak && !m.shot) { t.vx = dir * 80; spark(t.x - dir * 8, t.z, t.h + 22, 0, '#a6968f'); sfx.play('block'); t.blockT = 0.3; G.hs = 0.03; return false; }
+  // the BLOCK button in the brawler: a hero standing guard takes front hits as chip damage (grabs and throws get through)
+  if (!G.duel && t.hero && t.guarding && t.st === 'guard' && t.face === -dir && !m.unblock && !m.grab) { var ch = (m.dmg || 0) * 0.12; if (t.hp > 1) t.hp = Math.max(1, t.hp - ch); t.vx = dir * Math.max(70, (m.kb || 60) * 0.5); spark(t.x - dir * 8, t.z, t.h + t.ht * 0.6, 0, '#a6968f'); sfx.play('block'); t.blockT = 0.18; G.hs = Math.max(G.hs, 0.04); if (from && from.hero === undefined && from.vx !== undefined) from.vx = -dir * 40; t.meter = Math.min(100, (t.meter || 0) + 2); return false; }
   // a duel: holding back blocks (low attacks need down-back, jump-ins need standing). A little chip damage gets through
   if (G.duel && t.guard && !m.unblock && !t.prop && G.duel.phase === 'fight') { var okG = m.low ? t.guard === 'lo' : m.over ? t.guard === 'hi' : true;
     if (okG) { var chip = (m.dmg || 0) * 0.12; if (t.hp > 1) t.hp = Math.max(1, t.hp - chip); t.st = 'block'; t.mv = null; t.stun = 0.16 + Math.min(0.25, (m.dmg || 0) * 0.012); t.vx = dir * Math.max(90, (m.kb || 60) * 0.8);
@@ -1258,6 +1283,9 @@ function stepPlayer(dt) {
     case 'grab': return stepGrab(e, dt);
     case 'atk': stepMove(e, dt); if (e.mv && (KIT.pressed('a') || (G.bot && G.botA))) e.buf = 1; if (e.mv && KIT.pressed('x')) e.bufX = 1; return;
   }
+  // update 131: the BLOCK button (L / LB / Q). Hold it on the ground: he stands his guard, front hits only chip him, and he can still turn to face the other way
+  if (e.h <= 0 && e.st !== 'jump' && (KIT.held('lb') || (G.bot && G.botBlock))) { var bmx = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0); if (bmx) e.face = bmx; e.vx *= 0.6; e.vz = 0; e.st = 'guard'; e.guarding = true; e.running = false; return; }
+  e.guarding = false;
   // free: walking, running, jumping
   var air = e.h > 0 || e.st === 'jump';
   var mx = (KIT.held('right') ? 1 : 0) - (KIT.held('left') ? 1 : 0), mz = (KIT.held('down') ? 1 : 0) - (KIT.held('up') ? 1 : 0);
@@ -1744,7 +1772,7 @@ function stepDuel(dt) {
     if (D.t > 3.6) duelRoundOver();
   }
 }
-function padInput() { return { l: KIT.held('left'), r: KIT.held('right'), u: KIT.held('up'), d: KIT.held('down'), a: KIT.pressed('a'), b: KIT.pressed('b'), x: KIT.pressed('x'), y: KIT.pressed('y') }; }
+function padInput() { return { l: KIT.held('left'), r: KIT.held('right'), u: KIT.held('up'), d: KIT.held('down'), a: KIT.pressed('a'), b: KIT.pressed('b'), x: KIT.pressed('x'), y: KIT.pressed('y'), g: KIT.held('lb') }; }
 /* Cowboy Load leans on the fence at the back and lobs his mugs in while his brother fights */
 function stepAssist(e, dt, live) { e.t += dt; e.z = 6; e.x = G.cam + VW() - 26; e.face = P.x < e.x ? -1 : 1; if (!live) return; e.cd -= dt; if (e.cd <= 0) { e.cd = rnd(3.2, 5) / (1 + G.duel.lvl * 0.5); e.flash = 0.1; var b = shoot(e, { spr: 's_mug', spd: 150, arc: 260, dmg: 7, boom: 18 }, { h: 40, k: clamp(Math.abs(P.x - e.x) / 150, 0.4, 1.6) }); b.vz = (LANE - 6) * 1.4; sfx.play('throw'); } }
 
@@ -1784,6 +1812,7 @@ function stepDuelHero(e, I, o, dt) {
   e.crouch = !!I.d;
   var threat = (o.mv && o.st === 'atk') || o.st === 'move' || o.st === 'leap' || (o.h > 0 && o.mv) || G.shots.some(function (b) { return b.team !== e.team && Math.abs(b.x - e.x) < 110; }) || (G.beam && !G.beam.warn) || (G.sup && G.sup.by !== e);
   if (bk && threat) e.guard = I.d ? 'lo' : 'hi';
+  e.guardHeld = false; if (I.g) { e.guard = I.d ? 'lo' : 'hi'; e.vx = 0; e.st = 'idle'; e.crouch = !!I.d; e.guardHeld = true; return; } // the BLOCK button: guard high, or low with down, no matter what is coming
   if (I.y && e.meter >= 100) return startSuper(e);
   // motions: quarter circle forward or a dragon punch with a button = the EX version (costs a quarter of the meter)
   if ((I.a || I.b || I.x) && e.spCd <= 0) {
@@ -1898,7 +1927,7 @@ function heroFrame(e) {
   if (st === 'air' || st === 'thrown') return A.fall[0];
   if (st === 'win') return A.win[Math.floor(e.t * 3) % 2];
   if (st === 'hurt' || st === 'grabbed') { if (e.stun > 0.8 && G.duel) return A.dizzy[Math.floor(G.t * 3) % 2]; return A.hurt[e.hurtK || 0]; }
-  if (st === 'block') return e.crouch ? A.cblock[0] : A.block[0];
+  if (st === 'block' || st === 'guard' || e.guardHeld) return e.crouch ? A.cblock[0] : A.block[0];
   if (st === 'getup') return A.getup[0];
   if (m) return moveFrame(e, A[m.an] || A.jab);
   if (st === 'grab') return A.grab[0];
@@ -1928,8 +1957,9 @@ function shadow(x, z, w, h) { var g = KIT.ctx, a = Math.max(0.15, 0.5 - h / 300)
 function drawFighter(e) {
   var x = e.x - G.cam, y = sy(e) - e.h, g = KIT.ctx, name, sc = e.sc || 1, flip, rot = 0;
   if (e.hero) { name = heroFrame(e); flip = e.face < 0; if (e.mv && e.mv.spin && e.mv.rise) flip = Math.floor(G.t * 16) % 2 ? !flip : flip; if (e.st === 'air' || e.st === 'thrown') rot = (flip ? 1 : -1) * Math.min(0.9, e.t * 3) * (e.vh > 0 ? 1 : 0.6); }
-  else if (e.boss) { name = bossFrame(e); flip = e.face < 0; }
+  else if (e.boss || e.assist) { name = e.assist ? e.spr[Math.floor(G.t * 3) % e.spr.length] : bossFrame(e); flip = e.face < 0; }
   else { name = foeFrame(e); flip = e.face < 0; }
+  if (flip && typeof name === 'string' && /^f_(cow)?pig_\d$/.test(name) && KIT.has(name + 'L')) { name += 'L'; flip = false; } // the Piggy brothers' BROTHERS LOAD shirts never read backwards. update 131: the Cowboy Load assist only has his two frames (no foe frames: the duel crashed and only the sound ran)
   // lying down: foes without a lying frame are tipped over
   var lying = (e.st === 'down' || e.st === 'dead') && !e.hero && !(e.boss && e.bid === 'titan');
   if (lying) rot = (flip ? 1 : -1) * Math.PI / 2;
@@ -2266,7 +2296,7 @@ function botInput() {
 
 KIT.start({ w: 384, h: 216, wide: 512, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
   idleUpdate: function (dt) { if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
-  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }] } });
+  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }] } });
 titleMenu();
 window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect,
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };

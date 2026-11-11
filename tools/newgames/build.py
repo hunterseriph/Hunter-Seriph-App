@@ -18,7 +18,9 @@ def build(gid):
     head = open(os.path.join(HERE, 'lib', 'head.html'), encoding='utf-8').read()
     kit = open(os.path.join(HERE, 'lib', 'kit.js'), encoding='utf-8').read()
     musjs = open(os.path.join(APP, 'tools', 'load-legacy', 'src', '15-music.js'), encoding='utf-8').read()
-    code = '\n'.join(open(os.path.join(gdir, f), encoding='utf-8').read() for f in sorted(os.listdir(gdir)) if f.endswith('.js'))
+    libs = ''.join(open(os.path.join(HERE, 'lib', f), encoding='utf-8').read() + '\n' for f in meta.get('libs', []))
+    libs += ''.join(open(os.path.join(HERE, 'games', f), encoding='utf-8').read() + '\n' for f in meta.get('borrow', []))  # another game's files, e.g. Psycho Nightmare's 3D people
+    code = libs + '\n'.join(open(os.path.join(gdir, f), encoding='utf-8').read() for f in sorted(os.listdir(gdir)) if f.endswith('.js'))
     uri, pos = art.sheet(gid)
     kit = kit.replace("/*@SPR@*/{}", json.dumps(pos, separators=(',', ':'))).replace("/*@SHEET@*/''", json.dumps(uri))
     js = kit + '\n' + musjs + '\n' + code

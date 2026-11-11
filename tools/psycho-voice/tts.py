@@ -20,7 +20,7 @@ SAY = {  # the drawl: how TB's lines are spelt for the machine
  'tb10': 'Ah made muckies...', 'tb11': "A sissy don't deserve pleasure. A sissy is somebody's play thang.", 'tb12': 'Yew shoot real hard, huh?',
  'tb13': "Ah'm a fuckin' piggy.", 'tb14': "Who's ready fer shit head puddin'?", 'tb15': 'Hoh-lee shit!', 'tb16': 'Cock. rinse.',
  'tb17': "Yew suck, ah'll spray.", 'tb18': "Where the fuck d'yew think yer goin'? Prick!", 'tb19': "Oh gawd, ah'm pushin' piss outta mah dick.",
- 'tb20': "Ah'm so fucked raht now.", 'tb21': "Who's ready fer sissy-fi-cation? Ah'll make yew pretty. So pretty...", 'tb22': "Ah'm a tucker fucker!",
+ 'tb20': "Ah'm so fucked raht now.", 'tb21': "Who's ready fer sissy-fi-cation? Ah'll make yew pretty. So pretty...", 'tb22': "Ah'm a tucker fucker!", 'tb23': "Yew'll make a good sissy.",
  'tbend': "Take it easy, bro. Come back agin soon!", 'tbwoods': 'Make me yer pretty vocaloid pig.', 'tbkid': "Just kiddin', bro.",
 }
 # who speaks: model, speaker, slowness, pitch (1 = as made), extra ffmpeg filters

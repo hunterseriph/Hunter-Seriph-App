@@ -34,7 +34,7 @@ var CHARS = [
 ];
 /* TB says ONE of his lines when the run starts and each time he gets hit (same lines as Load Legacy, kept exact) */
 var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"',
-  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"'];
+  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"', '"you\'ll make a good sissy"'];
 function tbSay() { G.say = { t: 2.6, s: pick(TBQUOTES) }; }
 /* the Homunculus: same breeds, odds and growth as Load Legacy (tools/homunculus art), each breed with its own attack */
 var HOMB = { gloop: ['Gloop', '#3fb43a', 'Acid Spit: fast acid.'], guard: ['Bulwark', '#6a8aff', 'Headbutt: smashes what is in front. Bone plates: hits cost a quarter less.'],

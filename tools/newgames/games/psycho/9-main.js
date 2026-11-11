@@ -29,6 +29,8 @@ function update(dt) {
     G.time += dt; stepPlayer(dt); stepDoors(dt); if (!isGuest()) { stepFoes(dt); stepTB(dt); stepHazards(dt); } else stepGuestWorld(dt); if (G.splatT > 0) G.splatT -= dt; stepLoot(dt); stepBags(dt); stepTrip(dt); stepFx(dt); stepChapter(dt);
     G.noises = G.noises.filter(function (n) { n.t -= dt; return n.t > 0; });
     var chase = G.tb && G.tb.st === 'chase' || G.foes.some(function (f) { return f.st === 'chase'; }); if (chase && !(G.ev && G.ev.k === 'mute')) music.play('pnchase'); else if (music.current === 'pnchase') music.stop(2.5);
+    else if (G.fi === 3 && !G.inArena && !G.outside && FLOORS[3].kind !== 'drive' && !(G.ev && G.ev.k === 'mute') && music.current !== 'shotrope') { music.play('shotrope'); music.radioLevel(0.16); }
+    else if (G.inArena && music.current === 'shotrope') music.stop(1); // B1: the bar radio upstairs, faint through the ceiling
   } else if (G.mode === 'catch') { stepCatch(dt); stepFx(dt); }
   else if (G.mode === 'scene') { stepScene(dt); stepFx(dt); }
   else if (G.mode === 'drive') { G.time += dt; stepDrive(dt); stepTrip(dt); stepFx(dt); }
@@ -144,15 +146,16 @@ function beginEnding() {
   for (var j = 3; j <= 18; j++) for (var i = 18; i <= 22; i++) { F.K[idx(i, j)] = KR; F.RM[idx(i, j)] = 0; }
   for (var l = 5; l <= 17; l += 3) F.lights.push({ i: 20, j: l, k: 1.3, r: 8, fl: l === 11 ? 1 : 0 });
   [['g_bro', 6], ['poster', 9], ['g_tb', 15], ['poster2', 12], ['g_suck', 17]].forEach(function (d, n) { F.decals.push({ i: n % 2 ? 18 : 22, j: d[1], d: n % 2 ? 1 : 0, k: d[0], y: 1.5, s: 1, o: 0 }); });
-  [[18, 7, 'keg'], [22, 10, 'table'], [18, 13, 'chair'], [22, 16, 'keg']].forEach(function (p) { F.props.push({ i: p[0], j: p[1], k: p[2], a: p[0] < 20 ? Math.PI / 2 : -Math.PI / 2 }); F.K[idx(p[0], p[1])] = KP; });
+  [[18, 7, 'keg'], [22, 10, 'radio'], [18, 13, 'chair'], [22, 16, 'keg']].forEach(function (p) { F.props.push({ i: p[0], j: p[1], k: p[2], a: p[0] < 20 ? Math.PI / 2 : -Math.PI / 2 }); F.K[idx(p[0], p[1])] = KP; });
   FL = F; F.seen = new Uint8Array(MW * MH); F.propAt = {}; F.props.forEach(function (p) { F.propAt[idx(p.i, p.j)] = p; }); F.lockerAt = {}; F.doorAt = {}; F.doors = []; F.cellLocked = 0; F.cellDoor = null; F.exit = { i: 20, j: 2, di: 0, dj: 1 };
   if (MESH) MESH.free(); MESH = buildFloorMesh(F); F.lights.push({ i: 20, j: 2.6, k: 2.2, r: 9, fl: 0, exit: 1, c: [1, 0.95, 0.85] });
   G.fi = 3; G.foes = []; G.loot = []; G.fx = []; G.shots = []; G.stash = null; G.ev = null; G.ghost = null;
   setMapSize(41); var P = G.P; P.x = tx(20); P.z = tx(17.5); P.a = P.ca = Math.PI; P.cp = -0.05; P.hide = null; P.aim = 0; P.atkT = -1; P.crouch = 0;
   G.tb = { x: tx(21) - 0.2, z: tx(3) - 0.4, a: 0, st: 'door', ph: 0, spd: 0, sus: 0 }; F.lights.push({ i: 21, j: 3.2, k: 1.6, r: 5, fl: 0, exit: 1, c: [1, 0.3, 0.25] }); G.mode = 'end'; G.endT = 0; G.wake = 1.5; G.banner = { s: "TB'S SUCK N' FUCK", t: 4 };
-  music.play('pnend');
+  music.play('shotrope'); music.radioLevel(0.5); G.radio = { x: tx(22) - 0.35, z: tx(10) }; // the bar radio on the table: Shot Rope by Brothers Load
 }
 function stepEnding(dt) {
+  if (G.radio) { var rd = Math.hypot(G.P.x - G.radio.x, G.P.z - G.radio.z); music.radioLevel(Math.max(0.12, Math.min(1.2, 2.4 / (1 + rd * 0.55)))); }
   var P = G.P, tb = G.tb; G.endT += dt; tb.a = Math.atan2(P.x - tb.x, P.z - tb.z);
   if (P.z > tx(2) + 0.6) { var sp = 4.3; P.z -= sp * dt; P.spd = sp; P.run = 1; P.ph += sp * dt * 3.06; P.x += (tx(20) - 0.3 - P.x) * dt * 2; P.a = Math.PI; P.ca += angDiff(Math.PI, P.ca) * dt * 3; }
   if (!G.endSaid && P.z < tx(9)) { G.endSaid = 1; subtitle('TB', TBEND, 5); sfx.play('tblaugh'); }

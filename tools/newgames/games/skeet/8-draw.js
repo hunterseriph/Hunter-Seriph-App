@@ -19,7 +19,7 @@ function heroFrame(e) {
   if (st === 'air' || st === 'thrown') return A.fall[0];
   if (st === 'win') return A.win[Math.floor(e.t * 3) % 2];
   if (st === 'hurt' || st === 'grabbed') { if (e.stun > 0.8 && G.duel) return A.dizzy[Math.floor(G.t * 3) % 2]; return A.hurt[e.hurtK || 0]; }
-  if (st === 'block') return e.crouch ? A.cblock[0] : A.block[0];
+  if (st === 'block' || st === 'guard' || e.guardHeld) return e.crouch ? A.cblock[0] : A.block[0];
   if (st === 'getup') return A.getup[0];
   if (m) return moveFrame(e, A[m.an] || A.jab);
   if (st === 'grab') return A.grab[0];
@@ -49,8 +49,9 @@ function shadow(x, z, w, h) { var g = KIT.ctx, a = Math.max(0.15, 0.5 - h / 300)
 function drawFighter(e) {
   var x = e.x - G.cam, y = sy(e) - e.h, g = KIT.ctx, name, sc = e.sc || 1, flip, rot = 0;
   if (e.hero) { name = heroFrame(e); flip = e.face < 0; if (e.mv && e.mv.spin && e.mv.rise) flip = Math.floor(G.t * 16) % 2 ? !flip : flip; if (e.st === 'air' || e.st === 'thrown') rot = (flip ? 1 : -1) * Math.min(0.9, e.t * 3) * (e.vh > 0 ? 1 : 0.6); }
-  else if (e.boss) { name = bossFrame(e); flip = e.face < 0; }
+  else if (e.boss || e.assist) { name = e.assist ? e.spr[Math.floor(G.t * 3) % e.spr.length] : bossFrame(e); flip = e.face < 0; }
   else { name = foeFrame(e); flip = e.face < 0; }
+  if (flip && typeof name === 'string' && /^f_(cow)?pig_\d$/.test(name) && KIT.has(name + 'L')) { name += 'L'; flip = false; } // the Piggy brothers' BROTHERS LOAD shirts never read backwards. update 131: the Cowboy Load assist only has his two frames (no foe frames: the duel crashed and only the sound ran)
   // lying down: foes without a lying frame are tipped over
   var lying = (e.st === 'down' || e.st === 'dead') && !e.hero && !(e.boss && e.bid === 'titan');
   if (lying) rot = (flip ? 1 : -1) * Math.PI / 2;

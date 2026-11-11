@@ -22,6 +22,8 @@ function genYard(fi, seed, style) {
   for (var b = 4; b < MW - 4; b++) { mark(b, 4); mark(b, MH - 5); mark(4, b); mark(MW - 5, b); }
   if (cem) Object.keys(path).forEach(function (k) { F.FT[k] = 'stonef'; });
   else Object.keys(path).forEach(function (k) { F.FT[k] = 'pave'; });
+  // update 131: hedges / hoardings right across the ground, the gap at alternating ends: the way out zig-zags
+  windBands(F, rnd, [mid, last], [mid, 1], 4, used, function (k) { F.BT[k] = cem ? 'hedge' : 'hoarding'; F.BH[k] = cem ? 2.3 : 2.6; delete F.FT[k]; });
   function free(x, y, w, h, gap) { for (var yy = y - gap; yy < y + h + gap; yy++) for (var xx = x - gap; xx < x + w + gap; xx++) { if (xx < 1 || yy < 1 || xx > MW - 2 || yy > MH - 2) return false; var q = idx(xx, yy); if (K[q] !== KC || used[q] || (path[q] && xx >= x && xx < x + w && yy >= y && yy < y + h)) return false; } return true; }
   // buildings: the chapel / the towers, then crypts / portacabins you can walk into
   function block(x, y, w, h, tex, ht, scaf) { for (var yy = y; yy < y + h; yy++) for (var xx = x; xx < x + w; xx++) { var q = idx(xx, yy); K[q] = KW; F.BT[q] = tex; F.BH[q] = ht; if (scaf) F.BT[q + '_s'] = 1; } }

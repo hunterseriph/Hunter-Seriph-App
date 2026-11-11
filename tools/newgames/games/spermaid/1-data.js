@@ -93,7 +93,7 @@ function stageOpen(i) { return i === 0 || !!SV.cleared[STAGES[i - 1].id]; }
 
 /* ---------- friends locked in cells (one per place). Freeing one is for good: a small gift every run after ---------- */
 var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"',
-  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"'];
+  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"', '"you\'ll make a good sissy"'];
 var FRIENDS = {
   tb: { n: 'TB', spr: 'npc_tb', q: null, gift: '+1 reroll every run', f: function (s) { s.rerolls += 1; } },
   potbelly: { n: 'Potbelly', spr: 'npc_potbelly', q: '"Cabinets are free, kid. Play all you like."', gift: '+10% drops', f: function (s) { s.greed += 0.1; } },

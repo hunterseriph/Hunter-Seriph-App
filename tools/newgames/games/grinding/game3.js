@@ -74,3 +74,11 @@ drawHud = (function (orig) { return function () {
     c.fillStyle = 'rgba(7,4,5,0.72)'; c.fillRect(x0 - 4, y0 - 4, x1 - x0 + 8, y1 - y0 + 8); R('#4a1a1c', x0 - 4, y0 - 4, x1 - x0 + 8, 1); R('#4a1a1c', x0 - 4, y1 + 3, x1 - x0 + 8, 1); R('#4a1a1c', x0 - 4, y0 - 4, 1, y1 - y0 + 8); R('#4a1a1c', x1 + 3, y0 - 4, 1, y1 - y0 + 8); }
   orig();
 }; })(drawHud);
+/* update 131: he said the character stopped moving after a few rooms. One door in ten put him inside a rock or a pit
+   (a layout with something right inside that door). The tiles he arrives on, and the ones just in front, are cleared. */
+enterRoom = (function (orig) { return function (c, fromDir) {
+  orig.apply(this, arguments);
+  if (!fromDir || !room || !room.tiles) return;
+  var T = room.tiles, into = DV[fromDir], clear = function (x, y) { var cx = Math.floor(x / TS), cy = Math.floor(y / TS); if (cy >= 0 && cy < ROWS && cx >= 0 && cx < COLS && T[cy][cx]) T[cy][cx] = 0; };
+  for (var s = 0; s <= 30; s += 6) { var px = P.x + into[0] * s, py = P.y + into[1] * s; clear(px - 9, py - 9); clear(px + 9, py - 9); clear(px - 9, py + 9); clear(px + 9, py + 9); }
+}; })(enterRoom);

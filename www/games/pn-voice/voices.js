@@ -34,6 +34,7 @@ window.PNVOICE = {
 "tb20": "pn-voice/tb20.mp3",
 "tb21": "pn-voice/tb21.mp3",
 "tb22": "pn-voice/tb22.mp3",
+"tb23": "pn-voice/tb23.mp3",
 "tbend": "pn-voice/tbend.mp3",
 "tbkid": "pn-voice/tbkid.mp3",
 "tbwoods": "pn-voice/tbwoods.mp3"

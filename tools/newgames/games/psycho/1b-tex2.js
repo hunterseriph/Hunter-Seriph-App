@@ -92,3 +92,18 @@ HIPAINT.ring = function (g) { g.strokeStyle = 'rgba(255,40,40,1)'; g.lineWidth =
 PAINT.windowsw = function (p) { p.fill('#1a120c'); for (var y = 2; y < 32; y += 16) for (var x = 2; x < 32; x += 16) { var lit = p.rnd(); p.rect(x, y, 11, 11, '#0a0604'); if (lit < 0.55) { p.rect(x + 1, y + 1, 9, 9, lit < 0.3 ? '#d88a2a' : '#8a5018'); p.rect(x + 1, y + 1, 9, 2, '#ffd08a'); } p.rect(x + 5, y, 1, 11, '#0a0604'); } };
 HIPAINT.shopgloww = function (g) { g.fillStyle = '#2a1406'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#d88a2a'; g.fillRect(4, 8, 56, 48); g.fillStyle = '#ffd08a'; g.fillRect(4, 8, 56, 6); g.fillStyle = '#12040a'; g.fillRect(30, 8, 4, 48); for (var i = 0; i < 4; i++) { g.fillStyle = 'rgba(30,12,4,0.6)'; g.fillRect(8 + i * 13, 34, 8, 4); g.fillRect(10 + i * 13, 38, 4, 16); } };
 HIPAINT.f_lab.big = true; // update 128: his face at 128 px too
+/* update 131: the bar radio's front: a cloth speaker grille, a lit dial with a red needle, two knobs */
+PAINT.radiofront = function (p) { p.fill('#3a2416'); p.rect(1, 1, 30, 30, '#5a3820'); p.rect(2, 2, 28, 1, '#7a5030');
+  p.rect(3, 4, 16, 18, '#1e140c'); for (var y = 5; y < 22; y += 2) p.rect(3, y, 16, 1, '#2e2016'); for (var x = 4; x < 19; x += 3) p.rect(x, 4, 1, 18, '#120a06'); // the grille
+  p.rect(21, 4, 8, 12, '#e8c070'); p.rect(21, 4, 8, 1, '#fff0b0'); for (var k = 0; k < 4; k++) p.rect(22, 6 + k * 3, 6, 1, '#8a6a30'); p.rect(25, 5, 1, 10, '#c4121c'); // the dial, lit
+  p.rect(21, 19, 3, 3, '#12040a'); p.rect(26, 19, 3, 3, '#12040a'); p.px(22, 19, '#a89a8a'); p.px(27, 19, '#a89a8a'); p.rect(3, 25, 26, 4, '#2e1a0e'); };
+/* update 131: real roads for Cum City (his ask: "the city needs to feel more like a city, with roads") */
+function pRoad(p) { p.fill('#19171a'); p.speck(['#121013', '#232024', '#2b282c', '#0e0c0e', '#2a1416'], 420); for (var k = 0; k < 3; k++) { var y = Math.floor(p.rnd() * 32), x = Math.floor(p.rnd() * 20); p.rect(x, y, 6 + Math.floor(p.rnd() * 8), 1, '#0b0a0b'); } }
+PAINT.road = function (p) { pRoad(p); };
+PAINT.roadh = function (p) { pRoad(p); p.rect(6, 15, 20, 2, '#cfc6ae'); p.speck(['#19171a'], 4); };
+PAINT.roadv = function (p) { pRoad(p); p.rect(15, 6, 2, 20, '#cfc6ae'); };
+PAINT.zebrah = function (p) { pRoad(p); for (var y = 2; y < 32; y += 8) p.rect(0, y, 32, 4, '#d8d0b8'); p.speck(['#8a8478', '#19171a'], 60); };
+PAINT.zebrav = function (p) { pRoad(p); for (var x = 2; x < 32; x += 8) p.rect(x, 0, 4, 32, '#d8d0b8'); p.speck(['#8a8478', '#19171a'], 60); };
+PAINT.roadx = function (p) { pRoad(p); p.speck(['#3a1418'], 30); };
+PAINT.kerb = function (p) { p.fill('#5a5452'); for (var x = 0; x < 32; x += 10) p.rect(x, 0, 1, 32, '#2a2626'); p.rect(0, 0, 32, 2, '#7a7270'); p.speck(['#4a4442', '#6a6260'], 90); };
+PAINT.roadblock = function (p) { p.fill('#6a6460'); p.speck(['#5a5452', '#7a7470'], 160); for (var x = -32; x < 32; x += 8) for (var y = 8; y < 22; y++) { p.rect(x + y, y, 4, 1, '#c4121c'); p.rect(x + y + 4, y, 4, 1, '#e8e0d0'); } p.rect(0, 7, 32, 1, '#2a2626'); p.rect(0, 22, 32, 1, '#2a2626'); p.rect(0, 0, 32, 2, '#8a8480'); };

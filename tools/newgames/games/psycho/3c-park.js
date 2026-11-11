@@ -35,6 +35,9 @@ function genPark(fi, seed) {
     else if (k === 'graves') for (var gn = 0; gn < 5; gn++) { var gx = b[0] + Math.floor(rnd() * 5), gy = b[1] + Math.floor(rnd() * 5); if (K[idx(gx, gy)] !== KR) continue; K[idx(gx, gy)] = KP; if (!keep()) { K[idx(gx, gy)] = KR; continue; } used[idx(gx, gy)] = 1; F.props.push({ i: gx, j: gy, k: 'gravestone', a: Math.PI }); }
     F.lights.push({ i: cx, j: cy + 2.4, k: 1.2, r: 10, fl: rnd() < 0.5 ? 1 : 0, c: k === 'graves' ? [0.5, 1, 0.4] : [1, 0.2, 0.3], y: 3.6, pole: 1 });
   });
+  // update 131: whole lanes shut by collapsed stalls, picked so the way to the flume winds right round the park
+  var psegs = []; lines.forEach(function (a) { for (var c = 0; c + 1 < lines.length; c++) { var xm = lines[c] + 5, ch = [], cv = []; for (var w = 0; w < 3; w++) { ch.push([xm, a + w]); cv.push([a + w, xm]); } psegs.push(ch, cv); } });
+  windClose(F, rnd, psegs, [mid + 1, MH - 3], [mid + 1, 1], used, function () {}, 0.45);
   // fallen things block some lanes, so it's never a straight run
   for (var t = 0; t < 60; t++) { var horiz = rnd() < 0.5, a = lines[Math.floor(rnd() * lines.length)], bpos = lines[Math.floor(rnd() * (lines.length - 1))] + 3 + Math.floor(rnd() * 5), cells = [];
     for (var w2 = 0; w2 < 3; w2++) cells.push(horiz ? [bpos, a + w2] : [a + w2, bpos]);

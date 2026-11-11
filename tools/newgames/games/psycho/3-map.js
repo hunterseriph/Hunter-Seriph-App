@@ -189,6 +189,8 @@ function buildIndoorMesh(F, mesh) { // the basement, and (with F.indoorOnly) the
     else if (p.k === 'barrel') { cylM(cx - 0.3, cz, 0, 1.0, 0.38, TL('rust'), 0.9); cylM(cx + 0.4, cz + 0.3, 0, 1.0, 0.36, TL('rust'), 0.8); }
     else if (p.k === 'keg') { cylM(cx - 0.35, cz - 0.3, 0, 0.9, 0.36, TL('keg'), 1); cylM(cx + 0.38, cz - 0.3, 0, 0.9, 0.36, TL('keg'), 1); cylM(cx, cz + 0.35, 0, 0.9, 0.36, TL('keg'), 0.9); cylM(cx, cz - 0.3, 0.9, 1.8, 0.36, TL('keg'), 1.05); }
     else if (p.k === 'table') { B(-0.7, 0.7, -0.55, 0.55, 0.78, 0.88, TL('steel'), 1); [[-0.6, -0.45], [0.6, -0.45], [-0.6, 0.45], [0.6, 0.45]].forEach(function (q) { B(q[1] - 0.04, q[1] + 0.04, q[0] - 0.04, q[0] + 0.04, 0, 0.78, TL('steel'), 0.6); }); B(-0.3, 0.1, -0.2, 0.3, 0.88, 0.95, TL('blood1'), 1); }
+    else if (p.k === 'radio') { B(-0.7, 0.7, -0.55, 0.55, 0.78, 0.88, TL('wood'), 1); [[-0.6, -0.45], [0.6, -0.45], [-0.6, 0.45], [0.6, 0.45]].forEach(function (q) { B(q[1] - 0.04, q[1] + 0.04, q[0] - 0.04, q[0] + 0.04, 0, 0.78, TL('wood'), 0.6); });
+      B(-0.22, 0.12, -0.3, 0.3, 0.88, 1.22, TL('radiofront'), 1.1); B(-0.24, 0.1, -0.33, 0.33, 1.22, 1.27, TL('wood'), 0.8); B(-0.05, -0.03, 0.18, 0.2, 1.27, 1.7, TL('steel'), 0.8); } // the bar radio, aerial up
     else if (p.k === 'chair') { B(-0.25, 0.25, -0.25, 0.25, 0.42, 0.5, TL('wood'), 1); B(-0.27, -0.2, -0.25, 0.25, 0.5, 1.1, TL('wood'), 0.9); [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(function (q) { B(q[1] - 0.03, q[1] + 0.03, q[0] - 0.03, q[0] + 0.03, 0, 0.42, TL('wood'), 0.6); }); B(0.4, 0.95, -0.5, 0.5, 0, 0.75, TL('crate'), 0.9); }
     else if (p.k === 'shelf') { B(-0.5, -0.1, -w, w, 0, 2.3, TL('shelf'), 1.25); }
     else if (p.k === 'counter') { B(-0.45, 0.45, -w - 0.18, w + 0.18, 0, 1.0, TL('wood'), 0.8); B(-0.5, 0.5, -w - 0.2, w + 0.2, 1.0, 1.08, TL('steel'), 1); B(-0.15, 0.15, -0.2, 0.2, 1.08, 1.4, TL('black'), 0.9); }
@@ -265,12 +267,17 @@ var FL = null; // the floor being played
 var BLOCKEYES = { shelf: 1, keg: 1, hook: 1, cabinet: 1, speaker: 1, rack: 1, stall: 1, big: 1, booth: 1, clownhead: 1, freezer: 0, vat: 1, jukebox: 1, tomb: 1, angel: 1, digger: 1, mixer: 1, skip: 1, cabin: 1, mausoleum: 1 };
 function blocksFeet(i, j, who) { if (!inMap(i, j)) return true; var k = FL.K[idx(i, j)]; if (k === KW || k === KP || k === KL || k === KS || k === KA) return true; if (k === KB) return FL.cellLocked && who !== 'tb'; return false; }
 function blocksEyes(i, j) { if (!inMap(i, j)) return true; var k = FL.K[idx(i, j)]; if (k === KW || k === KL) return true; if (k === KP) { var p = FL.propAt[idx(i, j)]; return p && BLOCKEYES[p.k]; } if (k === KD) { var d = FL.doorAt[idx(i, j)]; return d && d.open < 0.35; } return false; }
+/* update 131 (his ask: obstacles took the whole square and blocked the way): props only block their own footprint;
+   most leave a gap either side you can squeeze past, only the really big things fill the square */
+var BIGPROP = { big: 1, carousel: 1, ferris: 1, bigtop: 1, mausoleum: 1, cabin: 1, digger: 1, car: 1, stall: 1, booth: 1, tomb: 1, skip: 1, vat: 1, freezer: 1 };
+var SMALLPROP = { chair: 1, candles: 1, cone: 1, stump: 1, gravestone: 1, rock: 1, popcorn: 1, radio: 1, keg: 1, bin: 1, crate: 1, barrel: 1, campfire: 1, teacup: 1, plinth: 1, cafetable: 1, angel: 1, bucket: 1, portaloo: 1, mixer: 1, sofa: 1, jukebox: 1, coffin: 1, cage: 1, barrier: 1, log: 1 };
+function propInset(p) { if (!p) return 0.55; if (BIGPROP[p.k]) return 0.3; if (SMALLPROP[p.k]) return 0.75; return 0.6; }
 /* a circle of radius r at (x, z) pushed out of anything solid */
 function collide(o, r, who) {
   var i0 = tileOf(o.x - r), i1 = tileOf(o.x + r), j0 = tileOf(o.z - r), j1 = tileOf(o.z + r);
   for (var j = j0; j <= j1; j++) for (var i = i0; i <= i1; i++) {
     if (!blocksFeet(i, j, who)) continue; var bx0 = i * TSZ, bz0 = j * TSZ, bx1 = bx0 + TSZ, bz1 = bz0 + TSZ;
-    var kq = FL.K[idx(i, j)]; if (kq === KP) { bx0 += 0.15; bz0 += 0.15; bx1 -= 0.15; bz1 -= 0.15; } else if (kq === KL) { var lr = lockerRect(FL.lockerAt[idx(i, j)]); bx0 = lr[0]; bz0 = lr[1]; bx1 = lr[2]; bz1 = lr[3]; }
+    var kq = FL.K[idx(i, j)]; if (kq === KP) { var pin = propInset(FL.propAt[idx(i, j)]); bx0 += pin; bz0 += pin; bx1 -= pin; bz1 -= pin; } else if (kq === KL) { var lr = lockerRect(FL.lockerAt[idx(i, j)]); bx0 = lr[0]; bz0 = lr[1]; bx1 = lr[2]; bz1 = lr[3]; }
     var nx = Math.max(bx0, Math.min(o.x, bx1)), nz = Math.max(bz0, Math.min(o.z, bz1)), dx = o.x - nx, dz = o.z - nz, d = Math.hypot(dx, dz);
     if (d < r) { if (d < 1e-5) { var cx = (bx0 + bx1) / 2, cz = (bz0 + bz1) / 2; dx = o.x - cx; dz = o.z - cz; if (Math.abs(dx) > Math.abs(dz)) { o.x = dx > 0 ? bx1 + r : bx0 - r; } else { o.z = dz > 0 ? bz1 + r : bz0 - r; } } else { o.x = nx + dx / d * r; o.z = nz + dz / d * r; } }
   }

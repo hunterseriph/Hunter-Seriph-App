@@ -375,7 +375,84 @@ def make_pn():
     return compose([('PSYCHO', 150, dict(arc=8, stretch=1.3)), ('NIGHTMARE', 104, dict(stretch=1.25, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=tb, mascot_y=0.8, extras=ex)
 
 
-LOGOS = {'pn': make_pn, 'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv}
+
+# ---------------------------------------------------------------- update 131: the eight new games
+def _burst(cols, n=24, rr=(420, 300), cy=190, alpha=90):
+    def ex(canvas, layers, st):
+        d = Image.new('RGBA', canvas.size, (0, 0, 0, 0)); dr = ImageDraw.Draw(d); cx = canvas.width // 2
+        for i in range(n):
+            a0 = i * math.pi * 2 / n; dr.polygon([(cx, cy), (cx + math.cos(a0) * rr[0], cy + math.sin(a0) * rr[1]), (cx + math.cos(a0 + math.pi / n) * rr[0], cy + math.sin(a0 + math.pi / n) * rr[1])], fill=hexc(cols[i % len(cols)], alpha))
+        layers.insert(0, ('stripe', d, (0, 0)))
+    return ex
+
+
+def make_ob():
+    """PULSAR'S OCTOBEATS: neon purple and cyan, Pulsar over a speaker burst"""
+    st = dict(face=[(0, '#ffffff'), (0.35, '#c04aff'), (1, '#4a10a0')], side=['#1a0a4a', '#06021a'], shine='#ffffff', outline=11, rim=3, depth=12, shear=-0.12)
+    m = pixel_sprite('npc_pulsar', 7)
+    return compose([("PULSAR'S", 80, dict(stretch=1.3, st=dict(face=[(0, '#c0ffff'), (1, '#20a8e0')], side=['#0a2a4a', '#020a14']))), ('OCTOBEATS', 124, dict(stripes=True))], st, mascot=m, mascot_y=0.8, extras=_burst(['#c04aff', '#4adfff', '#ff4a8a']))
+
+
+def make_fr():
+    """THE FAP ROOMS: old yellow wallpaper lettering with damp stains, a grin in the dark above"""
+    st = dict(face=[(0, '#fff6a0'), (0.5, '#d8c060'), (1, '#8a7a30')], side=['#4a4018', '#141008'], shine='#ffffe0', outline=11, rim=3, depth=12)
+    g = Image.new('RGBA', (420, 200), (0, 0, 0, 0)); d = ImageDraw.Draw(g); d.ellipse((40, 10, 380, 190), fill=(0, 0, 0, 255))
+    d.ellipse((120, 60, 160, 80), fill=(255, 255, 255, 255)); d.ellipse((260, 60, 300, 80), fill=(255, 255, 255, 255)); d.chord((90, 40, 330, 170), 20, 160, fill=(255, 255, 255, 255))
+    for i in range(14): x = 110 + i * 15; d.line((x, 108, x, 150), fill=(0, 0, 0, 255), width=3)
+    return compose([('THE', 70, dict(stretch=1.2)), ('FAP ROOMS', 130, dict(stripes=True))], st, mascot=g, mascot_y=0.5, extras=drips('#8a7a30', n=6, seed=2))
+
+
+def make_dk():
+    """DARK LOADS: bone white over blood, a candle flame on top"""
+    st = dict(face=[(0, '#ffffff'), (0.5, '#d8ccb0'), (1, '#7a6a50')], side=['#3a0a10', '#0e0204'], shine='#ffffff', outline=12, rim=3, depth=16)
+    m = Image.new('RGBA', (140, 260), (0, 0, 0, 0)); d = ImageDraw.Draw(m); d.rectangle((50, 110, 90, 250), fill=INK); d.rectangle((55, 115, 85, 250), fill=hexc('#f1e7d0')); d.rectangle((72, 115, 82, 250), fill=hexc('#d8ccb0'))
+    for r, c in ((60, '#c4121c'), (44, '#ff7a20'), (26, '#ffe36a')): d.ellipse((70 - r * 0.55, 100 - r * 1.4, 70 + r * 0.55, 100), fill=hexc(c))
+    return compose([('DARK', 150, dict(arc=6, stretch=1.3)), ('LOADS', 130, dict(stripes=True, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=m, mascot_y=0.78, extras=drips('#c4121c', n=7, seed=8))
+
+
+def make_lc():
+    """THE LEGEND OF CUMHEAD: gold and green, chibi Cumhead with the sausage"""
+    st = dict(face=[(0, '#fff6c0'), (0.45, '#ffc840'), (1, '#a8600a')], side=['#3a2a0a', '#0e0802'], shine='#ffffff', outline=11, rim=3, depth=14)
+    import art as A
+    ex = A.extra('grinding')[0]; ch = ex['chb_d0'].convert('RGBA'); ch = ch.resize((ch.width * 7, ch.height * 7), Image.NEAREST)
+    pad = 14; big = Image.new('RGBA', (ch.width + pad * 2, ch.height + pad * 2), (0, 0, 0, 0)); big.alpha_composite(ch, (pad, pad)); a = big.getchannel('A').point(lambda v: 255 if v > 40 else 0); ol = solid(dilate(a, 4), INK); ol.alpha_composite(big)
+    return compose([('THE LEGEND OF', 70, dict(stretch=1.2, st=dict(face=[(0, '#c8ffc0'), (1, '#2a8a2a')], side=['#0a2a0a', '#020a02']))), ('CUMHEAD', 140, dict(stripes=True))], st, mascot=ol, mascot_y=0.8, extras=_burst(['#ffe36a', '#4aa82a'], alpha=70))
+
+
+def make_gk():
+    """GOONING CAVE KEEPER: rock and gold, a Gloop homunculus with a pick"""
+    st = dict(face=[(0, '#fff09a'), (0.4, '#ffc840'), (1, '#8a5a10')], side=['#3a2a1a', '#100804'], shine='#ffffff', outline=11, rim=3, depth=14)
+    m = pixel_sprite('h_gloop_adult_idle0', 6)
+    return compose([('GOONING', 110, dict(stretch=1.25)), ('CAVE KEEPER', 100, dict(stripes=True, st=dict(face=[(0, '#d8c8c0'), (1, '#5a4a44')], side=['#2a1e1a', '#0a0604'])))], st, mascot=m, mascot_y=0.8, extras=drips('#ffc840', n=5, seed=4))
+
+
+def make_c3():
+    """CUMSTEIN 3D: hard steel lettering with rivets, Cumhead's face in the middle"""
+    st = dict(face=[(0, '#ffffff'), (0.4, '#a8b0c0'), (1, '#3a4250')], side=['#1a1e28', '#06080c'], shine='#ffffff', outline=12, rim=3, depth=18, shear=-0.08)
+    m = pixel_sprite('cumface', 6)
+    return compose([('CUMSTEIN', 130, dict(stretch=1.3)), ('3D', 150, dict(stripes=True, st=dict(face=RED['face'], side=RED['side'], shine=RED['shine'])))], st, mascot=m, mascot_y=0.75, extras=_burst(['#c4121c', '#2a0a10'], alpha=110))
+
+
+def make_sb():
+    """SUPER SPUNKY BALL: bright bubble lettering, Cumhead in his ball"""
+    st = dict(face=[(0, '#ffffff'), (0.4, '#ff7ab8'), (1, '#c4121c')], side=['#5a0a2a', '#1a020a'], shine='#ffffff', outline=11, rim=3, depth=14)
+    ch = pixel_sprite('ch_idle0', 5); b = Image.new('RGBA', (ch.width + 120, ch.width + 120), (0, 0, 0, 0)); d = ImageDraw.Draw(b); d.ellipse((0, 0, b.width - 1, b.height - 1), fill=(255, 255, 255, 60), outline=INK, width=10); d.ellipse((40, 30, 110, 80), fill=(255, 255, 255, 170))
+    b.alpha_composite(ch, ((b.width - ch.width) // 2, (b.height - ch.height) // 2 + 10))
+    return compose([('SUPER', 90, dict(stretch=1.3, st=dict(face=[(0, '#fff6a0'), (1, '#e0a010')], side=['#5a3a0a', '#1a0a02']))), ('SPUNKY BALL', 120, dict(stripes=True))], st, mascot=b, mascot_y=0.72, extras=_burst(['#ffe36a', '#4adfff', '#ff7ab8'], alpha=80))
+
+
+def make_sa():
+    """SPERMHOG ADVENTURE: Sonic Adventure blue-white over red, the four heroes on top"""
+    st = dict(face=[(0, '#ffffff'), (0.45, '#ffc840'), (1, '#c4600a')], side=['#5a0a10', '#1a0204'], shine='#ffffff', outline=12, rim=3, depth=16, shear=-0.14)
+    import art as A
+    team = Image.new('RGBA', (720, 330), (0, 0, 0, 0)); xs = [20, 190, 380, 540]
+    for name, x in zip(['spermaid_s0', 'ch_rn2', 'greebo_s0', 'lab_idle0'], xs):
+        sp = pixel_sprite(name, 5 if name != 'ch_rn2' else 5); team.alpha_composite(sp, (x, 330 - sp.height))
+    return compose([('SPERMHOG', 140, dict(arc=8, stretch=1.3)), ('ADVENTURE', 110, dict(stripes=True, st=dict(face=[(0, '#ffffff'), (0.5, '#4adfff'), (1, '#1050c0')], side=['#0a2a5a', '#040a20'])))], st, mascot=team, mascot_y=0.8, extras=_burst(['#c4121c', '#ffe36a'], alpha=70))
+
+
+LOGOS = {'pn': make_pn, 'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv,
+         'ob': make_ob, 'fr': make_fr, 'dk': make_dk, 'lc': make_lc, 'gk': make_gk, 'c3': make_c3, 'sb': make_sb, 'sa': make_sa}
 
 if __name__ == '__main__':
     want = sys.argv[1:] or list(LOGOS)

@@ -135,7 +135,7 @@ function botInput() {
 
 KIT.start({ w: 384, h: 216, wide: 512, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
   idleUpdate: function (dt) { if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
-  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }] } });
+  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }] } });
 titleMenu();
 window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect,
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };

@@ -12,7 +12,7 @@ function lvlFill(F, rnd, th, used, D, minD) { // pickups and TB's boys on free o
   var free = []; for (var j = 1; j < MH - 1; j++) for (var i = 1; i < MW - 1; i++) { var k = F.K[idx(i, j)]; if ((k === KC || k === KR) && !used[idx(i, j)] && D[idx(i, j)] > 3) free.push({ i: i, j: j, d: D[idx(i, j)] }); }
   function take(pred) { var c = free.filter(pred); if (!c.length) return null; var p = c[Math.floor(rnd() * c.length)]; free.splice(free.indexOf(p), 1); used[idx(p.i, p.j)] = 1; return p; }
   th.loot.forEach(function (l) { var p = take(function () { return true; }); if (p) F.loot.push({ i: p.i, j: p.j, k: l }); });
-  th.foes.forEach(function (f) { var p = take(function (q) { return q.d > (minD || 12); }); if (p) F.foes.push({ i: p.i, j: p.j, k: f }); });
+  th.foes.concat(MW > 60 ? th.foes.slice(0, Math.ceil(th.foes.length * 0.6)) : []).forEach(function (f) { var p = take(function (q) { return q.d > (minD || 12); }); if (p) F.foes.push({ i: p.i, j: p.j, k: f }); });
   for (var n = 0; n < 3; n++) { var np = take(function () { return true; }); if (np) F.notes.push({ i: np.i, j: np.j, n: noteFor(F.fi, n) }); }
 }
 function addHides(F, rnd, n, used, D, keep) { // lockers by another name: thick bushes, dumpsters
@@ -29,9 +29,12 @@ function genWoods(fi, seed) { // open woods (his ask: only the basement is a maz
   for (var e = 0; e <= 1; e++) { K[idx(mid + e, 0)] = KC; } F.exitIn = { i: mid, j: 1 }; F.exitZone = [mid - 1, 0, mid + 2, 1];
   var used = {}; [[mid, last], [mid + 1, last], [mid, 1], [mid + 1, 1]].forEach(function (q) { used[idx(q[0], q[1])] = 1; });
   function keep() { var D2 = bfs(F, mid, last); return D2[idx(mid, 1)] >= 0; }
+  // update 131: long thick tree lines right across, the gap at alternating ends, so the way north zig-zags
+  windBands(F, rnd, [mid, last], [mid, 1], 4, used, function () {});
+  Object.keys(F.bandRows).forEach(function (y) { y = +y; for (var x = 1; x < MW - 1; x++) { var k = idx(x, y + 1); if (K[idx(x, y)] === KW && K[k] === KC && !used[k] && rnd() < 0.7) { K[k] = KW; used[k] = 1; } } });
   // clearings, kept free of trees
   for (var r = 0, tries = 0; r < 10 && tries < 300; tries++) { var w = 5 + 2 * ri(3), h = 5 + 2 * ri(2), x = 3 + ri(MW - w - 6), y = 4 + ri(MH - h - 9);
-    if (F.rooms.some(function (q) { return x < q.x + q.w + 3 && x + w + 3 > q.x && y < q.y + q.h + 3 && y + h + 3 > q.y; })) continue;
+    if (F.rooms.some(function (q) { return x < q.x + q.w + 3 && x + w + 3 > q.x && y < q.y + q.h + 3 && y + h + 3 > q.y; })) continue; var hitB = 0; for (var by = y - 2; by < y + h + 2; by++) if (F.bandRows[by]) hitB = 1; if (hitB) continue;
     var R = { id: F.rooms.length, x: x, y: y, w: w, h: h, open: 1, doors: [] }; for (var j = y; j < y + h; j++) for (var i = x; i < x + w; i++) { K[idx(i, j)] = KR; F.RM[idx(i, j)] = R.id; } F.rooms.push(R); r++; }
   // clumps of trees everywhere else, never closing the way north
   var target = Math.floor((MW - 2) * (MH - 2) * 0.24), placed = 0;
@@ -54,30 +57,32 @@ function genWoods(fi, seed) { // open woods (his ask: only the basement is a maz
 /* ---------- CLUBHOUSE ROW: the red light district ---------- */
 var FRONTS = ['fac_cafe', 'fac_amy', 'fac_beebs', 'fac_bonjo', 'fac_joff', 'fac_saba', 'fac_greebo', 'fac_pulsar', 'fac_arcade', 'fac_sanct', 'fac_tb'];
 var NEONS = ['n_girls', 'n_xxx', 'n_live', 'n_peep', 'n_open', 'n_heart', 'n_lips', 'n_cum'];
-function streetGrid(F, rows, cols) { var K = F.K; rows.forEach(function (j) { for (var i = 1; i < MW - 1; i++) for (var w = 0; w < 3; w++) if (j + w < MH - 1) K[idx(i, j + w)] = KC; }); cols.forEach(function (i) { for (var j = 1; j < MH - 1; j++) for (var w = 0; w < 3; w++) if (i + w < MW - 1) K[idx(i + w, j)] = KC; }); } // streets three tiles wide (he wants it open)
+function streetGrid(F, rows, cols, sw) { sw = sw || 3; var K = F.K; rows.forEach(function (j) { for (var i = 1; i < MW - 1; i++) for (var w = 0; w < sw; w++) if (j + w < MH - 1) K[idx(i, j + w)] = KC; }); cols.forEach(function (i) { for (var j = 1; j < MH - 1; j++) for (var w = 0; w < sw; w++) if (i + w < MW - 1) K[idx(i + w, j)] = KC; }); } // streets three tiles wide (he wants it open)
 function genDistrict(fi, seed) {
   var rnd = srand(seed), F = lvlBase(fi), K = F.K, th = FLOORS[fi], CT = th.city || { fronts: FRONTS, hussy: 1, club: 1, closed: 10, neons: NEONS, lamps: [[1, 0.1, 0.18], [1, 0.3, 0.65]] }, rows = [], cols = [];
-  for (var r = 2; r + 2 < MH - 3; r += 8) rows.push(r); for (var c = 2; c + 2 < MW - 3; c += 9) cols.push(c);
-  streetGrid(F, rows, cols);
+  var SW = 5, BS = 13; F.SW = SW; F.BT = {}; F.BH = {}; F.FT = {}; F.roads = { rows: rows, cols: cols, sw: SW }; // update 131: roads five wide (pavement, three lanes, pavement), blocks of eight
+  for (var r = 2; r + SW < MH - 3; r += BS) rows.push(r); for (var c = 2; c + SW < MW - 3; c += BS) cols.push(c);
+  streetGrid(F, rows, cols, SW);
   for (var i0 = 1; i0 < MW - 1; i0++) K[idx(i0, 1)] = KW; // the top street is closed off on the north by the buildings
   var mid = cols[cols.length >> 1], last = rows[rows.length - 1] + 1;
   // two blocks knocked flat into open squares, a statue in each
-  for (var pz = 0, ptry = 0; pz < 2 && ptry < 40; ptry++) { var br = 1 + Math.floor(rnd() * (rows.length - 2)), bc = Math.floor(rnd() * (cols.length - 1)), y0 = rows[br] + 3, x0 = cols[bc] + 3, y1 = rows[br + 1] - 1, x1 = cols[bc + 1] - 1; if (F.squares && F.squares.some(function (s) { return s[0] === br && s[1] === bc; })) continue; (F.squares = F.squares || []).push([br, bc]); for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) K[idx(xx, yy)] = KC; var sx = (x0 + x1) >> 1, sy = (y0 + y1) >> 1; K[idx(sx, sy)] = KP; F.props.push({ i: sx, j: sy, k: 'angel', a: 0 }); pz++; }
+  for (var pz = 0, ptry = 0; pz < 2 && ptry < 40; ptry++) { var br = 1 + Math.floor(rnd() * (rows.length - 2)), bc = Math.floor(rnd() * (cols.length - 1)), y0 = rows[br] + SW, x0 = cols[bc] + SW, y1 = rows[br + 1] - 1, x1 = cols[bc + 1] - 1; if (F.squares && F.squares.some(function (s) { return s[0] === br && s[1] === bc; })) continue; (F.squares = F.squares || []).push([br, bc]); for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) { K[idx(xx, yy)] = KC; F.FT[idx(xx, yy)] = 'pave'; } var sx = (x0 + x1) >> 1, sy = (y0 + y1) >> 1; K[idx(sx, sy)] = KP; F.props.push({ i: sx, j: sy, k: 'angel', a: 0 }); pz++; }
   F.start = { i: mid, j: last, a: Math.PI }; F.start2 = { i: mid + 1, j: last }; F.respawn = F.start; F.cellIn = F.start; F.tb = { i: mid, j: last - 1 };
   F.club = { i: mid, j: 2 }; F.exitIn = { i: mid, j: 2 }; F.exitZone = [mid - 1, 2, mid + 2, 3];
   var used = {}; used[idx(mid, last)] = used[idx(mid + 1, last)] = used[idx(mid, 2)] = used[idx(mid + 1, 2)] = 1;
   var keep = function () { var D = bfs(F, mid, last); return D[idx(mid, 2)] >= 0; };
-  var scale = MW * MH / (41 * 41);
-  // barricades close some stretches so it is a maze of streets, never a straight run
-  for (var t = 0; t < 7 * scale; t++) { var horiz = rnd() < 0.5, a, b, cells = [];
-    if (horiz) { var row = rows[1 + Math.floor(rnd() * (rows.length - 2))], c0 = cols[Math.floor(rnd() * (cols.length - 1))]; a = c0 + 3 + Math.floor(rnd() * 3); cells = [[a, row], [a, row + 1]]; }
-    else { var col = cols[Math.floor(rnd() * cols.length)], r0 = rows[Math.floor(rnd() * (rows.length - 1))]; b = r0 + 3 + Math.floor(rnd() * 2); cells = [[col, b], [col + 1, b]]; }
-    if (cells.some(function (q) { return K[idx(q[0], q[1])] !== KC || used[idx(q[0], q[1])]; })) continue;
-    cells.forEach(function (q) { K[idx(q[0], q[1])] = KP; }); if (!keep()) { cells.forEach(function (q) { K[idx(q[0], q[1])] = KC; }); continue; }
-    cells.forEach(function (q, n) { used[idx(q[0], q[1])] = 1; F.props.push({ i: q[0], j: q[1], k: n ? 'car' : 'barrier', a: horiz ? 0 : Math.PI / 2 }); }); }
-  // alleys through some blocks
-  for (var al = 0; al < 9 * scale; al++) { var vert = rnd() < 0.5; if (vert) { var ci = cols[Math.floor(rnd() * (cols.length - 1))] + 4 + Math.floor(rnd() * 3), rj = rows[Math.floor(rnd() * (rows.length - 1))]; for (var j = rj + 2; j < rj + 7; j++) if (K[idx(ci, j)] === KW) K[idx(ci, j)] = KC; }
-    else { var rj2 = rows[Math.floor(rnd() * (rows.length - 1))] + 3 + Math.floor(rnd() * 3), ci2 = cols[Math.floor(rnd() * (cols.length - 1))]; for (var i = ci2 + 2; i < ci2 + 8; i++) if (K[idx(i, rj2)] === KW) K[idx(i, rj2)] = KC; } }
+  var scale = Math.min(2.6, MW * MH / (41 * 41));
+  // a few alleys through the blocks
+  for (var al = 0; al < 6; al++) { var vert = rnd() < 0.5; if (vert) { var ci = cols[Math.floor(rnd() * (cols.length - 1))] + SW + 2 + Math.floor(rnd() * (BS - SW - 4)), rj = rows[Math.floor(rnd() * (rows.length - 1))]; for (var j = rj + SW; j < rj + BS; j++) if (K[idx(ci, j)] === KW) K[idx(ci, j)] = KC; }
+    else { var rj2 = rows[Math.floor(rnd() * (rows.length - 1))] + SW + 2 + Math.floor(rnd() * (BS - SW - 4)), ci2 = cols[Math.floor(rnd() * (cols.length - 1))]; for (var i = ci2 + SW; i < ci2 + BS; i++) if (K[idx(i, rj2)] === KW) K[idx(i, rj2)] = KC; } }
+  // roadblocks: whole stretches of road shut, picked so the way to the far end winds right round the city (his ask: never a straight walk out)
+  var segs = []; rows.forEach(function (rw) { for (var c2 = 0; c2 + 1 < cols.length; c2++) { var xm = cols[c2] + SW + ((BS - SW) >> 1), cl = []; for (var w = 0; w < SW; w++) cl.push([xm, rw + w]); segs.push(cl); } });
+  cols.forEach(function (cc) { for (var r2 = 0; r2 + 1 < rows.length; r2++) { var ym = rows[r2] + SW + ((BS - SW) >> 1), cl = []; for (var w = 0; w < SW; w++) cl.push([cc + w, ym]); segs.push(cl); } });
+  windClose(F, rnd, segs, [mid, last], [mid, 2], used, function (k) { F.BT[k] = "roadblock"; F.BH[k] = 1.25; }, 0.62);
+  F.roadblocks = segs.filter(function (cl) { return K[idx(cl[0][0], cl[0][1])] === KW; });
+  // parked cars along the kerbs
+  for (var pc = 0; pc < 26 * scale; pc++) { var hz = rnd() < 0.5, rw2 = hz ? rows[Math.floor(rnd() * rows.length)] : cols[Math.floor(rnd() * cols.length)], along = 3 + Math.floor(rnd() * (MW - 6)), lane = rnd() < 0.5 ? 1 : SW - 2, ci3 = hz ? along : rw2 + lane, cj3 = hz ? rw2 + lane : along;
+    if (!inMap(ci3, cj3) || K[idx(ci3, cj3)] !== KC || used[idx(ci3, cj3)] || roadJ(F, ci3, cj3) === 3) continue; K[idx(ci3, cj3)] = KP; if (!keep()) { K[idx(ci3, cj3)] = KC; continue; } used[idx(ci3, cj3)] = 1; F.props.push({ i: ci3, j: cj3, k: 'car', a: hz ? Math.PI / 2 : 0 }); }
   var D = bfs(F, mid, last), total = D[idx(mid, 2)];
   // every shop front is a door you can walk through: a room carved into the block behind it
   F.doorRoom = {};
@@ -101,7 +106,7 @@ function genDistrict(fi, seed) {
     return R;
   }
   // T's Hussy House: a shop front about half way along the route to the Clubhouse
-  var faces = []; for (var j5 = 2; j5 < MH - 2; j5++) for (var i5 = 2; i5 < MW - 2; i5++) { if (K[idx(i5, j5)] !== KC || D[idx(i5, j5)] < 0) continue; DIRS.forEach(function (q, d) { if (K[idx(i5 + q[0], j5 + q[1])] === KW) faces.push({ i: i5, j: j5, d: d, dd: D[idx(i5, j5)] }); }); }
+  var faces = []; for (var j5 = 2; j5 < MH - 2; j5++) for (var i5 = 2; i5 < MW - 2; i5++) { if (K[idx(i5, j5)] !== KC || D[idx(i5, j5)] < 0) continue; DIRS.forEach(function (q, d) { if (K[idx(i5 + q[0], j5 + q[1])] === KW && !F.BT[idx(i5 + q[0], j5 + q[1])]) faces.push({ i: i5, j: j5, d: d, dd: D[idx(i5, j5)] }); }); }
   faces.sort(function (p, q) { return Math.abs(p.dd - total * 0.5) - Math.abs(q.dd - total * 0.5) + (rnd() - 0.5) * 6; });
   var best = null; if (CT.hussy) { for (var h = 0; h < faces.length && !best; h++) { var f0 = { i: faces[h].i, j: faces[h].j, d: faces[h].d, k: 'fac_t', big: 1 }; if (carve(f0, 'fac_t')) { best = f0; } } F.hussy = best; if (best) F.fronts.push(best); }
   if (CT.club) F.fronts.push({ i: mid, j: 2, d: 3, k: 'fac_club', big: 1, at: mid + 0.5 }); // the Clubhouse, north end of the top street
@@ -120,6 +125,7 @@ function genDistrict(fi, seed) {
   if (CT.tables) { // the cafes put their tables out on the pavement
     F.fronts.forEach(function (f) { if (!f.k || f.k === 'fac_club') return; var q = DIRS[f.d], s0 = [-q[1], q[0]]; [-2, 2].forEach(function (w) { var i = f.i + s0[0] * w - q[0], j = f.j + s0[1] * w - q[1]; if (!inMap(i, j) || K[idx(i, j)] !== KC || used[idx(i, j)]) return; K[idx(i, j)] = KP; if (!keep()) { K[idx(i, j)] = KC; return; } used[idx(i, j)] = 1; F.props.push({ i: i, j: j, k: 'cafetable', a: Math.atan2(q[0], q[1]) }); }); });
   }
+  paintRoads(F);
   lvlFill(F, rnd, th, used, D, 10);
   F.tbIn = best ? { i: best.i, j: best.j } : { i: mid, j: last }; F.toClub = bfs(F, mid, 2); F.clubTotal = F.toClub[idx(mid, last)]; if (!CT.club) F.exitIn = { i: mid, j: 2 };
   return F;
@@ -183,7 +189,7 @@ function buildOutdoorMesh(F, mesh) {
             if ((i2 + j2) % 2 === 0) boxM(ox - 0.04, 0, oz - 0.04, ox + 0.04, bh, oz + 0.04, TL('metal'), 0.8); } }
         continue; }
       var h = hgt(i2, j2); m.quad([x02, h, z02], [x02 + TSZ, h, z02], [x02 + TSZ, h, z02 + TSZ], [x02, h, z02 + TSZ], [0, 0, 1, 0, 1, 1, 0, 1], TL('roof'), vc(0.6), [0, 1, 0]);
-      for (var d = 0; d < 4; d++) { var q = DIRS[d]; if (indoor(i2 + q[0], j2 + q[1])) continue; var nk = kk(i2 + q[0], j2 + q[1]), nh = nk === KW ? (inMap(i2 + q[0], j2 + q[1]) ? hgt(i2 + q[0], j2 + q[1]) : 99) : 0; if (nh >= h) continue;
+      for (var d = 0; d < 4; d++) { var q = DIRS[d]; if (indoor(i2 + q[0], j2 + q[1])) continue; var nk = kk(i2 + q[0], j2 + q[1]), nh = nk === KW ? (inMap(i2 + q[0], j2 + q[1]) ? (F.BT && F.BT[idx(i2 + q[0], j2 + q[1])] ? F.BH[idx(i2 + q[0], j2 + q[1])] : hgt(i2 + q[0], j2 + q[1])) : 99) : 0; if (nh >= h) continue;
         var fd = d === 0 ? 1 : d === 1 ? 0 : d === 2 ? 3 : 2, ni = i2 + q[0], nj = j2 + q[1]; // the face on the neighbour's side, looking back at this building
         if (nh < 3.2) { var lit = ((ni * 31 + nj * 17 + d * 7) % 5) < 2; if (lit) { face(ni, nj, fd, nh, 0.6, TL('citywall'), 0.8); face(ni, nj, fd, 0.6, 2.7, TL(WIN2), 0.7, [0, 1, 1, 1, 1, 0, 0, 0], 0.7); face(ni, nj, fd, 2.7, 3.2, TL('citywall'), 0.8); } else face(ni, nj, fd, nh, 3.2, TL('citywall'), 0.8); } var y = Math.max(3.2, nh); while (y < h) { var y1 = Math.min(h, y + 2.6); face(ni, nj, fd, y, y1, TL(WIN1), 0.9, [0, (y1 - y) / 2.6, 1, (y1 - y) / 2.6, 1, 0, 0, 0]); y = y1; }
         face(ni, nj, fd, h - 0.25, h, TL('metal'), 0.7); }
@@ -196,6 +202,10 @@ function buildOutdoorMesh(F, mesh) {
     if (kind === 'district') for (var j7 = 2; j7 < MH - 2; j7++) for (var i7 = 2; i7 < MW - 2; i7++) { if (kk(i7, j7) !== KC || (i7 * 3 + j7 * 5) % 11) continue; var hz = kk(i7 - 1, j7) === KW && kk(i7 + 2, j7) === KW && kk(i7 + 1, j7) === KC, vt = kk(i7, j7 - 1) === KW && kk(i7, j7 + 2) === KW && kk(i7, j7 + 1) === KC, y7 = 4.6 + (i7 % 3) * 0.4, tc = TL('glow'), cc = (i7 + j7) % 3 ? [0.6, 0.06, 0.1] : [0.6, 0.2, 0.45];
       if (hz) m.quad([i7 * TSZ, y7, (j7 + 0.5) * TSZ - 0.05], [(i7 + 2) * TSZ, y7 - 0.3, (j7 + 0.5) * TSZ - 0.05], [(i7 + 2) * TSZ, y7 - 0.22, (j7 + 0.5) * TSZ + 0.05], [i7 * TSZ, y7 + 0.08, (j7 + 0.5) * TSZ + 0.05], [0, 0, 1, 0, 1, 1, 0, 1], tc, cc, [0, -1, 0], 2);
       if (vt) m.quad([(i7 + 0.5) * TSZ - 0.05, y7, j7 * TSZ], [(i7 + 0.5) * TSZ - 0.05, y7 - 0.3, (j7 + 2) * TSZ], [(i7 + 0.5) * TSZ + 0.05, y7 - 0.22, (j7 + 2) * TSZ], [(i7 + 0.5) * TSZ + 0.05, y7 + 0.08, j7 * TSZ], [0, 0, 1, 0, 1, 1, 0, 1], tc, cc, [0, -1, 0], 2); }
+    if (F.roads) { roadMesh(F, { boxM: boxM }); // update 131: neon strung across the five-wide roads too
+      for (var j8 = 2; j8 < MH - 2; j8++) for (var i8 = 2; i8 < MW - 2; i8++) { if ((i8 * 5 + j8 * 3) % 7) continue; var ra = roadAt(F, i8, j8); var y8 = 5.2 + (i8 % 3) * 0.4, tc8 = TL('glow'), cc8 = (i8 + j8) % 3 ? [0.6, 0.06, 0.1] : [0.6, 0.2, 0.45];
+        if (ra[0] === 0 && ra[1] < 0) m.quad([(i8 + 0.5) * TSZ - 0.05, y8, j8 * TSZ], [(i8 + 0.5) * TSZ - 0.05, y8 - 0.4, (j8 + F.SW) * TSZ], [(i8 + 0.5) * TSZ + 0.05, y8 - 0.32, (j8 + F.SW) * TSZ], [(i8 + 0.5) * TSZ + 0.05, y8 + 0.08, j8 * TSZ], [0, 0, 1, 0, 1, 1, 0, 1], tc8, cc8, [0, -1, 0], 2);
+        if (ra[1] === 0 && ra[0] < 0) m.quad([i8 * TSZ, y8, (j8 + 0.5) * TSZ - 0.05], [(i8 + F.SW) * TSZ, y8 - 0.4, (j8 + 0.5) * TSZ - 0.05], [(i8 + F.SW) * TSZ, y8 - 0.32, (j8 + 0.5) * TSZ + 0.05], [i8 * TSZ, y8 + 0.08, (j8 + 0.5) * TSZ + 0.05], [0, 0, 1, 0, 1, 1, 0, 1], tc8, cc8, [0, -1, 0], 2); } }
     // lamp posts, dumpsters
     F.lights.forEach(function (L) { if (!L.pole) return; var x = tx(L.i), z = tx(L.j); boxM(x - 0.05, 0, z - 0.05, x + 0.05, L.y, z + 0.05, TL('metal'), 0.6); boxM(x - 0.2, L.y - 0.1, z - 0.2, x + 0.2, L.y + 0.05, z + 0.2, TL('metal'), 0.8); });
     F.lockers.forEach(function (L) { if (L.indoor) return; var r = lockerRect(L);

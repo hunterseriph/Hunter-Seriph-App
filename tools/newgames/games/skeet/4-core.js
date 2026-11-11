@@ -45,6 +45,8 @@ function strike(t, m, dir) {
   if (t.prop) { t.hp -= 1; spark(t.x, t.z, 22, 1); sfx.play('thud'); if (t.hp <= 0) breakProp(t); return true; }
   // the Hollow Knight blocks from the front unless he is busy attacking
   if (t.def && t.def.ai === 'shield' && !t.mv && t.st !== 'hurt' && t.st !== 'grabbed' && t.face === -dir && !m.guardBreak && !m.shot) { t.vx = dir * 80; spark(t.x - dir * 8, t.z, t.h + 22, 0, '#a6968f'); sfx.play('block'); t.blockT = 0.3; G.hs = 0.03; return false; }
+  // the BLOCK button in the brawler: a hero standing guard takes front hits as chip damage (grabs and throws get through)
+  if (!G.duel && t.hero && t.guarding && t.st === 'guard' && t.face === -dir && !m.unblock && !m.grab) { var ch = (m.dmg || 0) * 0.12; if (t.hp > 1) t.hp = Math.max(1, t.hp - ch); t.vx = dir * Math.max(70, (m.kb || 60) * 0.5); spark(t.x - dir * 8, t.z, t.h + t.ht * 0.6, 0, '#a6968f'); sfx.play('block'); t.blockT = 0.18; G.hs = Math.max(G.hs, 0.04); if (from && from.hero === undefined && from.vx !== undefined) from.vx = -dir * 40; t.meter = Math.min(100, (t.meter || 0) + 2); return false; }
   // a duel: holding back blocks (low attacks need down-back, jump-ins need standing). A little chip damage gets through
   if (G.duel && t.guard && !m.unblock && !t.prop && G.duel.phase === 'fight') { var okG = m.low ? t.guard === 'lo' : m.over ? t.guard === 'hi' : true;
     if (okG) { var chip = (m.dmg || 0) * 0.12; if (t.hp > 1) t.hp = Math.max(1, t.hp - chip); t.st = 'block'; t.mv = null; t.stun = 0.16 + Math.min(0.25, (m.dmg || 0) * 0.012); t.vx = dir * Math.max(90, (m.kb || 60) * 0.8);

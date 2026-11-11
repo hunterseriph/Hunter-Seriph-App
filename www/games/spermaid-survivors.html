@@ -646,7 +646,7 @@ var music = (function () {
     if (!A) { var a = sfx.audio && sfx.audio(); if (!a) return; setup(a); if (want) { var w = want; want = null; cur = null; play(w); } }
     if (!song || !tg || sfx.muted || A.state !== 'running') return;
     var sd = 60 / song.sp.bpm / 4;
-    if (nextT < A.currentTime - 0.4) nextT = A.currentTime + 0.05;
+    if (nextT < A.currentTime - 0.4) { nextT = A.currentTime + 0.05; T0 = nextT - stepI * sd; }
     while (nextT < A.currentTime + 0.3) { var evs = song.ev[stepI % song.len]; for (var i = 0; i < evs.length; i++) play1(evs[i], nextT, sd); nextT += sd; stepI++; }
   }
   var ALIAS = { b0: 'castle', b2: 'roof', b8: 'park', b6: 'dungeon', b7: 'town', b3: 'blum', b4: 'boss' };
@@ -658,10 +658,33 @@ var music = (function () {
     if (!cache[id]) cache[id] = compile(SONGS[id]);
     cur = id; song = cache[id];
     tg = A.createGain(); tg.gain.setValueAtTime(0.0001, A.currentTime); tg.gain.linearRampToValueAtTime(song.sp.vol || 1, A.currentTime + 0.8);
-    tg.connect(bus); send = A.createGain(); send.gain.value = song.sp.wet; tg.connect(send); send.connect(dl);
-    stepI = 0; nextT = A.currentTime + 0.12;
+    if (song.sp.radio) { radioChain(tg); send = A.createGain(); send.gain.value = 0; } // an old radio: no hall reverb, everything through the little speaker
+    else { tg.connect(bus); send = A.createGain(); send.gain.value = song.sp.wet; tg.connect(send); send.connect(dl); }
+    stepI = 0; nextT = A.currentTime + 0.12; T0 = nextT;
   }
+  /* update 131: a song played out of an old radio (Psycho Nightmare's bar). Thin (only the middle of the sound gets through
+     the tiny speaker), a little overdriven, a wobble in the tuning, and static hiss with crackles under it. radioLevel(v)
+     turns the whole radio up or down (how near you are to it). */
+  var RAD = null, T0 = 0;
+  /* update 131 (Pulsar's Octobeats): where the song is right now, in sixteenth-note steps from its first note (output latency allowed for) */
+  function pos() { if (!A || !song) return -1; var lat = (A.outputLatency || 0) + (A.baseLatency || 0); return (A.currentTime - lat - T0) / (60 / song.sp.bpm / 4); }
+  function radioChain(src) {
+    if (RAD) { try { RAD.hp.disconnect(); RAD.noise.stop(); } catch (e) {} RAD = null; }
+    var hp = A.createBiquadFilter(), lp = A.createBiquadFilter(), pk = A.createBiquadFilter(), ws = A.createWaveShaper(), out = A.createGain(), cur = new Float32Array(256);
+    hp.type = 'highpass'; hp.frequency.value = 420; hp.Q.value = 0.9; lp.type = 'lowpass'; lp.frequency.value = 2400; lp.Q.value = 1.4; pk.type = 'peaking'; pk.frequency.value = 1150; pk.gain.value = 7; pk.Q.value = 1.1;
+    for (var i = 0; i < 256; i++) { var x = i / 128 - 1; cur[i] = Math.tanh(x * 2.6) * 0.8; } ws.curve = cur;
+    src.connect(hp); hp.connect(pk); pk.connect(lp); lp.connect(ws); ws.connect(out); out.gain.value = RAD_LEVEL; out.connect(bus);
+    var len = A.sampleRate * 3, buf = A.createBuffer(1, len, A.sampleRate), d = buf.getChannelData(0), crackle = 0; // static: hiss, plus pops and crackle bursts
+    for (var j = 0; j < len; j++) { var h = (Math.random() * 2 - 1) * 0.07; if (Math.random() < 0.0009) crackle = 0.6 + Math.random() * 0.4; crackle *= 0.985; d[j] = h + (Math.random() < 0.08 ? (Math.random() * 2 - 1) * crackle : 0) + (Math.random() < 0.00012 ? (Math.random() < 0.5 ? -0.9 : 0.9) : 0); }
+    var ns = A.createBufferSource(), nf = A.createBiquadFilter(), ng = A.createGain(); ns.buffer = buf; ns.loop = true; nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 0.6; ng.gain.value = 0.32;
+    ns.connect(nf); nf.connect(ng); ng.connect(ws); ns.start();
+    var wob = A.createOscillator(), wg = A.createGain(); wob.frequency.value = 0.35; wg.gain.value = 140; wob.connect(wg); wg.connect(lp.frequency); wob.start(); // the tuning drifts
+    RAD = { hp: hp, out: out, noise: ns, wob: wob, src: src };
+  }
+  var RAD_LEVEL = 1;
+  function radioLevel(v) { RAD_LEVEL = v; if (RAD && A) RAD.out.gain.setTargetAtTime(v, A.currentTime, 0.15); }
   function fadeOut(sec) {
+    if (RAD && RAD.src === tg) { var rr = RAD; RAD = null; setTimeout(function () { try { rr.noise.stop(); rr.wob.stop(); rr.out.disconnect(); } catch (e) {} }, sec * 1000 + 200); rr.out.gain.setTargetAtTime(0.0001, A.currentTime, sec / 3); }
     if (!tg) return; var g = tg, sn = send, now = A.currentTime;
     g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now); g.gain.linearRampToValueAtTime(0.0001, now + sec);
     setTimeout(function () { try { g.disconnect(); sn.disconnect(); } catch (e) {} }, sec * 1000 + 3000);
@@ -669,7 +692,7 @@ var music = (function () {
   }
   function stop(sec) { want = null; if (A) fadeOut(sec || 1); cur = null; song = null; }
   setInterval(tick, 40);
-  return { play: play, stop: stop, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, get current() { return cur; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
+  return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
 })();
 
 /* =====================================================================================================
@@ -767,7 +790,7 @@ function stageOpen(i) { return i === 0 || !!SV.cleared[STAGES[i - 1].id]; }
 
 /* ---------- friends locked in cells (one per place). Freeing one is for good: a small gift every run after ---------- */
 var TBQUOTES = ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"',
-  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"'];
+  '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"', '"you\'ll make a good sissy"'];
 var FRIENDS = {
   tb: { n: 'TB', spr: 'npc_tb', q: null, gift: '+1 reroll every run', f: function (s) { s.rerolls += 1; } },
   potbelly: { n: 'Potbelly', spr: 'npc_potbelly', q: '"Cabinets are free, kid. Play all you like."', gift: '+10% drops', f: function (s) { s.greed += 0.1; } },
