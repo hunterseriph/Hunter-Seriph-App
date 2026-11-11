@@ -39,6 +39,7 @@ function placeDecor(rnd) {
     if (pr.solid) { K[q] = 4; var now = countReach(); if (now < reach - 1) { K[q] = 0; continue; } reach = now; }
     busy[q] = 1; PROPS.push(pr); if (pr.k === 'phone' && !WEIRD.phone) WEIRD.phone = pr;
   }
+  propBoxes();
   // writing on the walls and stains on the floor
   var words = WRITING[LV.gen] || WRITING.rooms;
   for (var n = 0; n < Math.floor(MW * MH / 40); n++) { var a = 1 + Math.floor(rnd() * (MW - 2)), b = 1 + Math.floor(rnd() * (MH - 2)); if (K[idx(a, b)] !== 0) continue; var ws = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(function (dd) { var t = inMap(a + dd[0], b + dd[1]) ? K[idx(a + dd[0], b + dd[1])] : 0; return t === 1 || t === 2; }); if (!ws.length) continue;
@@ -49,6 +50,17 @@ function placeDecor(rnd) {
   var D = bfsFrom(G.start.i, G.start.j), far = []; for (var q2 = 0; q2 < MW * MH; q2++) if (D[q2] > 5 && K[q2] === 0 && !busy[q2]) far.push(q2);
   var extra = LV.gen === 'run' ? 2 : 7; for (n = 0; n < extra && far.length; n++) { var pick = far.splice(Math.floor(rnd() * far.length), 1)[0]; ITEMS.push({ x: tx(pick % MW), z: tx((pick / MW) | 0), k: n % 3 === 2 ? 'almond' : 'battery', n: 0 }); }
 }
+var PBOX = {}, FOOT = { chair: [0.55, 0.55, 0], cooler: [0.4, 0.4, 1], plant: [0.45, 0.45, 0], vend: [1.0, 0.8, 1], cab: [0.6, 0.6, 1], desk: [1.6, 0.8, 1], phone: [0.6, 0.5, 1], shelf: [2.0, 0.6, 1], pallet: [1.1, 1.1, 0], barrel: [0.6, 0.6, 0], valve: [0.5, 0.5, 1], tank: [1.2, 1.0, 1], lounger: [0.7, 1.8, 1], lifeguard: [0.8, 0.8, 1], ptable: [0.9, 0.9, 0], present: [0.85, 0.7, 0], speaker: [0.7, 0.6, 1] };
+/* props only block what they really take up (his ask: you could not squeeze past them; the whole tile used to block) */
+function propBoxes() { PBOX = {}; PROPS.forEach(function (p) { if (!p.solid) return; var f = FOOT[p.k] || [0.6, 0.6, 0], d = p.d, cx = tx(p.i) + (f[2] ? d[0] * 0.55 : 0), cz = tx(p.j) + (f[2] ? d[1] * 0.55 : 0), hx = (d[0] ? f[1] : f[0]) / 2 - 0.04, hz = (d[0] ? f[0] : f[1]) / 2 - 0.04; PBOX[idx(p.i, p.j)] = [cx - hx, cz - hz, cx + hx, cz + hz]; }); }
+function collide(o, r) {
+  var i0 = tileOf(o.x - r) - 1, i1 = tileOf(o.x + r) + 1, j0 = tileOf(o.z - r) - 1, j1 = tileOf(o.z + r) + 1;
+  for (var j = j0; j <= j1; j++) for (var i = i0; i <= i1; i++) { if (!solid(i, j)) continue; var q = inMap(i, j) ? idx(i, j) : -1, b = q >= 0 && K[q] === 4 ? (PBOX[q] || [tx(i) - 0.4, tx(j) - 0.4, tx(i) + 0.4, tx(j) + 0.4]) : null;
+    var bx0 = b ? b[0] : i * TSZ, bz0 = b ? b[1] : j * TSZ, bx1 = b ? b[2] : bx0 + TSZ, bz1 = b ? b[3] : bz0 + TSZ;
+    if (o.x < bx0 - r || o.x > bx1 + r || o.z < bz0 - r || o.z > bz1 + r) continue;
+    var nx = Math.max(bx0, Math.min(o.x, bx1)), nz = Math.max(bz0, Math.min(o.z, bz1)), dx = o.x - nx, dz = o.z - nz, d = Math.hypot(dx, dz);
+    if (d < r) { if (d < 1e-5) { o.x = o.x > (bx0 + bx1) / 2 ? bx1 + r : bx0 - r; } else { o.x = nx + dx / d * r; o.z = nz + dz / d * r; } } }
+}
 function countReach() { var D = bfsFrom(G.start.i, G.start.j), n = 0; for (var q = 0; q < D.length; q++) if (D[q] >= 0) n++; return n; }
 /* the furniture is boxes painted with its own textures */
 function bx(m, cx, cz, w, d, y0, y1, T, Tt, col) { var x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, z1 = cz + d / 2, c = col || [0.5, 0.5, 0.5], uv = [0, 1, 1, 1, 1, 0, 0, 0];
@@ -57,7 +69,7 @@ function bx(m, cx, cz, w, d, y0, y1, T, Tt, col) { var x0 = cx - w / 2, x1 = cx 
   m.quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], [0, 1, 1, 1, 1, 0, 0, 0], Tt || T, c, [0, 1, 0]); }
 /* a flat picture standing against the wall the prop backs onto, facing out */
 function wallPic(m, i, j, d, w, y0, y1, T, out, glow) { var cx = tx(i) + d[0] * (TSZ / 2 - out), cz = tx(j) + d[1] * (TSZ / 2 - out), sx = -d[1], sz = d[0];
-  m.quad([cx + sx * w, y0, cz + sz * w], [cx - sx * w, y0, cz - sz * w], [cx - sx * w, y1, cz - sz * w], [cx + sx * w, y1, cz + sz * w], [0, 1, 1, 1, 1, 0, 0, 0], T, [0.5, 0.5, 0.5], [-d[0], 0, -d[1]], glow || 0); }
+  m.quad([cx + sx * w, y0, cz + sz * w], [cx - sx * w, y0, cz - sz * w], [cx - sx * w, y1, cz - sz * w], [cx + sx * w, y1, cz + sz * w], [1, 1, 0, 1, 0, 0, 1, 0], T, [0.5, 0.5, 0.5], [-d[0], 0, -d[1]], glow || 0); }
 function buildDecor(m) {
   PROPS.forEach(function (p) { var x = tx(p.i), z = tx(p.j), d = p.d, bxp = x + d[0] * 0.55, bzp = z + d[1] * 0.55, along = d[0] ? 'z' : 'x';
     function B(w, dd, y0, y1, t, tt, ox, oz) { var W2 = d[0] ? dd : w, D2 = d[0] ? w : dd; bx(m, bxp + (ox || 0), bzp + (oz || 0), W2, D2, y0, y1, TL(t), tt ? TL(tt) : null); }
@@ -65,19 +77,20 @@ function buildDecor(m) {
       case 'chair': bx(m, x, z, 0.55, 0.55, 0.42, 0.5, TL('fabric')); bx(m, x + d[0] * 0.22, z + d[1] * 0.22, d[0] ? 0.08 : 0.55, d[0] ? 0.55 : 0.08, 0.5, 1.1, TL('fabric')); bx(m, x, z, 0.08, 0.08, 0.06, 0.42, TL('metal')); bx(m, x, z, 0.5, 0.06, 0.02, 0.07, TL('metal')); bx(m, x, z, 0.06, 0.5, 0.02, 0.07, TL('metal')); break;
       case 'cooler': B(0.4, 0.4, 0, 1.0, 'plastic'); bx(m, bxp, bzp, 0.3, 0.3, 1.0, 1.45, TL('bottle')); break;
       case 'plant': bx(m, x, z, 0.4, 0.4, 0, 0.45, TL('pot')); bx(m, x, z, 0.7, 0.7, 0.45, 1.5, TL('leaves')); break;
-      case 'vend': B(1.0, 0.8, 0, 2.0, 'metal'); wallPic(m, p.i, p.j, d, 0.48, 0.15, 1.95, TL('vend'), 0.96, 0.25); break;
+      case 'vend': B(1.0, 0.8, 0, 2.0, 'metal'); wallPic(m, p.i, p.j, d, 0.48, 0.15, 1.95, TL('vend'), 1.06, 0.25); break;
       case 'cab': B(0.6, 0.6, 0, 1.3, 'cabinet'); break;
       case 'desk': B(1.6, 0.8, 0.7, 0.78, 'wood'); B(0.08, 0.7, 0, 0.7, 'wood', null, d[0] ? 0 : -0.7, d[0] ? -0.7 : 0); B(0.08, 0.7, 0, 0.7, 'wood', null, d[0] ? 0 : 0.7, d[0] ? 0.7 : 0); bx(m, bxp, bzp, 0.45, 0.35, 0.78, 1.1, TL('monitor')); break;
       case 'phone': B(0.6, 0.5, 0, 0.75, 'wood'); bx(m, bxp, bzp, 0.3, 0.22, 0.75, 0.85, TL('phonetex')); break;
-      case 'clock': wallPic(m, p.i, p.j, d.map(function (v) { return -v; }), 0.3, 1.8, 2.4, TL('clock'), -0.02); break;
-      case 'fakedoor': wallPic(m, p.i, p.j, d.map(function (v) { return -v; }), 0.55, 0, 2.1, TL('door'), -0.02); break;
+      case 'clock': wallPic(m, p.i, p.j, d, 0.3, 1.75, 2.35, TL('clock'), 0.02); break;
+      case 'fakedoor': wallPic(m, p.i, p.j, d, 0.55, 0, 2.1, TL('door'), 0.02); bx(m, x + d[0] * 1.17, z + d[1] * 1.17, d[0] ? 0.06 : 1.3, d[0] ? 1.3 : 0.06, 2.1, 2.22, TL('wood')); [-0.6, 0.6].forEach(function (o) { bx(m, x + d[0] * 1.17 - d[1] * o, z + d[1] * 1.17 + d[0] * o, 0.08, 0.08, 0, 2.1, TL('wood')); }); break;
+      case 'wetsign': (function () { var a = p.r * 6.28, ca = Math.cos(a), sa = Math.sin(a), T = TL('wetsign'); [1, -1].forEach(function (sd) { var bxs = x + ca * 0.2 * sd, bzs = z + sa * 0.2 * sd, rx = -sa * sd, rz = ca * sd; m.quad([bxs - rx * 0.2, 0, bzs - rz * 0.2], [bxs + rx * 0.2, 0, bzs + rz * 0.2], [x + rx * 0.2, 0.68, z + rz * 0.2], [x - rx * 0.2, 0.68, z - rz * 0.2], [1, 1, 0, 1, 0, 0, 1, 0], T, [0.5, 0.5, 0.5], [ca * sd, 0.3, sa * sd]); }); })(); break;
       case 'shelf': B(2.0, 0.6, 0, 2.4, 'shelf', 'metal'); break;
       case 'pallet': bx(m, x, z, 1.1, 1.1, 0, 0.15, TL('wood')); bx(m, x, z, 0.9, 0.9, 0.15, 0.9 + p.r * 0.6, TL('crate')); break;
       case 'barrel': bx(m, x, z, 0.6, 0.6, 0, 0.95, TL('barrel'), TL('barreltop')); break;
       case 'cone': break;
       case 'valve': B(0.5, 0.5, 0, 1.2, 'rust'); bx(m, bxp - d[0] * 0.3, bzp - d[1] * 0.3, 0.5, 0.5, 1.0, 1.1, TL('red')); break;
       case 'tank': B(1.2, 1.0, 0, 2.2, 'rust'); break;
-      case 'gauge': wallPic(m, p.i, p.j, d.map(function (v) { return -v; }), 0.25, 1.3, 1.8, TL('gaugetex'), -0.02); break;
+      case 'gauge': wallPic(m, p.i, p.j, d, 0.25, 1.3, 1.8, TL('gaugetex'), 0.02); break;
       case 'lounger': B(0.7, 1.8, 0.25, 0.4, 'lounger'); B(0.7, 0.3, 0.4, 0.9, 'lounger'); break;
       case 'lifeguard': B(0.8, 0.8, 1.4, 1.5, 'white'); B(0.08, 0.08, 0, 1.4, 'white'); break;
       case 'ptable': bx(m, x, z, 1.0, 1.0, 0.72, 0.8, TL('cloth')); bx(m, x, z, 0.12, 0.12, 0, 0.72, TL('metal')); bx(m, x, z, 0.45, 0.45, 0.8, 1.05, TL('cake'), TL('caketop')); break;
@@ -89,8 +102,7 @@ function buildDecor(m) {
 /* billboards and see-through things, rebuilt as you go round (cheap: only near ones) */
 function decoDyn(m) {
   PROPS.forEach(function (p) { var x = tx(p.i), z = tx(p.j); if (Math.abs(x - P.x) > 20 || Math.abs(z - P.z) > 20) return;
-    if (p.k === 'wetsign') bill(m, x, 0.4, z, 0.3, 0.4, TL('wetsign'), [0.5, 0.5, 0.5]);
-    else if (p.k === 'cone') bill(m, x, 0.32, z, 0.25, 0.32, TL('conetex'), [0.5, 0.5, 0.5]);
+    if (p.k === 'cone') bill(m, x, 0.32, z, 0.25, 0.32, TL('conetex'), [0.5, 0.5, 0.5]);
     else if (p.k === 'balloons') bill(m, x, 1.6 + Math.sin(G.t + p.r * 6) * 0.08, z, 0.55, 0.55, TL('balloon'), [0.55, 0.55, 0.55]);
     else if (p.k === 'float') bill(m, x, 0.18, z, 0.45, 0.3, TL('floattex'), [0.5, 0.5, 0.5]);
   });
@@ -103,8 +115,8 @@ function buildDecals() {
       if (D.ceil) m.quad([x - c, y, z - n], [x - n, y, z + c], [x + c, y, z + n], [x + n, y, z - c], [0, 0, 1, 0, 1, 1, 0, 1], T, [0.5, 0.5, 0.5], [0, -1, 0]);
       else m.quad([x - c, y, z - n], [x + n, y, z - c], [x + c, y, z + n], [x - n, y, z + c], [0, 0, 1, 0, 1, 1, 0, 1], T, [0.5, 0.5, 0.5], [0, 1, 0]); return; }
     var d = D.d, cx = x + d[0] * (TSZ / 2 - 0.02), cz = z + d[1] * (TSZ / 2 - 0.02), sx = -d[1], sz = d[0], wd = D.k[0] === 'w' ? 0.95 : 0.4, ht = D.k[0] === 'w' ? 0.48 : 0.4, h = D.h, o = D.o;
-    // u = 0 on the viewer's left (looking at the wall from inside the room)
-    m.quad([cx + sx * (o + wd), h - ht, cz + sz * (o + wd)], [cx + sx * (o - wd), h - ht, cz + sz * (o - wd)], [cx + sx * (o - wd), h + ht, cz + sz * (o - wd)], [cx + sx * (o + wd), h + ht, cz + sz * (o + wd)], [0, 1, 1, 1, 1, 0, 0, 0], TL(D.k), [0.5, 0.5, 0.5], [-d[0], 0, -d[1]]);
+    // facing the wall the viewer's right is (sx, sz), so u = 1 there (update 132 fix: the writing read backwards)
+    m.quad([cx + sx * (o + wd), h - ht, cz + sz * (o + wd)], [cx + sx * (o - wd), h - ht, cz + sz * (o - wd)], [cx + sx * (o - wd), h + ht, cz + sz * (o - wd)], [cx + sx * (o + wd), h + ht, cz + sz * (o + wd)], [1, 1, 0, 1, 0, 0, 1, 0], TL(D.k), [0.5, 0.5, 0.5], [-d[0], 0, -d[1]]);
   });
   return m.upload();
 }
@@ -183,7 +195,7 @@ function sysMenu() { KIT.menu({ cls: 'clear', title: 'Paused', sub: LV.n + ': ' 
     vend: function (g) { g.fillStyle = '#1a1a22'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#c8e8ff'; g.fillRect(4, 4, 40, 52); for (var y = 0; y < 5; y++) for (var x = 0; x < 4; x++) { g.fillStyle = ['#c4121c', '#ffe36a', '#4adfff', '#f1e0b0'][(x + y) % 4]; g.fillRect(7 + x * 9, 7 + y * 10, 6, 7); } g.fillStyle = '#3a3a44'; g.fillRect(48, 10, 12, 20); g.fillStyle = '#ff2630'; g.fillRect(50, 34, 8, 3); g.fillStyle = '#000'; g.fillRect(8, 58, 32, 4); },
     clock: function (g) { g.clearRect(0, 0, 64, 64); g.fillStyle = '#e8e4d8'; g.beginPath(); g.arc(32, 32, 26, 0, 6.3); g.fill(); g.strokeStyle = '#1a1a1a'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#1a1a1a'; for (var i = 0; i < 12; i++) g.fillRect(32 + Math.cos(i * 0.52) * 21 - 1, 32 + Math.sin(i * 0.52) * 21 - 1, 3, 3); },
     gaugetex: function (g) { g.clearRect(0, 0, 64, 64); g.fillStyle = '#c8b878'; g.beginPath(); g.arc(32, 32, 24, 0, 6.3); g.fill(); g.fillStyle = '#f0e8d0'; g.beginPath(); g.arc(32, 32, 19, 0, 6.3); g.fill(); g.strokeStyle = '#c4121c'; g.lineWidth = 3; g.beginPath(); g.moveTo(32, 32); g.lineTo(46, 22); g.stroke(); },
-    wetsign: function (g) { g.clearRect(0, 0, 64, 64); g.fillStyle = '#ffd820'; g.beginPath(); g.moveTo(16, 62); g.lineTo(24, 4); g.lineTo(40, 4); g.lineTo(48, 62); g.fill(); g.fillStyle = '#1a1a1a'; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText('CAUTION', 32, 24); g.fillText('WET', 32, 36); g.fillText('FLOOR', 32, 46); },
+    wetsign: function (g) { g.fillStyle = '#ffd820'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#1a1a1a'; g.fillRect(0, 0, 64, 3); g.fillRect(0, 61, 64, 3); g.beginPath(); g.moveTo(32, 8); g.lineTo(44, 28); g.lineTo(20, 28); g.closePath(); g.fill(); g.fillStyle = '#ffd820'; g.fillRect(31, 14, 2, 8); g.fillRect(31, 24, 2, 2); g.fillStyle = '#1a1a1a'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CAUTION', 32, 38); g.font = 'bold 8px monospace'; g.fillText('WET FLOOR', 32, 51); },
     conetex: function (g) { g.clearRect(0, 0, 64, 64); g.fillStyle = '#ff6a1a'; g.beginPath(); g.moveTo(14, 58); g.lineTo(29, 4); g.lineTo(35, 4); g.lineTo(50, 58); g.fill(); g.fillStyle = '#f0f0f0'; g.fillRect(22, 22, 20, 6); g.fillRect(19, 38, 26, 6); g.fillStyle = '#2a2a2a'; g.fillRect(8, 56, 48, 6); },
     floattex: function (g) { g.clearRect(0, 0, 64, 64); g.strokeStyle = '#ff6a1a'; g.lineWidth = 12; g.beginPath(); g.ellipse(32, 36, 22, 14, 0, 0, 6.3); g.stroke(); g.strokeStyle = '#f0f0f0'; g.lineWidth = 12; g.beginPath(); g.ellipse(32, 36, 22, 14, 0, 0.4, 1.2); g.stroke(); g.beginPath(); g.ellipse(32, 36, 22, 14, 0, 3.5, 4.3); g.stroke(); },
     watcher: function (g) { g.clearRect(0, 0, 64, 64); g.fillStyle = 'rgba(0,0,0,0.92)'; g.beginPath(); g.ellipse(32, 9, 6, 8, 0, 0, 6.3); g.fill(); g.fillRect(25, 16, 14, 26); g.fillRect(21, 17, 4, 26); g.fillRect(39, 17, 4, 26); g.fillRect(26, 42, 5, 22); g.fillRect(33, 42, 5, 22); g.fillStyle = '#fff'; g.fillRect(29, 8, 2, 1); g.fillRect(34, 8, 2, 1); },

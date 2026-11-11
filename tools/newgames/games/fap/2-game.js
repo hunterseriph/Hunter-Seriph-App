@@ -235,8 +235,7 @@ function hud() {
   if (P.hurt > 0) { ctx.fillStyle = 'rgba(160,0,0,' + P.hurt * 0.6 + ')'; ctx.fillRect(0, 0, Wd, Hd); }
   KIT.R('rgba(255,255,255,0.5)', Wd / 2 - 1, Hd / 2 - 1, 2, 2);
   var y = Hd - 34; KIT.panel(6, y - 6, 132, 36); KIT.text('HEALTH', 12, y, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 1, 78, 4, P.hp / 100, '#c4121c'); KIT.text('SANITY', 12, y + 9, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 10, 78, 4, P.san / 100, '#c04aff'); KIT.text('BREATH', 12, y + 18, { size: 6, col: '#a6968f' }); KIT.bar(52, y + 19, 78, 4, P.sta / 100, '#4adfff');
-  KIT.panel(6, 6, 100, 34); KIT.text('TORCH ' + Math.round(P.bat) + '%' + (P.torch ? '' : ' OFF'), 14, 13, { size: 6, col: P.bat < 20 ? '#ff2630' : '#ffe36a' }); KIT.text('SPARES ' + (P.batts || 0) + '  CUPS ' + P.cups, 14, 24, { size: 6, col: '#f1e7d0' });
-  KIT.text(LV.n, Wd - 8, 8, { align: 'right', size: 6, col: '#a6968f' });
+  KIT.panel(6, 6, 100, 44); KIT.text(LV.n, 14, 13, { size: 6, col: '#a6968f' }); KIT.text('TORCH ' + Math.round(P.bat) + '%' + (P.torch ? '' : ' OFF'), 14, 24, { size: 6, col: P.bat < 20 ? '#ff2630' : '#ffe36a' }); KIT.text('SPARES ' + (P.batts || 0) + '  CUPS ' + P.cups, 14, 35, { size: 6, col: '#f1e7d0' });
   if (G.banner) { var a = Math.min(1, G.banner.t, 4 - G.banner.t); KIT.text(G.banner.a, Wd / 2, Hd * 0.3, { align: 'center', size: 8, col: '#a6968f', alpha: a }); KIT.text(G.banner.b, Wd / 2, Hd * 0.3 + 12, { align: 'center', font: 'title', size: 30, col: '#ffe36a', alpha: a, outline: 1 }); }
   if (G.prompt) KIT.text(G.prompt, Wd / 2, Hd * 0.62, { align: 'center', size: 8, col: '#7aff6a', outline: 1 });
   MSG.forEach(function (m, n) { KIT.text(m.s, Wd / 2, Hd - 66 - n * 11, { align: 'center', size: 6, col: m.col, alpha: Math.min(1, m.t), outline: 1 }); });
