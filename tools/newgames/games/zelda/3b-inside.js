@@ -34,7 +34,7 @@ var INSIDE = {
   bonjo: function () { var R0 = room({ counter: [7, 12], put: [[2, 2, 65], [17, 2, 65], [3, 6, 74], [16, 6, 74], [8, 6, 63], [9, 6, 63], [10, 6, 63], [11, 6, 63]] });
     return { T: R0.T, label: "BONJO'S BJ BOUTIQUE", style: 'bonjo', npcs: [keeper('npc_bonjo', 'BONJO', 'Welcome, welcome. Let me get the door.')],
       wares: [ware(12, 'bombs', 'Big Bomb Bag', 'Carries sixteen bombs, not eight. You need a bag to start with.', 120, function () { SV.items.bigbag = 1; SV.bombs = bombMax(); }, function () { return SV.items.bombs && !SV.items.bigbag; })] }; },
-  sanct: function () { var R0 = room({ put: [[9, 3, 54], [10, 3, 54], [9, 4, 54], [10, 4, 54], [3, 2, 74], [16, 2, 74], [3, 6, 16], [16, 6, 16]] });
+  sanct: function () { var R0 = room({ put: [[9, 3, 75], [10, 3, 75], [9, 4, 75], [10, 4, 75], [3, 2, 74], [16, 2, 74], [3, 6, 16], [16, 6, 16]] });
     return { T: R0.T, label: "SPERMAID'S SANCTUM", style: 'sanct', lights: [{ x: 3.5 * TS, y: 6.5 * TS, r: 50 }, { x: 16.5 * TS, y: 6.5 * TS, r: 50 }],
       npcs: [{ spr: 'npc_spermaid', x: 10 * TS, y: 3 * TS, name: 'SPERMAID', say: function () { P.hp = maxHp(); sfx.play('magic'); say('Sweetie! Even down here I keep a little stall. Your hearts are full again. ' + (SV.chal.length < 4 ? "Blumhead's Lair is past the Bloodspine Pass, and its seal wants four chalices." : 'You have four. The Lair will open for you now. Be careful, sweetie.'), 'SPERMAID'); } }] }; },
   greebo: function () { var R0 = room({ counter: [6, 13], put: [[2, 2, 71], [3, 2, 71], [16, 2, 65], [17, 2, 65], [3, 6, 64], [16, 6, 64], [2, 6, 72], [17, 6, 72]] });
@@ -63,7 +63,7 @@ var INSIDE = {
   chapel: function () { var R0 = room({ put: [[3, 3, 13], [5, 3, 31], [14, 3, 13], [16, 3, 31], [3, 6, 13], [16, 6, 13], [9, 2, 16], [10, 2, 16], [9, 5, 63], [10, 5, 63], [9, 6, 63], [10, 6, 63], [9, 7, 63], [10, 7, 63]] });
     return { T: R0.T, label: 'THE CRYPT UNDER THE CHAPEL', style: 'chapel', dark: 0.5, song: 'dungeon', lights: [{ x: 9.5 * TS, y: 2.5 * TS, r: 70 }, { x: 10.5 * TS, y: 2.5 * TS, r: 70 }], foes: SV.got['ch:chapel'] ? [] : [['skeleton', 5, 5], ['skeleton', 15, 5]],
       chest: chestAt('chapel', function () { givePiece(); }) }; },
-  seacave: function () { var R0 = room({ cave: 1, seed: 11, counter: [8, 11], put: [[3, 6, 54], [4, 6, 54], [15, 6, 54], [16, 6, 54], [3, 7, 54], [16, 7, 54]] });
+  seacave: function () { var R0 = room({ cave: 1, seed: 11, counter: [8, 11], put: [[3, 6, 75], [4, 6, 75], [15, 6, 75], [16, 6, 75], [3, 7, 75], [16, 7, 75]] });
     return { T: R0.T, label: "JESSIAH'S GROTTO", style: 'cave', dark: 0.4, lights: [{ x: 10 * TS, y: 3 * TS, r: 90 }], npcs: [keeper('npc_jessiah', 'JESSIAH', 'An empty stomach makes a hollow man. Eat.')],
       wares: [ware(12, 'stew', 'Fish Stew', 'Every heart back. Eat.', 8, function () { P.hp = maxHp(); }, function () { return P.hp < maxHp(); })] }; },
   forge: function () { var R0 = room({ cave: 1, seed: 21, counter: [8, 11], put: [[4, 3, 71], [5, 3, 71]] });
@@ -80,10 +80,10 @@ var TBSAY = ['Fuck muck', 'Shithead Laboozie', 'let me tighten that kynodesme', 
 function sillyPill() { var r = Math.random(); if (r < 0.3) { P.hp = maxHp(); say('Every heart back. Hm.', ''); } else if (r < 0.55) { G.pillFast = 20; say('Your legs feel like someone else\'s. Faster legs. For a bit.', ''); } else if (r < 0.75) { G.pillInv = 10; say('Nothing can touch you. For ten seconds. Go!', ''); } else { P.hp = Math.max(1, P.hp - 2); KIT.shake(6); say('Ugh. That one was bad.', ''); } }
 function slotPull() { var r = Math.random(), win = r < 0.04 ? 50 : r < 0.14 ? 20 : r < 0.36 ? 10 : 0; SV.drops += win; sfx.play(win ? 'coin' : 'no'); say(win ? 'Ding ding! ' + win + ' drops.' : 'Nothing. The cabinet laughs at you.', ''); }
 /* where to go next, from Uncle Beeb, Judgement and Stacked Fate */
-function hint() { var dirs = ['the Cream Marsh, west of town (a sewer grate by the lake)', 'the Bone Fields, east of town (the Great Skull)', 'Ejaculand, through the Goonwood in the north west (the Funhouse)', 'the Blood Factory, up in the east of the Bloodspine'];
-  if (!SV.items.sword) return "Amy's got something for you. Her shop is just up the street from the Clubhouse.";
-  for (var i = 0; i < 4; i++) if (SV.chal.indexOf(i) < 0) return 'A chalice still sits in ' + DUNGEONS[i].n + ': ' + dirs[i] + '.' + (!SV.items.bombs && i > 0 ? " Saba sells bombs. They open the cracked rocks." : '');
-  if (SV.chal.indexOf(4) < 0) return "You hold four. Blumhead's Lair is past the Bloodspine Pass, due north of town. Its seal will open now.";
+function hint() { var dirs = ['the Cream Marsh, out of the west gate. The bushes in the way want cutting', 'the Bone Fields, east of town. Red pegs block the way in: throw the Garlic Bread over them at the orb', 'Ejaculand, through the Goonwood north west of town. A stone eye guards the way: shoot it with the Cream Pistol', 'the Blood Factory, far up in the Bloodspine past the Bone Fields. Float over the chasms on the Steve Balloon'];
+  if (!SV.items.sword) return "Amy's got something for you. Her shop is on the same street as the Clubhouse.";
+  for (var i = 0; i < 4; i++) if (SV.chal.indexOf(i) < 0) return 'A chalice still sits in ' + DUNGEONS[i].n + ': ' + dirs[i] + '.' + (!SV.items.bombs ? " Saba sells bombs. They split the cracked rocks, and there's a lot hidden behind those." : '');
+  if (SV.chal.indexOf(4) < 0) return "You hold four. Blumhead's Lair is in the Blum Wastes, up past the blood boulders in the Bloodspine. Wear the ring and shove them aside.";
   return 'It is done. The land is yours to walk.'; }
 function shopAsk(key, name, desc, price, give) { KIT.confirm({ title: name, sub: desc, price: price, have: SV.drops, unit: 'DROPS', yes: function () { if (SV.drops < price) { sfx.play('no'); KIT.closeMenu(); return; } SV.drops -= price; give(); persist(); sfx.play('coin'); KIT.closeMenu(); }, no: KIT.closeMenu }); }
 /* A: talk to whoever you face, read a sign, buy what's on the counter, open a chest, sleep in your bed */
@@ -96,5 +96,7 @@ function interact() { if (MSGBOX || FADE) return false; var p = P, v = DIRV[p.di
   if (SCR.kind === 'in') {
     var c = SCR.chest; if (c && !SV.got['ch:' + c.id] && Math.hypot(c.x - fx, c.y - fy) < 24) { if (FOE.some(function (f) { return f.hp > 0; })) { say('Not with them about.'); return true; } SV.got['ch:' + c.id] = 1; c.give(); sfx.play('power'); persist(); return true; }
     var I = INSIDE[SCR.id] && SCR.id === 'club'; if (I) { var bi = Math.floor(fx / TS), bj = Math.floor(fy / TS); if (tAt(bi, bj) === 67) { P.hp = maxHp(); persist(); sfx.play('magic'); say('Cumhead sleeps. Every heart is back, and the day is saved.', ''); return true; } } }
-  if (SCR.kind === 'world') { var si = Math.floor(fx / TS), sj = Math.floor(fy / TS), s = WSIGNS[widx(si, sj)]; if (tAt(si, sj) === 35 && s) { sfx.play('blip'); say(s, 'SIGN'); return true; } }
+  var si = Math.floor(fx / TS), sj = Math.floor(fy / TS);
+  if (SCR.kind === 'world') { var s = WSIGNS[widx(si, sj)]; if (tAt(si, sj) === 26 && s) { sfx.play('blip'); say(s, 'SIGN'); return true; } }
+  if (SCR.kind === 'dg' && tAt(si, sj) === 76) { var ch = DG.chests.filter(function (c) { return c.i === si && c.j === sj; })[0], st = dgState(DG.di); if (ch && !st.chests[ch.room + ch.kind]) { openChest(ch); return true; } }
   return false; }

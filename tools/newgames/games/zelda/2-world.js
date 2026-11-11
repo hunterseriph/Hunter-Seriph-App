@@ -1,176 +1,219 @@
-/* =====================================================================================================
-   THE LAND, update 134 (his playtest: way too basic, you rarely get to change screen, screens look the same, the map is
-   a square, it doesn't feel like a place). One big land of 160 x 120 tiles that scrolls with Cumhead (A Link to the Past,
-   not screen by screen): a coast all round, the Bloodspine mountains with a pass, the Crimson Moors in the middle,
-   Cum City (a walled town you can walk round, every shop front a door), the Cream Marsh and its lake, the Goonwood,
-   Ejaculand, the Bone Fields and the Blum Wastes. Regions are laid from a hand-drawn map (MACRO), their edges wobble with
-   noise, roads are dug between every door and the town gates (A*: bridges over water, steps up cliffs), and each region
-   has its own ground, trees, water, clutter, landmarks, foes and music.
-   ===================================================================================================== */
+/* ---------- the land: 8 x 6 areas of 27 x 21 tiles, each walled in by its own country (forest, cliffs, reeds, thorns,
+   hedges, the city wall) and joined to its neighbours only where EDGES says, through a passage three tiles wide.
+   The shape inside each area comes from a hand-drawn block plan (TPL, one character = 3 x 3 tiles, mirrored for
+   variety), then the edges are worn ragged, things are placed (POIS), roads are laid between the passages and the
+   doors, and everything left over is dressed with trees, bushes, tall grass, rocks and flowers. ---------- */
 function srand(seed) { var s = seed >>> 0 || 1; return function () { s = (s + 0x6D2B79F5) | 0; var t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function hash2(i, j, s) { var h = Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(s, 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
-function vnoise(x, y, sc, s) { x /= sc; y /= sc; var i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); var a = hash2(i, j, s), b = hash2(i + 1, j, s), c = hash2(i, j + 1, s), d = hash2(i + 1, j + 1, s); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; }
-/* tiles: 0 ground, 1 tree, 2 rock, 3 water, 4 road, 5 bush (cut it), 6 cliff, 7 cave mouth, 8 dungeon door, 10 flowers, 11 bridge,
-   12 cracked rock (bomb it), 13 grave, 14 lamp, 15 bones, 16 candles, 17 iron fence, 19 skulls, 31 cross, 32 roses, 33 puddle,
-   34 city wall, 35 signpost, 36 sand, 38 paving, 39 building, 40 building door, 42 reeds, 44 striped post, 46 fountain,
-   47 steps, 48 standing stone, 50 goo crystal, 51 the footprint of a big thing (drawn on its own), 52 mushrooms, 53 driftwood,
-   54 shallows, 55 hedge, 56 flower box, 57 bench, 58 market stall,
-   dungeons 20 floor, 21 wall, 22 block, 23 pit, 24 open door, 25 locked, 26 boss door, 27 shutter, 28 stairs out, 29 water,
-   insides 60 boards, 61 wall, 62 counter, 63 rug, 64 table, 65 shelf, 66 barrel, 67 bed, 68 cave floor, 69 cave wall, 70 the way out,
-   71 hearth, 72 stool, 73 cabinet, 74 plant pot */
-var SOLID = {}; [1, 2, 3, 5, 6, 7, 8, 12, 13, 14, 17, 19, 31, 34, 35, 39, 40, 44, 46, 48, 50, 51, 53, 55, 57, 58, 21, 22, 25, 26, 27, 29, 61, 62, 64, 65, 66, 67, 69, 71, 73, 74].forEach(function (t) { SOLID[t] = 1; });
-var WW = 160, WHT = 120, CELL = 5;
-var MACRO = [
-  '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-  '~~~~~~..~~~~~~~^^^^^^~~~~~~~~~~~',
-  '~~~~.pppp.~~~^^^^^^^^^^^~~~~~~~~',
-  '~~~.pppppp.^^^^wwwwww^^^^^~~~~~~',
-  '~~.ppppppp^^^wwwwwwwwww^^^^^~~~~',
-  '~~.ppppppff^^wwwwwwwwww^^^^^^~~~',
-  '~~~.ppfffff^^^wwwwwwww^^^^bb^~~~',
-  '~~~.fffffffff^^^wwww^^^^^bbbb^~~',
-  '~~..ffffffffff^^^gg^^^^bbbbbbb~~',
-  '~~.mmffffffffggggggggggbbbbbbb.~',
-  '~.mmmmmfffffgggggggggggbbbbbbb.~',
-  '~.mmmmmmmffgggggggggggbbbbbbb..~',
-  '~.mmmllmmmggggggggggggggbbbbb.~~',
-  '~~.mmllllmmggggggggggggggbbbb.~~',
-  '~~.mmmllmmmgggggggggggggggbbb.~~',
-  '~~~.mmmmmmmggggggCCCCCgggggbb.~~',
-  '~~~.mmmmmmgggggggCCCCCgggggggg.~',
-  '~~~~.mmmmgggggggCCCCCCggggggg.~~',
-  '~~~~~..mmggggggCCCCCCgggggg..~~~',
-  '~~~~~~~...ggggggCCCCCggggg.~~~~~',
-  '~~~~~~~~~~.....ggCCCgg.....~~~~~',
-  '~~~~~~~~~~~~~~...........~~~~~~~',
-  '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-  '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'];
-var BKEYS = ['sea', 'shore', 'moors', 'wood', 'marsh', 'bones', 'peaks', 'park', 'wastes', 'city', 'lake'], MCH = { '~': 0, '.': 1, g: 2, f: 3, m: 4, b: 5, '^': 6, p: 7, w: 8, C: 9, l: 10 };
-var BIOME = {
-  sea: { g: '#140406', g2: '#1a080a', t: '#3a0a12', tr: '#12040a', path: '#3a2c2a', water: '#2a0810', sea: 1, foes: [] },
-  shore: { n: 'THE PALE SHORE', g: '#5e5042', g2: '#6e5e4c', t: '#3a2a1a', tr: '#1a0e08', path: '#4a3a2e', water: '#2a0810', foes: ['rat', 'slime', 'crawler'], song: 'lcover' },
-  moors: { n: 'THE CRIMSON MOORS', g: '#2c1419', g2: '#3a1c22', t: '#7a0a14', tr: '#120406', path: '#3a2c2a', water: '#5a0a10', blood: 1, foes: ['slime', 'bat', 'rat', 'crawler'], song: 'lcover' },
-  wood: { n: 'THE GOONWOOD', g: '#1c1416', g2: '#261c1e', t: '#24161e', tr: '#0a0406', path: '#2a2020', water: '#3a0a14', pine: 1, foes: ['ghoul', 'bat', 'imp', 'crawler'], song: 'moonarea' },
-  marsh: { n: 'THE CREAM MARSH', g: '#2c2219', g2: '#382c20', t: '#5a4a2a', tr: '#140e08', path: '#3e3426', water: '#d8c898', cream: 1, foes: ['creamblob', 'slimeB', 'rat', 'cultrat'], song: 'sewer' },
-  bones: { n: 'THE BONE FIELDS', g: '#3a302a', g2: '#463a32', t: '#4a3a30', tr: '#1a120e', path: '#5a4c40', water: '#120606', tar: 1, foes: ['skeleton', 'bonehound', 'mummy', 'bat'], song: 'bone' },
-  peaks: { n: 'THE BLOODSPINE', g: '#2a1e1c', g2: '#342624', t: '#3a2a24', tr: '#1a100c', path: '#3a2e2a', water: '#3a0a12', foes: ['bat', 'skeleton'], song: 'lcover' },
-  park: { n: 'EJACULAND', g: '#2a1020', g2: '#38182a', t: '#c4121c', tr: '#12040a', path: '#3a1a26', water: '#c4121c', blood: 1, foes: ['clown', 'balloon', 'ghoul', 'imp'], song: 'park' },
-  wastes: { n: 'THE BLUM WASTES', g: '#24102a', g2: '#301636', t: '#5a1a6a', tr: '#0a0206', path: '#2e1028', water: '#5a1a6a', goo: 1, foes: ['blumling', 'blumeye', 'wraith', 'knight'], song: 'castle' },
-  city: { n: 'CUM CITY', g: '#1a1012', g2: '#22161a', t: '#7a0a14', tr: '#120406', path: '#2a2024', water: '#d8c898', town: 1, foes: [], song: 'town' },
-  lake: { n: 'THE CRIMSON MOORS', g: '#2c1419', g2: '#3a1c22', t: '#7a0a14', tr: '#120406', path: '#3a2c2a', water: '#5a0a10', blood: 1, foes: [], song: 'lcover' }
+/* tiles: 0 ground, 1 wall, 2 rock, 3 water, 4 road, 5 bush, 6 tree, 9 ledge, 10 bridge, 11 flowers, 12 cracked rock, 13 grave, 14 lamp, 15 bones,
+   16 candles, 17 fence, 18 pegs up, 19 pegs down, 20 orb, 21 stone eye, 22 chasm, 23 blood boulder, 26 sign, 27 statue, 30 tall grass, 31 cross,
+   33 skulls, 40 building (solid), 41 door, 42 cave mouth, 43 standing stone, 45 bench, 46 stall, 48 stump, 49 mushrooms
+   inside: 60-75 (3b-inside.js); dungeons: 80-99 (2b-dungeon.js) */
+var SOLID = {}; [1, 2, 3, 5, 6, 9, 79, 12, 13, 14, 17, 18, 20, 21, 23, 26, 27, 31, 33, 40, 41, 42, 43, 45, 46, 48, 61, 62, 64, 65, 66, 67, 69, 71, 73, 74, 75, 76, 81, 83, 84, 85, 86, 87, 89, 90, 91, 92, 94, 96, 97].forEach(function (t) { SOLID[t] = 1; });
+var FLYSOLID = {}; [1, 6, 79, 14, 21, 26, 27, 40, 41, 42, 43, 46, 61, 69, 81, 84, 85, 86, 87, 89, 90, 91, 92, 96, 97].forEach(function (t) { FLYSOLID[t] = 1; });
+var AW = 27, AH = 21, NX = 8, NY = 6, WW = AW * NX, WHT = AH * NY;
+var BIO = ['ppfwwkkk', 'pffwkkbk', 'ffmmmkbb', 'ssmmmmbb', 'ssmCCmmb', 'asmCCmaa'];
+var BIOMES = {
+  m: { k: 'moors', n: 'THE CRIMSON MOORS', wall: 'forest', water: 'blood', road: 'dirt', tree: ['red', 'red', 'dead'], treeD: 0.02, bush: 'red', foes: ['slime', 'rat', 'crawler', 'bat'], song: 'lcover', map: '#3a1416' },
+  f: { k: 'wood', n: 'THE GOONWOOD', wall: 'woodsy', water: 'blood', road: 'dirt', tree: ['wine', 'pine', 'wine'], treeD: 0.05, bush: 'wine', foes: ['ghoul', 'bat', 'slimeB', 'crawler'], song: 'castle', map: '#2a1424' },
+  p: { k: 'park', n: 'EJACULAND', wall: 'hedge', water: 'cream', road: 'flag', tree: ['mush'], treeD: 0.02, bush: 'pink', foes: ['clown', 'balloon', 'imp'], song: 'park', map: '#3a0e2a' },
+  s: { k: 'marsh', n: 'THE CREAM MARSH', wall: 'reeds', water: 'cream', road: 'dirt', tree: ['dead'], treeD: 0.012, bush: 'olive', foes: ['creamblob', 'slime', 'rat'], song: 'sewer', map: '#3a3020' },
+  b: { k: 'bones', n: 'THE BONE FIELDS', wall: 'bonecliff', water: 'blood', road: 'dirt', tree: ['dead'], treeD: 0.012, bush: 'bone', foes: ['skeleton', 'bonehound', 'mummy', 'bat'], song: 'bone', map: '#4a3e32' },
+  k: { k: 'peaks', n: 'THE BLOODSPINE', wall: 'cliff', water: 'blood', road: 'flag', tree: ['pine'], treeD: 0.015, bush: 'wine', foes: ['imp', 'bat', 'knight'], song: 'castle', map: '#3a2e30' },
+  w: { k: 'wastes', n: 'THE BLUM WASTES', wall: 'thorns', water: 'goo', road: 'dirt', tree: ['goo'], treeD: 0.02, bush: 'goo', foes: ['blumling', 'wraith', 'cultist'], song: 'moonarea', map: '#2a1034' },
+  a: { k: 'shore', n: 'THE BLOOD COAST', wall: 'cliff', water: 'blood', road: 'dirt', tree: ['dead'], treeD: 0.006, bush: 'olive', foes: ['crawler', 'rat'], song: 'lcover', map: '#4a3624' },
+  C: { k: 'city', n: 'CUM CITY', wall: 'cwall', water: 'blood', road: 'flag', tree: ['red'], treeD: 0, bush: 'red', foes: [], song: 'town', map: '#2a2022' }
 };
-var WT = null, WB = null, SEA = null, STRUCTS = [], DOORS = {}, SPAWNS = [], WSIGNS = {}, WITEMS = [], TOWN = null, CHV = {};
+/* how the areas join: [ax, ay, bx, by, kind]. '' open, b bushes, k cracked rocks, o red pegs (an orb waits past them), e a stone eye,
+   c a chasm, h blood boulders, v a ledge you can only hop down (a to b). The gated side is b. */
+var EDGES = [
+  [2, 2, 2, 3, ''], [2, 2, 3, 2, 'b'], [3, 2, 4, 2, ''], [4, 2, 4, 3, ''], [2, 3, 3, 3, ''], [3, 3, 4, 3, ''], [4, 3, 5, 3, ''], [2, 3, 2, 4, ''], [2, 4, 2, 5, ''], [5, 3, 5, 4, ''], [5, 4, 5, 5, ''], [5, 4, 6, 4, ''], [6, 4, 6, 5, ''], [6, 5, 7, 5, ''], [5, 5, 6, 5, 'k'],
+  [2, 4, 3, 4, ''], [3, 3, 3, 4, ''], [4, 3, 4, 4, ''], [5, 5, 4, 5, ''],
+  [2, 4, 1, 4, 'b'], [1, 4, 0, 4, ''], [0, 4, 0, 3, ''], [0, 3, 1, 3, ''], [1, 4, 1, 5, ''], [0, 4, 0, 5, ''], [1, 3, 1, 4, 'b'],
+  [6, 4, 6, 3, 'o'], [6, 3, 7, 3, ''], [7, 3, 7, 4, ''], [6, 3, 6, 2, ''], [6, 2, 7, 2, ''], [7, 2, 7, 3, 'k'], [6, 2, 6, 1, ''],
+  [2, 2, 2, 1, 'e'], [1, 2, 0, 2, ''], [1, 2, 1, 1, ''], [1, 1, 2, 1, ''], [2, 1, 2, 0, ''], [1, 1, 1, 0, ''], [0, 2, 0, 1, ''], [0, 1, 0, 0, ''], [0, 0, 1, 0, ''], [1, 0, 2, 0, 'k'], [1, 2, 1, 3, 'v'],
+  [6, 1, 6, 0, 'c'], [6, 0, 5, 0, ''], [6, 0, 7, 0, ''], [5, 0, 5, 1, ''], [5, 1, 4, 1, ''], [5, 1, 5, 2, ''], [7, 0, 7, 1, ''], [5, 2, 5, 3, 'v'], [6, 1, 7, 1, 'c'],
+  [4, 1, 3, 1, 'h'], [3, 1, 3, 0, ''], [3, 0, 4, 0, ''], [3, 1, 3, 2, 'v']
+];
+/* block plans for an area's inside (7 x 5 blocks; the ring round them is the wall). # wall, ~ water, = bridge, , rough ground */
+var TPL = [
+  ['.......', '.##.##.', '.......', '.##.##.', '.......'],
+  ['.,.....', '..~~~..', '.~~~~~.', '..~~~,.', '.......'],
+  ['..#.#..', '.##.##.', '.......', '.##.##.', '..#.#..'],
+  ['....~..', '.,..~#.', '....=..', '.#..~..', '....~,.'],
+  ['.......', '.##.##.', '.#...#.', '.##.##.', '.,.....'],
+  ['.#.....', '..#..#.', '.......', '.#..#..', '.....#.'],
+  ['~~~....', '~~~..#.', '.......', '~~~..#.', '~~~..,.'],
+  ['.#.....', '.#.###.', '.......', '.###.#.', '.....#.'],
+  ['.......', '~~~=~~~', '.......', '.,.....', '.#...#.'],
+  ['.#...#.', '...#...', '.......', '...#...', '.#...#.'],
+  ['..#.#..', '.#...#.', '.......', '.#...#.', '..#.#..'],
+  ['##...##', '#.....#', '.......', '#.....#', '##...##'],
+  ['.,.#...', '...#.#.', '.......', '.#.#...', '...#.,.'],
+  ['...,...', '.#~~~#.', '..~~~..', '.#~~~#.', '.......']
+];
+/* what stands in each area */
+var POIS = {
+  '0,4': [{ k: 'dg', d: 0 }], '7,3': [{ k: 'dg', d: 1 }], '0,0': [{ k: 'dg', d: 2 }], '7,0': [{ k: 'dg', d: 3 }], '3,0': [{ k: 'dg', d: 4 }],
+  '2,2': [{ k: 'st', s: 'st_chapel', id: 'chapel' }, { k: 'graves' }], '5,3': [{ k: 'st', s: 'st_tent', id: 'tent' }], '0,3': [{ k: 'st', s: 'st_shack', id: 'shack' }], '1,1': [{ k: 'st', s: 'st_treehouse', id: 'harold' }],
+  '6,5': [{ k: 'cave', id: 'seacave' }], '5,1': [{ k: 'cave', id: 'forge' }], '4,2': [{ k: 'cave', id: 'hideout' }], '6,2': [{ k: 'cave', id: 'bats' }], '2,5': [{ k: 'cave', id: 'crack', cracked: 1 }], '7,1': [{ k: 'cave', id: 'crack2', cracked: 1 }],
+  '1,0': [{ k: 'deco', s: 'st_ferris' }], '0,1': [{ k: 'deco', s: 'st_carousel' }], '6,1': [{ k: 'deco', s: 'st_skullsign' }], '7,5': [{ k: 'deco', s: 'st_wreck' }], '2,1': [{ k: 'deco', s: 'st_bigtree' }], '5,4': [{ k: 'deco', s: 'pr_well' }], '2,3': [{ k: 'circle' }],
+  '4,3': [{ k: 'graves' }], '7,2': [{ k: 'graves' }], '6,3': [{ k: 'graves' }]
+};
+var PIECES = { '1,5': 'b', '2,0': 'b', '7,4': 'k', '5,0': 'c', '3,1': 'h', '6,4': 'o', '4,3': 'k', '0,2': 'b' };
+var GATEMSG = { b: 'Thick bushes. Something sharp would cut through them.', k: 'A cracked rock. A bomb would split it.', o: 'Red pegs block the way. There is an orb past them, out of reach.', e: 'A stone eye stares at you. It does not blink. Something from far away might make it.', c: 'A chasm. Far too wide to jump.', h: 'A blood boulder. Far too heavy for you as you are.', v: '' };
+var WT = null, WA = null, WV = null, STRUCTS = [], DOORS = {}, SPAWNS = [], WSIGNS = {}, WITEMS = [], TREES = [], GATES = [], TOWN = null, CHV = {}, AREAINFO = {};
 function widx(i, j) { return j * WW + i; }
-function macroAt(i, j) { var mx = Math.max(0, Math.min(31, Math.floor(i / CELL))), my = Math.max(0, Math.min(23, Math.floor(j / CELL))); var row = MACRO[my] || ''; return MCH[row[mx] || '~']; }
+function bioAt(i, j) { var ax = Math.max(0, Math.min(NX - 1, Math.floor(i / AW))), ay = Math.max(0, Math.min(NY - 1, Math.floor(j / AH))); return BIO[ay][ax]; }
+function walkable(t) { return !SOLID[t] && t !== 22 && t !== 3 && t >= 0; }
 function genWorld() {
-  if (WT) return; WT = new Uint8Array(WW * WHT); WB = new Uint8Array(WW * WHT); SEA = new Uint8Array(WW * WHT); STRUCTS = []; DOORS = {}; SPAWNS = []; WSIGNS = {}; WITEMS = [];
-  var i, j, q;
-  function get(i, j) { return i < 0 || j < 0 || i >= WW || j >= WHT ? 3 : WT[widx(i, j)]; }
+  if (WT) return; WT = new Uint8Array(WW * WHT); WV = new Uint8Array(WW * WHT); STRUCTS = []; DOORS = {}; SPAWNS = []; WSIGNS = {}; WITEMS = []; TREES = []; GATES = []; AREAINFO = {};
+  var rnd = srand(7331), i, j;
   function set(i, j, v) { if (i >= 0 && j >= 0 && i < WW && j < WHT) WT[widx(i, j)] = v; }
-  // 1. regions with wobbly edges
-  for (j = 0; j < WHT; j++) for (i = 0; i < WW; i++) { var jx = (vnoise(i, j, 7, 1) - 0.5) * 7 + (vnoise(i, j, 2.5, 5) - 0.5) * 2, jy = (vnoise(i, j, 7, 2) - 0.5) * 7 + (vnoise(i, j, 2.5, 6) - 0.5) * 2;
-    var b = macroAt(i + jx, j + jy); if (b === 9) b = 2; q = widx(i, j); WB[q] = b;
-    if (b === 0) { WT[q] = 3; SEA[q] = 1; } else if (b === 10) WT[q] = 3; else if (b === 6) WT[q] = 6; else WT[q] = 0; }
-  // beaches wherever land meets the sea
-  for (j = 0; j < WHT; j++) for (i = 0; i < WW; i++) { q = widx(i, j); if (SEA[q] || WB[q] === 6) continue; var near = 0; for (var dj = -2; dj <= 2; dj++) for (var di = -2; di <= 2; di++) { var a = i + di, c = j + dj; if (a < 0 || c < 0 || a >= WW || c >= WHT || SEA[widx(a, c)]) near = 1; } if (near) { WT[q] = 36; if (WB[q] !== 1) WB[q] = 1; } }
-  // 2. the river: off the Bloodspine, down through the moors, into the marsh lake
-  var RIV = [[88, 44], [84, 49], [77, 53], [70, 58], [62, 61], [54, 63], [46, 66], [38, 67]];
-  for (var s = 0; s < RIV.length - 1; s++) { var A = RIV[s], B2 = RIV[s + 1], n = Math.max(Math.abs(B2[0] - A[0]), Math.abs(B2[1] - A[1])) * 2;
-    for (var k = 0; k <= n; k++) { var t = k / n, x = A[0] + (B2[0] - A[0]) * t, y = A[1] + (B2[1] - A[1]) * t + (vnoise(x, y, 6, 9) - 0.5) * 3; for (var w = 0; w < 2; w++) for (var h = 0; h < 2; h++) { var ri = Math.round(x) + w, rj = Math.round(y) + h; if (get(ri, rj) !== 6) set(ri, rj, 3); } } }
-  // an island in the lake (a heart piece waits there for anyone with the balloon)
-  for (j = 66; j <= 67; j++) for (i = 32; i <= 33; i++) set(i, j, 0); WITEMS.push({ k: 'piece', i: 32, j: 66, id: 'isle' });
-  // 3. the land's clutter, clumped with noise so there are thickets and clearings
-  for (j = 1; j < WHT - 1; j++) for (i = 1; i < WW - 1; i++) { q = widx(i, j); if (WT[q] !== 0 && WT[q] !== 36) continue; var bk = BKEYS[WB[q]], cl = vnoise(i, j, 5, 11 + WB[q]), r = hash2(i, j, 3), r2 = hash2(i, j, 4);
-    if (bk === 'moors') { if (cl > 0.66 && r < 0.42) WT[q] = 1; else if (r < 0.05) WT[q] = 5; else if (r < 0.075) WT[q] = 32; else if (r < 0.09) WT[q] = 10; else if (r < 0.1) WT[q] = 2; else if (r < 0.106) WT[q] = 15; }
-    else if (bk === 'wood') { if (cl > 0.38 && r < 0.78) WT[q] = 1; else if (r < 0.08) WT[q] = 5; else if (r < 0.12) WT[q] = 52; else if (r < 0.14) WT[q] = 10; }
-    else if (bk === 'marsh') { if (cl > 0.64) WT[q] = r2 < 0.85 ? 3 : 42; else if (r < 0.14) WT[q] = 42; else if (r < 0.18) WT[q] = 33; else if (r < 0.22 && cl < 0.4) WT[q] = 1; else if (r < 0.24) WT[q] = 5; }
-    else if (bk === 'bones') { if (cl > 0.72) WT[q] = 3; else if (r < 0.05) WT[q] = 15; else if (r < 0.07) WT[q] = 19; else if (r < 0.1) WT[q] = 2; else if (r < 0.12 && cl < 0.3) WT[q] = 1; else if (r < 0.13) WT[q] = 13; }
-    else if (bk === 'park') { if (cl > 0.7 && r < 0.4) WT[q] = 1; else if (r < 0.03) WT[q] = 44; else if (r < 0.07) WT[q] = 32; else if (r < 0.1) WT[q] = 5; else if (r < 0.115) WT[q] = 33; }
-    else if (bk === 'wastes') { if (cl > 0.68) WT[q] = 3; else if (r < 0.05) WT[q] = 50; else if (r < 0.08) WT[q] = 19; else if (r < 0.1) WT[q] = 16; else if (r < 0.12) WT[q] = 33; }
-    else if (bk === 'shore') { if (r < 0.025) WT[q] = 53; else if (r < 0.04) WT[q] = 2; else if (r < 0.05) WT[q] = 15; } }
-  // a few graveyards and stone circles on the moors
-  [[60, 50], [110, 70], [70, 72], [48, 85]].forEach(function (c, n) { graveyard(c[0], c[1], n); });
-  function graveyard(gx, gy, n) { for (var y = gy - 1; y <= gy + 3; y++) for (var x = gx - 1; x <= gx + 6; x++) { if (get(x, y) === 3 || get(x, y) === 6) return; } for (y = gy - 1; y <= gy + 3; y++) for (x = gx - 1; x <= gx + 6; x++) set(x, y, 0);
-    for (x = gx - 1; x <= gx + 6; x++) { set(x, gy - 1, 17); if (x !== gx + 2 && x !== gx + 3) set(x, gy + 3, 17); } for (y = gy - 1; y <= gy + 3; y++) { set(gx - 1, y, 17); set(gx + 6, y, 17); }
-    for (x = gx; x <= gx + 5; x++) { set(x, gy, x % 2 ? 31 : 13); if (hash2(x, gy, n) < 0.5) set(x, gy + 1, x % 3 ? 13 : 31); } set(gx + 1, gy + 2, 16); set(gx + 4, gy + 2, 32); }
-  [[102, 52], [56, 30]].forEach(function (c) { for (var a = 0; a < 8; a++) { var x = Math.round(c[0] + Math.cos(a / 8 * 6.283) * 3.5), y = Math.round(c[1] + Math.sin(a / 8 * 6.283) * 2.5); set(x, y, 48); } for (var y = c[1] - 1; y <= c[1] + 1; y++) for (var x = c[0] - 2; x <= c[0] + 2; x++) set(x, y, 0); set(c[0], c[1], 16); });
-  // 4. Cum City
+  function get(i, j) { return i < 0 || j < 0 || i >= WW || j >= WHT ? 1 : WT[widx(i, j)]; }
+  var edgeOf = {}; EDGES.forEach(function (e) { edgeOf[e[0] + ',' + e[1] + '>' + e[2] + ',' + e[3]] = e; edgeOf[e[2] + ',' + e[3] + '>' + e[0] + ',' + e[1]] = e; });
+  function sides(ax, ay) { var o = {}; [['n', 0, -1], ['s', 0, 1], ['w', -1, 0], ['e', 1, 0]].forEach(function (d) { var e = edgeOf[ax + ',' + ay + '>' + (ax + d[1]) + ',' + (ay + d[2])]; if (e) o[d[0]] = e; }); return o; }
+  // 1. the block plans
+  var used = {};
+  for (var ay = 0; ay < NY; ay++) for (var ax = 0; ax < NX; ax++) {
+    var bio = BIO[ay][ax], x0 = ax * AW, y0 = ay * AH, info = AREAINFO[ax + ',' + ay] = { ax: ax, ay: ay, bio: bio, x0: x0, y0: y0, sides: sides(ax, ay) };
+    if (bio === 'C') continue;
+    var pick = Math.floor(hash2(ax, ay, 3) * TPL.length); for (var tries = 0; tries < TPL.length && (used[pick + ',' + (ax - 1) + ',' + ay] || used[pick + ',' + ax + ',' + (ay - 1)]); tries++) pick = (pick + 1) % TPL.length; used[pick + ',' + ax + ',' + ay] = 1;
+    var tp = TPL[pick], mx = hash2(ax, ay, 5) < 0.5, my = hash2(ax, ay, 6) < 0.5 && tp.join('').indexOf('=') < 0; info.tpl = pick;
+    for (j = 0; j < AH; j++) for (i = 0; i < AW; i++) {
+      var bx = Math.floor(i / 3), by = Math.floor(j / 3), ch = '#';
+      if (bx >= 1 && bx <= 7 && by >= 1 && by <= 5) { var r = tp[my ? 5 - by : by - 1]; ch = r[mx ? 7 - bx : bx - 1]; }
+      var v = ch === '#' ? 1 : ch === '~' ? 3 : ch === '=' ? 10 : 0; set(x0 + i, y0 + j, v); if (ch === ',') WV[widx(x0 + i, y0 + j)] = 1;
+    }
+    // the sea along the south of the land
+    if (ay === NY - 1) for (j = AH - (bio === 'a' ? 5 : 3); j < AH; j++) for (i = 0; i < AW; i++) set(x0 + i, y0 + j, 3);
+    // the passages
+    Object.keys(info.sides).forEach(function (s) { var a, b; if (s === 'n' || s === 's') { for (j = 0; j < 6; j++) for (i = 12; i <= 14; i++) { var jj = s === 'n' ? j : AH - 1 - j; if (get(x0 + i, y0 + jj) !== 3) set(x0 + i, y0 + jj, 0); } }
+      else { for (i = 0; i < 6; i++) for (j = 9; j <= 11; j++) { var ii = s === 'w' ? i : AW - 1 - i; set(x0 + ii, y0 + j, 0); } } });
+  }
+  // 2. ragged edges: wall tiles touching open ground wear away (never the outer two rows of an area, so areas stay shut)
+  for (j = 1; j < WHT - 1; j++) for (i = 1; i < WW - 1; i++) { if (get(i, j) !== 1) continue; var li = i % AW, lj = j % AH; if (li < 2 || lj < 2 || li > AW - 3 || lj > AH - 3) continue; if (BIO[Math.floor(j / AH)][Math.floor(i / AW)] === 'C') continue;
+    var open = (get(i - 1, j) === 0) + (get(i + 1, j) === 0) + (get(i, j - 1) === 0) + (get(i, j + 1) === 0); if (open && hash2(i, j, 11) < 0.22 * open) WV[widx(i, j)] = 9; }
+  for (var q = 0; q < WT.length; q++) if (WV[q] === 9) { WT[q] = 0; WV[q] = 0; }
+  // 3. Cum City
   buildTown(set, get);
-  // 5. doors and landmarks out in the land
-  function clearArea(x0, y0, w, h, keep) { for (var y = y0; y < y0 + h; y++) for (var x = x0; x < x0 + w; x++) { var t = get(x, y); if (keep && (t === 3 && SEA[widx(x, y)])) continue; set(x, y, WB[widx(x, y)] === 1 ? 36 : 0); } }
-  function struct(k, cx, cy, w, h, door, to) { var x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h); clearArea(x0 - 2, y0 - 1, w + 4, h + 4); var S = { k: k, i: x0, j: y0, w: w, h: h, to: to }; for (var y = y0; y < y0 + h; y++) for (var x = x0; x < x0 + w; x++) set(x, y, 51);
-    if (door) { var di = x0 + Math.floor(w / 2), dj = y0 + h - 1; set(di, dj, to && to.dg !== undefined ? 8 : 40); S.door = { i: di, j: dj }; DOORS[widx(di, dj)] = { to: to, back: { x: (di + 0.5) * TS, y: (dj + 1.6) * TS }, s: S }; }
-    STRUCTS.push(S); return S; }
-  DUNGEONS.forEach(function (D, di) { struct(D.look, D.wx, D.wy, D.look === 'lair' ? 7 : 5, D.look === 'lair' ? 5 : 4, 1, { dg: di }); });
-  struct('treehouse', 42, 48, 3, 3, 1, { in: 'harold' });
-  struct('shack', 13, 58, 3, 3, 1, { in: 'shack' });
-  struct('chapel', 67, 63, 4, 4, 1, { in: 'chapel' });
-  struct('tent', 22, 28, 3, 3, 1, { in: 'tent' });
-  struct('seacave', 43, 98, 3, 2, 1, { in: 'seacave' });
-  struct('ferris', 28, 18, 5, 2, 0); struct('carousel', 41, 22, 4, 3, 0); struct('steve', 43, 32, 2, 2, 0);
-  struct('ribs', 122, 67, 6, 1, 0); struct('wreck', 122, 103, 5, 2, 0); struct('bigtree', 32, 38, 2, 2, 0); struct('well', 56, 76, 2, 2, 0);
-  // caves cut into the cliffs
-  function cave(tx, ty, id, cracked) { var best = null, bd = 1e9; for (var y = ty - 10; y <= ty + 10; y++) for (var x = tx - 12; x <= tx + 12; x++) { if (get(x, y) !== 6 || get(x, y - 1) !== 6 || get(x - 1, y) !== 6 || get(x + 1, y) !== 6) continue; var b = get(x, y + 1); if (b !== 0 && b !== 36 && b !== 1 && b !== 5) continue; var d = Math.hypot(x - tx, y - ty); if (d < bd) { bd = d; best = [x, y]; } }
-    if (!best) return; set(best[0], best[1], cracked ? 12 : 7); set(best[0], best[1] + 1, 0); DOORS[widx(best[0], best[1])] = { to: { in: id }, back: { x: (best[0] + 0.5) * TS, y: (best[1] + 1.6) * TS }, cracked: cracked ? id : null, cave: 1 }; }
-  cave(72, 41, 'forge'); cave(116, 40, 'crack', 1); cave(56, 20, 'hideout'); cave(100, 44, 'bats'); cave(140, 46, 'crack2', 1);
-  // more heart pieces out in the land
-  WITEMS.push({ k: 'piece', i: 32, j: 41, id: 'grove' }, { k: 'piece', i: 147, j: 82, id: 'east' }, { k: 'piece', i: 72, j: 13, id: 'wastes' });
-  WITEMS.forEach(function (it) { if (it.id !== 'isle') { set(it.i, it.j, 0); } });
-  for (var g = 0; g < 10; g++) { var a2 = g / 10 * 6.283; set(32 + Math.round(Math.cos(a2) * 2), 41 + Math.round(Math.sin(a2) * 2), 5); } // the grove's hedge of thorn bushes
-  // 6. roads: from the town's middle to every door, sharing the way where they can
-  var goals = []; Object.keys(DOORS).forEach(function (k) { var d = DOORS[k]; if (d.town) return; goals.push([k % WW, ((k / WW) | 0) + 1]); });
-  goals.push([TOWN.x + 16, TOWN.y - 2], [TOWN.x + 16, TOWN.y + TOWN.h + 1], [TOWN.x + TOWN.w + 1, TOWN.y + 13]);
-  goals.sort(function (a, b) { return Math.hypot(a[0] - 92, a[1] - 86) - Math.hypot(b[0] - 92, b[1] - 86); });
-  goals.forEach(function (gl) { road(TOWN.x + 16, TOWN.y + 13, gl[0], gl[1]); });
-  WITEMS.forEach(function (it) { if (it.id === 'east' || it.id === 'wastes') road(TOWN.x + 16, TOWN.y + 13, it.i, it.j + 1); });
-  function cost(t, q) { if (SEA[q]) return 0; if (t === 34 || t === 39 || t === 40 || t === 51 || t === 46 || t === 7 || t === 8 || t === 12 || t === 48 || t === 17 || t === 13 || t === 31) return 0; if (t === 4 || t === 11 || t === 47 || t === 38) return 1; if (t === 3) return 16; if (t === 6) return 22; if (t === 1 || t === 2 || t === 5 || t === 50 || t === 53 || t === 44) return 5; return 3; }
-  function road(sx, sy, gx, gy) {
-    var N = WW * WHT, dist = new Float32Array(N).fill(1e9), prev = new Int32Array(N).fill(-1), heap = [], s0 = widx(sx, sy), g0 = widx(gx, gy); dist[s0] = 0; heap.push([0, s0, 0]);
-    function push(e) { heap.push(e); var c = heap.length - 1; while (c > 0) { var p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; var t = heap[p]; heap[p] = heap[c]; heap[c] = t; c = p; } }
-    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var c = 0; for (;;) { var l = c * 2 + 1, r = l + 1, m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; var t = heap[m]; heap[m] = heap[c]; heap[c] = t; c = m; } } return top; }
-    while (heap.length) { var e = pop(), u = e[1]; if (u === g0) break; if (e[2] > dist[u]) continue; var ux = u % WW, uy = (u / WW) | 0;
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var vx = ux + d[0], vy = uy + d[1]; if (vx < 1 || vy < 1 || vx >= WW - 1 || vy >= WHT - 1) return; var v = widx(vx, vy), c = v === g0 ? 1 : cost(WT[v], v); if (!c) return; var nd = dist[u] + c; if (nd < dist[v]) { dist[v] = nd; prev[v] = u; push([nd + (Math.abs(vx - gx) + Math.abs(vy - gy)) * 0.9, v, nd]); } }); }
-    if (prev[g0] < 0 && g0 !== s0) return; var cur = g0, last = -1;
-    while (cur >= 0) { var cx = cur % WW, cy = (cur / WW) | 0; pave(cx, cy); if (last >= 0) { var lx = last % WW; if (lx === cx) pave(cx + 1, cy); else pave(cx, cy + 1); } last = cur; cur = prev[cur]; } }
-  function pave(x, y) { var q = widx(x, y), t = WT[q]; if (SEA[q] || t === 34 || t === 39 || t === 40 || t === 51 || t === 46 || t === 7 || t === 8 || t === 12 || t === 38 || t === 48 || t === 17 || t === 13 || t === 31) return; WT[q] = t === 3 || t === 11 ? 11 : t === 6 || t === 47 ? 47 : 4; }
-  // 7. lamps by the roads, signposts at the town gates
-  for (j = 2; j < WHT - 2; j++) for (i = 2; i < WW - 2; i++) { q = widx(i, j); if (WT[q] !== 0 && WT[q] !== 36) continue; var bk2 = BKEYS[WB[q]]; if (bk2 === 'wastes' || bk2 === 'city') continue; var nr = get(i + 1, j) === 4 || get(i - 1, j) === 4 || get(i, j + 1) === 4 || get(i, j - 1) === 4; if (nr && hash2(i, j, 8) < 0.04) WT[q] = 14; }
-  sign(TOWN.x + 14, TOWN.y - 3, "NORTH: THE MOORS AND THE BLOODSPINE PASS. WEST: THE CREAM MARSH AND THE GOONWOOD. EAST: THE BONE FIELDS.");
-  sign(TOWN.x + 14, TOWN.y + TOWN.h + 2, 'THE PALE SHORE. DO NOT SWIM. THE SEA IS NOT WATER.');
-  sign(TOWN.x + TOWN.w + 2, TOWN.y + 11, 'EAST: THE BONE FIELDS. THE BONE PIT IS IN THE GREAT SKULL. NOBODY COMES BACK. (SOME DO.)');
-  sign(86, 47, 'THE BLOODSPINE PASS. BEYOND IT THE BLUM WASTES AND THE LAIR. TURN BACK. -- B.');
-  sign(45, 34, 'EJACULAND THIS WAY. STEVE SAYS HI.'); sign(27, 74, 'THE CREAM MARSH. DO NOT DRINK.'); sign(48, 52, "THE GOONWOOD. HAROLD'S TREE IS IN THE MIDDLE. MIND THE GHOULS.");
-  sign(126, 45, 'THE BLOOD FACTORY. NO ENTRY. (THERE IS ENTRY.)');
-  function sign(x, y, s) { for (var r = 0; r < 6; r++) for (var dy = -r; dy <= r; dy++) for (var dx = -r; dx <= r; dx++) { var t = get(x + dx, y + dy); if ((t === 0 || t === 36) && get(x + dx, y + dy + 1) !== 34) { set(x + dx, y + dy, 35); WSIGNS[widx(x + dx, y + dy)] = s; return; } } }
-  // 8. foes: spawn points out in the wild, never in town or right by its gates
-  for (j = 2; j < WHT - 2; j++) for (i = 2; i < WW - 2; i++) { q = widx(i, j); var tt = WT[q]; if (tt !== 0 && tt !== 36 && tt !== 4) continue; var B = BIOME[BKEYS[WB[q]]]; if (!B.foes || !B.foes.length) continue; if (i > TOWN.x - 6 && i < TOWN.x + TOWN.w + 6 && j > TOWN.y - 6 && j < TOWN.y + TOWN.h + 6) continue;
-    if (hash2(i, j, 21) < 0.011) SPAWNS.push({ i: i, j: j, k: B.foes[Math.floor(hash2(i, j, 22) * B.foes.length)], live: null, cd: 0 }); }
+  // 4. things in the areas
+  Object.keys(AREAINFO).forEach(function (key) { var A = AREAINFO[key]; if (A.bio === 'C') return; (POIS[key] || []).forEach(function (p) { placePoi(A, p, set, get, rnd); }); if (PIECES[key]) pocket(A, PIECES[key], set, get); });
+  // 5. the gates in the passages
+  EDGES.forEach(function (e, n) { if (e[4]) gate(e, n, set, get); });
+  // 6. roads, then dressing, then make sure every way through still works
+  Object.keys(AREAINFO).forEach(function (key) { var A = AREAINFO[key]; if (A.bio === 'C') return; roads(A, set, get); });
+  Object.keys(AREAINFO).forEach(function (key) { var A = AREAINFO[key]; if (A.bio === 'C') return; dress(A, set, get); });
+  Object.keys(AREAINFO).forEach(function (key) { var A = AREAINFO[key]; if (A.bio === 'C') return; mend(A, set, get); });
+  // 7. foes wait at spawn points
+  Object.keys(AREAINFO).forEach(function (key) { var A = AREAINFO[key], B = BIOMES[A.bio]; if (!B.foes.length) return; var r = srand(900 + A.ax * 31 + A.ay * 17), n = 0;
+    for (var t = 0; t < 40 && n < 3 + (A.ax + A.ay) % 2; t++) { var ii = A.x0 + 4 + Math.floor(r() * (AW - 8)), jj = A.y0 + 4 + Math.floor(r() * (AH - 8)); if (get(ii, jj) !== 0 && get(ii, jj) !== 30) continue; SPAWNS.push({ i: ii, j: jj, k: B.foes[Math.floor(r() * B.foes.length)], cd: 0, live: null }); n++; } });
 }
-/* Cum City: walls, gates, an avenue and a high street, the plaza with its cream fountain, and every shop front a door */
-var SHOPS = [
-  { id: 'club', fac: 'fac_club', x: 2, y: 2, w: 3, h: 6 }, { id: 'amy', fac: 'fac_amy', x: 6, y: 4, w: 3, h: 4 }, { id: 'saba', fac: 'fac_saba', x: 10, y: 4, w: 3, h: 4 },
-  { id: 'tb', fac: 'fac_tb', x: 21, y: 4, w: 3, h: 4 }, { id: 't', fac: 'fac_t', x: 25, y: 4, w: 3, h: 4 }, { id: 'bonjo', fac: 'fac_bonjo', x: 29, y: 4, w: 3, h: 4 },
-  { id: 'sanct', fac: 'fac_sanct', x: 2, y: 10, w: 3, h: 4 },
-  { id: 'greebo', fac: 'fac_greebo', x: 2, y: 19, w: 3, h: 4 }, { id: 'joff', fac: 'fac_joff', x: 6, y: 19, w: 3, h: 4 }, { id: 'cafe', fac: 'fac_cafe', x: 10, y: 19, w: 4, h: 4 },
-  { id: 'beebs', fac: 'fac_beebs', x: 21, y: 19, w: 3, h: 4 }, { id: 'arcade', fac: 'fac_arcade', x: 25, y: 19, w: 3, h: 4 }, { id: 'pulsar', fac: 'fac_pulsar', x: 29, y: 19, w: 3, h: 4 }];
-function buildTown(set, get) {
-  var X = 75, Y = 73, Wd = 34, Hd = 28; TOWN = { x: X, y: Y, w: Wd, h: Hd };
-  for (var y = -1; y <= Hd; y++) for (var x = -1; x <= Wd; x++) { var q = widx(X + x, Y + y); WB[q] = 9; if (x < 0 || y < 0 || x >= Wd || y >= Hd) { if (WT[q] !== 3) WT[q] = 0; continue; } WT[q] = 38; }
-  for (x = 0; x < Wd; x++) { set(X + x, Y, 34); set(X + x, Y + Hd - 1, 34); } for (y = 0; y < Hd; y++) { set(X, Y + y, 34); set(X + Wd - 1, Y + y, 34); }
-  for (x = 15; x <= 18; x++) { set(X + x, Y, 38); set(X + x, Y + Hd - 1, 38); } for (y = 12; y <= 14; y++) set(X + Wd - 1, Y + y, 38);
-  // the plaza: grass beds, the fountain in the middle, benches
-  for (y = 10; y <= 16; y++) for (x = 12; x <= 21; x++) { var edge = y === 10 || y === 16 || x === 12 || x === 21; if (!edge && (x < 15 || x > 18) && (y < 12 || y > 14)) set(X + x, Y + y, hash2(x, y, 3) < 0.3 ? 32 : 0); }
-  for (y = 12; y <= 14; y++) for (x = 16; x <= 17; x++) if (y !== 14) set(X + x, Y + y, 46);
-  set(X + 13, Y + 11, 57); set(X + 20, Y + 11, 57); set(X + 13, Y + 15, 57); set(X + 20, Y + 15, 57);
-  // a little park in the east, market stalls in the west
-  for (y = 10; y <= 16; y++) for (x = 25; x <= 31; x++) if (y !== 13) set(X + x, Y + y, hash2(x, y, 9) < 0.35 ? 1 : hash2(x, y, 10) < 0.3 ? 32 : 0);
-  for (x = 25; x <= 31; x++) { set(X + x, Y + 9, 55); set(X + x, Y + 17, 55); } set(X + 28, Y + 9, 38); set(X + 28, Y + 17, 38);
-  set(X + 7, Y + 11, 58); set(X + 9, Y + 11, 58); set(X + 7, Y + 15, 58); set(X + 9, Y + 15, 58);
-  // lamps down the avenue and along the high street
-  for (y = 2; y < Hd - 1; y += 4) { set(X + 14, Y + y, 14); set(X + 19, Y + y, 14); } [4, 8, 24, 28].forEach(function (x) { set(X + x, Y + 9, 14); set(X + x, Y + 17, 14); });
-  set(X + 1, Y + 1, 1); set(X + 32, Y + 1, 1); set(X + 1, Y + 26, 1); set(X + 32, Y + 26, 1); set(X + 13, Y + 1, 56); set(X + 20, Y + 1, 56);
-  // the shops
-  SHOPS.forEach(function (s) { for (var y = 0; y < s.h; y++) for (var x = 0; x < s.w; x++) set(X + s.x + x, Y + s.y + y, 39); var di = X + s.x + Math.floor(s.w / 2), dj = Y + s.y + s.h - 1; set(di, dj, 40); set(di, dj + 1, 38);
-    var S = { k: 'shop', fac: s.fac, i: X + s.x, j: Y + s.y, w: s.w, h: s.h, door: { i: di, j: dj }, to: { in: s.id } }; STRUCTS.push(S); DOORS[widx(di, dj)] = { to: { in: s.id }, back: { x: (di + 0.5) * TS, y: (dj + 1.6) * TS }, s: S, town: 1 }; });
-  TOWN.home = { x: (X + 3 + 0.5) * TS, y: (Y + 8 + 0.6) * TS };
+/* the middle of an area's floor, for roads to meet at */
+function hubOf(A, get) { var best = null, bd = 1e9; for (var j = 4; j < AH - 4; j++) for (var i = 4; i < AW - 4; i++) { var t = get(A.x0 + i, A.y0 + j); if (t !== 0 && t !== 4) continue; var d = Math.abs(i - 13) + Math.abs(j - 10); if (d < bd) { bd = d; best = [A.x0 + i, A.y0 + j]; } } return best || [A.x0 + 13, A.y0 + 10]; }
+function freeRect(get, i0, j0, w, h) { for (var j = j0; j < j0 + h; j++) for (var i = i0; i < i0 + w; i++) { var t = get(i, j); if (t !== 0 && t !== 4) return false; } return true; }
+function placePoi(A, p, set, get, rnd) {
+  var x0 = A.x0, y0 = A.y0;
+  if (p.k === 'st' || p.k === 'dg' || p.k === 'deco') { var s = p.k === 'dg' ? 'st_' + DUNGEONS[p.d].look : p.s, sz = KITSIZE(s), fw = Math.max(2, Math.ceil(sz.w / TS) - (p.k === 'deco' ? 1 : 0)), best = null, bd = 1e9;
+    for (var j = 5; j < AH - 4; j++) for (var i = 4; i < AW - 4 - fw; i++) { if (!freeRect(get, x0 + i - 1, y0 + j - 2, fw + 2, 6)) continue; var d = Math.abs(i + fw / 2 - 13.5) + Math.abs(j - 9) * 1.3; if (d < bd) { bd = d; best = [i, j]; } }
+    if (!best) { best = [13 - Math.floor(fw / 2), 10]; for (var jj = -2; jj <= 3; jj++) for (var ii = -1; ii <= fw; ii++) set(x0 + best[0] + ii, y0 + best[1] + jj, 0); }
+    var bi = x0 + best[0], bj = y0 + best[1], S = { i: bi, j: bj, w: fw, spr: s, id: p.id || ('d' + p.d), cx: (bi + fw / 2) * TS };
+    for (var a = 0; a < fw; a++) { set(bi + a, bj, 40); set(bi + a, bj - 1, 40); }
+    if (p.k !== 'deco') { var di = bi + Math.floor(fw / 2); if (fw % 2 === 0) S.cx = (di + 0.5) * TS; set(di, bj, 41); DOORS[widx(di, bj)] = { to: p.k === 'dg' ? { dg: p.d } : { in: p.id }, back: { x: (di + 0.5) * TS, y: (bj + 1.7) * TS } }; S.door = [di, bj]; if (p.k === 'dg') DUNGEONS[p.d].wx = di, DUNGEONS[p.d].wy = bj; }
+    STRUCTS.push(S); A.targets = (A.targets || []).concat([[Math.floor(S.cx / TS), bj + 1]]); return; }
+  if (p.k === 'cave') { var c = null, cd = 1e9;
+    for (var j2 = 4; j2 < AH - 4; j2++) for (var i2 = 4; i2 < AW - 4; i2++) { var I = x0 + i2, J = y0 + j2; if (get(I, J) === 1 && get(I, J - 1) === 1 && get(I, J - 2) === 1 && get(I - 1, J) === 1 && get(I + 1, J) === 1 && get(I - 1, J - 1) === 1 && get(I + 1, J - 1) === 1 && get(I, J + 1) === 0 && get(I, J + 2) === 0 && get(I - 1, J + 1) === 0 && get(I + 1, J + 1) === 0) { var d2 = Math.abs(i2 - 13) + Math.abs(j2 - 10) + hash2(I, J, 4) * 6; if (d2 < cd) { cd = d2; c = [I, J]; } } }
+    if (!c) { var h = hubOf(A, get), ci = h[0] + 3, cj = h[1] - 1; for (var dj = -3; dj <= 0; dj++) for (var dx = -2; dx <= 2; dx++) set(ci + dx, cj + dj, 1); for (dx = -2; dx <= 2; dx++) { set(ci + dx, cj + 1, 0); set(ci + dx, cj + 2, 0); } c = [ci, cj]; }
+    set(c[0], c[1], 42); DOORS[widx(c[0], c[1])] = { to: { in: p.id }, back: { x: (c[0] + 0.5) * TS, y: (c[1] + 1.7) * TS }, cracked: p.cracked ? p.id : null, cave: 1 };
+    A.targets = (A.targets || []).concat([[c[0], c[1] + 1]]); return; }
+  if (p.k === 'graves') { var h2 = hubOf(A, get), r = srand(A.ax * 7 + A.ay * 13 + 3), n = 0; for (var t = 0; t < 60 && n < 9; t++) { var gi = h2[0] - 7 + Math.floor(r() * 14), gj = h2[1] - 5 + Math.floor(r() * 10); if (gi % 2 || !freeRect(get, gi - 1, gj - 1, 3, 3)) continue; set(gi, gj, r() < 0.7 ? 13 : 31); n++; } return; }
+  if (p.k === 'circle') { var h3 = hubOf(A, get); for (var k = 0; k < 7; k++) { var an = k / 7 * 6.283, si = Math.round(h3[0] + Math.cos(an) * 4), sj = Math.round(h3[1] + Math.sin(an) * 3); if (freeRect(get, si, sj, 1, 1)) set(si, sj, 43); } return; }
 }
+function KITSIZE(n) { var s = KIT.size(n); return s.w ? s : { w: 72, h: 72 }; }
+/* a heart piece shut in a ring of whatever the area's gate is */
+function pocket(A, kind, set, get) { var r = srand(A.ax * 101 + A.ay * 7), spot = null;
+  var need = kind === 'o' || kind === 'c' ? 3 : 2;
+  for (var t = 0; t < 400 && !spot; t++) { var i = A.x0 + 5 + Math.floor(r() * (AW - 10)), j = A.y0 + 5 + Math.floor(r() * (AH - 10)); if (Math.abs(i - A.x0 - 13) < 2 || Math.abs(j - A.y0 - 10) < 2) continue; if (freeRect(get, i - need, j - need, need * 2 + 1, need * 2 + 2)) spot = [i, j]; }
+  if (!spot) { spot = [A.x0 + 7, A.y0 + 7]; for (var cj = -need; cj <= need + 1; cj++) for (var ci = -need; ci <= need; ci++) set(spot[0] + ci, spot[1] + cj, 0); } var tile = { b: 5, k: 12, h: 23, c: 22, o: 18 }[kind], id = 'p' + A.ax + A.ay, G2 = { id: id, kind: kind, tiles: [], pocket: 1 };
+  if (kind !== 'o') { for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) if (di || dj) { set(spot[0] + di, spot[1] + dj, tile); G2.tiles.push(widx(spot[0] + di, spot[1] + dj)); } if (kind !== 'c' && kind !== 'b') GATES.push(G2); }
+  if (kind === 'c') for (dj = -2; dj <= 2; dj++) for (di = -2; di <= 2; di++) if (Math.max(Math.abs(di), Math.abs(dj)) === 2) set(spot[0] + di, spot[1] + dj, 22);
+  if (kind === 'o') { var G1 = { id: id, kind: 'o', tiles: [], orb: [spot[0], spot[1]], pocket: 1 }; for (dj = -2; dj <= 2; dj++) for (di = -2; di <= 2; di++) { var ring = Math.max(Math.abs(di), Math.abs(dj)); if (ring === 2) { set(spot[0] + di, spot[1] + dj, 18); G1.tiles.push(widx(spot[0] + di, spot[1] + dj)); } else set(spot[0] + di, spot[1] + dj, 0); }
+    set(spot[0], spot[1], 20); GATES.push(G1); WITEMS.push({ i: spot[0], j: spot[1] + 1, id: id }); A.pocket = [spot[0], spot[1] + 1]; return; }
+  WITEMS.push({ i: spot[0], j: spot[1], id: id }); A.pocket = spot;
+}
+/* a gate in the passage between two areas */
+function gate(e, n, set, get) { var vert = e[0] === e[2], kind = e[4], id = 'g' + n, G0 = { id: id, kind: kind, tiles: [], e: e }, c, b, k;
+  if (vert) { c = e[0] * AW + 13; b = Math.max(e[1], e[3]) * AH; var bUp = e[3] < e[1];
+    if (kind === 'c') { for (k = b - 3; k <= b + 2; k++) for (var d = -1; d <= 1; d++) { set(c + d, k, 22); G0.tiles.push(widx(c + d, k)); } }
+    else if (kind === 'v') { for (d = -1; d <= 1; d++) set(c + d, b, 9); }
+    else { var t = { b: 5, k: 12, h: 23, o: 18, e: 21 }[kind], rows = kind === 'b' ? [b - 1, b] : [b]; rows.forEach(function (r) { for (var d2 = -1; d2 <= 1; d2++) { set(c + d2, r, t); G0.tiles.push(widx(c + d2, r)); } });
+      if (kind === 'o') { G0.orb = [c, bUp ? b - 3 : b + 2]; set(c, G0.orb[1], 20); }
+      if (kind === 'e') G0.eye = [c, b]; }
+    G0.sign = bUp ? [c - 2, b + 4] : [c - 2, b - 5]; }
+  else { var r0 = e[1] * AH + 10; b = Math.max(e[0], e[2]) * AW; var bLeft = e[2] < e[0];
+    if (kind === 'c') { for (k = b - 3; k <= b + 2; k++) for (var d3 = -1; d3 <= 1; d3++) { set(k, r0 + d3, 22); G0.tiles.push(widx(k, r0 + d3)); } }
+    else { var t2 = { b: 5, k: 12, h: 23, o: 18, e: 21 }[kind], cols = kind === 'b' ? [b - 1, b] : [b]; cols.forEach(function (cc) { for (var d4 = -1; d4 <= 1; d4++) { set(cc, r0 + d4, t2); G0.tiles.push(widx(cc, r0 + d4)); } });
+      if (kind === 'o') { G0.orb = [bLeft ? b - 3 : b + 2, r0]; set(G0.orb[0], r0, 20); } }
+    G0.sign = bLeft ? [b + 4, r0 - 2] : [b - 5, r0 - 2]; }
+  if (kind !== 'v') { GATES.push(G0); if (GATEMSG[kind]) { set(G0.sign[0], G0.sign[1], 26); WSIGNS[widx(G0.sign[0], G0.sign[1])] = GATEMSG[kind]; } } }
+/* roads: A* across the area from every passage to the middle and from the middle to every door */
+function astar(get, from, to, box, cost) { var Wd = box[2] - box[0], Hd = box[3] - box[1], N = Wd * Hd, dist = new Float32Array(N).fill(1e9), prev = new Int32Array(N).fill(-1), heap = [];
+  function id(i, j) { return (j - box[1]) * Wd + (i - box[0]); }
+  function push(f, v, g) { heap.push([f, v, g]); var k = heap.length - 1; while (k > 0) { var p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; var tmp = heap[p]; heap[p] = heap[k]; heap[k] = tmp; k = p; } }
+  function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var tmp = heap[m]; heap[m] = heap[k]; heap[k] = tmp; k = m; } } return top; }
+  var s = id(from[0], from[1]), g = id(to[0], to[1]); dist[s] = 0; push(0, s, 0);
+  while (heap.length) { var e = pop(), u = e[1]; if (e[2] > dist[u]) continue; if (u === g) break; var ui = u % Wd + box[0], uj = Math.floor(u / Wd) + box[1];
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var vi = ui + d[0], vj = uj + d[1]; if (vi < box[0] || vj < box[1] || vi >= box[2] || vj >= box[3]) return; var c = cost(get(vi, vj), vi, vj); if (c >= 1e8) return; var v = id(vi, vj), nd = dist[u] + c; if (nd < dist[v]) { dist[v] = nd; prev[v] = u; push(nd + Math.abs(vi - to[0]) + Math.abs(vj - to[1]), v, nd); } }); }
+  if (dist[g] >= 1e9) return null; var path = [], v = g; while (v >= 0) { path.push([v % Wd + box[0], Math.floor(v / Wd) + box[1]]); v = prev[v]; } return path; }
+var ROADCOST = function (t) { return t === 0 || t === 30 || t === 11 ? 1.2 : t === 4 ? 0.6 : t === 10 ? 1 : t === 5 || t === 2 || t === 6 || t === 48 || t === 49 ? 6 : t === 1 ? 40 : t === 3 ? 60 : 1e9; };
+function openings(A) { var o = []; Object.keys(A.sides).forEach(function (s) { var e = A.sides[s]; if (s === 'n') o.push([A.x0 + 13, A.y0 + 3]); if (s === 's') o.push([A.x0 + 13, A.y0 + AH - 4]); if (s === 'w') o.push([A.x0 + 3, A.y0 + 10]); if (s === 'e') o.push([A.x0 + AW - 4, A.y0 + 10]); }); return o; }
+function roads(A, set, get) { var hub = hubOf(A, get), box = [A.x0 + 1, A.y0 + 1, A.x0 + AW - 1, A.y0 + AH - 1], B = BIOMES[A.bio]; A.hub = hub;
+  openings(A).concat(A.targets || []).forEach(function (t) { var p = astar(get, t, hub, box, ROADCOST); if (!p) return;
+    p.forEach(function (c) { var tt = get(c[0], c[1]); if (tt === 3) set(c[0], c[1], 10); else if (tt !== 10 && tt !== 40 && tt !== 41 && tt !== 42) { set(c[0], c[1], 4); if (get(c[0] + 1, c[1]) === 0) set(c[0] + 1, c[1], 4); } }); });
+  // pave the passages too, up to the gates
+  Object.keys(A.sides).forEach(function (s) { for (var k = 0; k < 4; k++) for (var d = -1; d <= 1; d++) { var i = s === 'n' || s === 's' ? A.x0 + 13 + d : s === 'w' ? A.x0 + k : A.x0 + AW - 1 - k, j = s === 'w' || s === 'e' ? A.y0 + 10 + d : s === 'n' ? A.y0 + k : A.y0 + AH - 1 - k; if (get(i, j) === 0 && d === 0) set(i, j, 4); } });
+  // lamps by the roads
+  if (A.bio === 'm' || A.bio === 'p' || A.bio === 'k') for (var j = A.y0 + 3; j < A.y0 + AH - 3; j++) for (var i = A.x0 + 3; i < A.x0 + AW - 3; i++) if (get(i, j) === 0 && get(i + 1, j) === 4 && get(i - 1, j) === 0 && get(i, j - 1) === 0 && get(i, j + 1) === 0 && hash2(i, j, 21) < 0.08) set(i, j, 14);
+}
+function dress(A, set, get) { var B = BIOMES[A.bio], r = srand(A.ax * 977 + A.ay * 131);
+  for (var j = A.y0 + 2; j < A.y0 + AH - 2; j++) for (var i = A.x0 + 2; i < A.x0 + AW - 2; i++) { var q = widx(i, j), t = WT[q]; if (t !== 0) continue; var x = r(), rough = WV[q] === 1, nearRoad = get(i - 1, j) === 4 || get(i + 1, j) === 4 || get(i, j - 1) === 4 || get(i, j + 1) === 4;
+    var clear = true; for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) { var tt = get(i + di, j + dj); if (tt !== 0 && tt !== 30 && tt !== 11) clear = false; }
+    if (rough) { WV[q] = 0; if (x < 0.3) set(i, j, 30); else if (x < 0.55 && !nearRoad) set(i, j, 5); else if (x < 0.62 && !nearRoad) set(i, j, 2); else if (x < 0.72) set(i, j, 11); continue; }
+    if (clear && !nearRoad && x < B.treeD) { set(i, j, 6); TREES.push({ i: i, j: j, f: 'tr_' + B.tree[Math.floor(r() * B.tree.length)] }); continue; }
+    x = r(); if (x < 0.012) set(i, j, 30); else if (x < 0.022) set(i, j, 11); else if (x < 0.062 && clear) set(i, j, A.bio === 'b' ? 15 : A.bio === 'p' ? 49 : A.bio === 'f' ? 48 : 2); else if (x < 0.066 && A.bio === 'b') set(i, j, 33); else if (x < 0.07 && A.bio === 'w' && clear) set(i, j, 16); }
+  // clumps of bushes round the edges of the walls, like hedgerows
+  for (j = A.y0 + 3; j < A.y0 + AH - 3; j++) for (i = A.x0 + 3; i < A.x0 + AW - 3; i++) if (get(i, j) === 0 && get(i, j - 1) === 1 && hash2(i, j, 31) < 0.18) set(i, j, 5);
+}
+/* after dressing, walk the area: every passage, door and pocket must still be reachable from the middle. Anything in the way is cleared. */
+function mend(A, set, get) { var hub = A.hub || hubOf(A, get), box = [A.x0 + 1, A.y0 + 1, A.x0 + AW - 1, A.y0 + AH - 1];
+  var cost = function (t) { return walkable(t) ? 1 : t === 5 || t === 2 || t === 6 || t === 48 || t === 49 || t === 15 || t === 33 || t === 14 || t === 13 || t === 31 || t === 43 ? 20 : t === 1 ? 60 : 1e9; };
+  var targets = openings(A).concat(A.targets || []); if (A.pocket) targets.push([A.pocket[0], A.pocket[1] + 3]);
+  targets.forEach(function (t) { var p = astar(get, t, hub, box, cost); if (!p) return; p.forEach(function (c) { var tt = get(c[0], c[1]); if (!walkable(tt) && tt !== 41 && tt !== 42 && tt !== 40) { if (tt === 6) TREES = TREES.filter(function (o) { return o.i !== c[0] || o.j !== c[1]; }); set(c[0], c[1], 0); } }); }); }
+/* ---------- Cum City: 2 x 2 areas inside its own wall, with every shop front on its streets ---------- */
+var SHOPS = [['club', 'fac_club'], ['amy', 'fac_amy'], ['saba', 'fac_saba'], ['beebs', 'fac_beebs'], ['cafe', 'fac_cafe'], ['tb', 'fac_tb'], ['greebo', 'fac_greebo'], ['t', 'fac_t'], ['bonjo', 'fac_bonjo'], ['joff', 'fac_joff'], ['arcade', 'fac_arcade'], ['pulsar', 'fac_pulsar'], ['sanct', 'fac_sanct']];
+function buildTown(set, get) { var X = 3 * AW, Y = 4 * AH, w = 2 * AW, h = 2 * AH, i, j; TOWN = { x: X, y: Y, w: w, h: h };
+  for (j = 0; j < h; j++) for (i = 0; i < w; i++) set(X + i, Y + j, i < 3 || j < 3 || i >= w - 3 || j >= h - 3 ? 1 : 0);
+  function road(i0, j0, i1, j1) { for (var jj = j0; jj <= j1; jj++) for (var ii = i0; ii <= i1; ii++) set(X + ii, Y + jj, 4); }
+  road(0, 9, w - 4, 11); road(3, 30, w - 1, 32); road(12, 0, 14, h - 4); road(39, 0, 41, h - 4); road(18, 15, 35, 26);
+  // the fountain in the plaza
+  STRUCTS.push({ i: X + 25, j: Y + 21, w: 3, spr: 'pr_fountain', id: 'fountain', cx: (X + 26.5) * TS }); for (i = 24; i <= 29; i++) for (j = 19; j <= 21; j++) set(X + i, Y + j, 40);
+  // shop fronts along the north side of both streets, doors on the street
+  var segs = [[8, 3, 11], [8, 15, 38], [8, 42, 50], [29, 3, 11], [29, 15, 38], [29, 42, 50]], order = SHOPS.slice(), si = 0;
+  segs.forEach(function (sg) { var c = sg[1]; while (si < order.length) { var sp = order[si][1], fw = Math.ceil(KITSIZE(sp).w / TS); if (c + fw - 1 > sg[2]) break; placeShop(order[si][0], sp, X + c, Y + sg[0], fw); c += fw + 1; si++; } });
+  // houses fill the blocks behind and below
+  var hs = [[17, 3, 11], [23, 3, 11], [17, 42, 50], [23, 42, 50], [38, 3, 11], [38, 15, 38], [38, 42, 50]], hk = 0;
+  hs.forEach(function (sg) { for (var c = sg[1]; c + 2 <= sg[2]; c += 4) { var j0 = Y + sg[0]; if (!freeRect(get, X + c, j0 - 1, 3, 2)) continue; for (var a = 0; a < 3; a++) { set(X + c + a, j0, 40); set(X + c + a, j0 - 1, 40); } STRUCTS.push({ i: X + c, j: j0, w: 3, spr: 'st_house' + (hk++ % 2), id: 'house', cx: (X + c + 1.5) * TS }); } });
+  // lamps, benches, stalls, trees in the plaza
+  for (i = 4; i < w - 4; i += 6) { if (get(X + i, Y + 12) === 0) set(X + i, Y + 12, 14); if (get(X + i, Y + 33) === 0) set(X + i, Y + 33, 14); }
+  [[19, 16], [34, 16], [19, 25], [34, 25]].forEach(function (p) { set(X + p[0], Y + p[1], 14); });
+  [[22, 24], [30, 24]].forEach(function (p) { set(X + p[0], Y + p[1], 45); set(X + p[0] + 1, Y + p[1], 45); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_bench', id: 'bench', cx: (X + p[0] + 1) * TS }); });
+  [[20, 18], [32, 18]].forEach(function (p) { for (var a = 0; a < 2; a++) set(X + p[0] + a, Y + p[1], 46); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_stall', id: 'stall', cx: (X + p[0] + 1) * TS }); });
+  [[5, 18], [8, 22], [46, 18], [48, 23], [6, 35], [45, 35]].forEach(function (p) { if (get(X + p[0], Y + p[1]) === 0) { set(X + p[0], Y + p[1], 6); TREES.push({ i: X + p[0], j: Y + p[1], f: 'tr_red' }); } });
+  // the gates through the city wall
+  function gap(i0, j0, i1, j1) { for (var jj = j0; jj <= j1; jj++) for (var ii = i0; ii <= i1; ii++) set(X + ii, Y + jj, 4); }
+  gap(0, 9, 2, 11); gap(12, 0, 14, 2); gap(39, 0, 41, 2); gap(w - 3, 30, w - 1, 32);
+  TOWN.home = TOWN.home || { x: (X + 20) * TS, y: (Y + 10) * TS };
+}
+function placeShop(id, spr, i0, j, fw) { for (var a = 0; a < fw; a++) { WT[widx(i0 + a, j)] = 40; WT[widx(i0 + a, j - 1)] = 40; } var di = i0 + Math.floor(fw / 2); WT[widx(di, j)] = 41;
+  DOORS[widx(di, j)] = { to: { in: id }, back: { x: (di + 0.5) * TS, y: (j + 1.7) * TS }, town: 1 }; STRUCTS.push({ i: i0, j: j, w: fw, spr: spr, id: id, cx: (di + 0.5) * TS, door: [di, j], shop: 1 });
+  if (id === 'club') TOWN.home = { x: (di + 0.5) * TS, y: (j + 1.7) * TS }; }

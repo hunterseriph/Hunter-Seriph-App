@@ -1,16 +1,20 @@
 /* =====================================================================================================
-   THE LEGEND OF CUMHEAD: a top-down Zelda on The Grinding of Cumhead's engine art. Blumhead has hidden the five
-   Cum Chalices in five dungeons round the land outside Cum City. Walk the land (one big scrolling place since update
-   134), go into every shop and cave, cut bushes, bomb cracked rocks for secrets, and clear the dungeons one by one:
-   each holds a new item and a chalice. The Lair's seal opens when you hold the other four.
+   THE LEGEND OF CUMHEAD: a top-down Zelda. Blumhead has hidden the five Cum Chalices in five dungeons round Cum City.
+   Update 135 (his playtest: too basic, samey, an open field, dungeons still flicked screen to screen, art clashing):
+   the land is 48 walled areas laid out by hand (2-world.js) joined by passages, and the way on is shut by things only a
+   dungeon's item opens: bushes (the Sausage), cracked rocks (bombs), red pegs (hit the orb past them with the Garlic
+   Bread), stone eyes (the Cream Pistol), chasms (float over on the Steve Balloon) and blood boulders (the Bloodmoon
+   Ring). Ledges you can hop down make the shortcuts home. Dungeons are one scrolling map of rooms (2b-dungeon.js) with
+   keys, a gate that needs that dungeon's item, the Boss Key behind it and the boss. Every tile, prop and building is a
+   sprite from tiles.py, drawn at the game's own pixel size.
    ===================================================================================================== */
 var W = 480, H = 270, TS = 24, COLS = 20, ROWS = 10, OY = 30;
 var DUNGEONS = [
-  { n: 'THE CREAM SEWERS', look: 'sewer', wx: 24, wy: 78, boss: 'kraken', item: 'bread', floor: '#3a3428', wall: '#5a4a32', water: 1, foes: ['creamblob', 'slime', 'rat', 'cultrat', 'bat'], song: 'sewer', rooms: 10 },
-  { n: 'THE BONE PIT', look: 'skull', wx: 132, wy: 58, boss: 'boner', item: 'pistol', floor: '#4a4234', wall: '#7a6a52', foes: ['skeleton', 'bonehound', 'mummy', 'bat', 'ghoul'], song: 'bone', rooms: 11 },
-  { n: 'THE EJACULAND FUNHOUSE', look: 'funhouse', wx: 33, wy: 25, boss: 'pig', item: 'balloon', floor: '#3a1a2a', wall: '#6a2a3a', foes: ['clown', 'balloon', 'imp', 'ghoul', 'knight'], song: 'park', rooms: 12 },
-  { n: 'THE BLOOD FACTORY', look: 'factory', wx: 131, wy: 35, boss: 'execu', item: 'ring', floor: '#2a1210', wall: '#5a2218', pits: 1, foes: ['magmaslug', 'knight', 'imp', 'mummy', 'wraith'], song: 'furnace', rooms: 12 },
-  { n: "BLUMHEAD'S LAIR", look: 'lair', wx: 88, wy: 23, boss: 'blum', item: null, floor: '#200410', wall: '#5a1a3a', pits: 1, foes: ['blumling', 'blumeye', 'wraith', 'knight', 'cultist'], song: 'lair', rooms: 13, seal: 4 }
+  { n: 'THE CREAM SEWERS', look: 'sewer', boss: 'kraken', item: 'bread', gate: 'pegs', foes: ['creamblob', 'slime', 'rat', 'cultrat', 'bat'], song: 'sewer', rooms: 11 },
+  { n: 'THE BONE PIT', look: 'skull', boss: 'boner', item: 'pistol', gate: 'eye', foes: ['skeleton', 'bonehound', 'mummy', 'bat', 'ghoul'], song: 'bone', rooms: 12 },
+  { n: 'THE EJACULAND FUNHOUSE', look: 'funhouse', boss: 'pig', item: 'balloon', gate: 'pit', foes: ['clown', 'balloon', 'imp', 'ghoul', 'knight'], song: 'park', rooms: 13 },
+  { n: 'THE BLOOD FACTORY', look: 'factory', boss: 'execu', item: 'ring', gate: 'heavy', foes: ['magmaslug', 'knight', 'imp', 'mummy', 'wraith'], song: 'furnace', rooms: 13 },
+  { n: "BLUMHEAD'S LAIR", look: 'lair', boss: 'blum', item: null, gate: 'pit', gate2: 'heavy', foes: ['blumling', 'blumeye', 'wraith', 'knight', 'cultist'], song: 'lair', rooms: 15, seal: 4 }
 ];
 var FOES = {
   slime: { s: 'f_slime_', hp: 2, spd: 40, ai: 'hop', dmg: 1 }, slimeB: { s: 'f_slimeB_', hp: 3, spd: 45, ai: 'hop', dmg: 1 }, creamblob: { s: 'f_creamblob_', hp: 3, spd: 45, ai: 'hop', dmg: 1 },
@@ -22,25 +26,17 @@ var FOES = {
   blumeye: { s: 'f_blumeye_', hp: 5, spd: 30, ai: 'shoot', dmg: 2, nf: 3 }, cultist: { s: 'f_cultist_', hp: 5, spd: 30, ai: 'shoot', dmg: 2 }
 };
 var BOSSES = {
-  kraken: { n: 'THE CREAM KRAKEN', s: 'f_kraken_', hp: 22, moves: ['ring', 'aim', 'dive'], song: 'bsperm', sc: 0.8 },
-  boner: { n: 'THE BIG BONER', s: 'f_boner_', hp: 28, moves: ['spears', 'aim', 'charge'], song: 'bboner', sc: 0.75 },
-  pig: { n: 'BROTHERS LOAD PIGGY', s: 'f_pig_', hp: 32, moves: ['charge', 'coins', 'charge'], song: 'bpig', sc: 0.7 },
-  execu: { n: 'THE BLUM EXECUTIONER', s: 'f_execu_', hp: 36, moves: ['charge', 'ring', 'spears'], song: 'bbeast', sc: 0.7 },
-  blum: { n: 'BLUMHEAD', s: 'f_blum_', hp: 48, moves: ['ring', 'aim', 'charge', 'spears', 'summon'], song: 'blum', sc: 0.75 }
+  kraken: { n: 'THE CREAM KRAKEN', s: 'f_kraken_', hp: 22, moves: ['ring', 'aim', 'dive'], song: 'bsperm', r: 34 },
+  boner: { n: 'THE BIG BONER', s: 'f_boner_', hp: 28, moves: ['spears', 'aim', 'charge'], song: 'bboner', r: 26 },
+  pig: { n: 'BROTHERS LOAD PIGGY', s: 'f_pig_', hp: 32, moves: ['charge', 'coins', 'charge'], song: 'bpig', r: 26 },
+  execu: { n: 'THE BLUM EXECUTIONER', s: 'f_execu_', hp: 36, moves: ['charge', 'ring', 'spears'], song: 'bbeast', r: 26 },
+  blum: { n: 'BLUMHEAD', s: 'f_blum_', hp: 48, moves: ['ring', 'aim', 'charge', 'spears', 'summon'], song: 'blum', r: 26 }
 };
 var ITEMS = {
-  sword: { n: "Amy's Sausage", d: 'Swing it with A.', icon: 'lc_sausage' },
-  bombs: { n: 'Bombs', d: 'Blow open cracked rocks and walls.', icon: 'gr_bomb' },
-  bread: { n: "Ali's Garlic Bread", d: 'Throw it and it comes back. Stuns, and grabs drops.', icon: 'it_bread' },
-  pistol: { n: 'Cream Pistol', d: 'Shoots cream. Each shot costs a drop.', icon: 'it_cup' },
-  balloon: { n: 'Steve Balloon', d: 'Float over pits and water for a moment.', icon: 'it_balloon' },
-  ring: { n: 'Bloodmoon Ring', d: 'You take half damage.', icon: 'it_moon' }
-};
-var NPCSAY = {
-  amy: "It's dangerous to go alone! Take this. Mild, hot or dynamite?",
-  saba: "Hitless runs only. Take a look, my friend.",
-  harold: "Potions? Tea? Same thing, really. Sit, sit!",
-  greebo: "Fresh cream pies. Don't ask what's in them.",
-  spermaid: "Sweetie! Even down here I keep a little stall.",
-  tb: "suck your own and fuck your own"
+  sword: { n: "Amy's Sausage", d: 'Swing it with A. It cuts bushes and tall grass.', icon: 'lc_sausage' },
+  bombs: { n: 'Bombs', d: 'Blow open cracked rocks and cracked walls.', icon: 'gr_bomb' },
+  bread: { n: "Ali's Garlic Bread", d: 'Throw it and it comes back. It flies over the red pegs and knocks the orb behind them, stuns foes and fetches drops.', icon: 'it_bread' },
+  pistol: { n: 'Cream Pistol', d: 'Shoots cream a long way. Stone eyes open when you hit them. A drop a shot.', icon: 'it_cup' },
+  balloon: { n: 'Steve Balloon', d: 'Float over chasms, pits and water for a moment.', icon: 'it_balloon' },
+  ring: { n: 'Bloodmoon Ring', d: 'Half damage, and the strength to shove blood boulders and heavy blocks to bits (walk into them).', icon: 'it_moon' }
 };
