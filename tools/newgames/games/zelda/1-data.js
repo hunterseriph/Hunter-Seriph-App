@@ -1,22 +1,16 @@
 /* =====================================================================================================
    THE LEGEND OF CUMHEAD: a top-down Zelda on The Grinding of Cumhead's engine art. Blumhead has hidden the five
-   Cum Chalices in five dungeons round the land outside Cum City. Walk the overworld screen by screen, cut bushes,
-   bomb cracked rocks for secrets, buy things off Saba, and clear the dungeons one by one: each holds a new item and a
-   chalice. The Lair's seal opens when you hold the other four.
+   Cum Chalices in five dungeons round the land outside Cum City. Walk the land (one big scrolling place since update
+   134), go into every shop and cave, cut bushes, bomb cracked rocks for secrets, and clear the dungeons one by one:
+   each holds a new item and a chalice. The Lair's seal opens when you hold the other four.
    ===================================================================================================== */
-var W = 480, H = 270, TS = 24, COLS = 20, ROWS = 10, OY = 30, MAPW = 6, MAPH = 5;
-var BIOME = { fields: { g: '#2a4a1e', g2: '#335a24', t: '#1a3412', tr: '#0e2008', path: '#8a6a3a', water: '#1a4a6a', foes: ['slime', 'bat', 'rat', 'crawler'] },
-  swamp: { g: '#2a3a24', g2: '#34442c', t: '#1a2a18', tr: '#0e1a0e', path: '#6a5a3a', water: '#c8b880', cream: 1, foes: ['creamblob', 'slimeB', 'rat', 'cultrat'] },
-  bones: { g: '#8a7a5a', g2: '#9a8a66', t: '#5a4a32', tr: '#3a2a1a', path: '#a8946a', water: '#4a2a1a', foes: ['skeleton', 'bonehound', 'mummy', 'bat'] },
-  park: { g: '#3a1a2a', g2: '#4a2034', t: '#1a0a12', tr: '#0e040a', path: '#5a2a3a', water: '#c4121c', foes: ['clown', 'balloon', 'ghoul', 'imp'] },
-  lair: { g: '#2a0a1a', g2: '#341024', t: '#14040e', tr: '#0a0206', path: '#4a1a2a', water: '#5a1a6a', foes: ['blumling', 'blumeye', 'wraith', 'knight'] } };
-function biomeAt(sx, sy) { if (sy <= 1) return sx <= 1 ? 'park' : sx >= 4 ? 'park' : 'lair'; if (sx <= 1) return 'swamp'; if (sx >= 4) return 'bones'; return 'fields'; }
+var W = 480, H = 270, TS = 24, COLS = 20, ROWS = 10, OY = 30;
 var DUNGEONS = [
-  { n: 'THE CREAM SEWERS', at: [0, 3], boss: 'kraken', item: 'bread', floor: '#3a3428', wall: '#5a4a32', water: 1, foes: ['creamblob', 'slime', 'rat', 'cultrat', 'bat'], song: 'sewer', rooms: 10 },
-  { n: 'THE BONE PIT', at: [5, 3], boss: 'boner', item: 'pistol', floor: '#4a4234', wall: '#7a6a52', foes: ['skeleton', 'bonehound', 'mummy', 'bat', 'ghoul'], song: 'bone', rooms: 11 },
-  { n: 'THE EJACULAND FUNHOUSE', at: [1, 0], boss: 'pig', item: 'balloon', floor: '#3a1a2a', wall: '#6a2a3a', foes: ['clown', 'balloon', 'imp', 'ghoul', 'knight'], song: 'park', rooms: 12 },
-  { n: 'THE BLOOD FACTORY', at: [4, 0], boss: 'execu', item: 'ring', floor: '#2a1210', wall: '#5a2218', pits: 1, foes: ['magmaslug', 'knight', 'imp', 'mummy', 'wraith'], song: 'furnace', rooms: 12 },
-  { n: "BLUMHEAD'S LAIR", at: [3, 0], boss: 'blum', item: null, floor: '#200410', wall: '#5a1a3a', pits: 1, foes: ['blumling', 'blumeye', 'wraith', 'knight', 'cultist'], song: 'lair', rooms: 13, seal: 4 }
+  { n: 'THE CREAM SEWERS', look: 'sewer', wx: 24, wy: 78, boss: 'kraken', item: 'bread', floor: '#3a3428', wall: '#5a4a32', water: 1, foes: ['creamblob', 'slime', 'rat', 'cultrat', 'bat'], song: 'sewer', rooms: 10 },
+  { n: 'THE BONE PIT', look: 'skull', wx: 132, wy: 58, boss: 'boner', item: 'pistol', floor: '#4a4234', wall: '#7a6a52', foes: ['skeleton', 'bonehound', 'mummy', 'bat', 'ghoul'], song: 'bone', rooms: 11 },
+  { n: 'THE EJACULAND FUNHOUSE', look: 'funhouse', wx: 33, wy: 25, boss: 'pig', item: 'balloon', floor: '#3a1a2a', wall: '#6a2a3a', foes: ['clown', 'balloon', 'imp', 'ghoul', 'knight'], song: 'park', rooms: 12 },
+  { n: 'THE BLOOD FACTORY', look: 'factory', wx: 131, wy: 35, boss: 'execu', item: 'ring', floor: '#2a1210', wall: '#5a2218', pits: 1, foes: ['magmaslug', 'knight', 'imp', 'mummy', 'wraith'], song: 'furnace', rooms: 12 },
+  { n: "BLUMHEAD'S LAIR", look: 'lair', wx: 88, wy: 23, boss: 'blum', item: null, floor: '#200410', wall: '#5a1a3a', pits: 1, foes: ['blumling', 'blumeye', 'wraith', 'knight', 'cultist'], song: 'lair', rooms: 13, seal: 4 }
 ];
 var FOES = {
   slime: { s: 'f_slime_', hp: 2, spd: 40, ai: 'hop', dmg: 1 }, slimeB: { s: 'f_slimeB_', hp: 3, spd: 45, ai: 'hop', dmg: 1 }, creamblob: { s: 'f_creamblob_', hp: 3, spd: 45, ai: 'hop', dmg: 1 },
