@@ -99,7 +99,13 @@ function drawPlayer() { var p = P, d = p.dir === 'l' || p.dir === 'r' ? 's' : p.
   var blink = (p.inv > 0 && Math.floor(G.t * 20) % 2) || (G.pillInv > 0 && Math.floor(G.t * 10) % 2);
   if (!blink) KIT.spr(fr2, p.x, p.y + 12 - (p.hover > 0 ? 6 : 0) - z, { flip: flip });
   if (SV.items.condom && !blink) KIT.condom && KIT.condom(p.x, p.y + 12 - z, 26, 38, G.t);
-  if (p.atk > 0) { var v = DIRV[p.dir], k2 = 1 - p.atk / 0.24; KIT.spr('lc_sausage', p.x + v[0] * 12, p.y + v[1] * 10 - 4, { anchor: 'c', rot: Math.atan2(v[1], v[0]) + (k2 - 0.5) * 1.8 }); } }
+  if (p.atk > 0) drawSwing(p, z); }
+/* the Sausage swings in an arc from the hand, like Link's sword: it starts out to one side, sweeps through the front and
+   ends on the other side, with a pale swoosh behind it (the old version spun on its own middle: he said it looked wrong) */
+function drawSwing(p, z) { var g = KIT.ctx, v = DIRV[p.dir], k = 1 - p.atk / 0.24, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, base = Math.atan2(v[1], v[0]), side = p.dir === 'l' || p.dir === 'd' ? -1 : 1,
+    a0 = base - side * 1.4, a = a0 + side * 2.8 * e, hx = p.x + v[0] * 3, hy = p.y - 4 - (z || 0) + v[1] * 3;
+  g.save(); g.lineCap = 'round'; for (var n = 0; n < 6; n++) { var t = Math.max(0, e - n * 0.07), aa = a0 + side * 2.8 * t; g.strokeStyle = 'rgba(255,240,220,' + (0.32 - n * 0.05) * (1 - k * 0.6) + ')'; g.lineWidth = 5 - n * 0.6; g.beginPath(); g.arc(hx, hy, 19, Math.min(aa, a), Math.max(aa, a)); g.stroke(); }
+  g.translate(hx, hy); g.rotate(a); KIT.spr('lc_sausage', 3, -4.5, { anchor: 'tl' }); g.restore(); }
 function drawNpc(n) { shadow(n.x, n.y + 1, 9); KIT.spr(n.spr, n.x, n.y + 2, { flip: !!n.face }); }
 function drawPiece(x, y) { var b = Math.round(Math.sin(G.t * 3) * 2); shadow(x, y + 8, 6); KIT.spr('gr_heart', x, y + b, { anchor: 'c' }); if (Math.floor(G.t * 3) % 2) R('#ffe36a', x - 1, y - 8 + b, 2, 2); }
 function drawPick(k) { var x = k.x, y = Math.round(k.y + Math.sin(G.t * 4 + x) * 1.5); if (k.t !== undefined && k.t < 2 && Math.floor(G.t * 10) % 2) return;
