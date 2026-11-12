@@ -1026,7 +1026,7 @@ var BACKS = {
     },
     floor: function (s, r) {
       R('#5a2a30', 0, 0, SEG, 3); R('#2a0c10', 0, 3, SEG, 1); // the kerb at the back
-      floorRows(function (y, h, i) { if (y < 4) return; var bw = 14 + i * 2; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, i % 3 ? '#341216' : '#2e1014', '#3a161a', '#12040a', bw); });
+      floorRows(function (y, h, i) { if (y < 4) { if (y + h > 4) R('#12040a', 0, 4, SEG, y + h - 4); return; } var bw = 14 + i * 2; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, i % 3 ? '#341216' : '#2e1014', '#3a161a', '#12040a', bw); });
       if (r() < 0.5) R('#1a0608', 20 + r() * 80, 30 + r() * 30, 18, 4); // a puddle of something
     },
     front: function (s, r) { return r() < 0.3 ? [{ k: 'post', x: s * SEG + r() * SEG }] : []; }
@@ -1041,7 +1041,7 @@ var BACKS = {
       else { R('#5a4a36', 50, 14, 28, 12); R('#3a3024', 54, 26, 20, 4); R('#f1e0b0', 58, 30, 12, 48); R('#fffbe8', 60, 30, 3, 48); } // a pipe pouring cream
       R('#f1e0b0', 0, 70, SEG, 8); R('#fffbe8', 0, 70, SEG, 1); R('#b8a070', 0, 76, SEG, 2); }, // the cream river
     wallH: 78,
-    floor: function (s, r) { R('#4a4034', 0, 0, SEG, 3); floorRows(function (y, h, i) { if (y < 3) return; var bw = 20 + i * 3; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, '#3a3226', '#342c22', '#14100c', bw); });
+    floor: function (s, r) { R('#4a4034', 0, 0, SEG, 3); floorRows(function (y, h, i) { if (y < 3) { if (y + h > 3) R('#0e0a08', 0, 3, SEG, y + h - 3); return; } var bw = 20 + i * 3; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, '#3a3226', '#342c22', '#14100c', bw); });
       if (r() < 0.5) { var px = r() * 90; R('#f1e0b0', px, 24, 26, 3); R('#fffbe8', px + 3, 24, 8, 1); } },
     live: function () { var t = G.t; for (var x = -((G.cam + t * 40) % 24); x < KIT.W; x += 24) R('#fffbe8', x, FLOOR - 7, 6, 1); }, // the river flows
     front: function (s, r) { return r() < 0.35 ? [{ k: 'pipe', x: s * SEG + r() * SEG }] : []; }
@@ -1111,6 +1111,7 @@ function drawBack() {
   [B.far, B.mid].forEach(function (L, i) { if (L) parLayer(G.S.back + (i ? 'mid' : 'far'), L[0], L[1], L[2], L[3], L[4]); });
   if (!KIT.sheetReady) { R('#070405', 0, 0, KIT.W, KIT.H); return; } // painted once into the cache, so wait for the art
   var wh = B.wallH || 60; segs('w_' + G.S.back + '_', wh, FLOOR - wh, function (s, r) { B.wall(s, r); });
+  R(B.seam || '#12040a', 0, FLOOR - 1, W, KIT.H - FLOOR + 1); // a solid foot under the wall: nothing behind ever shows between the wall and the floor (he saw a gap)
   // props that stand on the back of the street (shop fronts, lamps, Steve, torches): drawn whole, from the world
   if (B.props) { var s0 = Math.floor(G.cam / SEG) - 2, s1 = Math.floor((G.cam + W) / SEG) + 2; for (var s = s0; s <= s1; s++) B.props(s, srand(s * 77 + 3)).forEach(function (p) { var x = p.x - G.cam;
     if (p.spr) KIT.spr(p.spr, x, FLOOR + 1, { sc: p.sc || 1 });
@@ -1244,7 +1245,9 @@ function shoot(owner, s, o) {
   if (b.ground) b.h = 0; G.shots.push(b); return b;
 }
 function stepShots(dt) {
-  G.shots = G.shots.filter(function (b) {
+  G.shots = G.shots.filter(function (b) { var keep = stepShot(b, dt); if (!keep && b.drop) landThrown(b); return keep; }); // a thrown weapon lands where it ends
+}
+function stepShot(b, dt) { return (function (b) {
     b.t += dt; b.x += b.vx * dt; b.z += b.vz * dt; if (b.grav) { b.vh -= b.grav * dt; b.h += b.vh * dt; }
     if (b.boomer && b.t > 0.45 && !b.back) { b.back = 1; b.vx = -b.vx; b.hit = {}; }
     if (b.boomer && b.back && b.owner && Math.abs(b.x - b.owner.x) < 14 && Math.abs(b.z - b.owner.z) < 12) return false;
@@ -1265,7 +1268,7 @@ function stepShots(dt) {
       } }
     if (b.t > b.life || b.x < G.cam - 80 || b.x > G.cam + KIT.W + 80) { if (b.boom || b.puddle) return burst(b); return false; }
     return true;
-  });
+  })(b);
 }
 function burst(b) {
   if (b.boom) { G.fx.push({ k: 'ring', x: b.x, z: b.z, t: 0, life: 0.3, r: b.boom, col: b.fuse ? '#ffe36a' : '#fffbe8' }); if (b.splat) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.4, sc: 1.6 }); sfx.play(b.fuse ? 'boom' : 'splat'); KIT.shake(b.fuse ? 6 : 3);
@@ -1371,6 +1374,7 @@ function stepPlayer(dt) {
     if (mx && !e.weapon) { var g = grabbable(e); if (g) { e.grabTry = (e.grabTry || 0) + dt; if (e.grabTry > 0.14) return grabStart(e, g); } else e.grabTry = 0; } else e.grabTry = 0;
   } else { if (mx) { e.vx += mx * 300 * dt; e.vx = clamp(e.vx, -H.run, H.run); } }
   var A = KIT.pressed('a') || (G.bot && G.botA), B = KIT.pressed('b') || (G.bot && G.botB), X = KIT.pressed('x') || (G.bot && G.botX), Y = KIT.pressed('y') || (G.bot && G.botY);
+  if (KIT.pressed('rb') && e.weapon && !air) return throwWeapon(e);
   if (Y && e.meter >= 100 && !air) return startSuper(e);
   if (B && !air) { e.vh = H.jump; e.h = 0.5; e.st = 'jump'; e.airDone = false; sfx.play('jump'); dust(e.x, e.z, 2); if (!mx) e.vx = 0; return; }
   if (X && e.spCd <= 0) { var k = motion(e, [2, 3, 6], 0.4) ? 'fireEX' : motion(e, [6, 2, 3], 0.4) ? 'riseEX' : dn === 8 || dn === 7 || dn === 9 ? 'rise' : dn === 6 ? 'dash' : dn === 2 || dn === 1 || dn === 3 ? 'ground' : 'fire';
@@ -1414,11 +1418,18 @@ function doSpecial(e, k) { var m = e.spm[k]; if (!m) return; e.running = false; 
 function breakaway(e) { e.hp -= 10; e.st = 'idle'; e.inv = 0.6; G.fx.push({ k: 'ring', x: e.x, z: e.z, t: 0, life: 0.3, r: 46, col: '#ffffff' }); sfx.play('heavy'); KIT.shake(4); hitArea(e.x, e.z, 46, 18, { dmg: 6, kd: true, kb: 200, lift: 200, from: e, team: 'p' }); G.callout = { s: 'BREAKAWAY', t: 0.8 }; }
 
 /* ---------- weapons ---------- */
+/* R / RB / E throws what you are holding (he asked: its own button, A always swings it). It flies, hits, then drops to
+   the floor where you can pick it up again; every throw costs a third of its life, so it breaks after a few */
+function throwWeapon(e) { var w = WEAPONS[e.weapon.id]; if (w.kind === 'throw') return weaponAttack(e, 5);
+  var cost = Math.max(1, Math.ceil(w.dur / 3)), left = e.weapon.dur - cost, b = shoot(e, { spr: e.weapon.id, spd: 320, dmg: (w.dmg || 10) * 1.4, kd: true, kb: 200, spin: 1, life: 0.7 }, { h: e.ht * 0.5 });
+  b.drop = { id: e.weapon.id, dur: left }; e.weapon = null; sfx.play('throw'); startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); }
+function landThrown(b) { var d = b.drop, x = Math.max(G.cam + 12, Math.min(G.cam + KIT.W - 12, b.x - (b.vx > 0 ? 10 : -10)));
+  if (d.dur <= 0) { sfx.play('crash'); G.fx.push({ k: 'text', s: 'BROKEN!', x: x, z: b.z, h: 20, t: 0, life: 0.8, col: '#ff2630' }); for (var i = 0; i < 4; i++) G.fx.push({ k: 'spr', spr: 'b_bits', x: x, z: b.z, h: 16, vx: rnd(-80, 80), vh: rnd(80, 200), grav: 1, life: 0.6, t: 0, rot: rnd(0, 6) }); return; }
+  G.items.push({ id: d.id, x: x, z: Math.max(2, Math.min(DEPTH - 2, b.z)), h: Math.max(8, b.h), vh: 150, t: 0, dur: d.dur }); }
+
 function weaponAttack(e, dn) {
   var w = WEAPONS[e.weapon.id], H = e.hero;
   if (w.kind === 'melee') {
-    if (dn === 2 || dn === 1 || dn === 3) { // down + A: throw it
-      shoot(e, { spr: e.weapon.id, spd: 320, dmg: w.dmg * 1.4, kd: true, kb: 200, spin: 1, life: 0.9 }, { h: e.ht * 0.5 }); e.weapon = null; sfx.play('throw'); startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); return; }
     startMove(e, MV({ an: 'cross', st: 0.07, ac: 0.09, rc: w.spd, box: [0, w.reach, 4, H.ht], dmg: w.dmg, kb: w.kb, kd: !!w.kd, lift: w.kd ? 200 : 0, sfx: w.sfx, hs: 0.07, weap: 1, zr: w.wide ? 16 : 10, meter: 5 }));
     return;
   }
@@ -2306,7 +2317,7 @@ function titleMenu() {
 function storyMenu() { KIT.menu({ title: 'Skeet Fighter', html: STORY.map(function (s) { return '<p>' + s + '</p>'; }).join(''), items: [{ label: 'Back', back: true, fn: titleMenu }] }); }
 function helpMenu(back) {
   KIT.menu({ title: 'How to Play', html: '<p><b>Story</b>: the streets of Clubhouse Row, beat-em-up style, six stages. At the end of each one the boss stops the brawl and it turns into a one on one, Street Fighter style. <b>Arcade</b>: ten one on one fights in a row; lose one and you can continue.</p>' +
-    '<p><b>On the streets</b>: up and down walk into and out of the screen. <b>A</b> attack (keep pressing for a combo, it also picks things up), <b>B</b> jump, <b>X</b> special, <b>Y</b> super with a full meter. Double tap forward to run, A while running for a dash attack, A in the air for a flying kick. Walk into someone to grab them: A knees, A with a direction throws. X while you are being hit breaks away for a little health. Smash bins and crates for food and weapons; weapons wear out, DOWN + A throws one.</p>' +
+    '<p><b>On the streets</b>: up and down walk into and out of the screen. <b>A</b> attack (keep pressing for a combo, it also picks things up), <b>B</b> jump, <b>X</b> special, <b>Y</b> super with a full meter. Double tap forward to run, A while running for a dash attack, A in the air for a flying kick. Walk into someone to grab them: A knees, A with a direction throws. X while you are being hit breaks away for a little health. Smash bins and crates for food and weapons; weapons wear out. <b>R</b> throws the one you hold: it lands, you can pick it up again, and every throw wears it down.</p>' +
     '<p><b>One on one</b>: <b>A</b> punch, <b>B</b> kick, <b>UP</b> jump (with a direction to jump at them or away), <b>DOWN</b> crouch. <b>Hold back to block</b>: low sweeps need down-back, jump-ins need standing. Down + A jab low, down + B sweep, down-forward + A uppercut, forward + B roundhouse, A and B in the air. Forward + A up close throws (it cannot be blocked). Chains: A then A, then B. A normal that hits cancels into a special with X.</p>' +
     '<p><b>Specials</b> (both modes): X fireball, UP + X rising move, FORWARD + X dash, DOWN + X ground move. <b>Motions</b>: down, down-forward, forward + a button is the EX fireball; forward, down, down-forward + a button the EX rising move (a quarter of the meter in a one on one, free on the streets).</p>' +
     '<p>The <b>Blumwashed homunculi</b> are not evil, just full of goo: beat it out of them and they go home.</p>', items: [{ label: 'Back', back: true, fn: back || titleMenu }] });
@@ -2367,7 +2378,7 @@ function botInput() {
 
 KIT.start({ w: 384, h: 216, wide: 512, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
   idleUpdate: function (dt) { if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
-  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }] } });
+  pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }, { k: 'rb', label: 'R', sub: 'THROW' }] } });
 titleMenu();
 window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect,
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };

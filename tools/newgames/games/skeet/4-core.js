@@ -100,7 +100,9 @@ function shoot(owner, s, o) {
   if (b.ground) b.h = 0; G.shots.push(b); return b;
 }
 function stepShots(dt) {
-  G.shots = G.shots.filter(function (b) {
+  G.shots = G.shots.filter(function (b) { var keep = stepShot(b, dt); if (!keep && b.drop) landThrown(b); return keep; }); // a thrown weapon lands where it ends
+}
+function stepShot(b, dt) { return (function (b) {
     b.t += dt; b.x += b.vx * dt; b.z += b.vz * dt; if (b.grav) { b.vh -= b.grav * dt; b.h += b.vh * dt; }
     if (b.boomer && b.t > 0.45 && !b.back) { b.back = 1; b.vx = -b.vx; b.hit = {}; }
     if (b.boomer && b.back && b.owner && Math.abs(b.x - b.owner.x) < 14 && Math.abs(b.z - b.owner.z) < 12) return false;
@@ -121,7 +123,7 @@ function stepShots(dt) {
       } }
     if (b.t > b.life || b.x < G.cam - 80 || b.x > G.cam + KIT.W + 80) { if (b.boom || b.puddle) return burst(b); return false; }
     return true;
-  });
+  })(b);
 }
 function burst(b) {
   if (b.boom) { G.fx.push({ k: 'ring', x: b.x, z: b.z, t: 0, life: 0.3, r: b.boom, col: b.fuse ? '#ffe36a' : '#fffbe8' }); if (b.splat) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.4, sc: 1.6 }); sfx.play(b.fuse ? 'boom' : 'splat'); KIT.shake(b.fuse ? 6 : 3);

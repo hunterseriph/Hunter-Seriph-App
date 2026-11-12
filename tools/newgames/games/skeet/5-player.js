@@ -64,6 +64,7 @@ function stepPlayer(dt) {
     if (mx && !e.weapon) { var g = grabbable(e); if (g) { e.grabTry = (e.grabTry || 0) + dt; if (e.grabTry > 0.14) return grabStart(e, g); } else e.grabTry = 0; } else e.grabTry = 0;
   } else { if (mx) { e.vx += mx * 300 * dt; e.vx = clamp(e.vx, -H.run, H.run); } }
   var A = KIT.pressed('a') || (G.bot && G.botA), B = KIT.pressed('b') || (G.bot && G.botB), X = KIT.pressed('x') || (G.bot && G.botX), Y = KIT.pressed('y') || (G.bot && G.botY);
+  if (KIT.pressed('rb') && e.weapon && !air) return throwWeapon(e);
   if (Y && e.meter >= 100 && !air) return startSuper(e);
   if (B && !air) { e.vh = H.jump; e.h = 0.5; e.st = 'jump'; e.airDone = false; sfx.play('jump'); dust(e.x, e.z, 2); if (!mx) e.vx = 0; return; }
   if (X && e.spCd <= 0) { var k = motion(e, [2, 3, 6], 0.4) ? 'fireEX' : motion(e, [6, 2, 3], 0.4) ? 'riseEX' : dn === 8 || dn === 7 || dn === 9 ? 'rise' : dn === 6 ? 'dash' : dn === 2 || dn === 1 || dn === 3 ? 'ground' : 'fire';
@@ -107,11 +108,18 @@ function doSpecial(e, k) { var m = e.spm[k]; if (!m) return; e.running = false; 
 function breakaway(e) { e.hp -= 10; e.st = 'idle'; e.inv = 0.6; G.fx.push({ k: 'ring', x: e.x, z: e.z, t: 0, life: 0.3, r: 46, col: '#ffffff' }); sfx.play('heavy'); KIT.shake(4); hitArea(e.x, e.z, 46, 18, { dmg: 6, kd: true, kb: 200, lift: 200, from: e, team: 'p' }); G.callout = { s: 'BREAKAWAY', t: 0.8 }; }
 
 /* ---------- weapons ---------- */
+/* R / RB / E throws what you are holding (he asked: its own button, A always swings it). It flies, hits, then drops to
+   the floor where you can pick it up again; every throw costs a third of its life, so it breaks after a few */
+function throwWeapon(e) { var w = WEAPONS[e.weapon.id]; if (w.kind === 'throw') return weaponAttack(e, 5);
+  var cost = Math.max(1, Math.ceil(w.dur / 3)), left = e.weapon.dur - cost, b = shoot(e, { spr: e.weapon.id, spd: 320, dmg: (w.dmg || 10) * 1.4, kd: true, kb: 200, spin: 1, life: 0.7 }, { h: e.ht * 0.5 });
+  b.drop = { id: e.weapon.id, dur: left }; e.weapon = null; sfx.play('throw'); startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); }
+function landThrown(b) { var d = b.drop, x = Math.max(G.cam + 12, Math.min(G.cam + KIT.W - 12, b.x - (b.vx > 0 ? 10 : -10)));
+  if (d.dur <= 0) { sfx.play('crash'); G.fx.push({ k: 'text', s: 'BROKEN!', x: x, z: b.z, h: 20, t: 0, life: 0.8, col: '#ff2630' }); for (var i = 0; i < 4; i++) G.fx.push({ k: 'spr', spr: 'b_bits', x: x, z: b.z, h: 16, vx: rnd(-80, 80), vh: rnd(80, 200), grav: 1, life: 0.6, t: 0, rot: rnd(0, 6) }); return; }
+  G.items.push({ id: d.id, x: x, z: Math.max(2, Math.min(DEPTH - 2, b.z)), h: Math.max(8, b.h), vh: 150, t: 0, dur: d.dur }); }
+
 function weaponAttack(e, dn) {
   var w = WEAPONS[e.weapon.id], H = e.hero;
   if (w.kind === 'melee') {
-    if (dn === 2 || dn === 1 || dn === 3) { // down + A: throw it
-      shoot(e, { spr: e.weapon.id, spd: 320, dmg: w.dmg * 1.4, kd: true, kb: 200, spin: 1, life: 0.9 }, { h: e.ht * 0.5 }); e.weapon = null; sfx.play('throw'); startMove(e, MV({ an: 'throw', st: 0.05, ac: 0.02, rc: 0.18, dmg: 0, box: null })); return; }
     startMove(e, MV({ an: 'cross', st: 0.07, ac: 0.09, rc: w.spd, box: [0, w.reach, 4, H.ht], dmg: w.dmg, kb: w.kb, kd: !!w.kd, lift: w.kd ? 200 : 0, sfx: w.sfx, hs: 0.07, weap: 1, zr: w.wide ? 16 : 10, meter: 5 }));
     return;
   }

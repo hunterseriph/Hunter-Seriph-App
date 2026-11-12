@@ -37,7 +37,7 @@ var BACKS = {
     },
     floor: function (s, r) {
       R('#5a2a30', 0, 0, SEG, 3); R('#2a0c10', 0, 3, SEG, 1); // the kerb at the back
-      floorRows(function (y, h, i) { if (y < 4) return; var bw = 14 + i * 2; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, i % 3 ? '#341216' : '#2e1014', '#3a161a', '#12040a', bw); });
+      floorRows(function (y, h, i) { if (y < 4) { if (y + h > 4) R('#12040a', 0, 4, SEG, y + h - 4); return; } var bw = 14 + i * 2; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, i % 3 ? '#341216' : '#2e1014', '#3a161a', '#12040a', bw); });
       if (r() < 0.5) R('#1a0608', 20 + r() * 80, 30 + r() * 30, 18, 4); // a puddle of something
     },
     front: function (s, r) { return r() < 0.3 ? [{ k: 'post', x: s * SEG + r() * SEG }] : []; }
@@ -52,7 +52,7 @@ var BACKS = {
       else { R('#5a4a36', 50, 14, 28, 12); R('#3a3024', 54, 26, 20, 4); R('#f1e0b0', 58, 30, 12, 48); R('#fffbe8', 60, 30, 3, 48); } // a pipe pouring cream
       R('#f1e0b0', 0, 70, SEG, 8); R('#fffbe8', 0, 70, SEG, 1); R('#b8a070', 0, 76, SEG, 2); }, // the cream river
     wallH: 78,
-    floor: function (s, r) { R('#4a4034', 0, 0, SEG, 3); floorRows(function (y, h, i) { if (y < 3) return; var bw = 20 + i * 3; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, '#3a3226', '#342c22', '#14100c', bw); });
+    floor: function (s, r) { R('#4a4034', 0, 0, SEG, 3); floorRows(function (y, h, i) { if (y < 3) { if (y + h > 3) R('#0e0a08', 0, 3, SEG, y + h - 3); return; } var bw = 20 + i * 3; brickRow(y, h, (i % 2) * (bw / 2) + (s * SEG) % bw, '#3a3226', '#342c22', '#14100c', bw); });
       if (r() < 0.5) { var px = r() * 90; R('#f1e0b0', px, 24, 26, 3); R('#fffbe8', px + 3, 24, 8, 1); } },
     live: function () { var t = G.t; for (var x = -((G.cam + t * 40) % 24); x < KIT.W; x += 24) R('#fffbe8', x, FLOOR - 7, 6, 1); }, // the river flows
     front: function (s, r) { return r() < 0.35 ? [{ k: 'pipe', x: s * SEG + r() * SEG }] : []; }
@@ -122,6 +122,7 @@ function drawBack() {
   [B.far, B.mid].forEach(function (L, i) { if (L) parLayer(G.S.back + (i ? 'mid' : 'far'), L[0], L[1], L[2], L[3], L[4]); });
   if (!KIT.sheetReady) { R('#070405', 0, 0, KIT.W, KIT.H); return; } // painted once into the cache, so wait for the art
   var wh = B.wallH || 60; segs('w_' + G.S.back + '_', wh, FLOOR - wh, function (s, r) { B.wall(s, r); });
+  R(B.seam || '#12040a', 0, FLOOR - 1, W, KIT.H - FLOOR + 1); // a solid foot under the wall: nothing behind ever shows between the wall and the floor (he saw a gap)
   // props that stand on the back of the street (shop fronts, lamps, Steve, torches): drawn whole, from the world
   if (B.props) { var s0 = Math.floor(G.cam / SEG) - 2, s1 = Math.floor((G.cam + W) / SEG) + 2; for (var s = s0; s <= s1; s++) B.props(s, srand(s * 77 + 3)).forEach(function (p) { var x = p.x - G.cam;
     if (p.spr) KIT.spr(p.spr, x, FLOOR + 1, { sc: p.sc || 1 });
