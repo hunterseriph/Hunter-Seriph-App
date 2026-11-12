@@ -81,8 +81,10 @@ function drawFighter(e) {
 }
 function drawHeld(e, x, y) {
   if (!e.weapon || e.st === 'down' || e.st === 'dead') return; var w = WEAPONS[e.weapon.id], m = e.mv, swing = 0;
-  if (m && m.weap) { var k = clamp(e.mvT / (m.st + m.ac), 0, 1); swing = -1.4 + k * 2.0; } else swing = -0.6 + Math.sin(G.t * 3) * 0.05;
-  KIT.spr(e.weapon.id, x + e.face * 8, y - e.ht * 0.5, { flip: e.face < 0, rot: swing * e.face, anchor: 'c' });
+  // held by the grip in his front hand, the business end pointing the way he faces (he said they were all turned round:
+  // they were drawn by their middle, so half of each weapon stuck out behind him)
+  if (m && m.weap) { var k = clamp(e.mvT / (m.st + m.ac), 0, 1); swing = -2.0 + k * 2.5; } else swing = -0.75 + Math.sin(G.t * 3) * 0.05;
+  KIT.spr(e.weapon.id, x + e.face * 6, y - e.ht * 0.48, { flip: e.face < 0, rot: swing * e.face, anchor: 'l' });
 }
 function drawWorld() {
   drawBack();

@@ -59,7 +59,7 @@ def extra_anims():
     A['pidle'] = [P(hip=(0, 0.95 - 0.02 * (1 - math.cos(a)) / 2), lean=0, ff=(0.28, 0), bf=(-0.28, 0), fh=(0.42, -0.8 + 0.03 * math.sin(a)), bh=(-0.42, -0.8 + 0.03 * math.sin(a)), head=(0, -round((1 - math.cos(a)) / 2))) for a in [i / 4 * math.tau for i in range(4)]]
     def pw(a):
         c = math.cos(a); s = math.sin(a)
-        return P(hip=(0.02, 0.93 - 0.035 * abs(c)), lean=1, ff=(0.04 + 0.34 * c, max(0, 0.2 * s)), bf=(0.0 - 0.34 * c, max(0, -0.2 * s)), fh=(0.42 - 0.24 * c, -0.8 + 0.06 * abs(c)), bh=(-0.42 + 0.24 * c, -0.8 + 0.06 * abs(c)), feb=(-1, -0.2), beb=(-1, -0.2))
+        return P(hip=(0.02, 0.93 - 0.035 * abs(c)), lean=1, ff=(0.04 + 0.34 * c, max(0, -0.2 * s)), bf=(0.0 - 0.34 * c, max(0, 0.2 * s)), fh=(0.42 - 0.24 * c, -0.8 + 0.06 * abs(c)), bh=(-0.42 + 0.24 * c, -0.8 + 0.06 * abs(c)), feb=(-1, -0.2), beb=(-1, -0.2))
     A['pwalk'] = [pw(i / 8 * math.tau) for i in range(8)]
     A['pjump'] = [P(hip=(0, 0.95), lean=1, ff=(0.3, 0.5), bf=(-0.15, 0.35), fh=(0.55, 0.65), bh=(-0.35, 0.75), fkb=(1, 0.5), bkb=(1, 0.5)),
                   P(hip=(0, 0.95), lean=1, ff=(0.3, 0.1), bf=(-0.25, 0.2), fh=(0.6, 0.2), bh=(-0.45, 0.35))]

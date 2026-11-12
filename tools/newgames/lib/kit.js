@@ -61,11 +61,11 @@ var KIT = (function () {
     if (whites[n]) return whites[n]; var f = SPR[n], c = document.createElement('canvas'); c.width = f[2]; c.height = f[3];
     var g = c.getContext('2d'); g.drawImage(SHEET, f[0], f[1], f[2], f[3], 0, 0, f[2], f[3]); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, f[2], f[3]); return (whites[n] = c);
   }
-  /* spr(name, x, y, {flip, sc, alpha, anchor: 'b' (bottom centre, default) | 'c' | 'tl', rot, flash}) */
+  /* spr(name, x, y, {flip, sc, alpha, anchor: 'b' (bottom centre, default) | 'c' | 'tl' | 'l', rot, flash}) */
   function spr(n, x, y, o) {
     var f = SPR[n]; if (!f || !ready) return; o = o || {};
     var sc = o.sc || 1, w = f[2] * sc, h = f[3] * sc, an = o.anchor || 'b';
-    var dx = an === 'tl' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' ? -h / 2 : 0;
+    var dx = an === 'tl' || an === 'l' ? 0 : -w / 2, dy = an === 'b' ? -h : an === 'c' || an === 'l' ? -h / 2 : 0; // 'l' = left middle (a weapon's grip)
     if (!o.rot && !o.flip && !o.flash && o.alpha === undefined && !o.sx && !o.sy) { ctx.drawImage(SHEET, f[0], f[1], f[2], f[3], Math.round(x) + Math.round(dx), Math.round(y) + Math.round(dy), w, h); return; } // the common case without save/restore
     ctx.save(); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
     ctx.translate(Math.round(x), Math.round(y)); if (o.rot) ctx.rotate(o.rot); if (o.flip) ctx.scale(-1, 1);

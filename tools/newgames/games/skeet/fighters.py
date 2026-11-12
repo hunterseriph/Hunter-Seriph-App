@@ -65,14 +65,14 @@ def anims(k):
     def walk(i, a):
         s = math.sin(a); c = math.cos(a)
         if tail: return P(hip=(0, 0.95 + 0.04 * s), lean=1 + round(c), ff=(0.5 + 0.12 * c, 0.1 + 0.08 * s), fh=(0.5, 0.28 + 0.04 * s), bh=(0.4, 0.4 - 0.04 * s))
-        return P(hip=(0.02, 0.93 - 0.035 * abs(math.cos(a))), lean=1, ff=(0.04 + 0.34 * c, max(0, 0.2 * s)), bf=(0.0 - 0.34 * c, max(0, -0.2 * s)),
+        return P(hip=(0.02, 0.93 - 0.035 * abs(math.cos(a))), lean=1, ff=(0.04 + 0.34 * c, max(0, -0.2 * s)), bf=(0.0 - 0.34 * c, max(0, 0.2 * s)), # a foot only lifts while it swings forward (they moonwalked)
                  fh=(0.62, 0.3 + 0.03 * c), bh=(0.3, 0.22 - 0.03 * c))
     A['walk'] = cyc(8, walk)
     # RUN: long strides, arms pumping, leaning in
     def run(i, a):
         s = math.sin(a); c = math.cos(a)
         if tail: return P(hip=(0, 1.05 + 0.06 * s), lean=4, ff=(-0.3 + 0.3 * c, 0.35 + 0.15 * s), fh=(0.3 + 0.35 * c, -0.1), bh=(0.3 - 0.35 * c, -0.05))
-        return P(hip=(0.06, 0.9 + 0.06 * abs(s)), lean=4, ff=(0.1 + 0.5 * c, max(0, 0.42 * s)), bf=(0.1 - 0.5 * c, max(0, -0.42 * s)),
+        return P(hip=(0.06, 0.9 + 0.06 * abs(s)), lean=4, ff=(0.1 + 0.5 * c, max(0, -0.42 * s)), bf=(0.1 - 0.5 * c, max(0, 0.42 * s)),
                  fh=(0.25 - 0.45 * c, 0.05 - 0.15 * abs(c)), bh=(0.25 + 0.45 * c, 0.05 - 0.15 * abs(c)), feb=(-1, -0.4), beb=(-1, -0.4))
     A['run'] = cyc(6, run)
     # JAB: front hand snaps out at head height and straight back
