@@ -64,7 +64,8 @@ var PIECES = { '1,5': 'b', '2,0': 'b', '7,4': 'k', '5,0': 'c', '3,1': 'h', '6,4'
 var GATEMSG = { b: 'Thick bushes. Something sharp would cut through them.', k: 'A cracked rock. A bomb would split it.', o: 'Red pegs block the way. There is an orb past them, out of reach.', e: 'A stone eye stares at you. It does not blink. Something from far away might make it.', c: 'A chasm. Far too wide to jump.', h: 'A blood boulder. Far too heavy for you as you are.', v: '' };
 var WT = null, WA = null, WV = null, STRUCTS = [], DOORS = {}, SPAWNS = [], WSIGNS = {}, WITEMS = [], TREES = [], GATES = [], TOWN = null, CHV = {}, AREAINFO = {};
 function widx(i, j) { return j * WW + i; }
-function bioAt(i, j) { var ax = Math.max(0, Math.min(NX - 1, Math.floor(i / AW))), ay = Math.max(0, Math.min(NY - 1, Math.floor(j / AH))); return BIO[ay][ax]; }
+function bioAt(i, j) { var ax = Math.max(0, Math.min(NX - 1, Math.floor(i / AW))), ay = Math.max(0, Math.min(NY - 1, Math.floor(j / AH))), b = BIO[ay][ax];
+  if (b === 'C' && TOWN && TOWN.inner && (i < TOWN.x + 3 || j < TOWN.y + 3 || i >= TOWN.x + TOWN.w - 3 || j >= TOWN.y + TOWN.h - 3)) return 'm'; /* the wood round the town (its wall too) */ return b; }
 function walkable(t) { return !SOLID[t] && t !== 22 && t !== 3 && t >= 0; }
 function genWorld() {
   if (WT) return; WT = new Uint8Array(WW * WHT); WV = new Uint8Array(WW * WHT); STRUCTS = []; DOORS = {}; SPAWNS = []; WSIGNS = {}; WITEMS = []; TREES = []; GATES = []; AREAINFO = {};
@@ -191,28 +192,33 @@ function mend(A, set, get) { var hub = A.hub || hubOf(A, get), box = [A.x0 + 1, 
   targets.forEach(function (t) { var p = astar(get, t, hub, box, cost); if (!p) return; p.forEach(function (c) { var tt = get(c[0], c[1]); if (!walkable(tt) && tt !== 41 && tt !== 42 && tt !== 40) { if (tt === 6) TREES = TREES.filter(function (o) { return o.i !== c[0] || o.j !== c[1]; }); set(c[0], c[1], 0); } }); }); }
 /* ---------- Cum City: 2 x 2 areas inside its own wall, with every shop front on its streets ---------- */
 var SHOPS = [['club', 'fac_club'], ['amy', 'fac_amy'], ['saba', 'fac_saba'], ['beebs', 'fac_beebs'], ['cafe', 'fac_cafe'], ['tb', 'fac_tb'], ['greebo', 'fac_greebo'], ['t', 'fac_t'], ['bonjo', 'fac_bonjo'], ['joff', 'fac_joff'], ['arcade', 'fac_arcade'], ['pulsar', 'fac_pulsar'], ['sanct', 'fac_sanct']];
-function buildTown(set, get) { var X = 3 * AW, Y = 4 * AH, w = 2 * AW, h = 2 * AH, i, j; TOWN = { x: X, y: Y, w: w, h: h };
+/* Cum City: a walled town of 36 x 30 in the middle of its four areas, a thick wood round it with paths in from the four ways
+   (he said the old one was too big with houses you could not go in) */
+function buildTown(set, get) { var OX = 3 * AW, OY0 = 4 * AH, OW = 2 * AW, OH = 2 * AH, w = 36, h = 30, X = OX + 9, Y = OY0 + 6, i, j;
+  TOWN = { x: X, y: Y, w: w, h: h, inner: 1 };
+  for (j = 0; j < OH; j++) for (i = 0; i < OW; i++) set(OX + i, OY0 + j, 1); // the wood (drawn as forest: bioAt)
+  function out(i0, j0, i1, j1) { for (var jj = j0; jj <= j1; jj++) for (var ii = i0; ii <= i1; ii++) set(OX + ii, OY0 + jj, 4); }
+  out(0, 9, 6, 11); out(4, 9, 6, 17); out(4, 15, 9, 17); // west way in
+  out(12, 0, 14, 6); out(39, 0, 41, 6); // the two ways in from the north
+  out(47, 30, 53, 32); out(47, 28, 49, 32); out(44, 28, 49, 30); // east way in
   for (j = 0; j < h; j++) for (i = 0; i < w; i++) set(X + i, Y + j, i < 3 || j < 3 || i >= w - 3 || j >= h - 3 ? 1 : 0);
   function road(i0, j0, i1, j1) { for (var jj = j0; jj <= j1; jj++) for (var ii = i0; ii <= i1; ii++) set(X + ii, Y + jj, 4); }
-  road(0, 9, w - 4, 11); road(3, 30, w - 1, 32); road(12, 0, 14, h - 4); road(39, 0, 41, h - 4); road(18, 15, 35, 26);
-  // the fountain in the plaza
-  STRUCTS.push({ i: X + 25, j: Y + 21, w: 3, spr: 'pr_fountain', id: 'fountain', cx: (X + 26.5) * TS }); for (i = 24; i <= 29; i++) for (j = 19; j <= 21; j++) set(X + i, Y + j, 40);
-  // shop fronts along the north side of both streets, doors on the street
-  var segs = [[8, 3, 11], [8, 15, 38], [8, 42, 50], [29, 3, 11], [29, 15, 38], [29, 42, 50]], order = SHOPS.slice(), si = 0;
-  segs.forEach(function (sg) { var c = sg[1]; while (si < order.length) { var sp = order[si][1], fw = Math.ceil(KITSIZE(sp).w / TS); if (c + fw - 1 > sg[2]) break; placeShop(order[si][0], sp, X + c, Y + sg[0], fw); c += fw + 1; si++; } });
-  // houses fill the blocks behind and below
-  var hs = [[17, 3, 11], [23, 3, 11], [17, 42, 50], [23, 42, 50], [38, 3, 11], [38, 15, 38], [38, 42, 50]], hk = 0;
-  hs.forEach(function (sg) { for (var c = sg[1]; c + 2 <= sg[2]; c += 4) { var j0 = Y + sg[0]; if (!freeRect(get, X + c, j0 - 1, 3, 2)) continue; for (var a = 0; a < 3; a++) { set(X + c + a, j0, 40); set(X + c + a, j0 - 1, 40); } STRUCTS.push({ i: X + c, j: j0, w: 3, spr: 'st_house' + (hk++ % 2), id: 'house', cx: (X + c + 1.5) * TS }); } });
-  // lamps, benches, stalls, trees in the plaza
-  for (i = 4; i < w - 4; i += 6) { if (get(X + i, Y + 12) === 0) set(X + i, Y + 12, 14); if (get(X + i, Y + 33) === 0) set(X + i, Y + 33, 14); }
-  [[19, 16], [34, 16], [19, 25], [34, 25]].forEach(function (p) { set(X + p[0], Y + p[1], 14); });
-  [[22, 24], [30, 24]].forEach(function (p) { set(X + p[0], Y + p[1], 45); set(X + p[0] + 1, Y + p[1], 45); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_bench', id: 'bench', cx: (X + p[0] + 1) * TS }); });
-  [[20, 18], [32, 18]].forEach(function (p) { for (var a = 0; a < 2; a++) set(X + p[0] + a, Y + p[1], 46); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_stall', id: 'stall', cx: (X + p[0] + 1) * TS }); });
-  [[5, 18], [8, 22], [46, 18], [48, 23], [6, 35], [45, 35]].forEach(function (p) { if (get(X + p[0], Y + p[1]) === 0) { set(X + p[0], Y + p[1], 6); TREES.push({ i: X + p[0], j: Y + p[1], f: 'tr_red' }); } });
-  // the gates through the city wall
-  function gap(i0, j0, i1, j1) { for (var jj = j0; jj <= j1; jj++) for (var ii = i0; ii <= i1; ii++) set(X + ii, Y + jj, 4); }
-  gap(0, 9, 2, 11); gap(12, 0, 14, 2); gap(39, 0, 41, 2); gap(w - 3, 30, w - 1, 32);
-  TOWN.home = TOWN.home || { x: (X + 20) * TS, y: (Y + 10) * TS };
+  road(0, 9, 32, 11); road(3, 22, w - 1, 24); road(3, 0, 5, 8); road(30, 0, 32, 8); road(14, 12, 17, 21);
+  // shop fronts: six on the top street (the Clubhouse and Amy's side by side), seven on the bottom one, a lane between
+  var bySp = {}; SHOPS.forEach(function (sp) { bySp[sp[0]] = sp[1]; });
+  function row(ids, c, jj) { ids.forEach(function (id) { var fw = Math.ceil(KITSIZE(bySp[id]).w / TS); placeShop(id, bySp[id], X + c, Y + jj, fw); c += fw + 1; }); }
+  row(['club', 'amy', 'saba', 'beebs', 'cafe', 'tb'], 6, 8);
+  row(['greebo', 't', 'bonjo'], 3, 21); row(['joff', 'arcade', 'pulsar', 'sanct'], 18, 21);
+  // the plaza: fountain, benches, a stall, lamps, trees
+  STRUCTS.push({ i: X + 21, j: Y + 15, w: 3, spr: 'pr_fountain', id: 'fountain', cx: (X + 22.5) * TS }); for (i = 20; i <= 25; i++) for (j = 13; j <= 15; j++) set(X + i, Y + j, 40);
+  [[27, 16], [8, 16]].forEach(function (p) { set(X + p[0], Y + p[1], 45); set(X + p[0] + 1, Y + p[1], 45); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_bench', id: 'bench', cx: (X + p[0] + 1) * TS }); });
+  [[9, 13]].forEach(function (p) { for (var a2 = 0; a2 < 2; a2++) set(X + p[0] + a2, Y + p[1], 46); STRUCTS.push({ i: X + p[0], j: Y + p[1], w: 2, spr: 'pr_stall', id: 'stall', cx: (X + p[0] + 1) * TS }); });
+  [[19, 12], [26, 12], [4, 12], [31, 12], [6, 25], [29, 25], [13, 25], [22, 25]].forEach(function (p) { if (get(X + p[0], Y + p[1]) === 0) set(X + p[0], Y + p[1], 14); });
+  [[5, 14], [30, 15], [8, 26], [17, 26], [27, 26]].forEach(function (p) { if (get(X + p[0], Y + p[1]) === 0) { set(X + p[0], Y + p[1], 6); TREES.push({ i: X + p[0], j: Y + p[1], f: 'tr_red' }); } });
+  [[11, 26], [24, 26], [29, 13]].forEach(function (p) { if (get(X + p[0], Y + p[1]) === 0) set(X + p[0], Y + p[1], 11); });
+  // the gates through the town wall
+  road(0, 9, 2, 11); road(3, 0, 5, 2); road(30, 0, 32, 2); road(w - 3, 22, w - 1, 24);
+  TOWN.home = TOWN.home || { x: (X + 8) * TS, y: (Y + 10) * TS };
 }
 function placeShop(id, spr, i0, j, fw) { for (var a = 0; a < fw; a++) { WT[widx(i0 + a, j)] = 40; WT[widx(i0 + a, j - 1)] = 40; } var di = i0 + Math.floor(fw / 2); WT[widx(di, j)] = 41;
   DOORS[widx(di, j)] = { to: { in: id }, back: { x: (di + 0.5) * TS, y: (j + 1.7) * TS }, town: 1 }; STRUCTS.push({ i: i0, j: j, w: fw, spr: spr, id: id, cx: (di + 0.5) * TS, door: [di, j], shop: 1 });

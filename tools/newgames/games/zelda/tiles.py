@@ -190,6 +190,30 @@ def noisy(ramp, seed, chunks=6, cracks=4, bits=None):
     if bits:
         for _ in range(2): x, y = rnd.randrange(24), rnd.randrange(24); wput(a, x, y, hx(bits)); wput(a, x + 1, y, hx(bits)); wput(a, x, y + 1, ramp[0])
     return a
+def rocktop(ramp, seed, bits=None):
+    rnd = random.Random(seed); a = blank(24, 24); a[:, :] = ramp[1]
+    hi = tuple(min(255, int(v * 1.12)) for v in ramp[4][:3]) + (255,)
+    stones = [(rnd.uniform(0, 24), rnd.uniform(0, 24), rnd.uniform(3.2, 5.6), rnd.uniform(2.6, 4.2)) for _ in range(11)]
+    stones.sort(key=lambda t: t[1])
+    for (cx, cy, rx, ry) in stones:
+        for y in range(-6, 30):
+            for x in range(-6, 30):
+                dx, dy = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry; d = dx * dx + dy * dy
+                if d > 1: continue
+                t = 3
+                if dx + dy < -0.55: t = 4
+                if dx + dy > 0.6: t = 2
+                c = ramp[t]
+                if dx + dy < -1.05: c = hi
+                if d > 0.78 and dx + dy > 0: c = ramp[1]
+                a[y % 24, x % 24] = c
+    for _ in range(3):
+        x, y = rnd.randrange(24), rnd.randrange(24)
+        for k in range(rnd.randint(2, 4)): wput(a, x, y, ramp[0]); x += rnd.choice((-1, 1)); y += rnd.choice((0, 1))
+    for _ in range(8): wput(a, rnd.randrange(24), rnd.randrange(24), ramp[rnd.choice((2, 4))])
+    if bits:
+        for _ in range(2): x, y = rnd.randrange(24), rnd.randrange(24); wput(a, x, y, hx(bits)); wput(a, x + 1, y, hx(bits)); wput(a, x, y + 1, ramp[1])
+    return a
 def waterfill(ramp, seed):
     rnd = random.Random(seed); a = blank(24, 24); a[:, :] = ramp[1]
     for y in range(24):
@@ -273,8 +297,8 @@ def cwallfill(seed):
 terr('forest', 'top', [leafy(CANOPY, s, berries='#c4121c' if s == 1 else None) for s in range(3)], CANOPY)
 terr('woodsy', 'top', [leafy(CANOPYW, 10 + s, r=5.5, berries='#7a2a8a' if s == 2 else None) for s in range(3)], CANOPYW)
 terr('hedge', 'top', [leafy(HEDGE, 20 + s, r=3.6, step=6) for s in range(3)], HEDGE)
-terr('cliff', 'top', [noisy(ROCK, 30 + s) for s in range(3)], ROCK)
-terr('bonecliff', 'top', [noisy(BONEROCK, 40 + s, bits='#e8dcc0') for s in range(3)], BONEROCK)
+terr('cliff', 'top', [rocktop(ROCK, 30 + s) for s in range(3)], ROCK)
+terr('bonecliff', 'top', [rocktop(BONEROCK, 40 + s, bits='#e8dcc0') for s in range(3)], BONEROCK)
 terr('cwall', 'top', [cwallfill(50)], SLATE)
 terr('thorns', 'top', [thornfill(60 + s) for s in range(3)], THORN)
 terr('reeds', 'top', [reedfill(70 + s) for s in range(3)], REED)
@@ -310,7 +334,9 @@ def quarter(name, qx, qy, case, fill):
             dh = X if qx == 0 else 23 - X # distance to the left/right side of the tile
             dv = Y if qy == 0 else 23 - Y
             eh = e0 + ragged(Y, amp, seed); ev = e0 + ragged(X, amp, seed + 3)
-            if style == 'top' and qy == 1: ev = 0 # the south edge of a wall top sits right on its face
+            if style == 'top':
+                eh = 0 # sides line up with the outline of the face below
+                if qy == 1: ev = 0 # the south edge of a wall top sits right on its face
             side = None
             if case == 'F': d = 99
             elif case == 'H': d = dv - ev; side = 'T' if qy == 0 else 'B'
@@ -329,6 +355,7 @@ def quarter(name, qx, qy, case, fill):
                 if d < 1: c = OUT
                 elif d < 2: c = ramp[4] if lightside else ramp[0]
                 elif d < 3 and lightside: c = ramp[3]
+                if side == 'B' and d < 3: c = fill[Y % 24, X % 24] # never a line where the top meets its face
             elif style == 'soft':
                 if d < 1: c = ramp[1] if (X + Y) % 2 else ramp[0]
                 elif d < 2: c = ramp[1]
@@ -389,7 +416,7 @@ def face_tile(kind, pos, row, cave=False):
         rr = random.Random(sh(kind, row, pos) & 0xffff)
         blobs = []
         for k in range(9 if row else 8):
-            cx = rr.uniform(0, 24); cy = rr.uniform(2, 22) + (0 if row else 3); rx = rr.uniform(4, 7) + row * 1.2; ry = rx * rr.uniform(0.6, 0.85)
+            cx = rr.uniform(0, 24); cy = rr.uniform(1, 22) if row else rr.uniform(-1, 20); rx = rr.uniform(4, 7) + row * 1.2; ry = rx * rr.uniform(0.6, 0.85)
             blobs.append((cy, cx, rx, ry))
         blobs.sort()
         for (cy, cx, rx, ry) in blobs:
@@ -403,8 +430,11 @@ def face_tile(kind, pos, row, cave=False):
                     if dx + dy > 0.7 or dy > 0.6: t = 1
                     if d > 0.82: t = 0 if (dx + dy > -0.3) else 1
                     a[y, x % 24] = rp[t]
-        if row == 0:
-            for x in range(24): a[0, x] = rp[3]; a[1, x] = rp[1]
+        if row == 0: # the lip: the edge of the top, lit, crumbling into the face
+            for x in range(24):
+                lip = 2 + (sh(kind, x // 3) % 2)
+                for y in range(lip): a[y, x] = rp[4] if y == 0 else rp[3]
+                a[lip, x] = rp[1] if (x + lip) % 4 else rp[0]
         if row == 1:
             for x in range(24): a[23, x] = OUT; a[22, x] = rp[0]
         if kind == 'bonecliff' and rr.random() < 0.5:

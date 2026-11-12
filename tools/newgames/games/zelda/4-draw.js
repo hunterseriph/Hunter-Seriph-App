@@ -17,7 +17,7 @@ function paintWall(i, j, x, y, Wf, kind) {
   var f1 = Wf(i, j) && !Wf(i, j + 1), f0 = Wf(i, j) && Wf(i, j + 1) && !Wf(i, j + 2);
   if (f1 || f0) { var row = f1 ? 1 : 0; function isf(ii) { return Wf(ii, j) && (row === 1 ? !Wf(ii, j + 1) : Wf(ii, j + 1) && !Wf(ii, j + 2)); }
     var L = isf(i - 1), Rt = isf(i + 1), pos = L && Rt ? 'M' : Rt ? 'L' : L ? 'R' : 'S'; fr('f_' + kind + '_' + pos + row, x, y); return row; }
-  auto(kind, i, j, function (ii, jj) { return Wf(ii, jj) && !(Wf(ii, jj) && !Wf(ii, jj + 1)) && !(Wf(ii, jj) && Wf(ii, jj + 1) && !Wf(ii, jj + 2)); }, x, y); return -1; }
+  auto(kind, i, j, function (ii, jj) { if (jj > j) return Wf(ii, jj); /* the face below joins the top: no edge there */ return Wf(ii, jj) && !(Wf(ii, jj) && !Wf(ii, jj + 1)) && !(Wf(ii, jj) && Wf(ii, jj + 1) && !Wf(ii, jj + 2)); }, x, y); return -1; }
 function paintTile(i, j, x, y) { var t = tAt(i, j); if (SCR.kind === 'world') paintWorld(t, i, j, x, y); else if (SCR.kind === 'dg') paintDg(t, i, j, x, y); else paintIn(t, i, j, x, y); }
 function wt(i, j) { return i < 0 || j < 0 || i >= WW || j >= WHT ? (j >= WHT ? 3 : 1) : WT[widx(i, j)]; }
 function isWallW(i, j) { var t = wt(i, j); return t === 1 || t === 42; }

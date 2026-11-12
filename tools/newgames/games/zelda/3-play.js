@@ -23,9 +23,9 @@ function goWorld(x, y) { genWorld(); SV.inDg = null; DG = null; ROOM = null; BOS
   GATES.forEach(function (g) { if (SV.got['g:' + g.id]) openGate(g, true); });
   P.x = x; P.y = y; P.safeX = x; P.safeY = y; P.hop = null; P.fall = 0; unstick(P); SV.where = { k: 'world', x: P.x, y: P.y }; camSnap(); G.area = null; areaCheck(); persist(); }
 function worldFolk() { var X = TOWN.x, Y = TOWN.y, out = [
-  { spr: 'npc_ali', x: (X + 23.5) * TS, y: (Y + 17.2) * TS, name: 'ALI', say: function () { shopAsk('nuggets', "Ali's Garlic Nuggets", 'Nuggets? Garlic bread? Everything is better with garlic. A bag of nuggets mends two hearts.', 5, function () { P.hp = Math.min(maxHp(), P.hp + 4); }); }, wander: 2 },
-  { spr: 'npc_judgement', x: (X + 33.5) * TS, y: (Y + 22.2) * TS, name: 'JUDGEMENT', say: function () { say('Light or shadow. Both have a price. ' + hint(), 'JUDGEMENT'); } },
-  { spr: 'npc_elden', x: (X + 20.5) * TS, y: (Y + 23.2) * TS, name: 'ELDEN', say: function () { say("Kaya's on the coffee, I'm on the grill. If you want a Cumpuccino to take with you, you'll need a bottle. She sells those too.", 'ELDEN'); }, wander: 1.5 }];
+  { spr: 'npc_ali', x: (X + 12.5) * TS, y: (Y + 14.2) * TS, name: 'ALI', say: function () { shopAsk('nuggets', "Ali's Garlic Nuggets", 'Nuggets? Garlic bread? Everything is better with garlic. A bag of nuggets mends two hearts.', 5, function () { P.hp = Math.min(maxHp(), P.hp + 4); }); }, wander: 2 },
+  { spr: 'npc_judgement', x: (X + 30.5) * TS, y: (Y + 17.2) * TS, name: 'JUDGEMENT', say: function () { say('Light or shadow. Both have a price. ' + hint(), 'JUDGEMENT'); } },
+  { spr: 'npc_elden', x: (X + 19.5) * TS, y: (Y + 17.2) * TS, name: 'ELDEN', say: function () { say("Kaya's on the coffee, I'm on the grill. If you want a Cumpuccino to take with you, you'll need a bottle. She sells those too.", 'ELDEN'); }, wander: 1.5 }];
   var A = AREAINFO['0,1']; if (A && A.hub) out.push({ spr: 'steve0', x: (A.hub[0] + 2.5) * TS, y: (A.hub[1] + 2.2) * TS, name: 'STEVE', say: function () { say('...', 'STEVE'); } });
   STRUCTS.forEach(function (s) { if (s.id === 'tent') out.push({ spr: 'npc_stackedfate', x: (s.i + s.w + 1) * TS, y: (s.j + 1.2) * TS, name: 'STACKED FATE', say: function () { say('The deck was never yours. Neither was your fate. Come into the tent if you want to know what it holds.', 'STACKED FATE'); } }); });
   return out; }
@@ -168,6 +168,13 @@ var DIRV = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
 function swordHit(hx, hy, r, dmg, offs) { var p = P;
   FOE.forEach(function (f) { if (f.hp > 0 && Math.hypot(f.x - hx, f.y - hy) < r) hitFoe(f, dmg, p.x, p.y); }); if (BOSS && Math.hypot(BOSS.x - hx, BOSS.y - hy) < BOSS.r + r - 12) hitBoss(dmg);
   offs.forEach(function (o) { var bi = Math.floor((hx + o[0]) / TS), bj = Math.floor((hy + o[1]) / TS), bt2 = tAt(bi, bj); if (bt2 === 5 || bt2 === 30) cutBush(bi, bj, bt2); if (bt2 === 20 || bt2 === 96) shotHitsTile({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, t: 1, back: 0 }); }); }
+/* while the spin attack charges the Sausage is held out in front: walk it into foes and it hurts them, like Zelda
+   (he asked: knock the sword into enemies), one jab per foe every 0.45 s, and it cuts grass and hits orbs */
+function pokeSword(dt) { var p = P, v = DIRV[p.dir], hx = p.x + v[0] * 3, hy = p.y - 4 + v[1] * 3, pts = [[hx + v[0] * 12, hy + v[1] * 12], [hx + v[0] * 24, hy + v[1] * 24]];
+  FOE.forEach(function (f) { f.poke = Math.max(0, (f.poke || 0) - dt); if (f.hp <= 0 || f.poke > 0) return;
+    if (pts.some(function (q) { return Math.hypot(f.x - q[0], f.y - q[1]) < (f.d.r || 8) + 6; })) { f.poke = 0.45; hitFoe(f, 1, p.x, p.y); FX.push({ x: pts[1][0], y: pts[1][1], vx: 0, vy: 0, t: 0.12, col: '#ffe36a' }); } });
+  if (BOSS) { BOSS.poke = Math.max(0, (BOSS.poke || 0) - dt); if (!(BOSS.poke > 0) && pts.some(function (q) { return Math.hypot(BOSS.x - q[0], BOSS.y - q[1]) < BOSS.r; })) { BOSS.poke = 0.45; hitBoss(1); } }
+  var q = pts[1], bi = Math.floor(q[0] / TS), bj = Math.floor(q[1] / TS), bt = tAt(bi, bj); if (bt === 5 || bt === 30) cutBush(bi, bj, bt); if (bt === 20 || bt === 96) shotHitsTile({ x: (bi + 0.5) * TS, y: (bj + 0.5) * TS, t: 1, back: 0 }); }
 /* the spin attack: a full turn with the Sausage out, double damage, cuts everything round you */
 function spinAttack() { var p = P; p.spin = 0.4; p.atk = 0; sfx.play('magic'); sfx.tone('sawtooth', 220, 660, 0.3, 0.05); KIT.shake(3);
   var offs = []; for (var a = 0; a < 8; a++) offs.push([Math.cos(a / 8 * 6.283) * 26, Math.sin(a / 8 * 6.283) * 26]); offs.push([0, 0]);
@@ -200,6 +207,7 @@ function stepPlayer(dt) {
   // hold A after a swing to charge the spin attack; let go when the Sausage glows
   if (p.chgArm && SV.items.sword) { if (KIT.held('a')) { if (p.atk <= 0) { p.chg += dt; if (p.chg >= 0.75 && !p.chgDone) { p.chgDone = 1; sfx.play('power'); } } }
     else { if (p.chg >= 0.75) spinAttack(); p.chg = 0; p.chgArm = 0; p.chgDone = 0; } }
+  if (p.chgArm && p.chg > 0 && p.atk <= 0) pokeSword(dt);
   if (p.spin > 0) p.spin = Math.max(0, p.spin - dt);
   if (KIT.pressed('b') && p.atk <= 0 && !(p.spin > 0)) useItem();
   if (KIT.pressed('y') || KIT.pressed('x')) cycleItem();
