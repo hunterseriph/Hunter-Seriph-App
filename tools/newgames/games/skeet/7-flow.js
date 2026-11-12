@@ -16,7 +16,7 @@ function newGame(hero, o) {
 }
 function startStage(i) {
   G.si = i; G.S = STAGES[i]; G.ents = []; G.shots = []; G.fx = []; G.items = []; G.props = []; G.puddles = []; G.waves = []; G.cam = 0; G.lock = null; G.secI = -1; G.bossOn = false; G.koT = 0; G.go = 0; G.stageT = 0; G.hurtThisStage = false; G.beam = null; G.sup = null; G.superT = 0; G.cutin = null; G.splat = 0; G.combo = 0;
-  G.foeK = { hp: 1 + i * 0.12 + (G.hard ? 0.25 : 0), dmg: 1 + i * 0.07 };
+  G.foeK = { hp: (1 + i * 0.12 + (G.hard ? 0.25 : 0)) * coK('hp'), dmg: (1 + i * 0.07) * coK('dmg') };
   // lay the stage out: sections one after another, then the arena
   var x = 0; G.secs = (G.rush ? [] : G.S.secs).map(function (s, k) { var o = { x0: x, x1: x + s.len, def: s, k: k }; x += s.len; return o; });
   G.arena = x; G.end = x + KIT.W;
@@ -25,10 +25,30 @@ function startStage(i) {
   if (!G.rush && i > 0) P.hp = Math.min(P.mhp, P.hp + P.mhp * 0.5); if (G.rush) P.hp = P.mhp;
   G.mode = 'card'; G.cardT = 0; music.play(G.S.song); KIT.dropLayer();
 }
+/* solo: one player. Online co-op (G.pl): every player takes a step with his own buttons (IN), and each foe goes for the player nearest to it */
+function stepPlayers(dt) {
+  if (!G.pl) { stepPlayer(dt); physics(P, dt); return; }
+  var me = P, gb = G.bot;
+  G.pl.forEach(function (pl) { if (pl.out) return; P = pl; IN = pl.IN || null; if (pl.IN) { G.bot = !!pl.IN.bot; if (G.bot) botThink(); } try { stepPlayer(dt); } finally { IN = null; G.bot = gb; } physics(pl, dt); });
+  P = me;
+}
+function stepFoes(dt) { var me = P; G.ents.forEach(function (e) { if (G.pl) P = foeTarget(e); stepFoe(e, dt); P = me; physics(e, dt); }); }
+function foeTarget(e) {
+  var live = G.pl.filter(function (p) { return !p.out && p.st !== 'dead'; }); if (!live.length) return G.pl[0];
+  for (var i = 0; i < live.length; i++) if (live[i].heldBy === e) return live[i];
+  var cur = live.filter(function (p) { return p.id === e.tgt; })[0]; e.tgtT = (e.tgtT || 0) - 1 / 60;
+  if (cur && e.tgtT > 0) return cur;
+  var best = live[0], bd = 1e9; live.forEach(function (p) { var d = Math.abs(p.x - e.x) + Math.abs(p.z - e.z) * 2 + (p.id === e.tgt ? -30 : 0); if (d < bd) { bd = d; best = p; } });
+  e.tgt = best.id; e.tgtT = 2.5 + Math.random(); return best;
+}
+function playersX(k) { var L = players(); if (!L.length) return P ? P.x : 0; if (k === 'max') return Math.max.apply(null, L.map(function (p) { return p.x; })); return L.reduce(function (a, p) { return a + p.x; }, 0) / L.length; }
+function coN() { return G.pl ? G.pl.length : 1; }
+function coK(k) { var n = coN() - 1; return k === 'hp' ? 1 + 0.45 * n : 1 + 0.08 * n; } // the difficulty follows the number of players
+function coExtra(len) { return Math.round(len * 0.5 * (coN() - 1)); }
 function inPlay() { return G.mode === 'play'; }
 /* the camera follows; a lock holds it while a wave is on */
 function stepCamera(dt) {
-  var want = P.x - KIT.W * 0.42, max = G.end - KIT.W;
+  var want = playersX('mid') - KIT.W * 0.42, max = G.end - KIT.W;
   if (locked()) want = G.lock; else want = clamp(want, G.cam - 0, max); // the camera never goes back
   if (!locked()) want = Math.max(G.cam, want);
   G.cam += (want - G.cam) * Math.min(1, dt * 6); if (Math.abs(want - G.cam) < 0.3) G.cam = want;
@@ -37,18 +57,18 @@ function stepSections(dt) {
   if (G.bossOn || G.koT) return;
   // reach the next section's middle: lock and send the waves
   var nx = G.secI + 1, s = G.secs[nx];
-  if (!locked() && s && P.x > s.x0 + s.def.len * 0.45) { G.secI = nx; G.lock = clamp(P.x - KIT.W * 0.45, G.cam, G.end - KIT.W); G.wave = -1; G.waveT = 0.4; G.go = 0; }
+  if (!locked() && s && playersX('max') > s.x0 + s.def.len * 0.45) { G.secI = nx; G.lock = clamp(P.x - KIT.W * 0.45, G.cam, G.end - KIT.W); G.wave = -1; G.waveT = 0.4; G.go = 0; }
   if (locked() && G.secI >= 0) {
     var cur = G.secs[G.secI], alive = G.ents.filter(function (e) { return e.team === 'f' && e.hp > 0 && e.st !== 'gone'; }).length;
     if (G.spawnQ && G.spawnQ.length) { G.spawnT -= dt; if (G.spawnT <= 0) { var q = G.spawnQ.shift(); spawnFoe(q[0], q[1]); G.spawnT = 0.45; } return; }
     if (alive === 0) { G.waveT -= dt; if (G.waveT > 0) return; G.wave++;
       if (G.wave >= cur.def.waves.length) { G.lock = null; G.go = 3; sfx.play('go'); G.ents = G.ents.filter(function (e) { return e.st !== 'gone'; }); return; }
-      var w = cur.def.waves[G.wave], side = Math.random() < 0.5 ? -1 : 1; G.spawnQ = w.map(function (id, j) { return [id, j % 2 ? side : -side]; }); G.spawnT = 0; G.waveT = 0.8;
+      var w = cur.def.waves[G.wave], side = Math.random() < 0.5 ? -1 : 1; G.spawnQ = w.map(function (id, j) { return [id, j % 2 ? side : -side]; }); for (var xj = 0; xj < coExtra(w.length); xj++) G.spawnQ.push([pick(w), xj % 2 ? side : -side]); G.spawnT = 0; G.waveT = 0.8; // co-op: more of them
       if (G.hard && G.wave === cur.def.waves.length - 1) G.spawnQ.push([pick(cur.def.waves[0]), side]);
     }
   }
   // the arena
-  if (!locked() && G.secI >= G.secs.length - 1 && P.x > G.arena + 60) { G.lock = G.arena; G.cam = Math.min(G.cam, G.arena); bossIntro(); }
+  if (!locked() && G.secI >= G.secs.length - 1 && playersX('max') > G.arena + 60) { G.lock = G.arena; G.cam = Math.min(G.cam, G.arena); bossIntro(); }
 }
 function bossIntro() { // the brawl stops here: the Street Fighter VS screen, then a one on one
   G.ents = G.ents.filter(function (e) { return e.team !== 'f' || e.hp > 0; }).filter(function (e) { return e.team !== 'f'; });
@@ -78,8 +98,8 @@ function stepPlay(dt) {
   if (G.sup) { stepSuper(dt); stepFx(dt); if (G.sup && G.sup.t < 0.7) return; }
   if (G.hs > 0) { G.hs -= dt; stepFx(dt); return; } // hit stop: the world freezes on a big hit
   if (G.slow > 0) { G.slow -= dt; dt *= 0.35; }
-  stepPlayer(dt); physics(P, dt);
-  G.ents.forEach(function (e) { stepFoe(e, dt); physics(e, dt); });
+  stepPlayers(dt);
+  stepFoes(dt);
   G.ents = G.ents.filter(function (e) { return e.st !== 'gone'; });
   G.props = G.props.filter(function (p) { return !p.gone; });
   stepShots(dt); stepItems(dt); stepPuddles(dt); stepWaves(dt); stepFx(dt); stepCamera(dt); stepSections(dt);

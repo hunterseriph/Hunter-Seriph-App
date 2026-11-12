@@ -27,7 +27,7 @@ function dirNow(e) {
   return d ? (f ? 3 : b ? 1 : 2) : u ? (f ? 9 : b ? 7 : 8) : f ? 6 : b ? 4 : 5;
 }
 function motion(e, seq, win) { var t = G.t - win, j = 0; for (var i = 0; i < e.dirs.length; i++) { var d = e.dirs[i]; if (d.t < t) continue; if (d.d === seq[j]) { j++; if (j === seq.length) return true; } } return false; }
-function startMove(e, m) { e.mv = m; e.mvT = 0; e.hit = {}; e.st = 'atk'; e.mf = {}; if (m.n && e.team === 'p') G.callout = { s: m.n, t: 0.9 }; }
+function startMove(e, m) { e.mv = m; e.mvT = 0; e.hit = {}; e.st = 'atk'; e.mf = {}; if (m.n && e.team === 'p' && (!G.pl || G.duel)) G.callout = { s: m.n, t: 0.9 }; }
 
 function stepPlayer(dt) {
   var e = P, H = e.hero;
@@ -163,7 +163,7 @@ function startSuper(e) {
 function stepSuper(dt) {
   var S = G.sup; if (!S) return; S.t += dt; G.superT -= dt; var e = S.by || P;
   if (S.t < 0.7) return; // the cut-in
-  var foes = e === P ? G.ents.filter(function (o) { return o.team === 'f' && o.hp > 0 && !o.assist && o.st !== 'dead' && o.st !== 'gone' && o.st !== 'ko' && !o.leaving && o.x > G.cam - 20 && o.x < G.cam + KIT.W + 20; }) : (P && P.hp > 0 && P.st !== 'ko' ? [P] : []);
+  var foes = e.team === 'p' ? G.ents.filter(function (o) { return o.team === 'f' && o.hp > 0 && !o.assist && o.st !== 'dead' && o.st !== 'gone' && o.st !== 'ko' && !o.leaving && o.x > G.cam - 20 && o.x < G.cam + KIT.W + 20; }) : players().filter(function (p) { return p.hp > 0 && p.st !== 'ko'; });
   var tick = Math.floor((S.t - 0.7) / 0.12); if (tick !== S.tick) { S.tick = tick;
     if (S.kind === 'beam') foes.forEach(function (o) { if ((o.x - S.x) * S.face > -10 && Math.abs(o.z - S.z) < 22) { o.inv = 0; strike(o, { dmg: S.dmg / 10, kb: 40, stun: 0.5, hs: 0.02, from: e, meter: 0, sfx: 'hit', kd: tick === 9, lift: 240 }, S.face); } });
     if (S.kind === 'storm' || S.kind === 'pies') { var o = foes[tick % Math.max(1, foes.length)]; if (o) { G.fx.push({ k: S.kind === 'storm' ? 'column' : 'piefall', x: o.x, z: o.z, t: 0, life: 0.35 }); o.inv = 0; strike(o, { dmg: S.dmg / 4, kd: true, kb: 120, lift: 260, hs: 0.04, from: e, meter: 0, sfx: S.kind === 'storm' ? 'splash' : 'splat' }, o.x >= S.x ? 1 : -1); } else G.fx.push({ k: S.kind === 'storm' ? 'column' : 'piefall', x: G.cam + rnd(30, KIT.W - 30), z: rnd(10, DEPTH - 10), t: 0, life: 0.35 }); }

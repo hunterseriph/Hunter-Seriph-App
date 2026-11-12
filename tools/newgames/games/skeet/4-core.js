@@ -5,6 +5,10 @@
    ===================================================================================================== */
 var G = { mode: 'title', t: 0, cam: 0, ents: [], shots: [], fx: [], items: [], props: [], puddles: [], hs: 0, slow: 0, combo: 0, comboT: 0 };
 var P = null; // the player
+var IN = null; // online: when set, KIT.held / KIT.pressed read this player's buttons instead of the keyboard (8c-net.js)
+/* everyone on the players' side: just P, or every player in online co-op (G.pl); in a one on one only the fighter */
+function players() { return G.duel ? (P ? [P] : []) : G.pl ? G.pl.filter(function (p) { return !p.out; }) : (P ? [P] : []); }
+function splatOn(t) { if (t.net && window.netTell) return netTell(t, { k: 'splat' }); if (!G.pl || t === G.pl[0] || G.duel) G.splat = 1.4; }
 function locked() { return G.lock !== null && G.lock !== undefined; } // the camera is held (a lock at 0 still counts: Boss Rush's arena starts there)
 function sy(e) { return FLOOR + e.z; } // where someone's feet are on screen
 function ent(o) { var e = { x: 0, z: 30, h: 0, vx: 0, vz: 0, vh: 0, face: 1, st: 'idle', t: 0, mv: null, mvT: 0, hit: {}, inv: 0, stun: 0, anim: 0, flash: 0, armor: 0, juggle: 0, id: ++ent.n }; for (var k in o) e[k] = o[k]; return e; }
@@ -38,7 +42,7 @@ function boxOf(e, b) { var a = e.x + e.face * b[0], c = e.x + e.face * b[1]; ret
 function overlaps(B, t, zr) { return t.x + t.w / 2 > B.x0 && t.x - t.w / 2 < B.x1 && t.h + t.ht > B.h0 && t.h < B.h1 && Math.abs(t.z - B.z) <= zr; }
 function hittable(t) { return t.st !== 'dead' && t.st !== 'down' && t.st !== 'gone' && t.inv <= 0 && t.st !== 'getup' && !t.leaving && !t.intro; }
 /* who an attacker of this team can hit (the player is not in G.ents, so foes get him added) */
-function targetsOf(team) { var out = []; G.ents.forEach(function (e) { if (e.team !== team && e.team !== 'o' && hittable(e)) out.push(e); }); if (team === 'p') G.props.forEach(function (p) { if (p.hp > 0) out.push(p); }); else if (P && P.team !== team && hittable(P)) out.push(P); return out; }
+function targetsOf(team) { var out = []; G.ents.forEach(function (e) { if (e.team !== team && e.team !== 'o' && hittable(e)) out.push(e); }); if (team === 'p') G.props.forEach(function (p) { if (p.hp > 0) out.push(p); }); else players().forEach(function (p) { if (p.team !== team && hittable(p) && out.indexOf(p) < 0) out.push(p); }); return out; }
 /* one blow lands. m: {dmg, kb, lift, kd, stun, hs, sfx, fx, dir, from, guardBreak} */
 function strike(t, m, dir) {
   var from = m.from;
@@ -108,13 +112,13 @@ function stepShot(b, dt) { return (function (b) {
     if (b.boomer && b.back && b.owner && Math.abs(b.x - b.owner.x) < 14 && Math.abs(b.z - b.owner.z) < 12) return false;
     if (b.grav && b.h <= 0) { b.h = 0; if (b.bounce > 0) { b.bounce--; b.vh = 160; } else return burst(b); }
     // hits
-    var targets = b.team === 'p' ? targetsOf('p') : (P && hittable(P) ? [P] : []);
+    var targets = b.team === 'p' ? targetsOf('p') : players().filter(hittable);
     for (var i = 0; i < targets.length; i++) { var t = targets[i]; if (b.hit[t.id]) continue;
       if (Math.abs(t.x - b.x) < t.w / 2 + (b.big ? 12 : 6) && Math.abs(t.z - b.z) < (b.big ? 14 : 10) && b.h + 6 > t.h && b.h - 6 < t.h + t.ht) {
         b.hit[t.id] = 1;
         if (b.boom) return burst(b);
         if (b.bubble && !t.boss && !t.prop) { t.st = 'hurt'; t.stun = b.bubble; t.bubbled = b.bubble; t.vx = 0; t.mv = null; sfx.play('bubble'); return false; }
-        if (b.team === 'f' && b.splat && t === P) G.splat = 1.4;
+        if (b.team === 'f' && b.splat && t.team === 'p') splatOn(t);
         strike(t, { dmg: b.dmg, kb: b.kb, kd: b.kd, stun: b.stun, hs: 0.04, from: b.owner, shot: 1, lift: 200 }, b.vx >= 0 ? 1 : -1);
         if (b.silly && t.team === 'f') { t.silly = 3; }
         if (b.poison && !t.prop) { t.poisonT = b.poison; t.poisonBy = b.owner; }
@@ -127,18 +131,18 @@ function stepShot(b, dt) { return (function (b) {
 }
 function burst(b) {
   if (b.boom) { G.fx.push({ k: 'ring', x: b.x, z: b.z, t: 0, life: 0.3, r: b.boom, col: b.fuse ? '#ffe36a' : '#fffbe8' }); if (b.splat) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.4, sc: 1.6 }); sfx.play(b.fuse ? 'boom' : 'splat'); KIT.shake(b.fuse ? 6 : 3);
-    hitArea(b.x, b.z, b.boom, b.boom * 0.45, { dmg: b.dmg, kd: b.kd, kb: 160, lift: 240, from: b.owner, team: b.team, hs: 0.06 }); if (b.team === 'f' && b.splat && P && Math.abs(P.x - b.x) < b.boom && Math.abs(P.z - b.z) < 18) G.splat = 1.4; }
+    hitArea(b.x, b.z, b.boom, b.boom * 0.45, { dmg: b.dmg, kd: b.kd, kb: 160, lift: 240, from: b.owner, team: b.team, hs: 0.06 }); if (b.team === 'f' && b.splat) players().forEach(function (p) { if (Math.abs(p.x - b.x) < b.boom && Math.abs(p.z - b.z) < 18) splatOn(p); }); }
   if (b.puddle) { G.puddles.push({ x: b.x, z: b.z, r: b.fire ? 22 : 18, t: 0, life: b.puddle, team: b.team, dmg: b.fire ? 4 : 3, col: b.fire ? '#5a3010' : b.green ? '#4aa82a' : '#9a3ad8', fire: b.fire, owner: b.owner }); sfx.play('splat'); }
   if (!b.boom && !b.puddle) G.fx.push({ k: 'spr', spr: 'fx_cream', x: b.x, z: b.z, h: 0, t: 0, life: 0.25 });
   return false;
 }
 function stepPoison(dt) { // Laboozie's bag: whoever it hits is covered in it and it eats at them
-  G.ents.concat(P ? [P] : []).forEach(function (t) { if (!(t.poisonT > 0) || t.st === 'dead') return; t.poisonT -= dt; t.ptick = (t.ptick || 0) - dt;
+  G.ents.concat(players()).forEach(function (t) { if (!(t.poisonT > 0) || t.st === 'dead') return; t.poisonT -= dt; t.ptick = (t.ptick || 0) - dt;
     if (t.ptick <= 0) { t.ptick = 0.5; t.hp -= 3.5; t.flash = 0.06; if (Math.random() < 0.6) G.fx.push({ k: 'spr', spr: 'fx_goo', x: t.x, z: t.z, h: t.h + 30, t: 0, life: 0.3 }); if (t.hp <= 0) { t.hp = 0; launch(t, 1, 80, 200); onKO(t, t.poisonBy); } } }); }
 function stepPuddles(dt) {
   stepPoison(dt);
   G.puddles = G.puddles.filter(function (q) { q.t += dt; q.tick = (q.tick || 0) - dt;
-    if (q.tick <= 0) { q.tick = 0.4; var vs = q.team === 'p' ? targetsOf('p').filter(function (t) { return !t.prop; }) : (P && hittable(P) ? [P] : []); vs.forEach(function (t) { if (t.h < 4 && Math.abs(t.x - q.x) < q.r && Math.abs(t.z - q.z) < 9) { t.hp -= q.dmg; t.flash = 0.08; if (t.hp <= 0 && t.st !== 'dead') { t.hp = 0; launch(t, 1, 80, 200); onKO(t, q.owner); } } }); }
+    if (q.tick <= 0) { q.tick = 0.4; var vs = q.team === 'p' ? targetsOf('p').filter(function (t) { return !t.prop; }) : players().filter(hittable); vs.forEach(function (t) { if (t.h < 4 && Math.abs(t.x - q.x) < q.r && Math.abs(t.z - q.z) < 9) { t.hp -= q.dmg; t.flash = 0.08; if (t.hp <= 0 && t.st !== 'dead') { t.hp = 0; launch(t, 1, 80, 200); onKO(t, q.owner); } } }); }
     return q.t < q.life; });
 }
 

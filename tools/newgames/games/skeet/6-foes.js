@@ -16,7 +16,7 @@ function spawnFoe(id, side, o) {
   G.ents.push(e); return e;
 }
 function tokens() { return G.ents.filter(function (e) { return e.team === 'f' && e.tok && e.hp > 0; }).length; }
-function maxTokens() { return Math.min(3, 1 + Math.floor((G.si + 2) / 3)) + (G.hard ? 1 : 0); }
+function maxTokens() { return Math.min(3, 1 + Math.floor((G.si + 2) / 3)) + (G.hard ? 1 : 0) + (G.pl ? G.pl.length - 1 : 0); } // online co-op: one more at a time per extra player
 function freeToken(e) { e.tok = false; e.cd = rnd(0.9, 1.9) / (G.hard ? 1.3 : 1); }
 
 function stepFoe(e, dt) {
@@ -162,4 +162,4 @@ function bossDown(b) {
   if (bossesLeft().length === 0) { G.koT = 0.01; music.stop(0.4); G.ents.forEach(function (o) { if (o.team === 'f' && !o.boss && o.hp > 0) { o.hp = 0; launch(o, o.x > P.x ? 1 : -1, 120, 200); onKO(o); } }); }
 }
 /* shock rings from the Titan: jump over the line */
-function stepWaves(dt) { G.waves = (G.waves || []).filter(function (w) { w.r += w.spd * dt; if (!w.hit && P && hittable(P) && P.h < 6) { var dd = Math.hypot(P.x - w.x, (P.z - w.z) * 2.6); if (Math.abs(dd - w.r) < 8) { w.hit = true; strike(P, { dmg: w.dmg, kd: true, kb: 160, lift: 240, hs: 0.08, low: 1 }, P.x >= w.x ? 1 : -1); } } return w.r < w.max; }); }
+function stepWaves(dt) { G.waves = (G.waves || []).filter(function (w) { w.r += w.spd * dt; w.hitP = w.hitP || {}; players().forEach(function (p) { if (w.hitP[p.id] || !hittable(p) || p.h >= 6) return; var dd = Math.hypot(p.x - w.x, (p.z - w.z) * 2.6); if (Math.abs(dd - w.r) < 8) { w.hitP[p.id] = 1; strike(p, { dmg: w.dmg, kd: true, kb: 160, lift: 240, hs: 0.08, low: 1 }, p.x >= w.x ? 1 : -1); } }); return w.r < w.max; }); }

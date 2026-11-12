@@ -51,7 +51,7 @@ function arcadeNext() {
 }
 /* ---------- starting a duel ---------- */
 function startDuel(o) {
-  var lvl = G.arc ? G.arc.i / 9 : G.si / 5;
+  var lvl = G.versus ? 0 : G.arc ? G.arc.i / 9 : G.si / 5;
   G.duel = { o: o, round: 1, wins: [0, 0], phase: 'intro', t: 0, clock: o.boss ? 90 : 60, lvl: lvl * (G.hard ? 1.2 : 1), x0: G.cam }; G.zoom = duelZoom();
   G.mode = 'duel'; G.lock = G.cam; G.bossOn = true; G.koT = 0; padSubs(true);
   duelRound();
@@ -61,8 +61,11 @@ function makeOpp(o) {
   if (o.hero) { e = makePlayer(o.hero); e.team = 'f'; e.cpu = true; e.face = -1; if (o.shadow) { e.shade = SHADE; e.hp = e.mhp = e.mhp * 1.15; } e.hp = e.mhp = e.mhp * (1 + D.lvl * 0.35); }
   else { var b = BOSSES[o.boss]; e = ent({ team: 'f', boss: true, bid: o.boss, def: b, w: b.w, ht: b.ht, face: -1, cd: 1.2, poise: 40 + D.lvl * 20, intro: true, sc: b.sc, spr: b.spr, mvi: 0, wait: 1.0 });
     e.hp = e.mhp = (200 + 140 * D.lvl) * (G.arc ? 1 : 1.1) * (o.boss === 'blum' ? 1.1 : 1); }
+  if (o.net) { e.net = o.net; e.pname = o.pname; if (P && o.hero === P.hid) e.shade = MIRROR; } // online versus: the other player's fighter (a mirror match gets other colours)
+  if (G.pl && e.boss) { e.hp = e.mhp = e.mhp * (1 + 0.2 * (G.pl.length - 1)); } // online co-op: tougher with more of you
   e.inside = true; return e;
 }
+var MIRROR = 'hue-rotate(160deg) saturate(1.25)';
 function duelRound() {
   var D = G.duel, W = KIT.W; G.ents = []; G.shots = []; G.fx = []; G.items = []; G.props = []; G.puddles = []; G.waves = []; G.beam = null; G.sup = null; G.superT = 0; G.cutin = null; G.splat = 0; G.combo = 0; G.hs = 0; G.slow = 0;
   G.foeK = { hp: 1, dmg: 0.85 + D.lvl * 0.35 };
@@ -88,9 +91,9 @@ function stepDuel(dt) {
   var foe = D.foe, live = D.phase === 'fight';
   if (D.phase === 'intro') { foe.intro = true; if (D.t > 1.9) { D.phase = 'fight'; D.t = 0; foe.intro = false; foe.wait = 0.6; sfx.play('fight'); } }
   if (live) { D.clock -= dt; if (D.clock <= 0) { D.clock = 0; duelTime(); } }
-  var pin = live ? (G.bot ? cpuInput(P, foe, dt, 0.85) : padInput()) : NOIN;
+  var pin = live ? duelIn(P, foe, dt) : NOIN;
   stepDuelHero(P, pin, foe, dt); physics(P, dt);
-  if (foe.hero) stepDuelHero(foe, live ? cpuInput(foe, P, dt, D.lvl) : NOIN, P, dt);
+  if (foe.hero) stepDuelHero(foe, live ? (foe.net ? duelIn(foe, P, dt) : cpuInput(foe, P, dt, D.lvl)) : NOIN, P, dt);
   else if (live || D.phase === 'ko') { if (D.phase === 'ko' && foe.st !== 'down' && foe.st !== 'air' && foe.st !== 'dead') { foe.vx = 0; foe.st = foe.hp > 0 ? 'idle' : foe.st; } else stepFoe(foe, dt); }
   else { foe.t += dt; if (foe.flash > 0) foe.flash -= dt; }
   physics(foe, dt);
@@ -108,6 +111,8 @@ function stepDuel(dt) {
     if (D.t > 3.6) duelRoundOver();
   }
 }
+/* whose buttons drive a fighter: his own over the link (IN), the test autopilot, or this machine's pad */
+function duelIn(e, o, dt) { if (e.IN) { if (e.IN.bot) return cpuInput(e, o, dt, 0.85); IN = e.IN; var r = padInput(); IN = null; return r; } if (e.net) return NOIN; return G.bot ? cpuInput(e, o, dt, 0.85) : padInput(); }
 function padInput() { return { l: KIT.held('left'), r: KIT.held('right'), u: KIT.held('up'), d: KIT.held('down'), a: KIT.pressed('a'), b: KIT.pressed('b'), x: KIT.pressed('x'), y: KIT.pressed('y'), g: KIT.held('lb') }; }
 /* Cowboy Load leans on the fence at the back and lobs his mugs in while his brother fights */
 function stepAssist(e, dt, live) { e.t += dt; e.z = 6; e.x = G.cam + VW() - 26; e.face = P.x < e.x ? -1 : 1; if (!live) return; e.cd -= dt; if (e.cd <= 0) { e.cd = rnd(3.2, 5) / (1 + G.duel.lvl * 0.5); e.flash = 0.1; var b = shoot(e, { spr: 's_mug', spd: 150, arc: 260, dmg: 7, boom: 18 }, { h: 40, k: clamp(Math.abs(P.x - e.x) / 150, 0.4, 1.6) }); b.vz = (LANE - 6) * 1.4; sfx.play('throw'); } }

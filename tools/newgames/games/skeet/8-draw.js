@@ -97,11 +97,12 @@ function drawWorld() {
   var L = [];
   G.props.forEach(function (p) { L.push({ z: p.z, f: function () { shadow(p.x - G.cam, p.z, 16, 0); KIT.spr(p.spr, p.x - G.cam, FLOOR + p.z, { flash: p.flash > 0 }); } }); });
   G.items.forEach(function (it) { L.push({ z: it.z, f: function () { shadow(it.x - G.cam, it.z, 10, it.h); var bob = it.h <= 0 ? Math.round(Math.sin(G.t * 4 + it.x) * 1) : 0; KIT.spr(it.id, it.x - G.cam, FLOOR + it.z - it.h - 1 + bob, {}); if (it.h <= 0 && Math.floor(G.t * 3) % 2 && WEAPONS[it.id]) R('#ffe36a', it.x - G.cam - 1, FLOOR + it.z - 20, 2, 2); } }); });
-  G.ents.concat([P]).forEach(function (e) { if (e.st === 'gone') return; L.push({ z: e.z + (e.st === 'grabbed' ? 0.1 : 0), f: function () { shadow(e.x - G.cam, e.z, e.w * (e.sc || 1), e.h); drawFighter(e); } }); });
+  G.ents.concat(players()).forEach(function (e) { if (e.st === 'gone') return; L.push({ z: e.z + (e.st === 'grabbed' ? 0.1 : 0), f: function () { shadow(e.x - G.cam, e.z, e.w * (e.sc || 1), e.h); drawFighter(e); } }); });
   G.shots.forEach(function (b) { L.push({ z: b.z, f: function () { shadow(b.x - G.cam, b.z, 8, b.h); var o = { flip: b.vx < 0, anchor: 'c' }; if (b.spin) o.rot = G.t * 18; if (b.big) o.sc = 1.5; if (b.rat) { KIT.spr('f_rat_' + (Math.floor(G.t * 10) % 4), b.x - G.cam, FLOOR + b.z, { flip: b.vx < 0 }); return; } if (b.ground && b.spr === 's_wave') { KIT.spr(b.spr, b.x - G.cam, FLOOR + b.z, { flip: b.vx < 0, sc: b.big ? 1.5 : 1 }); return; }
     if (b.col && b.spr === 's_orb') { g.fillStyle = '#12040a'; g.beginPath(); g.arc(b.x - G.cam, FLOOR + b.z - b.h, 6, 0, 6.3); g.fill(); g.fillStyle = b.col; g.beginPath(); g.arc(b.x - G.cam, FLOOR + b.z - b.h, 5, 0, 6.3); g.fill(); R('#ffffff', b.x - G.cam - 2, FLOOR + b.z - b.h - 3, 2, 2); return; }
     KIT.spr(b.spr, b.x - G.cam, FLOOR + b.z - b.h, o); } }); });
   L.sort(function (a, b) { return a.z - b.z; }); L.forEach(function (l) { l.f(); });
+  if (G.pl && !G.duel && window.drawTags) drawTags(); // online co-op: P1-P4 over their heads
   // effects on top
   G.fx.forEach(function (f) { var x = f.x - G.cam, y = FLOOR + (f.z || 0) - (f.h || 0), k = f.t / f.life;
     if (f.k === 'spark') { KIT.spr('fx_spark' + Math.min(3, (f.size || 1) + Math.floor(k * 2)), x, y, { anchor: 'c' }); }
@@ -150,6 +151,7 @@ function drawHUD() {
   if (G.go > 0 && Math.floor(G.t * 3) % 2) { T('GO', W - 48, 78, { size: 24, col: '#ff2630', outline: true, font: 'title' }); var g = KIT.ctx; g.fillStyle = '#ff2630'; g.beginPath(); g.moveTo(W - 12, 90); g.lineTo(W - 22, 80); g.lineTo(W - 22, 100); g.fill(); }
   if (G.fightT > 0) { var a = G.fightT > 0.9 ? 'ROUND ' + (G.si + 1) : 'FIGHT!'; T(a, W / 2, 70, { size: 32, align: 'center', col: a === 'FIGHT!' ? '#ff2630' : '#f1e7d0', outline: true, font: 'title' }); }
   if (G.koT > 0.2 && G.koT < 2.8) T('K.O.', W / 2, 60, { size: 48, align: 'center', col: '#ff2630', outline: true, font: 'title' });
+  if (G.pl && G.pl.length > 1 && window.drawMates) drawMates(ty);
   if (G.splat > 0) { var al = Math.min(1, G.splat); KIT.ctx.globalAlpha = al * 0.85; [[0.3, 0.35, 3], [0.62, 0.5, 2.6], [0.45, 0.7, 2.2], [0.75, 0.28, 1.8]].forEach(function (s) { KIT.spr('fx_cream', W * s[0], HH * s[1], { anchor: 'c', sc: s[2] }); }); KIT.ctx.globalAlpha = 1; }
   drawCutin();
 }
@@ -168,6 +170,7 @@ function drawVS() {
   V.art.forEach(function (a, j) { var tall = KIT.size(a.spr).h * a.sc, n = V.art.length; if (a.shade) g.filter = a.shade;
     KIT.spr(a.spr, W * 0.76 + (1 - k) * 200 + j * 44 - (n - 1) * 22, HH - 14 - j * 4, { sc: a.sc * clamp(130 / tall, 0.7, 2) * (n > 1 ? 0.8 : 1), flip: true }); g.filter = 'none'; });
   T(H.n, W * 0.22, 26, { size: 16, align: 'center', col: '#f1e7d0', outline: true, font: 'title' }); T(V.name, W * 0.76, 26, { size: 16, align: 'center', col: '#ff2630', outline: true, font: 'title', max: W * 0.44 });
+  if (P.pname) T(P.pname, W * 0.22, 14, { size: 8, align: 'center', col: '#ffe36a', outline: true }); if (V.o && V.o.pname) T(V.o.pname, W * 0.76, 14, { size: 8, align: 'center', col: '#ffe36a', outline: true }); // online: who is who
   if (G.arc) T('FIGHT ' + (G.arc.i + 1) + ' OF 10', W / 2, HH - 12, { size: 8, align: 'center', col: '#ffe36a' });
   if (t > 0.35) { var s = 1 + Math.max(0, 0.6 - t) * 3; T('VS', W / 2, 84 - (s - 1) * 20, { size: Math.round(48 * s), align: 'center', col: '#ffe36a', outline: true, font: 'title' }); }
   if (t > 0.9) { KIT.wrap('"' + H.quote + '"', W * 0.4, 8).forEach(function (l, i) { T(l, W * 0.22, 50 + i * 11, { size: 8, align: 'center', col: '#f1e7d0' }); }); KIT.wrap('"' + V.quote + '"', W * 0.4, 8).forEach(function (l, i) { T(l, W * 0.76, 50 + i * 11, { size: 8, align: 'center', col: '#ff9ad0' }); }); }
@@ -179,7 +182,7 @@ function drawDuelHUD() {
   [P, foe].forEach(function (e, i) { e.trail = e.trail === undefined ? e.hp : (e.trail > e.hp ? Math.max(e.hp, e.trail - e.mhp * 0.5 / 60) : e.hp);
     var x = i ? cx + 22 : cx - 22 - bw, low = e.hp < e.mhp * 0.25 && Math.floor(G.t * 6) % 2;
     hpBar(x, y, bw, 8, e.hp / e.mhp, e.trail / e.mhp, low ? '#ff2630' : e.superOn ? '#9a3ad8' : '#c4121c', i === 0);
-    var nm = i ? oppName(D.o) : P.hero.n;
+    var nm = (e.pname ? e.pname + ' · ' : '') + (i ? (e.hero ? e.hero.n : oppName(D.o)) : P.hero.n);
     T(nm, i ? x + bw : x, y + 11, { size: 8, align: i ? 'right' : 'left', col: '#f1e7d0', outline: true, max: bw });
     for (var r = 0; r < 2; r++) { var wx = i ? x + bw - 6 - r * 9 : x + r * 9, on = D.wins[i] > r; R('#12040a', wx - 1, y - 8, 8, 6); R(on ? '#ffe36a' : '#2a0a0e', wx, y - 7, 6, 4); }
     if (e.hero) { var mw = Math.min(80, W * 0.22), mx = i ? W - 8 - mw : 8, full = e.meter >= 100, sw = (mw - 3) / 4; R('#12040a', mx - 1, HH - 12, mw + 2, 6);
@@ -192,7 +195,7 @@ function drawDuelHUD() {
   if (G.callout) T(G.callout.s, cx, HH - 24, { size: 8, align: 'center', col: '#ffe36a', outline: true, alpha: Math.min(1, G.callout.t * 3) }); // move names low, clear of the backdrop's signs
   if (D.phase === 'intro') { var a = D.t < 1.1 ? (D.round === 3 || (D.wins[0] === 1 && D.wins[1] === 1) ? 'FINAL ROUND' : 'ROUND ' + D.round) : 'FIGHT!'; T(a, cx, 70, { size: 32, align: 'center', col: a === 'FIGHT!' ? '#ff2630' : '#f1e7d0', outline: true, font: 'title' }); }
   if (D.phase === 'ko' && D.t > 0.1) { if (D.t < 2) T(D.msg, cx, 60, { size: D.msg === 'K.O.' ? 48 : 32, align: 'center', col: D.msg === 'PERFECT' ? '#ffe36a' : '#ff2630', outline: true, font: 'title' });
-    else T(D.winner === P ? 'YOU WIN' : 'YOU LOSE', cx, 64, { size: 32, align: 'center', col: D.winner === P ? '#ffe36a' : '#a6968f', outline: true, font: 'title' }); }
+    else { var mine = G.versus ? D.winner === G.me : D.winner === P; T(G.versus ? (D.winner && D.winner.pname ? D.winner.pname : 'P' + (D.winner === P ? 1 : 2)) + ' WINS' : mine ? 'YOU WIN' : 'YOU LOSE', cx, 64, { size: 32, align: 'center', col: mine ? '#ffe36a' : '#a6968f', outline: true, font: 'title', max: KIT.W - 16 }); } }
   if (G.splat > 0) { var al = Math.min(1, G.splat); KIT.ctx.globalAlpha = al * 0.85; [[0.3, 0.35, 3], [0.62, 0.5, 2.6], [0.45, 0.7, 2.2]].forEach(function (s) { KIT.spr('fx_cream', W * s[0], HH * s[1], { anchor: 'c', sc: s[2] }); }); KIT.ctx.globalAlpha = 1; }
   drawCutin();
 }

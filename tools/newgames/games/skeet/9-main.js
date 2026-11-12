@@ -68,6 +68,7 @@ function titleMenu() {
   KIT.menu({ cls: 'clear', logo: '../assets/sk-logo.webp', title: 'Skeet Fighter', items: [
     { label: 'Story', fn: function () { toSelect('story'); } },
     { label: 'Arcade', fn: function () { toSelect('arcade'); } },
+    { label: 'Online', fn: function () { onlineMenu(); } },
     { label: 'How to Play', fn: helpMenu },
     { label: 'Options', fn: function () { optionsMenu(titleMenu); } }] });
 }
@@ -77,6 +78,7 @@ function helpMenu(back) {
     '<p><b>On the streets</b>: up and down walk into and out of the screen. <b>A</b> attack (keep pressing for a combo, it also picks things up), <b>B</b> jump, <b>X</b> special, <b>Y</b> super with a full meter. Double tap forward to run, A while running for a dash attack, A in the air for a flying kick. Walk into someone to grab them: A knees, A with a direction throws. X while you are being hit breaks away for a little health. Smash bins and crates for food and weapons; weapons wear out. <b>R</b> throws the one you hold: it lands, you can pick it up again, and every throw wears it down.</p>' +
     '<p><b>One on one</b>: <b>A</b> punch, <b>B</b> kick, <b>UP</b> jump (with a direction to jump at them or away), <b>DOWN</b> crouch. <b>Hold back to block</b>: low sweeps need down-back, jump-ins need standing. Down + A jab low, down + B sweep, down-forward + A uppercut, forward + B roundhouse, A and B in the air. Forward + A up close throws (it cannot be blocked). Chains: A then A, then B. A normal that hits cancels into a special with X.</p>' +
     '<p><b>Specials</b> (both modes): X fireball, UP + X rising move, FORWARD + X dash, DOWN + X ground move. <b>Motions</b>: down, down-forward, forward + a button is the EX fireball; forward, down, down-forward + a button the EX rising move (a quarter of the meter in a one on one, free on the streets).</p>' +
+    '<p><b>Online</b>: host a room and give your friends the five-letter code. <b>Versus</b> is a one on one between two of you. <b>Co-op</b> takes up to four through the story together; more of you means more foes and tougher ones. At a boss, player 1 picks who fights it; lose and it passes to the next player along, until the boss is down or everyone has had a go.</p>' +
     '<p>The <b>Blumwashed homunculi</b> are not evil, just full of goo: beat it out of them and they go home.</p>', items: [{ label: 'Back', back: true, fn: back || titleMenu }] });
 }
 function optionsMenu(back) {
@@ -93,6 +95,7 @@ function stepSelect() {
 }
 function pickFighter() { sfx.play('fight'); if (G.pickKind === 'arcade') arcadeStart(HEROLIST[G.sel]); else newGame(HEROLIST[G.sel], {}); }
 function pauseMenu() {
+  if (netLive()) return netPause();
   if (G.mode !== 'play' && G.mode !== 'card' && G.mode !== 'duel') return;
   KIT.menu({ cls: 'clear', title: 'Paused', sub: G.arc ? 'Arcade · fight ' + (G.arc.i + 1) + ' of 10' : G.S.n, items: [{ label: 'Resume', fn: KIT.closeMenu }, { label: 'Move List', fn: moveList }, { label: 'How to Play', fn: function () { helpMenu(pauseMenu); } }, { label: 'Options', fn: function () { optionsMenu(pauseMenu); } }, { label: 'Quit to Title', fn: titleMenu }] });
 }
@@ -134,8 +137,8 @@ function botInput() {
 }
 
 KIT.start({ w: 384, h: 216, wide: 512, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
-  idleUpdate: function (dt) { if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
+  idleUpdate: function (dt) { if (netLive()) return update(dt); if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
   pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }, { k: 'rb', label: 'R', sub: 'THROW' }] } });
 titleMenu();
-window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect,
+window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect, NET: NET, netHost: netHost, netJoin: netJoin, hostStart: hostStart, get IN() { return IN; },
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };
