@@ -80,9 +80,11 @@ function stepWorld(dt) {
   SHOTS.forEach(function (s) {
     if (s.delay > 0) { s.delay -= dt; return; }
     s.life -= dt; s.vy += (s.g || 0) * dt; s.x += s.vx * dt; s.y += s.vy * dt;
-    if (s.mine) { ENTS.forEach(function (e) { if (e.k === 'foe' && e.alive && Math.abs(e.x - s.x) < (e.w || 12) && s.y > e.y - (e.h || 24) - 4 && s.y < e.y + 4) { if (e.F.shield && Math.sign(s.vx) === -e.dir) { s.vx = -s.vx * 0.6; s.vy = -120; s.mine = false; s.life = 0.4; sfx.play('clink'); } else { hitFoe(e, 1); s.life = 0; } } if (e.k === 'box' && e.alive && Math.abs(e.x - s.x) < 12 && Math.abs(e.y - 12 - s.y) < 14) { openBox(e); s.life = 0; } }); if (G.boss && G.boss.alive && bossHitBy(s.x, s.y)) { hitBoss(1); s.life = 0; } }
+    if (s.mine) { ENTS.forEach(function (e, ei) { if (s.life <= 0 || !s.mine) return; // the homunculi's shots (9e-homs.js) can pierce (s.pierce), freeze (s.freeze), hit harder (s.dmg) and do something on a hit (s.onHit)
+        if (e.k === 'foe' && e.alive && !(s.seen && s.seen[ei]) && Math.abs(e.x - s.x) < (e.w || 12) + (s.big || 0) && s.y > e.y - (e.h || 24) - 4 - (s.big || 0) && s.y < e.y + 4 + (s.big || 0)) { if (e.F.shield && Math.sign(s.vx) === -e.dir && !s.pierce) { s.vx = -s.vx * 0.6; s.vy = -120; s.mine = false; s.life = 0.4; sfx.play('clink'); } else { if (s.freeze && typeof freezeFoe === 'function') freezeFoe(e, s.freeze); else hitFoe(e, s.dmg || 1); if (s.onHit) s.onHit(s, e); if (s.pierce) (s.seen = s.seen || {})[ei] = 1; else s.life = 0; } }
+        if (e.k === 'box' && e.alive && Math.abs(e.x - s.x) < 12 && Math.abs(e.y - 12 - s.y) < 14) { openBox(e); if (!s.pierce) s.life = 0; } }); if (s.mine && s.life > 0 && G.boss && G.boss.alive && bossHitBy(s.x, s.y)) { hitBoss(s.dmg >= 2 ? 2 : 1); if (!s.pierce) s.life = 0; } }
     else if (p && p.state === 'normal' && Math.abs(p.x - s.x) < 7 && s.y > p.y - PH + 6 && s.y < p.y - 1) { hurt(s.x); s.life = 0; } // a hurt box a little inside Cumhead
-    if (wallAt(s.x, s.y) && !s.ghost) s.life = 0;
+    if (wallAt(s.x, s.y) && !s.ghost && !(s.onWall && s.onWall(s))) s.life = 0;
   });
   SHOTS = SHOTS.filter(function (s) { return s.life > 0; });
   // scattered drops you can grab back

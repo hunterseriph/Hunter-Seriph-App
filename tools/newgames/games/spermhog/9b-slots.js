@@ -104,6 +104,7 @@ function drawData() {
     var C = i === 0 ? charDef('cumhead') : charOf(s ? s.ch : HOGCHARS[(DS.pick['c' + i] || 0) % HOGCHARS.length].id);
     drawCharStand(C, x + pw / 2, y + 140, t + i * 0.3);
     text(i === 0 ? 'ANY ZONE YOU HAVE REACHED' : C.name, x + pw / 2, y + 147, { size: i === 0 || C.name.length > 15 ? 4 : 6, align: 'center', col: '#f1e7d0' });
+    var AB = i > 0 && typeof HOMAB !== 'undefined' ? HOMAB[C.kind === 'hom' ? C.breed : C.fol] : null; if (AB) text(C.kind === 'hom' ? 'B ' + AB.b + ' · ' + AB.p : 'FOLLOWER: ' + AB.b, x + pw / 2, y + 154, { size: 4, align: 'center', col: '#ffe36a', max: pw - 6 }); // what this one does (9e-homs.js)
     if (on && !DS.erase) dsArrows(i).forEach(function (a) { var cx = a.x + a.w / 2, cy = a.y + a.h / 2, pulse = Math.floor(t * 3) % 2;
       R('#12040a', a.x, a.y, a.w, a.h); R(pulse ? '#c4121c' : '#8a0a14', a.x + 1, a.y + 1, a.w - 2, a.h - 2); g.fillStyle = '#ffe36a'; g.beginPath(); g.moveTo(cx + a.d * 6, cy); g.lineTo(cx - a.d * 4, cy - 8); g.lineTo(cx - a.d * 4, cy + 8); g.fill(); });
     if (s) { drawCharIcon(C, x + 14, y + 168); text('x' + s.lives, x + 22, y + 160, { size: 6, col: '#f1e7d0' });
