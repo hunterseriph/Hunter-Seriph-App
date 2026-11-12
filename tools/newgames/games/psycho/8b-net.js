@@ -91,15 +91,15 @@ function hostData(L, m) {
   if (m.t === 'st') { unpackP(R, m.s); R.seenAt = KIT.t; return; }
   if (m.t === 'hit') { var f = m.id === 'tb' ? G.tb : G.foes.filter(function (q) { return q.id === m.id; })[0]; if (f) hurtFoe(f, +m.dmg || 0, +m.a || 0, +m.push || 0, m.w); return; }
   if (m.t === 'bag') { var b = m.b || {}; G.bags.push({ x: +b.x, z: +b.z, y: +b.y, vx: +b.vx, vz: +b.vz, vy: +b.vy, t: 3, by: 'g' }); return; }
-  if (m.t === 'take') { var i = G.loot.findIndex(function (l) { return l.id === m.id; }); if (i < 0) return; var l = G.loot[i]; if (l.k === 'bag' && l.own !== 'g') return; G.loot.splice(i, 1); G.lootV++; if (l.k === 'key') { G.keys[G.fi] = 1; say('Laboozie found the ' + FLOORS[G.fi].key + '! The stairs up are open now.', 4, '#ffe36a'); sfx.play('key'); } netToGuest({ t: 'got', l: l }); return; }
+  if (m.t === 'take') { var i = G.loot.findIndex(function (l) { return l.id === m.id; }); if (i < 0) return; var l = G.loot[i]; if (l.k === 'bag' && l.own !== 'g') return; G.loot.splice(i, 1); G.lootV++; if (l.k === 'key') { G.keys[G.fi] = 1; say('Shithead Laboozie found the ' + FLOORS[G.fi].key + '! The stairs up are open now.', 4, '#ffe36a'); sfx.play('key'); } netToGuest({ t: 'got', l: l }); return; }
   if (m.t === 'exit') { if (haveKey()) climb(); return; }
   if (m.t === 'unlock') { FL.cellLocked = 0; return; } if (m.t === 'lock') { FL.cellLocked = 1; return; }
   if (m.t === 'noise') { makeNoise(+m.x, +m.z, +m.r, m.src); return; }
-  if (m.t === 'dead') { R.dead = 1; R.downT = 15; say('Laboozie is down! He gets back up in a bit... if you live that long.', 4, '#c4121c'); checkBothDown(); return; }
+  if (m.t === 'dead') { R.dead = 1; R.downT = 15; say('Shithead Laboozie is down! He gets back up in a bit... if you live that long.', 4, '#c4121c'); checkBothDown(); return; }
   if (m.t === 'bagdrop') { G.loot = G.loot.filter(function (q) { return !(q.k === 'bag' && q.own === 'g'); }); addLoot(+m.x, +m.z, 'bag', { own: 'g' }); return; }
   if (m.t === 'again') { return; }
 }
-function hostDrop(L) { if (NET.link === L) NET.link = null; try { L.close(); } catch (e) {} NET.mate = null; netChanged(); if (G && G.R) { G.R.gone = 1; G.R.dead = 1; say('Laboozie left the game.', 4, '#a6968f'); } }
+function hostDrop(L) { if (NET.link === L) NET.link = null; try { L.close(); } catch (e) {} NET.mate = null; netChanged(); if (G && G.R) { G.R.gone = 1; G.R.dead = 1; say('Shithead Laboozie left the game.', 4, '#a6968f'); } }
 function checkBothDown() { if (G.P.dead && (!G.R || G.R.dead || G.R.gone) && G.mode !== 'over') { gameOver('dead'); netEv({ k: 'over', why: 'dead' }); } }
 /* every frame: the snapshot to the guest, and getting downed players back up */
 function netStep(dt) {
@@ -172,7 +172,7 @@ function netLost() { var e = NET.err; netLeave(); if (G && G.mode !== 'title') {
 /* ---------- starting a game together ---------- */
 function hostStart(cont) {
   var r = SV.run; KIT.closeMenu(); SV.runs++; persist();
-  G = freshG(cont && r ? r.seed : (Math.random() * 1e9) >>> 0); G.net = 'host'; G.R = newPlayer('lab'); G.R.name = NET.mate ? NET.mate.name : 'LABOOZIE';
+  G = freshG(cont && r ? r.seed : (Math.random() * 1e9) >>> 0); G.net = 'host'; G.R = newPlayer('lab'); G.R.name = NET.mate ? NET.mate.name : 'SHITHEAD LABOOZIE';
   if (cont && r) { var P = G.P; P.hp = Math.max(40, r.hp); P.weaps = r.weaps; P.weap = r.weap; P.ammo = r.ammo; P.inv = r.inv; P.buffs = r.buffs || []; G.trip = r.trip; G.read = r.read || {}; G.kills = r.kills; G.caught = r.caught; G.pills = r.pills; G.time = r.time; }
   netToGuest({ t: 'start', seed: G.seed, intro: cont && r ? 0 : 1, name: netMe().name });
   if (cont && r) { G.henchDone = r.done || {}; loadFloor(r.fi, r.arena ? 'arena' : r.fi === 0 ? 'new' : 'up'); music.stop(1); } else { G.mode = 'intro'; G.introT = 0; music.stop(1); }
@@ -187,13 +187,13 @@ function onlineMenu(err) {
   NET.onChange = null;
   KIT.menu({ cls: 'pn plain', title: 'Play online', sub: (err ? err + '  ·  ' : '') + 'Two of you: Cumhead (the host) and Shithead Laboozie (whoever joins).', items: [
     { label: 'HOST A GAME (CUMHEAD)', def: 1, fn: function () { KIT.menu({ cls: 'pn plain', title: 'Opening a room...', items: [{ label: 'CANCEL', back: 1, fn: function () { netLeave(); onlineMenu(); } }] }); netHost(function (ok) { if (ok) hostLobby(); else onlineMenu(NET.err || 'Could not open a room.'); }); } },
-    { label: 'JOIN A GAME (LABOOZIE)', fn: function () { joinPad(''); } },
+    { label: 'JOIN A GAME (SHITHEAD LABOOZIE)', fn: function () { joinPad(''); } },
     { label: 'BACK', back: 1, fn: function () { netLeave(); titleMenu(); } }], note: 'Some networks block direct connections. Home wifi works best.' });
 }
 function hostLobby() {
   NET.onChange = function () { if (NET.role === 'host') hostLobby(); };
   var mate = NET.mate, r = SV.run;
-  KIT.menu({ cls: 'pn plain', title: 'Room ' + NET.code, sub: mate ? 'Shithead Laboozie is here: ' + mate.name : 'Tell your friend the code: ' + NET.code + '. Waiting for Laboozie...', items: [
+  KIT.menu({ cls: 'pn plain', title: 'Room ' + NET.code, sub: mate ? 'Shithead Laboozie is here: ' + mate.name : 'Tell your friend the code: ' + NET.code + '. Waiting for Shithead Laboozie...', items: [
     mate ? { label: 'START A NEW NIGHTMARE', def: 1, fn: function () { NET.onChange = null; hostStart(false); } } : null,
     mate && r ? { label: 'CARRY ON FROM ' + (FLOORS[r.fi].n || FLOORS[r.fi].name), fn: function () { NET.onChange = null; hostStart(true); } } : null,
     { label: 'CLOSE THE ROOM', back: 1, fn: function () { netLeave(); onlineMenu(); } }] });

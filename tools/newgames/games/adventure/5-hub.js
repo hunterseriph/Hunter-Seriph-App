@@ -32,11 +32,11 @@ function clearMenu() { if (G.mode !== 'clear' || !RUN || (!RUN.stage && !RUN.bos
   KIT.menu({ title: RUN.boss ? 'Boss Down' : 'Stage Clear', sub: (RUN.stage ? STAGES[RUN.stage].n : BOSSES[RUN.boss].n) + '  ·  ' + P.rings + ' drops  ·  ' + fmtT(G.time), html: G.egg ? '<p style="text-align:center;color:#ffe36a">You found a homunculus egg! It is waiting on a nest in the Garden.</p>' : '',
     items: [STORY ? { label: 'CARRY ON', def: true, fn: advance } : { label: 'BACK TO THE HUB', def: true, fn: function () { enterHub(RUN.stage ? STAGES[RUN.stage].hub : 'city'); } }, { label: 'TITLE', back: true, fn: titleMenu }] });
 }
-function endStory(who) { STORY = null; persist(); var html = who === 'super' ? '<p>The seven chalices clatter onto the street, just cups again. TB is sat in the gutter laughing at nothing. Cumhead, Greebo, Spermaid and Laboozie go for a drink. Not at TB\'s.</p>' : '<p>' + STORIES[who].n + ' is done.' + (allFour() && !storyDone('super') ? ' Something is happening in the sky over Cum City...' : '') + '</p>';
+function endStory(who) { STORY = null; persist(); var html = who === 'super' ? '<p>The seven chalices clatter onto the street, just cups again. TB is sat in the gutter laughing at nothing. Cumhead, Greebo, Spermaid and Shithead Laboozie go for a drink. Not at TB\'s.</p>' : '<p>' + STORIES[who].n + ' is done.' + (allFour() && !storyDone('super') ? ' Something is happening in the sky over Cum City...' : '') + '</p>';
   KIT.menu({ title: who === 'super' ? 'The End' : 'Story Done', html: html, items: [{ label: 'TITLE', def: true, back: true, fn: titleMenu }] }); }
 /* ---------- the cutscenes: played out in 3D where the story is, everyone acting, the camera on whoever speaks ---------- */
 var CUT = null, SPOT = { city: { x: 0, z: 9 }, park: { x: 0, z: -14 }, isles: { x: 0, z: -18 } };
-var WHO = { CUMHEAD: 'cumhead', GREEBO: 'greebo', SPERMAID: 'spermaid', LABOOZIE: 'lab', TB: 'tb' };
+var WHO = { CUMHEAD: 'cumhead', GREEBO: 'greebo', SPERMAID: 'spermaid', LABOOZIE: 'lab', 'SHITHEAD LABOOZIE': 'lab', TB: 'tb' };
 function showSay(ev, done) {
   if (!R3.ok) { done(); return; }
   buildAtlas(); buildAdvRigs(); KIT.closeMenu(); var at = ev.at || 'city'; LV = buildHub(at); LV.npcs = []; buildMesh(); P = null; BOSS = null; FX = []; SHOTS = [];

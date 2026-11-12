@@ -29,8 +29,8 @@ function charDef(id) { var L = mkChars(); for (var i = 0; i < L.length; i++) if 
 HOGCHARS = mkChars();
 charOf = function (id) { return charDef(id); };
 function CHR() { var id = G.mode === 'title' || !G.ch ? 'cumhead' : G.ch; if (CHR.id !== id) { CHR.id = id; CHR.c = charDef(id); } return CHR.c; }
-function superName() { var C = CHR(); if (C.kind === 'lab') return 'SUPER LABOOZIE!'; return C.kind === 'hom' && C.breed === 'blood' ? 'THE ULTIMATE LIFEFORM!' : C.kind === 'hom' ? 'SUPER ' + C.name + '!' : C.kind === 'gs' ? 'SUPER GREEBO & SIR JOHNATHAN!' : 'SUPER CUMHEAD!'; }
-function shortName() { var C = CHR(); if (C.kind === 'lab') return 'LABOOZIE'; return C.kind === 'gs' ? 'GREEBO' : C.kind === 'hom' ? C.name : 'CUMHEAD'; }
+function superName() { var C = CHR(); if (C.kind === 'lab') return 'SUPER SHITHEAD LABOOZIE!'; return C.kind === 'hom' && C.breed === 'blood' ? 'THE ULTIMATE LIFEFORM!' : C.kind === 'hom' ? 'SUPER ' + C.name + '!' : C.kind === 'gs' ? 'SUPER GREEBO & SIR JOHNATHAN!' : 'SUPER CUMHEAD!'; }
+function shortName() { var C = CHR(); if (C.kind === 'lab') return 'SHITHEAD LABOOZIE'; return C.kind === 'gs' ? 'GREEBO' : C.kind === 'hom' ? C.name : 'CUMHEAD'; }
 function ssBack(i) { var C = CHR(); if (C.kind === 'lab') return 'bk_lab' + i; return C.kind === 'hom' ? 'bk_' + C.breed + i : C.kind === 'gs' ? 'bk_greebo' + i : 'chb_u' + i; }
 function refreshChars() { HOGCHARS = mkChars(); CHR.id = null; }
 

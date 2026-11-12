@@ -55,7 +55,7 @@ def body(g, d, f, oy):
     # trousers then boots (drawn first so the shirt sits over the waist)
     if d == 's':
         g.rect(9, by + 5, 7, 4, 'cloth')
-        g.rect(8 + sw * 2, by + 8, 5, 3, 'boot'); g.rect(12 - sw * 2, by + 8, 5, 3, 'boot')
+        for bx in (8 + sw * 2, 12 - sw * 2): g.rect(bx, by + 8, 5, 3, 'boot'); g.rect(bx + 5, by + 9, 1, 2, 'boot') # toe out in front
         g.put(9 + sw * 2, by + 10, 'red'); g.put(13 - sw * 2, by + 10, 'red')
     else:
         g.rect(7, by + 5, 10, 3, 'cloth'); g.put(8, by + 6, 'red'); g.put(15, by + 6, 'red')
@@ -121,7 +121,7 @@ def lab_body(g, d, f, oy):
     sw = [0, 1, 0, -1][f]; by = 22 + oy
     if d == 's':
         g.rect(9, by + 5, 7, 4, 'camo'); g.put(10, by + 6, 'camod'); g.put(13, by + 7, 'camod')
-        g.rect(8 + sw * 2, by + 8, 5, 3, 'boot'); g.rect(12 - sw * 2, by + 8, 5, 3, 'boot')
+        for bx in (8 + sw * 2, 12 - sw * 2): g.rect(bx, by + 8, 5, 3, 'boot'); g.rect(bx + 5, by + 9, 1, 2, 'boot') # toe out in front
     else:
         g.rect(7, by + 5, 10, 4, 'camo'); g.put(8, by + 6, 'camod'); g.put(12, by + 5, 'camod'); g.put(15, by + 7, 'camod'); g.put(10, by + 8, 'camod')
         lf, rf = (-1 if sw > 0 else 0), (-1 if sw < 0 else 0)

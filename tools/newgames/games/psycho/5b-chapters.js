@@ -15,7 +15,7 @@ function startDrive(fi, how) {
   DR = { z: 0, x: 0, yaw: 0, v: 8, hp: 100, t: 0, peds: [], next: 40, hits: 0, end: 0, stopT: 0, wheel: 0, steer: 0, splat: 0, bump: 0 };
   G.foes = []; G.loot = []; G.fx = []; G.shots = []; G.bags = []; G.burns = []; G.stash = null; G.keys = {}; G.tb = { x: -99, z: -99, st: 'gone', a: 0 };
   G.mode = 'drive'; G.banner = { s: FLOORS[fi].name, t: 4 }; G.wake = 1.2; music.play('pnchase');
-  say('Floor it. Run the bastards down.', 4, '#ffe36a'); if (G.R) say('Laboozie: throw bags at them from the passenger seat!', 4, '#ffe36a');
+  say('Floor it. Run the bastards down.', 4, '#ffe36a'); if (G.R) say('Shithead Laboozie: throw bags at them from the passenger seat!', 4, '#ffe36a');
   if (isHost()) netFloor(how);
 }
 function buildDriveMesh() {

@@ -76,11 +76,11 @@ var STORIES = {
     { stage: 'reef' }, { boss: 'kraken', hub: 'isles' }, { stage: 'sewer' }, { stage: 'beach' }, { boss: 'hotload', hub: 'isles' },
     { at: 'isles', cast: ['spermaid'], fx: 'clean', say: [['SPERMAID', 'The sea is clean again. Now to find Cumhead before TB does.']] }] },
   lab: { n: "SHITHEAD LABOOZIE'S STORY", ev: [
-    { at: 'city', cast: ['lab', 'gimp', 'gimp'], fx: 'roofs', say: [['LABOOZIE', 'Sheriff of Cum City. TB has his boys on every roof. Time to clean up the town.']] },
+    { at: 'city', cast: ['lab', 'gimp', 'gimp'], fx: 'roofs', say: [['SHITHEAD LABOOZIE', 'Sheriff of Cum City. TB has his boys on every roof. Time to clean up the town.']] },
     { stage: 'rooftop' }, { stage: 'coaster' }, { boss: 'execu', hub: 'park' }, { stage: 'volcano' }, { boss: 'mega', hub: 'city' },
-    { at: 'city', cast: ['lab'], fx: 'hold', say: [['LABOOZIE', 'Town\'s clean. Now where did TB run off to with all them cups?']] }] },
+    { at: 'city', cast: ['lab'], fx: 'hold', say: [['SHITHEAD LABOOZIE', 'Town\'s clean. Now where did TB run off to with all them cups?']] }] },
   super: { n: 'THE LAST STORY', ev: [
-    { at: 'city', cast: ['tb', 'cumhead', 'greebo', 'spermaid', 'lab'], fx: 'supertb', say: [['TB', 'Im a fuckin piggy'], ['CUMHEAD', 'He has swallowed all seven chalices. He is pulling the bad half out of them...'], ['GREEBO', 'Then you take the good half, Cumhead!'], ['SPERMAID', 'Go on, sweetie!'], ['LABOOZIE', 'We got your back.'], ['CUMHEAD', '...'], ['CUMHEAD', 'All right. Let\'s go.']] },
+    { at: 'city', cast: ['tb', 'cumhead', 'greebo', 'spermaid', 'lab'], fx: 'supertb', say: [['TB', 'Im a fuckin piggy'], ['CUMHEAD', 'He has swallowed all seven chalices. He is pulling the bad half out of them...'], ['GREEBO', 'Then you take the good half, Cumhead!'], ['SPERMAID', 'Go on, sweetie!'], ['SHITHEAD LABOOZIE', 'We got your back.'], ['CUMHEAD', '...'], ['CUMHEAD', 'All right. Let\'s go.']] },
     { boss: 'supertb', hub: 'city', who: 'super' },
     { at: 'city', cast: ['cumhead', 'tb', 'greebo', 'spermaid', 'lab'], fx: 'end', say: [['CUMHEAD', 'It\'s over. The chalices are just cups again.'], ['TB', 'im so fucked right now']] }] }
 };

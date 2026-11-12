@@ -71,7 +71,7 @@ var HEROES = {
       ground: { n: 'OOZE SHIELD', an: 'pound', st: 0.08, ring: 40, dmg: 8, shield: 2.5, kd: false, kb: 160 },
       sup: { n: 'OOZE FLOOD', kind: 'flood', dmg: 52, col: '#9aff5a' } },
     quote: 'Gloop. (He means you are dead.)' },
-  laboozie: { n: 'LABOOZIE', k: 'lb', hp: 120, spd: 76, run: 160, jump: 330, w: 20, ht: 48, scale: 1, col: '#8a5020',
+  laboozie: { n: 'SHITHEAD LABOOZIE', k: 'lb', hp: 120, spd: 76, run: 160, jump: 330, w: 20, ht: 48, scale: 1, col: '#8a5020',
     blurb: 'Shithead Laboozie. Flaming bags of shit: a hit poisons them, the floor burns for 8 seconds.', stats: [3, 3, 5],
     face: 'hud_lb',
     combo: [MV({ an: 'jab', dmg: 6, box: [6, 30, 24, 44] }), MV({ an: 'cross', dmg: 7, box: [6, 32, 24, 44] }), MV({ an: 'kick', dmg: 9, st: 0.08, ac: 0.08, rc: 0.18, kb: 60, box: [4, 32, 10, 34], arc: '#ff7a1a' }),

@@ -185,10 +185,12 @@ def render(C, pose):
             fx, fy = (math.cos(ang), math.sin(ang)) if kick else (1, 0)
             if C.get('claw'):
                 for da in (-0.35, 0.35): pt.cap(t, (t[0] + fx * 3.5 + math.cos(da) * 0, t[1] + fy * 3.5 + da * 2), 1.0, C['footPal'], 0.6)
+            elif C.get('boot') and not kick: pass # drawn after the leg, over it
             else:
                 pt.ell((t[0] + fx * C['footF'], t[1] + fy * C['footF'] + (0 if kick else C['footR'][1] * 0.6)), C['footR'][0], C['footR'][1], C['footPal'], shine=True)
                 if C.get('sole') and not kick: pt.cap((t[0] + fx * C['footF'] - C['footR'][0] + 1, t[1] - 0.2), (t[0] + fx * C['footF'] + C['footR'][0] - 1, t[1] - 0.2), 0.6, C['sole'])
             pt.lay()
+            if C.get('boot') and not kick: bp = Part(fr, C['legOut'], group='l' + side); C['boot'](bp, t); bp.lay()
         elif part == 'body':
             if C.get('body') is None: continue
             im, (ox, oy) = C['body'] # the piece and where its hip pixel is inside it

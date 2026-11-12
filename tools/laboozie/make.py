@@ -26,7 +26,15 @@ def rigspec(S):
         handR=3.2, handPal=('#ffffff', '#dcd8e0', '#8a8494'), leg=(5.8, 5.6), legR=3.0, legTaper=0.92,
         legPal=('#6e6a3a', '#4a4a26', '#2a2a16'), legPalB=('#56522c', '#3a381c', '#1e1e10'), legOut=INK,
         footR=(5.0, 2.9), footF=2.0, footPal=('#f0b45a', '#c08038', '#6a4418'), sole=('#8a5a28', '#5a3a18', '#3a2410'),
-        outer=INK, inner='#0a080c', rest=dict(hip=(0, 0.95), lean=1, ff=(0.4, 0), bf=(-0.36, 0), fh=(0.62, 0.3), bh=(0.3, 0.22)))
+        boot=boot, outer=INK, inner='#0a080c', rest=dict(hip=(0, 0.95), lean=1, ff=(0.4, 0), bf=(-0.36, 0), fh=(0.62, 0.3), bh=(0.3, 0.22)))
+def boot(pt, t):
+    """his tan work boots seen from the side: a high ankle, a round toe cap pointing the way he faces, a heel at the back
+    and a thick dark sole (he said the round blobs read as feet on backwards)"""
+    x, y = t; P = ('#f0b45a', '#c08038', '#6a4418') # y is up here: y is the floor under him
+    pt.cap((x - 0.9, y + 1.4), (x - 0.7, y + 5.2), 2.6, P)        # ankle and heel counter
+    pt.cap((x - 1.9, y + 1.6), (x + 3.4, y + 1.4), 2.0, P)        # the foot
+    pt.ell((x + 4.3, y + 1.7), 2.5, 2.1, P, shine=True)          # toe cap, in front
+    pt.cap((x - 3.1, y - 0.4), (x + 6.3, y - 0.4), 0.9, ('#5a3a18', '#3a2410', '#2a1a0c'))  # sole, toe to heel
 def camo(im, seed):
     """his cargo trousers are camo: blotches of olive, brown and black on the leg colours"""
     im = im.copy(); p = im.load(); legs = {(0x6e, 0x6a, 0x3a), (0x4a, 0x4a, 0x26), (0x2a, 0x2a, 0x16), (0x56, 0x52, 0x2c), (0x3a, 0x38, 0x1c), (0x1e, 0x1e, 0x10)}
@@ -46,12 +54,12 @@ def extra_anims():
                  P(hip=(0.06, 0.92), lean=3, fh=(0.95, 0.55), bh=(0.2, 0.1), feb=(-1, 0), fhand='big', bf=(-0.42, 0.05)),
                  P(hip=(0.04, 0.93), lean=2, fh=(0.8, 0.0), bh=(0.3, 0.2))]
     # STAND: arms down by his sides like the drawing, a little breath
-    A['stand'] = [P(hip=(0, 0.95 - 0.02 * k), lean=0, ff=(0.3, 0), bf=(-0.3, 0), fh=(0.12, -0.95), bh=(-0.08, -0.95), head=(0, -k)) for k in (0, 1)]
+    A['stand'] = [P(hip=(0, 0.95 - 0.02 * k), lean=0, ff=(0.3, 0), bf=(-0.3, 0), fh=(0.42, -0.82), bh=(-0.42, -0.82), head=(0, -k)) for k in (0, 1)]
     # PLATFORM GAMES: a relaxed idle and walk with his arms down and swinging (the fighter's walk keeps his guard up)
-    A['pidle'] = [P(hip=(0, 0.95 - 0.02 * (1 - math.cos(a)) / 2), lean=0, ff=(0.28, 0), bf=(-0.28, 0), fh=(0.12, -0.92 + 0.03 * math.sin(a)), bh=(-0.08, -0.92 + 0.03 * math.sin(a)), head=(0, -round((1 - math.cos(a)) / 2))) for a in [i / 4 * math.tau for i in range(4)]]
+    A['pidle'] = [P(hip=(0, 0.95 - 0.02 * (1 - math.cos(a)) / 2), lean=0, ff=(0.28, 0), bf=(-0.28, 0), fh=(0.42, -0.8 + 0.03 * math.sin(a)), bh=(-0.42, -0.8 + 0.03 * math.sin(a)), head=(0, -round((1 - math.cos(a)) / 2))) for a in [i / 4 * math.tau for i in range(4)]]
     def pw(a):
         c = math.cos(a); s = math.sin(a)
-        return P(hip=(0.02, 0.93 - 0.035 * abs(c)), lean=1, ff=(0.04 + 0.34 * c, max(0, 0.2 * s)), bf=(0.0 - 0.34 * c, max(0, -0.2 * s)), fh=(-0.32 * c, -0.88), bh=(0.32 * c, -0.88), feb=(1, -0.2), beb=(1, -0.2))
+        return P(hip=(0.02, 0.93 - 0.035 * abs(c)), lean=1, ff=(0.04 + 0.34 * c, max(0, 0.2 * s)), bf=(0.0 - 0.34 * c, max(0, -0.2 * s)), fh=(0.42 - 0.24 * c, -0.8 + 0.06 * abs(c)), bh=(-0.42 + 0.24 * c, -0.8 + 0.06 * abs(c)), feb=(-1, -0.2), beb=(-1, -0.2))
     A['pwalk'] = [pw(i / 8 * math.tau) for i in range(8)]
     A['pjump'] = [P(hip=(0, 0.95), lean=1, ff=(0.3, 0.5), bf=(-0.15, 0.35), fh=(0.55, 0.65), bh=(-0.35, 0.75), fkb=(1, 0.5), bkb=(1, 0.5)),
                   P(hip=(0, 0.95), lean=1, ff=(0.3, 0.1), bf=(-0.25, 0.2), fh=(0.6, 0.2), bh=(-0.45, 0.35))]
@@ -89,7 +97,12 @@ def bust(S):
     return S.crop((0, 0, 31, 34))
 def build():
     S = pix.pixel(); C = rigspec(S); frames = {'lab_s0': S, 'lab_face': bust(S)}
-    A = FT.anims('cu'); A.update(extra_anims())
+    A = FT.anims('cu')
+    for n in ('idle', 'walk', 'run', 'dash', 'jump', 'jab', 'cross', 'kick', 'rh', 'sweep', 'knee', 'crouch', 'cjab', 'fire', 'upper', 'grab', 'throw'):
+        for p in A.get(n, []):
+            b = p.get('bh')
+            if b and b[0] > -0.2 and b[1] < 0.5: p['bh'] = (min(b[0] - 0.55, -0.25), b[1] - 0.25)
+    A.update(extra_anims())
     for n, L in A.items():
         for i, p in enumerate(L):
             im = R.render(C, p)

@@ -245,8 +245,8 @@ function hurtPlayer(P, dmg, from, dose) {
   if (P.dead || (G.mode !== 'play' && G.mode !== 'drive' && G.mode !== 'ride')) return; P.hp -= dmg; P.hurtT = 0.4; blood(P.x, 1.2, P.z, 6); sfx.play('hurt'); KIT.shake(5); KIT.flash(0.08);
   if (dose) { G.trip = Math.min(TRIPMAX, G.trip + dose); say('Something sharp. Your head swims.', 2, '#ff4a8a'); }
   if (from) { var aa = Math.atan2(P.x - from.x, P.z - from.z); P.x += Math.sin(aa) * 0.25; P.z += Math.cos(aa) * 0.25; collide(P, 0.3, 'me'); }
-  if (P.hp <= 0) { P.hp = 0; P.dead = 1; if (isGuest()) { netSend({ t: 'dead' }); say("You're down. Laboozie gets back up in a bit...", 4, '#c4121c'); }
-    else if (G.R && !G.R.dead && !G.R.gone) { P.downT = 15; say("You're down! Cumhead gets back up in a bit, if Laboozie keeps them off you.", 4, '#c4121c'); netEv({ k: 'say', s: 'Cumhead is down! Keep them off him.', t: 4, col: '#c4121c' }); }
+  if (P.hp <= 0) { P.hp = 0; P.dead = 1; if (isGuest()) { netSend({ t: 'dead' }); say("You're down. Shithead Laboozie gets back up in a bit...", 4, '#c4121c'); }
+    else if (G.R && !G.R.dead && !G.R.gone) { P.downT = 15; say("You're down! Cumhead gets back up in a bit, if Shithead Laboozie keeps them off you.", 4, '#c4121c'); netEv({ k: 'say', s: 'Cumhead is down! Keep them off him.', t: 4, col: '#c4121c' }); }
     else { gameOver('dead'); netEv({ k: 'over', why: 'dead' }); } }
 }
 /* ---------- Shithead Laboozie's flaming bag of shit: hits a foe = covered in it (poison), hits the floor = it burns there 8 s ---------- */
