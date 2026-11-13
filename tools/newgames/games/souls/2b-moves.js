@@ -149,14 +149,16 @@ stepFoes = function (dt) { FOE.forEach(function (f) { if (f.parried > 0) f.parri
 function lerpA(a, b, k) { return a.map(function (v, i) { return v + (b[i] - v) * k; }); }
 var MPOSE = { // update 151 (his ask: he swung like he was punching): [shoulder R [forward, out, sweep], elbow, body twist, lean] at the wind-up and the strike, hw/hs = the blade's angle in his fist then.
   // The arm sweeps round the shoulder (the third number turns it across the body), and on the strike the blade swings out to carry on the line of the arm, so it cuts an arc instead of being pushed forward
-  slashR: { w: [[1.45, 0.25, -1.35], 1.15, -0.75, -0.05], s: [[1.4, 0.05, 1.05], 0.1, 0.8, 0.22], hw: -1.55, hs: -2.85 },
-  slashL: { w: [[1.35, 0.1, 1.2], 1.7, 0.6, 0.0], s: [[1.45, 0.3, -1.3], 0.1, -0.75, 0.2], hw: -2.3, hs: -2.85 },
-  over: { w: [[2.95, 0.15, 0.0], 1.7, -0.25, -0.2], s: [[0.7, 0.1, 0.0], 0.1, 0.15, 0.45], hw: -1.6, hs: -2.95 },
+  // update 152 (he said it still looked like punching): keyed swings, [forward, out, sweep, elbow, twist, lean, blade] each; the first key is the wind-up, the rest are passed through on the strike.
+  // Picked from shots taken from behind (the game's camera): the sword is cocked over his shoulder, comes out to his right with the blade up, and cuts down across to his left, so the blade is on screen the whole way.
+  slashR: { k: [[0.5, 2.4, -0.3, 1.6, -0.55, 0, -3.0], [1.0, 1.3, 0.0, 0.15, -0.25, 0.15, -2.0], [1.3, 0.6, 0.5, 0.15, 0.3, 0.2, -2.0], [1.0, -0.3, 1.0, 0.25, 0.55, 0.2, -2.2]] },
+  slashL: { k: [[0.9, -0.1, 1.2, 0.3, 0.55, 0.05, -1.4], [1.3, 0.6, 0.5, 0.15, 0.25, 0.15, -2.0], [1.0, 1.3, 0.0, 0.15, -0.25, 0.2, -2.0], [0.8, 1.8, -0.3, 0.3, -0.5, 0.2, -1.6]] },
+  over: { k: [[2.9, 0.7, -0.2, 1.6, -0.2, -0.25, -4.4], [2.1, 0.65, -0.1, 0.4, -0.05, 0.1, -2.9], [1.2, 0.45, 0.0, 0.1, 0.0, 0.35, -2.2], [0.7, 0.35, 0.0, 0.1, 0.0, 0.45, -1.95]] },
   stab: { w: [[0.45, 0.1, -0.25], 1.95, -0.5, -0.05], s: [[1.55, 0.0, 0.1], 0.0, 0.35, 0.28], hw: -1.6, hs: -3.1 },
   lunge: { w: [[0.45, 0.1, -0.3], 2.0, -0.6, -0.1], s: [[1.6, 0.0, 0.1], 0.0, 0.45, 0.5], hw: -1.6, hs: -3.1 },
-  sweep: { w: [[1.0, 0.35, -1.45], 0.6, -0.95, 0.15], s: [[1.05, 0.2, 1.15], 0.1, 0.9, 0.35], hw: -2.4, hs: -2.85 },
-  spin: { w: [[1.45, 0.2, -1.35], 0.3, -0.6, 0.05], s: [[1.45, 0.2, -1.35], 0.2, 0.0, 0.15], hw: -2.85, hs: -2.85 },
-  slam: { w: [[3.05, 0.1, 0.0], 1.4, 0.0, -0.25], s: [[0.4, 0.1, 0.0], 0.05, 0.0, 0.55], hw: -1.6, hs: -2.95 },
+  sweep: { k: [[0.6, 2.2, -0.4, 1.0, -0.6, 0.1, -2.6], [0.9, 1.5, 0.0, 0.15, -0.3, 0.3, -2.0], [1.1, 0.7, 0.6, 0.15, 0.3, 0.35, -2.0], [0.9, -0.2, 1.1, 0.25, 0.6, 0.35, -2.1]] },
+  spin: { k: [[0.8, 1.6, -0.2, 0.4, -0.5, 0.05, -2.0], [0.9, 1.5, 0.0, 0.15, 0.0, 0.15, -2.0], [0.9, 1.5, 0.0, 0.15, 0.0, 0.15, -2.0]] },
+  slam: { k: [[3.0, 0.6, -0.2, 1.5, -0.2, -0.3, -4.5], [2.1, 0.5, -0.1, 0.4, 0.0, 0.15, -2.9], [1.1, 0.3, 0.0, 0.1, 0.0, 0.5, -2.2], [0.5, 0.2, 0.0, 0.05, 0.0, 0.6, -1.9]] },
   jab: { w: [[0.8, 0.05, 0.0], 1.8, -0.2, 0.0], s: [[1.55, 0.05, 0.0], 0.05, 0.3, 0.12] },
   hook: { w: [[1.2, -0.9, -0.5], 1.6, -0.5, 0.0], s: [[1.4, 0.6, 0.8], 1.3, 0.55, 0.12] },
   upper: { w: [[0.2, 0.1, 0.0], 2.2, -0.35, 0.15], s: [[2.6, 0.1, 0.0], 1.6, 0.25, -0.2] }
@@ -165,7 +167,14 @@ var HELD0 = -Math.PI / 2 - 0.2;
 function poseMove(Q, A) {
   var Mv = MOVES[A.m], spd = WEAPONS[SV.wpn].spd, wnd = Mv.wind * spd, act = Mv.act * spd, rec = Mv.rec * spd, t = A.t, D = MPOSE[Mv.pose] || MPOSE.slashR, sh, el, tw, ln;
   var hw = D.hw === undefined ? HELD0 : D.hw, hs = D.hs === undefined ? HELD0 : D.hs, ha;
-  if (t < wnd) { var k = t / wnd, e = k * k * (3 - 2 * k); sh = lerpA([0.6, 0.15, 0.1], D.w[0], e); el = 0.5 + (D.w[1] - 0.5) * e; tw = D.w[2] * e; ln = D.w[3] * e; ha = HELD0 + (hw - HELD0) * e; }
+  if (D.k) { var K = D.k, R0 = [0.6, 0.15, 0.1, 0.5, 0, 0, HELD0], v;
+    var mix = function (A0, B0, e) { return A0.map(function (x, i) { return x + (B0[i] - x) * e; }); };
+    if (t < wnd) { var kw = t / wnd; v = mix(R0, K[0], kw * kw * (3 - 2 * kw)); }
+    else if (t < wnd + act) { var ka = (t - wnd) / act; ka = 1 - (1 - ka) * (1 - ka); var f = ka * (K.length - 1), j = Math.min(K.length - 2, Math.floor(f)); v = mix(K[j], K[j + 1], f - j); }
+    else { var kr = Math.min(1, (t - wnd - act) / rec); v = mix(K[K.length - 1], R0, kr * kr * (3 - 2 * kr)); }
+    sh = [v[0], v[1], v[2]]; el = v[3]; tw = v[4]; ln = v[5]; ha = v[6];
+  }
+  else if (t < wnd) { var k = t / wnd, e = k * k * (3 - 2 * k); sh = lerpA([0.6, 0.15, 0.1], D.w[0], e); el = 0.5 + (D.w[1] - 0.5) * e; tw = D.w[2] * e; ln = D.w[3] * e; ha = HELD0 + (hw - HELD0) * e; }
   else if (t < wnd + act) { var k2 = (t - wnd) / act; k2 = 1 - (1 - k2) * (1 - k2); sh = lerpA(D.w[0], D.s[0], k2); el = D.w[1] + (D.s[1] - D.w[1]) * k2; tw = D.w[2] + (D.s[2] - D.w[2]) * k2; ln = D.w[3] + (D.s[3] - D.w[3]) * k2; ha = hw + (hs - hw) * Math.min(1, k2 * 1.6); }
   else { var k3 = Math.min(1, (t - wnd - act) / rec), e3 = k3 * k3 * (3 - 2 * k3); sh = lerpA(D.s[0], [0.6, 0.15, 0.1], e3); el = D.s[1] + (0.5 - D.s[1]) * e3; tw = D.s[2] * (1 - e3); ln = D.s[3] * (1 - e3); ha = hs + (HELD0 - hs) * e3; }
   Q.heldA = ha;
