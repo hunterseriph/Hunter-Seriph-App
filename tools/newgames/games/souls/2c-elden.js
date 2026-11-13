@@ -17,9 +17,9 @@
 var ER = { tap: 0.33, regen: 45, sprintDrain: 11, roll: 12, back: 8, jump: 10, acc: 30, dec: 36, walk: 0.55, arc: 1.396, gc: 0.66, jumpV: 7.6, lowH: 0.35, lockBreak: 22, atkK: 1.25,
   walkS: 1.8, runS: 5.0, sprintS: 7.0, lockS: 3.6, turn: { run: 18.8, sprint: 8.4, lock: 12.6, act: 6.3 } };
 var LOADS = { // equip load tiers by weapon kind
-  light: { n: 'LIGHT', len: 0.6, i0: 0.04, i1: 0.56, sp: 12.5, cost: 0.9 },
-  mid: { n: 'MEDIUM', len: 0.66, i0: 0.05, i1: 0.47, sp: 9.5, cost: 1 },
-  heavy: { n: 'HEAVY', len: 0.9, i0: 0.06, i1: 0.3, sp: 5.8, cost: 1.3 } };
+  light: { n: 'LIGHT', len: 0.62, i0: 0.04, i1: 0.56, sp: 14, cost: 0.9 },
+  mid: { n: 'MEDIUM', len: 0.68, i0: 0.05, i1: 0.47, sp: 11, cost: 1 },
+  heavy: { n: 'HEAVY', len: 0.9, i0: 0.06, i1: 0.3, sp: 6.8, cost: 1.3 } };
 function loadOf(w) { var c = WEAPONS[w || SV.wpn].c; return c === 'dagger' || c === 'fist' ? 'light' : c === 'heavy' || c === 'axe' ? 'heavy' : 'mid'; }
 MOVES.rollatk = { wind: 0.1, act: 0.12, rec: 0.3, lunge: 4.4, arc: 0.7, reach: 1.05, pose: 'stab' };
 MOVES.backatk = { wind: 0.08, act: 0.12, rec: 0.3, lunge: 3.2, arc: 1.2, pose: 'slashR' };

@@ -147,24 +147,28 @@ var _stepFoes = stepFoes;
 stepFoes = function (dt) { FOE.forEach(function (f) { if (f.parried > 0) f.parried -= dt; }); _stepFoes(dt); FOE.forEach(function (f) { if (f.hp > 0) propPush(f, 0.4); }); };
 /* the attack poses: each move goes from its wind-up to its strike and settles (k 0..1 over the whole move) */
 function lerpA(a, b, k) { return a.map(function (v, i) { return v + (b[i] - v) * k; }); }
-var MPOSE = { // [shoulder R wind, el R wind, twist wind, lean wind], then the strike
-  slashR: { w: [[1.35, -1.05, -0.9], 0.7, -0.75, -0.05], s: [[1.25, 0.55, 0.75], 0.15, 0.7, 0.2] },
-  slashL: { w: [[1.4, 0.65, 1.0], 1.3, 0.6, 0.0], s: [[1.3, -0.9, -0.7], 0.15, -0.65, 0.2] },
-  over: { w: [[3.0, 0.15, 0.0], 1.5, -0.25, -0.15], s: [[0.55, 0.1, 0.0], 0.1, 0.15, 0.4] },
-  stab: { w: [[0.9, -0.15, 0.1], 2.0, -0.45, -0.05], s: [[1.55, 0.0, 0.0], 0.04, 0.35, 0.28] },
-  lunge: { w: [[0.8, -0.2, 0.1], 2.1, -0.6, -0.1], s: [[1.6, 0.0, 0.0], 0.0, 0.45, 0.5] },
-  sweep: { w: [[1.0, -1.25, -1.0], 0.5, -0.9, 0.15], s: [[1.0, 0.8, 0.9], 0.1, 0.85, 0.35] },
-  spin: { w: [[1.4, -1.3, -0.4], 0.3, -0.6, 0.05], s: [[1.45, -1.3, -0.4], 0.2, 0.0, 0.15] },
-  slam: { w: [[3.1, 0.1, 0.0], 1.2, 0.0, -0.25], s: [[0.35, 0.1, 0.0], 0.05, 0.0, 0.55] },
+var MPOSE = { // update 151 (his ask: he swung like he was punching): [shoulder R [forward, out, sweep], elbow, body twist, lean] at the wind-up and the strike, hw/hs = the blade's angle in his fist then.
+  // The arm sweeps round the shoulder (the third number turns it across the body), and on the strike the blade swings out to carry on the line of the arm, so it cuts an arc instead of being pushed forward
+  slashR: { w: [[1.45, 0.25, -1.35], 1.15, -0.75, -0.05], s: [[1.4, 0.05, 1.05], 0.1, 0.8, 0.22], hw: -1.55, hs: -2.85 },
+  slashL: { w: [[1.35, 0.1, 1.2], 1.7, 0.6, 0.0], s: [[1.45, 0.3, -1.3], 0.1, -0.75, 0.2], hw: -2.3, hs: -2.85 },
+  over: { w: [[2.95, 0.15, 0.0], 1.7, -0.25, -0.2], s: [[0.7, 0.1, 0.0], 0.1, 0.15, 0.45], hw: -1.6, hs: -2.95 },
+  stab: { w: [[0.45, 0.1, -0.25], 1.95, -0.5, -0.05], s: [[1.55, 0.0, 0.1], 0.0, 0.35, 0.28], hw: -1.6, hs: -3.1 },
+  lunge: { w: [[0.45, 0.1, -0.3], 2.0, -0.6, -0.1], s: [[1.6, 0.0, 0.1], 0.0, 0.45, 0.5], hw: -1.6, hs: -3.1 },
+  sweep: { w: [[1.0, 0.35, -1.45], 0.6, -0.95, 0.15], s: [[1.05, 0.2, 1.15], 0.1, 0.9, 0.35], hw: -2.4, hs: -2.85 },
+  spin: { w: [[1.45, 0.2, -1.35], 0.3, -0.6, 0.05], s: [[1.45, 0.2, -1.35], 0.2, 0.0, 0.15], hw: -2.85, hs: -2.85 },
+  slam: { w: [[3.05, 0.1, 0.0], 1.4, 0.0, -0.25], s: [[0.4, 0.1, 0.0], 0.05, 0.0, 0.55], hw: -1.6, hs: -2.95 },
   jab: { w: [[0.8, 0.05, 0.0], 1.8, -0.2, 0.0], s: [[1.55, 0.05, 0.0], 0.05, 0.3, 0.12] },
   hook: { w: [[1.2, -0.9, -0.5], 1.6, -0.5, 0.0], s: [[1.4, 0.6, 0.8], 1.3, 0.55, 0.12] },
   upper: { w: [[0.2, 0.1, 0.0], 2.2, -0.35, 0.15], s: [[2.6, 0.1, 0.0], 1.6, 0.25, -0.2] }
 };
+var HELD0 = -Math.PI / 2 - 0.2;
 function poseMove(Q, A) {
   var Mv = MOVES[A.m], spd = WEAPONS[SV.wpn].spd, wnd = Mv.wind * spd, act = Mv.act * spd, rec = Mv.rec * spd, t = A.t, D = MPOSE[Mv.pose] || MPOSE.slashR, sh, el, tw, ln;
-  if (t < wnd) { var k = t / wnd, e = k * k * (3 - 2 * k); sh = lerpA([0.6, 0.15, 0.1], D.w[0], e); el = 0.5 + (D.w[1] - 0.5) * e; tw = D.w[2] * e; ln = D.w[3] * e; }
-  else if (t < wnd + act) { var k2 = (t - wnd) / act; sh = lerpA(D.w[0], D.s[0], k2); el = D.w[1] + (D.s[1] - D.w[1]) * k2; tw = D.w[2] + (D.s[2] - D.w[2]) * k2; ln = D.w[3] + (D.s[3] - D.w[3]) * k2; }
-  else { var k3 = Math.min(1, (t - wnd - act) / rec), e3 = k3 * k3; sh = lerpA(D.s[0], [0.6, 0.15, 0.1], e3); el = D.s[1] + (0.5 - D.s[1]) * e3; tw = D.s[2] * (1 - e3); ln = D.s[3] * (1 - e3); }
+  var hw = D.hw === undefined ? HELD0 : D.hw, hs = D.hs === undefined ? HELD0 : D.hs, ha;
+  if (t < wnd) { var k = t / wnd, e = k * k * (3 - 2 * k); sh = lerpA([0.6, 0.15, 0.1], D.w[0], e); el = 0.5 + (D.w[1] - 0.5) * e; tw = D.w[2] * e; ln = D.w[3] * e; ha = HELD0 + (hw - HELD0) * e; }
+  else if (t < wnd + act) { var k2 = (t - wnd) / act; k2 = 1 - (1 - k2) * (1 - k2); sh = lerpA(D.w[0], D.s[0], k2); el = D.w[1] + (D.s[1] - D.w[1]) * k2; tw = D.w[2] + (D.s[2] - D.w[2]) * k2; ln = D.w[3] + (D.s[3] - D.w[3]) * k2; ha = hw + (hs - hw) * Math.min(1, k2 * 1.6); }
+  else { var k3 = Math.min(1, (t - wnd - act) / rec), e3 = k3 * k3 * (3 - 2 * k3); sh = lerpA(D.s[0], [0.6, 0.15, 0.1], e3); el = D.s[1] + (0.5 - D.s[1]) * e3; tw = D.s[2] * (1 - e3); ln = D.s[3] * (1 - e3); ha = hs + (HELD0 - hs) * e3; }
+  Q.heldA = ha;
   Q.sh[1] = sh; Q.el[1] = el; Q.twist = tw; Q.lean = (Q.lean || 0) * 0.3 + ln;
   if (Mv.pose === 'lunge' || Mv.pose === 'stab') { Q.hip = [0.7 * Math.min(1, t / (wnd + act)), -0.35]; Q.kn = [0.5, 0.2]; }
   if (Mv.pose === 'slam') { Q.hip = [0.6, 0.6]; Q.kn = [0.9, 0.9]; }

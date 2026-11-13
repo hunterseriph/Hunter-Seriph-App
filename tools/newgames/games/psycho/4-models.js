@@ -176,7 +176,7 @@ function drawRig(rig, x, y, z, yaw, P, o) {
   var hips = MM(body, MD(0, hipY, 0, P.twist * 0.3, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.02, 0, P.twist, P.lean, P.roll)); dr(S.torso, tor);
   var head = MM(tor, MD(0, D.tor + D.neck, 0, P.hy, P.hp, P.hr)); dr(o.head || S.head, head);
-  if (S.drip && rig.drip) dr(S.drip, MM(head, MD(0.04, 0.95 + Math.sin(KIT.t * 3) * 0.03, -0.1, 0, 0, 0)));
+  if (S.drip && rig.drip) { var da = rig.dripAt || [0.04, 0.95, -0.1]; dr(S.drip, MM(head, MD(da[0], da[1] + Math.sin(KIT.t * 3) * 0.03, da[2], 0, 0, 0))); }
   var out = { head: head };
   [0, 1].forEach(function (k) { var sd = k ? 'R' : 'L', sx = k ? -D.shW : D.shW, a = P.sh[k];
     var up = MM(tor, MD(sx, D.tor * 0.86, 0, a[2] || 0, -a[0], k ? -a[1] : a[1])); dr(S['au' + sd], up);
