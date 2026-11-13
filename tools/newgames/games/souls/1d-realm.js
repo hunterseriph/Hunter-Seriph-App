@@ -126,7 +126,9 @@ function buildMesh() {
   ms.forEach(function (mm, c) { CHUNKS.push({ cx: ((c % nc) + 0.5) * CHUNK * TSZ, cz: (Math.floor(c / nc) + 0.5) * CHUNK * TSZ, mesh: mm.upload() }); });
   return { free: function () { CHUNKS.forEach(function (c) { if (c.mesh) c.mesh.free(); }); CHUNKS = []; } };
 }
-function drawChunks(eye, far) { CHUNKS.forEach(function (c) { if (Math.hypot(c.cx - eye[0], c.cz - eye[2]) < far + CHUNK * TSZ * 0.75) R3.draw(c.mesh, ATT); }); }
+function drawChunks(eye, far, at) { var fx = at ? at[0] - eye[0] : 0, fz = at ? at[2] - eye[2] : 0, fl = Math.hypot(fx, fz) || 1, R2 = CHUNK * TSZ * 0.75; fx /= fl; fz /= fl;
+  CHUNKS.forEach(function (c) { var dx = c.cx - eye[0], dz = c.cz - eye[2], d = Math.hypot(dx, dz); if (d > far + R2) return; if (at && d > R2 && (dx * fx + dz * fz) < -R2) return; R3.draw(c.mesh, ATT); }); }
+var LOWEND = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 /* the clutter, per region now: against the walls, never in a corridor, never on stairs or by a candle, a door or a fog gate */
 function dressRealm(ms, nc) {
   var rnd = srand(911), MW = WORLD.MW, MH = WORLD.MH, D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];

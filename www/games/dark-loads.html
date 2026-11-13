@@ -2007,7 +2007,9 @@ function buildMesh() {
   ms.forEach(function (mm, c) { CHUNKS.push({ cx: ((c % nc) + 0.5) * CHUNK * TSZ, cz: (Math.floor(c / nc) + 0.5) * CHUNK * TSZ, mesh: mm.upload() }); });
   return { free: function () { CHUNKS.forEach(function (c) { if (c.mesh) c.mesh.free(); }); CHUNKS = []; } };
 }
-function drawChunks(eye, far) { CHUNKS.forEach(function (c) { if (Math.hypot(c.cx - eye[0], c.cz - eye[2]) < far + CHUNK * TSZ * 0.75) R3.draw(c.mesh, ATT); }); }
+function drawChunks(eye, far, at) { var fx = at ? at[0] - eye[0] : 0, fz = at ? at[2] - eye[2] : 0, fl = Math.hypot(fx, fz) || 1, R2 = CHUNK * TSZ * 0.75; fx /= fl; fz /= fl;
+  CHUNKS.forEach(function (c) { var dx = c.cx - eye[0], dz = c.cz - eye[2], d = Math.hypot(dx, dz); if (d > far + R2) return; if (at && d > R2 && (dx * fx + dz * fz) < -R2) return; R3.draw(c.mesh, ATT); }); }
+var LOWEND = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 /* the clutter, per region now: against the walls, never in a corridor, never on stairs or by a candle, a door or a fog gate */
 function dressRealm(ms, nc) {
   var rnd = srand(911), MW = WORLD.MW, MH = WORLD.MH, D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2422,9 +2424,9 @@ function poseHold(Q, p) { // walking with a weapon: the arm carries it, not a li
 var ER = { tap: 0.33, regen: 45, sprintDrain: 11, roll: 12, back: 8, jump: 10, acc: 30, dec: 36, walk: 0.55, arc: 1.396, gc: 0.66, jumpV: 7.6, lowH: 0.35, lockBreak: 22, atkK: 1.25,
   walkS: 1.8, runS: 5.0, sprintS: 7.0, lockS: 3.6, turn: { run: 18.8, sprint: 8.4, lock: 12.6, act: 6.3 } };
 var LOADS = { // equip load tiers by weapon kind
-  light: { n: 'LIGHT', len: 0.52, i0: 0.04, i1: 0.56, sp: 9.6, cost: 0.9 },
-  mid: { n: 'MEDIUM', len: 0.6, i0: 0.05, i1: 0.47, sp: 7.0, cost: 1 },
-  heavy: { n: 'HEAVY', len: 0.9, i0: 0.06, i1: 0.3, sp: 3.8, cost: 1.3 } };
+  light: { n: 'LIGHT', len: 0.6, i0: 0.04, i1: 0.56, sp: 12.5, cost: 0.9 },
+  mid: { n: 'MEDIUM', len: 0.66, i0: 0.05, i1: 0.47, sp: 9.5, cost: 1 },
+  heavy: { n: 'HEAVY', len: 0.9, i0: 0.06, i1: 0.3, sp: 5.8, cost: 1.3 } };
 function loadOf(w) { var c = WEAPONS[w || SV.wpn].c; return c === 'dagger' || c === 'fist' ? 'light' : c === 'heavy' || c === 'axe' ? 'heavy' : 'mid'; }
 MOVES.rollatk = { wind: 0.1, act: 0.12, rec: 0.3, lunge: 4.4, arc: 0.7, reach: 1.05, pose: 'stab' };
 MOVES.backatk = { wind: 0.08, act: 0.12, rec: 0.3, lunge: 3.2, arc: 1.2, pose: 'slashR' };
@@ -2919,7 +2921,7 @@ function draw() {
   if (!WORLD || !P) { if (R3.ok) R3.begin([0.04, 0.0, 0.01]); titleArt(); return; }
   var A = regionAt(P.x, P.z), C = camPose(), L = G.look; // update 149: the look eases from place to place
   if (!L) L = G.look = { fog: A.fog.slice(), amb: A.amb.slice(), lamp: A.lamp.slice(), fr: A.fogR.slice() };
-  for (var q0 = 0; q0 < 3; q0++) { L.fog[q0] += (A.fog[q0] - L.fog[q0]) * 0.03; L.amb[q0] += (A.amb[q0] - L.amb[q0]) * 0.03; L.lamp[q0] += (A.lamp[q0] - L.lamp[q0]) * 0.03; } L.fr[0] += (A.fogR[0] - L.fr[0]) * 0.03; L.fr[1] += (A.fogR[1] - L.fr[1]) * 0.03;
+  for (var q0 = 0; q0 < 3; q0++) { L.fog[q0] += (A.fog[q0] - L.fog[q0]) * 0.03; L.amb[q0] += (A.amb[q0] - L.amb[q0]) * 0.03; L.lamp[q0] += (A.lamp[q0] - L.lamp[q0]) * 0.03; } L.fr[0] += (A.fogR[0] - L.fr[0]) * 0.03; L.fr[1] += ((LOWEND ? Math.min(A.fogR[1], 48) : A.fogR[1]) - L.fr[1]) * 0.03;
   R3.begin(L.fog); R3.setCam(C.eye, C.at, KIT.W < KIT.H ? 1.25 : 1.0);
   var lights = []; WORLD.things.forEach(function (t, n) { if (t.k !== 'candle' && t.k !== 'torch') return; var x = tx(t.i), z = tx(t.j), d = Math.hypot(x - C.eye[0], z - C.eye[2]); if (d > 34) return; var lit = t.k === 'torch' || SV.lit[t.id], fl = 0.9 + Math.sin(G.t * 11 + n) * 0.08 + Math.sin(G.t * 23 + n * 3) * 0.05;
     lights.push({ x: x, y: th(t.i, t.j) + (t.k === 'torch' ? 2.7 : 1.4), z: z, r: t.k === 'torch' ? 11 : lit ? 10 : 4, c: lit ? L.lamp : [0.5, 0.3, 0.2], k: (lit ? 1.25 : 0.6) * fl, d: d }); });
@@ -2928,7 +2930,7 @@ function draw() {
   R3.scene({ fog: L.fog, fogR: L.fr, amb: [L.amb[0] * 1.5, L.amb[1] * 1.5, L.amb[2] * 1.5], lights: lights, torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
   if (A.sky) { var md = 46, ma = 2.2, mx = C.eye[0] + Math.sin(ma) * md, mz = C.eye[2] + Math.cos(ma) * md, my = C.eye[1] + 22; if (!OWN.moon) { var mm = new R3.Mesh(); mm.quad([-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL('moon'), [0.5, 0.5, 0.5], [0, 0, 1], 2); OWN.moon = mm.upload(); }
     R3.draw(OWN.moon, ATT, { m: R3.model(mx, my, mz, ma + Math.PI, 0, 0, 7), lit: false, soft: true, tint: [1, 0.35, 0.3] }); }
-  drawChunks(C.eye, L.fr[1] + 10);
+  drawChunks(C.eye, L.fr[1] + 10, C.at);
   // props that change: doors, chests, the fog gates, the Keep's gate, messages
   WORLD.things.forEach(function (t) { var x = tx(t.i), z = tx(t.j), h = th(t.i, t.j); if (Math.hypot(x - C.eye[0], z - C.eye[2]) > 50) return;
     if ((t.k === 'sdoor' && !SV.doors[t.id]) || (t.k === 'gate' && !SV.gateOpen)) { var horiz = tk(t.i - 1, t.j) === 1 || tk(t.i - 1, t.j) === 3 || tk(t.i + 1, t.j) === 3; R3.draw(OWN.door, ATT, { m: R3.model(x, h, z, horiz ? 0 : Math.PI / 2, 0, 0, t.k === 'gate' ? 1.4 : 1), tint: t.k === 'gate' ? [0.8, 0.6, 0.4] : undefined }); }
@@ -2998,7 +3000,7 @@ function hud() { // update 146: laid out like Elden Ring's: three bars top left,
   POP.forEach(function (p) { p.t -= 1 / 60; p.y += 0.01; var pp3 = R3.project(p.x, p.y, p.z); if (pp3) KIT.text(p.s, pp3.x, pp3.y, { align: 'center', size: 6, col: p.col, alpha: Math.min(1, p.t * 2), outline: 1 }); }); POP = POP.filter(function (p) { return p.t > 0; });
   if (BOSS && BOSS.st !== 'dead' && G.inArena) { var b = BOSS; if (b.lag === undefined || b.lag < b.hp) b.lag = b.hp; if (b.lastHp !== undefined && b.hp < b.lastHp) { b.lagT = 0.8; b.dmgSum = (b.dmgT > 0 ? b.dmgSum : 0) + (b.lastHp - b.hp); b.dmgT = 2; } b.lastHp = b.hp; b.lagT = (b.lagT || 0) - 1 / 60; b.dmgT = (b.dmgT || 0) - 1 / 60; if (b.lagT <= 0) b.lag = Math.max(b.hp, b.lag - b.mhp / 90);
     var right = PR && PR.y < Hd - 30 ? Math.min(Wd, PR.x) : Wd, left = 96, bw = Math.min(320, right - left - 12), bx = left + (right - left - bw) / 2, by = Hd - 26; KIT.text(b.B.n, bx, by - 10, { size: 6, col: '#f1e7d0', outline: 1 }); if (b.dmgT > 0) KIT.text(String(Math.round(b.dmgSum)), bx + bw, by - 10, { align: 'right', size: 6, col: '#f1e7d0', outline: 1 }); bar(bx, by, bw, 4, b.hp / b.mhp, '#9a1018', b.lag / b.mhp); }
-  if (G.prompt) { var ps = G.prompt.replace('@', keyName('use')).replace('%', keyName('light')), pw = ps.length * 6 + 24, py = Hd * 0.7; R('rgba(8,3,4,0.78)', Wd / 2 - pw / 2, py - 6, pw, 20); R(GOLD, Wd / 2 - pw / 2, py - 6, pw, 1); R(GOLD, Wd / 2 - pw / 2, py + 13, pw, 1); KIT.text(ps, Wd / 2, py, { align: 'center', size: 7, col: '#f1e7d0' }); }
+  if (G.prompt) { var ps = G.prompt.replace('@', keyName('use')).replace('%', keyName('light')), pw = Math.ceil(KIT.tw(ps, 7)) + 24, pr = padRect(), py = pr ? Math.min(Hd * 0.7, pr.y - 22) : Hd * 0.7; R('rgba(8,3,4,0.78)', Wd / 2 - pw / 2, py - 6, pw, 20); R(GOLD, Wd / 2 - pw / 2, py - 6, pw, 1); R(GOLD, Wd / 2 - pw / 2, py + 13, pw, 1); KIT.text(ps, Wd / 2, py, { align: 'center', size: 7, col: '#f1e7d0' }); }
   if (G.banner && G.banner.t > 0) { var a = Math.min(1, G.banner.t, 3.5 - G.banner.t); R('rgba(0,0,0,' + 0.5 * a + ')', 0, Hd * 0.36, Wd, 34); KIT.text(G.banner.s, Wd / 2, Hd * 0.36 + 4, { align: 'center', font: 'title', size: 26, col: '#ffe36a', alpha: a }); }
   if (G.mode === 'dead') { var a2 = Math.min(1, G.deadT / 1.2); R('rgba(0,0,0,' + a2 * 0.6 + ')', 0, Hd * 0.38, Wd, 44); KIT.text('YOU DIED', Wd / 2, Hd * 0.38 + 4, { align: 'center', font: 'title', size: 36, col: '#c4121c', alpha: a2 }); }
 }
@@ -3141,6 +3143,7 @@ function enterArea(ai, candleId) {
   persist();
 }
 function spawnFoes() { FOE = []; WORLD.things.forEach(function (t) { if (t.k === 'foe') { var f = mkFoe(t.f, tx(t.i), tx(t.j)); f.y = floorAt(f.x, f.z); FOE.push(f); } }); }
+(function () { var sc = document.getElementById('scan'); if (sc) sc.hidden = true; })(); // no scanlines over a 3D game (they striped Cumhead's head)
 (function () { var st = document.createElement('style'); st.textContent = 'html.dkcine #pad{display:none!important}'; document.head.appendChild(st); })();
 KIT.canvas.addEventListener('pointerdown', function () { if (G.mode === 'intro') G.skipReq = 1; });
 var __stick = KIT.stick; KIT.stick = function (i) { if (i === 0 && G.autoMove) return G.autoMove; return __stick.apply(KIT, arguments); };
@@ -3192,9 +3195,10 @@ stepPlayer = function (dt) {
   if (!p.atk) { var rip = FOE.filter(function (e) { return e.hp > 0 && e.parried > 0 && Math.hypot(e.x - p.x, e.z - p.z) < 1.9; })[0]; if (rip && !G.prompt) G.prompt = '%  CRITICAL HIT'; }
 };
 function keyText(s) { return s.replace(/\{(\w+)\}/g, function (m, k) { return keyName(k); }); }
-KEYN.pad.move = 'LEFT STICK'; KEYN.pad.cam = 'RIGHT STICK'; KEYN.pad.jump = 'A'; KEYN.pad.guard = 'LB'; KEYN.pad.flask = 'X'; KEYN.pad.lock = 'R3'; KEYN.pad.skill = 'LT';
-KEYN.kb.move = 'WASD'; KEYN.kb.cam = 'THE MOUSE (CLICK FIRST) OR THE ARROWS'; KEYN.kb.jump = 'F'; KEYN.kb.guard = 'L'; KEYN.kb.flask = 'R'; KEYN.kb.lock = 'Q'; KEYN.kb.skill = 'U';
-KEYN.touch.move = 'THE LEFT THUMB'; KEYN.touch.cam = 'THE RIGHT THUMB'; KEYN.touch.jump = 'JUMP'; KEYN.touch.guard = 'GUARD'; KEYN.touch.flask = 'FLASK'; KEYN.touch.lock = 'LOCK'; KEYN.touch.skill = 'SKILL';
+ KEYN.pad.jump = 'A'; KEYN.pad.guard = 'LB'; KEYN.pad.flask = 'X'; KEYN.pad.lock = 'R3'; KEYN.pad.skill = 'LT';
+KEYN.kb.move = 'WASD'; KEYN.kb.cam = 'the mouse (click first) or the arrows'; KEYN.kb.jump = 'F'; KEYN.kb.guard = 'L'; KEYN.kb.flask = 'R'; KEYN.kb.lock = 'Q'; KEYN.kb.skill = 'U';
+KEYN.touch.move = 'the left thumb'; KEYN.touch.cam = 'the right thumb'; KEYN.touch.jump = 'A'; KEYN.touch.guard = 'LB'; KEYN.touch.flask = 'X'; KEYN.touch.lock = 'R3'; KEYN.touch.skill = 'LT'; KEYN.touch.use = 'A'; KEYN.touch.light = 'RB'; KEYN.touch.heavy = 'RT'; KEYN.touch.dodge = 'B';
+KEYN.kb.move = 'WASD'; KEYN.pad.move = 'the left stick'; KEYN.pad.cam = 'the right stick';
 /* only the foes near you think (the world is big now) */
 var flowFoes = stepFoes;
 stepFoes = function (dt) { var all = FOE; FOE = all.filter(function (f) { return Math.abs(f.x - P.x) < 46 && Math.abs(f.z - P.z) < 46; }); try { flowFoes(dt); } finally { FOE = all; }
@@ -3236,12 +3240,12 @@ hud = function () { var Wd = KIT.W, Hd = KIT.H, R = KIT.R;
     else { var k = G.wake / 4.2; if (k > 0.8) R('rgba(0,0,0,' + (k - 0.8) * 5 + ')', 0, 0, Wd, Hd); }
     return; }
   flowHud();
-  if (G.note) { var s = G.note.s, a2 = Math.min(1, G.note.t * 2, (6 - G.note.t) * 4), w = Math.min(Wd - 24, 360), lines = splitText(s, w - 24, 7), h = lines.length * 11 + 22, x = (Wd - w) / 2, y = Hd * 0.18;
+  if (G.note) { var s = G.note.s, a2 = Math.min(1, G.note.t * 2, (6 - G.note.t) * 4), w = Math.min(Wd - 16, 400), lines = splitText(s, w - 20, 7), h = lines.length * 11 + 22, x = (Wd - w) / 2, y = Hd * 0.18;
     KIT.ctx.globalAlpha = a2; R('rgba(10,4,4,0.86)', x, y, w, h); R('#c48a3a', x, y, w, 1); R('#c48a3a', x, y + h - 1, w, 1); R('#c48a3a', x, y, 1, h); R('#c48a3a', x + w - 1, y, 1, h); KIT.ctx.globalAlpha = 1;
     KIT.text('A MESSAGE SCRATCHED INTO THE FLOOR', Wd / 2, y + 5, { align: 'center', size: 6, col: '#c48a3a', alpha: a2 }); lines.forEach(function (l, i) { KIT.text(l, Wd / 2, y + 16 + i * 11, { align: 'center', size: 7, col: '#f1e7d0', alpha: a2 }); }); }
   if (G.banner && G.banner.place && G.banner.t > 0) { var a3 = Math.min(1, G.banner.t, 3.5 - G.banner.t), cy = Hd * 0.3; R('rgba(255,227,106,' + 0.55 * a3 + ')', Wd / 2 - 110, cy + 32, 220, 1); }
 };
-function splitText(s, w, size) { var words = s.split(' '), out = [], cur = '', cw = size * 0.86; words.forEach(function (wd) { var t = cur ? cur + ' ' + wd : wd; if (t.length * cw > w && cur) { out.push(cur); cur = wd; } else cur = t; }); if (cur) out.push(cur); return out; }
+function splitText(s, w, size) { var words = s.split(' '), out = [], cur = ''; words.forEach(function (wd) { var t = cur ? cur + ' ' + wd : wd; if (KIT.tw(t, size) > w && cur) { out.push(cur); cur = wd; } else cur = t; }); if (cur) out.push(cur); return out; }
 function wrapText(s, x, y, w, o) { var ls = splitText(s, w, o.size || 7); ls.forEach(function (l, i) { KIT.text(l, x, y - (ls.length - 1 - i) * ((o.size || 7) + 5), o); }); }
 /* the boss falls: the fog lifts for good, the music comes back, a seal breaks */
 var flowHurtBoss = hurtBoss;
@@ -3336,7 +3340,7 @@ function drawCum(x, y, z, yaw, P, o) {
   var pY = P.py !== undefined ? P.py : P.twist * 0.3, hips = MM(body, MD(0, hipY, 0, pY, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.06, 0, P.twist, P.lean, P.roll * (P.py !== undefined ? -0.6 : 1))); dr(S.torso, tor);
   var head = MM(tor, MD(0, D.tor + D.neck, 0, P.hy, P.hp, P.hr)); dr(S.head, head);
-  dr(S.drip, MM(head, MD(-0.1, 1.06 + Math.sin(KIT.t * 3) * 0.03, -0.03, 0, 0, Math.sin(KIT.t * 1.3) * 0.15)));
+  dr(S.drip, MM(head, MD(0.05, 1.13 + Math.sin(KIT.t * 3) * 0.025, -0.02, 0, 0, Math.sin(KIT.t * 1.3) * 0.12)));
   var out = { head: head };
   [0, 1].forEach(function (k) { var sd = k ? 'R' : 'L', sx = k ? -D.shW : D.shW, a = P.sh[k];
     var up = MM(tor, MD(sx, D.tor * 0.86, 0, a[2] || 0, -a[0], k ? -a[1] : a[1])); dr(S['au' + sd], up);

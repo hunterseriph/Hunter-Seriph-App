@@ -45,7 +45,7 @@ function draw() {
   if (!WORLD || !P) { if (R3.ok) R3.begin([0.04, 0.0, 0.01]); titleArt(); return; }
   var A = regionAt(P.x, P.z), C = camPose(), L = G.look; // update 149: the look eases from place to place
   if (!L) L = G.look = { fog: A.fog.slice(), amb: A.amb.slice(), lamp: A.lamp.slice(), fr: A.fogR.slice() };
-  for (var q0 = 0; q0 < 3; q0++) { L.fog[q0] += (A.fog[q0] - L.fog[q0]) * 0.03; L.amb[q0] += (A.amb[q0] - L.amb[q0]) * 0.03; L.lamp[q0] += (A.lamp[q0] - L.lamp[q0]) * 0.03; } L.fr[0] += (A.fogR[0] - L.fr[0]) * 0.03; L.fr[1] += (A.fogR[1] - L.fr[1]) * 0.03;
+  for (var q0 = 0; q0 < 3; q0++) { L.fog[q0] += (A.fog[q0] - L.fog[q0]) * 0.03; L.amb[q0] += (A.amb[q0] - L.amb[q0]) * 0.03; L.lamp[q0] += (A.lamp[q0] - L.lamp[q0]) * 0.03; } L.fr[0] += (A.fogR[0] - L.fr[0]) * 0.03; L.fr[1] += ((LOWEND ? Math.min(A.fogR[1], 48) : A.fogR[1]) - L.fr[1]) * 0.03;
   R3.begin(L.fog); R3.setCam(C.eye, C.at, KIT.W < KIT.H ? 1.25 : 1.0);
   var lights = []; WORLD.things.forEach(function (t, n) { if (t.k !== 'candle' && t.k !== 'torch') return; var x = tx(t.i), z = tx(t.j), d = Math.hypot(x - C.eye[0], z - C.eye[2]); if (d > 34) return; var lit = t.k === 'torch' || SV.lit[t.id], fl = 0.9 + Math.sin(G.t * 11 + n) * 0.08 + Math.sin(G.t * 23 + n * 3) * 0.05;
     lights.push({ x: x, y: th(t.i, t.j) + (t.k === 'torch' ? 2.7 : 1.4), z: z, r: t.k === 'torch' ? 11 : lit ? 10 : 4, c: lit ? L.lamp : [0.5, 0.3, 0.2], k: (lit ? 1.25 : 0.6) * fl, d: d }); });
@@ -54,7 +54,7 @@ function draw() {
   R3.scene({ fog: L.fog, fogR: L.fr, amb: [L.amb[0] * 1.5, L.amb[1] * 1.5, L.amb[2] * 1.5], lights: lights, torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
   if (A.sky) { var md = 46, ma = 2.2, mx = C.eye[0] + Math.sin(ma) * md, mz = C.eye[2] + Math.cos(ma) * md, my = C.eye[1] + 22; if (!OWN.moon) { var mm = new R3.Mesh(); mm.quad([-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL('moon'), [0.5, 0.5, 0.5], [0, 0, 1], 2); OWN.moon = mm.upload(); }
     R3.draw(OWN.moon, ATT, { m: R3.model(mx, my, mz, ma + Math.PI, 0, 0, 7), lit: false, soft: true, tint: [1, 0.35, 0.3] }); }
-  drawChunks(C.eye, L.fr[1] + 10);
+  drawChunks(C.eye, L.fr[1] + 10, C.at);
   // props that change: doors, chests, the fog gates, the Keep's gate, messages
   WORLD.things.forEach(function (t) { var x = tx(t.i), z = tx(t.j), h = th(t.i, t.j); if (Math.hypot(x - C.eye[0], z - C.eye[2]) > 50) return;
     if ((t.k === 'sdoor' && !SV.doors[t.id]) || (t.k === 'gate' && !SV.gateOpen)) { var horiz = tk(t.i - 1, t.j) === 1 || tk(t.i - 1, t.j) === 3 || tk(t.i + 1, t.j) === 3; R3.draw(OWN.door, ATT, { m: R3.model(x, h, z, horiz ? 0 : Math.PI / 2, 0, 0, t.k === 'gate' ? 1.4 : 1), tint: t.k === 'gate' ? [0.8, 0.6, 0.4] : undefined }); }
@@ -124,7 +124,7 @@ function hud() { // update 146: laid out like Elden Ring's: three bars top left,
   POP.forEach(function (p) { p.t -= 1 / 60; p.y += 0.01; var pp3 = R3.project(p.x, p.y, p.z); if (pp3) KIT.text(p.s, pp3.x, pp3.y, { align: 'center', size: 6, col: p.col, alpha: Math.min(1, p.t * 2), outline: 1 }); }); POP = POP.filter(function (p) { return p.t > 0; });
   if (BOSS && BOSS.st !== 'dead' && G.inArena) { var b = BOSS; if (b.lag === undefined || b.lag < b.hp) b.lag = b.hp; if (b.lastHp !== undefined && b.hp < b.lastHp) { b.lagT = 0.8; b.dmgSum = (b.dmgT > 0 ? b.dmgSum : 0) + (b.lastHp - b.hp); b.dmgT = 2; } b.lastHp = b.hp; b.lagT = (b.lagT || 0) - 1 / 60; b.dmgT = (b.dmgT || 0) - 1 / 60; if (b.lagT <= 0) b.lag = Math.max(b.hp, b.lag - b.mhp / 90);
     var right = PR && PR.y < Hd - 30 ? Math.min(Wd, PR.x) : Wd, left = 96, bw = Math.min(320, right - left - 12), bx = left + (right - left - bw) / 2, by = Hd - 26; KIT.text(b.B.n, bx, by - 10, { size: 6, col: '#f1e7d0', outline: 1 }); if (b.dmgT > 0) KIT.text(String(Math.round(b.dmgSum)), bx + bw, by - 10, { align: 'right', size: 6, col: '#f1e7d0', outline: 1 }); bar(bx, by, bw, 4, b.hp / b.mhp, '#9a1018', b.lag / b.mhp); }
-  if (G.prompt) { var ps = G.prompt.replace('@', keyName('use')).replace('%', keyName('light')), pw = ps.length * 6 + 24, py = Hd * 0.7; R('rgba(8,3,4,0.78)', Wd / 2 - pw / 2, py - 6, pw, 20); R(GOLD, Wd / 2 - pw / 2, py - 6, pw, 1); R(GOLD, Wd / 2 - pw / 2, py + 13, pw, 1); KIT.text(ps, Wd / 2, py, { align: 'center', size: 7, col: '#f1e7d0' }); }
+  if (G.prompt) { var ps = G.prompt.replace('@', keyName('use')).replace('%', keyName('light')), pw = Math.ceil(KIT.tw(ps, 7)) + 24, pr = padRect(), py = pr ? Math.min(Hd * 0.7, pr.y - 22) : Hd * 0.7; R('rgba(8,3,4,0.78)', Wd / 2 - pw / 2, py - 6, pw, 20); R(GOLD, Wd / 2 - pw / 2, py - 6, pw, 1); R(GOLD, Wd / 2 - pw / 2, py + 13, pw, 1); KIT.text(ps, Wd / 2, py, { align: 'center', size: 7, col: '#f1e7d0' }); }
   if (G.banner && G.banner.t > 0) { var a = Math.min(1, G.banner.t, 3.5 - G.banner.t); R('rgba(0,0,0,' + 0.5 * a + ')', 0, Hd * 0.36, Wd, 34); KIT.text(G.banner.s, Wd / 2, Hd * 0.36 + 4, { align: 'center', font: 'title', size: 26, col: '#ffe36a', alpha: a }); }
   if (G.mode === 'dead') { var a2 = Math.min(1, G.deadT / 1.2); R('rgba(0,0,0,' + a2 * 0.6 + ')', 0, Hd * 0.38, Wd, 44); KIT.text('YOU DIED', Wd / 2, Hd * 0.38 + 4, { align: 'center', font: 'title', size: 36, col: '#c4121c', alpha: a2 }); }
 }

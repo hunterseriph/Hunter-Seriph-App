@@ -86,7 +86,7 @@ function drawCum(x, y, z, yaw, P, o) {
   var pY = P.py !== undefined ? P.py : P.twist * 0.3, hips = MM(body, MD(0, hipY, 0, pY, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.06, 0, P.twist, P.lean, P.roll * (P.py !== undefined ? -0.6 : 1))); dr(S.torso, tor);
   var head = MM(tor, MD(0, D.tor + D.neck, 0, P.hy, P.hp, P.hr)); dr(S.head, head);
-  dr(S.drip, MM(head, MD(-0.1, 1.06 + Math.sin(KIT.t * 3) * 0.03, -0.03, 0, 0, Math.sin(KIT.t * 1.3) * 0.15)));
+  dr(S.drip, MM(head, MD(0.05, 1.13 + Math.sin(KIT.t * 3) * 0.025, -0.02, 0, 0, Math.sin(KIT.t * 1.3) * 0.12)));
   var out = { head: head };
   [0, 1].forEach(function (k) { var sd = k ? 'R' : 'L', sx = k ? -D.shW : D.shW, a = P.sh[k];
     var up = MM(tor, MD(sx, D.tor * 0.86, 0, a[2] || 0, -a[0], k ? -a[1] : a[1])); dr(S['au' + sd], up);

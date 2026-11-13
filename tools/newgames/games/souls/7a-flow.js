@@ -29,6 +29,7 @@ function enterArea(ai, candleId) {
   persist();
 }
 function spawnFoes() { FOE = []; WORLD.things.forEach(function (t) { if (t.k === 'foe') { var f = mkFoe(t.f, tx(t.i), tx(t.j)); f.y = floorAt(f.x, f.z); FOE.push(f); } }); }
+(function () { var sc = document.getElementById('scan'); if (sc) sc.hidden = true; })(); // no scanlines over a 3D game (they striped Cumhead's head)
 (function () { var st = document.createElement('style'); st.textContent = 'html.dkcine #pad{display:none!important}'; document.head.appendChild(st); })();
 KIT.canvas.addEventListener('pointerdown', function () { if (G.mode === 'intro') G.skipReq = 1; });
 var __stick = KIT.stick; KIT.stick = function (i) { if (i === 0 && G.autoMove) return G.autoMove; return __stick.apply(KIT, arguments); };
@@ -80,9 +81,10 @@ stepPlayer = function (dt) {
   if (!p.atk) { var rip = FOE.filter(function (e) { return e.hp > 0 && e.parried > 0 && Math.hypot(e.x - p.x, e.z - p.z) < 1.9; })[0]; if (rip && !G.prompt) G.prompt = '%  CRITICAL HIT'; }
 };
 function keyText(s) { return s.replace(/\{(\w+)\}/g, function (m, k) { return keyName(k); }); }
-KEYN.pad.move = 'LEFT STICK'; KEYN.pad.cam = 'RIGHT STICK'; KEYN.pad.jump = 'A'; KEYN.pad.guard = 'LB'; KEYN.pad.flask = 'X'; KEYN.pad.lock = 'R3'; KEYN.pad.skill = 'LT';
-KEYN.kb.move = 'WASD'; KEYN.kb.cam = 'THE MOUSE (CLICK FIRST) OR THE ARROWS'; KEYN.kb.jump = 'F'; KEYN.kb.guard = 'L'; KEYN.kb.flask = 'R'; KEYN.kb.lock = 'Q'; KEYN.kb.skill = 'U';
-KEYN.touch.move = 'THE LEFT THUMB'; KEYN.touch.cam = 'THE RIGHT THUMB'; KEYN.touch.jump = 'JUMP'; KEYN.touch.guard = 'GUARD'; KEYN.touch.flask = 'FLASK'; KEYN.touch.lock = 'LOCK'; KEYN.touch.skill = 'SKILL';
+ KEYN.pad.jump = 'A'; KEYN.pad.guard = 'LB'; KEYN.pad.flask = 'X'; KEYN.pad.lock = 'R3'; KEYN.pad.skill = 'LT';
+KEYN.kb.move = 'WASD'; KEYN.kb.cam = 'the mouse (click first) or the arrows'; KEYN.kb.jump = 'F'; KEYN.kb.guard = 'L'; KEYN.kb.flask = 'R'; KEYN.kb.lock = 'Q'; KEYN.kb.skill = 'U';
+KEYN.touch.move = 'the left thumb'; KEYN.touch.cam = 'the right thumb'; KEYN.touch.jump = 'A'; KEYN.touch.guard = 'LB'; KEYN.touch.flask = 'X'; KEYN.touch.lock = 'R3'; KEYN.touch.skill = 'LT'; KEYN.touch.use = 'A'; KEYN.touch.light = 'RB'; KEYN.touch.heavy = 'RT'; KEYN.touch.dodge = 'B';
+KEYN.kb.move = 'WASD'; KEYN.pad.move = 'the left stick'; KEYN.pad.cam = 'the right stick';
 /* only the foes near you think (the world is big now) */
 var flowFoes = stepFoes;
 stepFoes = function (dt) { var all = FOE; FOE = all.filter(function (f) { return Math.abs(f.x - P.x) < 46 && Math.abs(f.z - P.z) < 46; }); try { flowFoes(dt); } finally { FOE = all; }
@@ -124,12 +126,12 @@ hud = function () { var Wd = KIT.W, Hd = KIT.H, R = KIT.R;
     else { var k = G.wake / 4.2; if (k > 0.8) R('rgba(0,0,0,' + (k - 0.8) * 5 + ')', 0, 0, Wd, Hd); }
     return; }
   flowHud();
-  if (G.note) { var s = G.note.s, a2 = Math.min(1, G.note.t * 2, (6 - G.note.t) * 4), w = Math.min(Wd - 24, 360), lines = splitText(s, w - 24, 7), h = lines.length * 11 + 22, x = (Wd - w) / 2, y = Hd * 0.18;
+  if (G.note) { var s = G.note.s, a2 = Math.min(1, G.note.t * 2, (6 - G.note.t) * 4), w = Math.min(Wd - 16, 400), lines = splitText(s, w - 20, 7), h = lines.length * 11 + 22, x = (Wd - w) / 2, y = Hd * 0.18;
     KIT.ctx.globalAlpha = a2; R('rgba(10,4,4,0.86)', x, y, w, h); R('#c48a3a', x, y, w, 1); R('#c48a3a', x, y + h - 1, w, 1); R('#c48a3a', x, y, 1, h); R('#c48a3a', x + w - 1, y, 1, h); KIT.ctx.globalAlpha = 1;
     KIT.text('A MESSAGE SCRATCHED INTO THE FLOOR', Wd / 2, y + 5, { align: 'center', size: 6, col: '#c48a3a', alpha: a2 }); lines.forEach(function (l, i) { KIT.text(l, Wd / 2, y + 16 + i * 11, { align: 'center', size: 7, col: '#f1e7d0', alpha: a2 }); }); }
   if (G.banner && G.banner.place && G.banner.t > 0) { var a3 = Math.min(1, G.banner.t, 3.5 - G.banner.t), cy = Hd * 0.3; R('rgba(255,227,106,' + 0.55 * a3 + ')', Wd / 2 - 110, cy + 32, 220, 1); }
 };
-function splitText(s, w, size) { var words = s.split(' '), out = [], cur = '', cw = size * 0.86; words.forEach(function (wd) { var t = cur ? cur + ' ' + wd : wd; if (t.length * cw > w && cur) { out.push(cur); cur = wd; } else cur = t; }); if (cur) out.push(cur); return out; }
+function splitText(s, w, size) { var words = s.split(' '), out = [], cur = ''; words.forEach(function (wd) { var t = cur ? cur + ' ' + wd : wd; if (KIT.tw(t, size) > w && cur) { out.push(cur); cur = wd; } else cur = t; }); if (cur) out.push(cur); return out; }
 function wrapText(s, x, y, w, o) { var ls = splitText(s, w, o.size || 7); ls.forEach(function (l, i) { KIT.text(l, x, y - (ls.length - 1 - i) * ((o.size || 7) + 5), o); }); }
 /* the boss falls: the fog lifts for good, the music comes back, a seal breaks */
 var flowHurtBoss = hurtBoss;
