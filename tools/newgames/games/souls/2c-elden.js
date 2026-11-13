@@ -55,7 +55,8 @@ var KEYN = { pad: { use: 'Y', light: 'RB', heavy: 'RT', dodge: 'B' }, kb: { use:
 function keyName(k) { return (KEYN[ERI.dev] || KEYN.kb)[k] || k; }
 function inCombat() { if (G.inArena && BOSS && BOSS.hp > 0) return true;
   for (var i = 0; i < FOE.length; i++) { var f = FOE[i]; if (f.hp > 0 && f.st !== 'idle' && f.st !== 'walk' && f.st !== 'dead' && Math.hypot(f.x - P.x, f.z - P.z) < 20) return true; } return false; }
-function jump() { var p = P; p.sta -= ER.jump; p.staWait = 0.45; p.fall = 1; p.jump = 1; p.vy = ER.jumpV; p.fy0 = p.y; p.crouch = 0; sfx.noise(0.08, 0.06, 900); sfx.tone('triangle', 140, 220, 0.08, 0.04); }
+function jump() { var p = P; p.sta -= ER.jump; p.staWait = 0.45; p.jsq = 0.1; p.crouch = 0; } // update 148: a short squat first, then liftOff()
+function liftOff() { var p = P; p.jsq = 0; p.fall = 1; p.jump = 1; p.vy = ER.jumpV; p.fy0 = p.y; sfx.noise(0.08, 0.06, 900); sfx.tone('triangle', 140, 220, 0.08, 0.04); }
 function useSkill(wl, wa) { var p = P, S0 = skillOf(); if ((p.fp || 0) < S0.fp) { POP.push({ x: p.x, y: p.y + 2.3, z: p.z, s: 'NOT ENOUGH FP', t: 0.8, col: '#6a9aff' }); sfx.tone('square', 200, 150, 0.08, 0.03); return; }
   p.fp -= S0.fp; p.crouch = 0; sfx.tone('sine', 300, 900, 0.18, 0.05); FX.push({ k: 'spark', x: p.x, y: p.y + 1.4, z: p.z, t: 0.3, col: '#6a9aff' });
   if (S0.qs) { var ra = wl > 0.2 ? wa : p.a + Math.PI; p.st = 'roll'; p.qs = 1; p.roll = p.rollLen = 0.32; p.rollSp = 11; p.ri0 = 0; p.ri1 = 1; p.rollA = ra; if (!(LOCK && LOCK.hp > 0)) p.a = ra; return; }
@@ -77,7 +78,8 @@ function stepPlayer(dt) {
   if (ip('crouch') && !p.atk && p.st !== 'down' && !p.fall) { p.crouch = !p.crouch; sfx.tone('triangle', p.crouch ? 220 : 300, p.crouch ? 160 : 360, 0.06, 0.03); }
   p.holdA = ih('dodge') ? (p.holdA || 0) + dt : 0; if (ip('dodge')) p.tapA = 1;
   var released = p.tapA && !ih('dodge'), quickTap = released && p.lastHold < ER.tap; if (released) p.tapA = 0; if (ih('dodge')) p.lastHold = p.holdA;
-  var busy = p.atk || p.st === 'roll' || p.st === 'back' || p.st === 'down' || p.hurtT > 0.25 || p.st === 'drink' || p.fall || p.landT > 0.15;
+  if (p.jsq > 0) { p.jsq -= dt; if (p.jsq <= 0) liftOff(); }
+  var busy = p.jsq > 0 || p.atk || p.st === 'roll' || p.st === 'back' || p.st === 'down' || p.hurtT > 0.25 || p.st === 'drink' || p.fall || p.landT > 0.15;
   var wasGuard = p.guard; p.guard = !busy && ih('guard') && p.sta > 0; if (p.guard && !wasGuard) p.guardT = 0; if (p.guard) p.guardT = (p.guardT || 0) + dt;
   var sprint = !busy && !p.guard && ih('dodge') && p.holdA > ER.tap && wl > 0.3 && p.sta > 0, fight = inCombat(); if (sprint) p.crouch = 0;
   if (p.staWait <= 0 && (!busy || p.st === 'drink') && !(sprint && fight)) p.sta = Math.min(maxSta(), p.sta + dt * ER.regen * (p.guard ? 0.5 : 1) * (SV.ring === 'pie' ? 1.35 : 1));
@@ -85,7 +87,7 @@ function stepPlayer(dt) {
   p.sprint = sprint;
   var tvx = 0, tvz = 0, acc = ER.acc, spdNow = Math.hypot(p.vx, p.vz);
   if (p.st === 'roll' || p.st === 'back') { p.roll -= dt; var len = p.rollLen || 0.62, k = 1 - p.roll / len, sp;
-    if (p.st === 'roll') { sp = p.qs ? p.rollSp * (1 - k * 0.6) : k < 0.65 ? p.rollSp : p.rollSp * (1 - (k - 0.65) / 0.35); if (k > p.ri0 && k < p.ri1) p.inv = Math.max(p.inv, 0.02); } else { sp = -5.6 * (1 - k); if (k < 0.45) p.inv = Math.max(p.inv, 0.02); }
+    if (p.st === 'roll') { sp = p.qs ? p.rollSp * (1 - k * 0.6) : k < 0.65 ? p.rollSp : p.rollSp * (1 - (k - 0.65) / 0.35); if (k > p.ri0 && k < p.ri1) p.inv = Math.max(p.inv, 0.02); } else { sp = k < 0.12 ? -2 : -6.2 * Math.max(0, 1 - (k - 0.12) / 0.55); if (k < 0.36) p.inv = Math.max(p.inv, 0.02); }
     var ra = p.st === 'roll' ? p.rollA : p.a; tvx = Math.sin(ra) * sp; tvz = Math.cos(ra) * sp; acc = 70;
     if (k > 0.78 && quickTap && p.sta > 0) { p.st = 'idle'; p.qs = 0; doRoll(wl, wa); } // chain another roll in the recovery
     else if (p.roll <= 0) { p.afterRoll = { k: p.st, t: 0.2 }; p.st = 'idle'; p.qs = 0; if (locked) p.a = lockA; } }
@@ -114,6 +116,7 @@ function stepPlayer(dt) {
     else if (A.t >= wnd + act + rec * 0.55 && !p.fall && quickTap && p.sta > 0) { p.atk = null; doRoll(wl, wa); }
     else if (A.t >= wnd + act + rec * 0.6 && !p.fall && p.buf && p.buf.k === 'j' && p.sta > 0) { p.buf = null; p.atk = null; jump(); }
     else if (A.t >= wnd + act + rec && !(A.air && p.fall)) p.atk = null; }
+  else if (p.jsq > 0) { tvx = p.vx; tvz = p.vz; acc = 3; }
   else if (p.fall) { // in the air: a little steering, jump attacks
     var ac = wl > 0.15 ? Math.max(spdNow, 2.6) : spdNow; tvx = wl > 0.15 ? wx / Math.max(1e-4, Math.hypot(wx, wz)) * ac : p.vx; tvz = wl > 0.15 ? wz / Math.max(1e-4, Math.hypot(wx, wz)) * ac : p.vz; acc = 4;
     if (p.buf && p.buf.k === 'x' && p.sta > 0) { p.buf = null; startAtk(false, 0, { m: 'jl', air: 1 }); }
@@ -123,7 +126,7 @@ function stepPlayer(dt) {
     if (p.landT > 0) spd2 *= 0.35;
     if (wl > 0.15) { tvx = wx / Math.max(0.0001, Math.hypot(wx, wz)) * spd2; tvz = wz / Math.max(0.0001, Math.hypot(wx, wz)) * spd2; }
     if (locked && !sprint) p.a = turnTo(p.a, lockA, dt * ER.turn.lock); else if (wl > 0.15) p.a = turnTo(p.a, wa, dt * (sprint ? ER.turn.sprint : ER.turn.run));
-    acc = wl > 0.15 ? (sprint ? 16 : ER.acc) : spdNow > 5.5 ? 14 : ER.dec; // out of a sprint you skid to a stop
+    acc = wl > 0.15 ? (sprint ? 16 : ER.acc) : spdNow > 3 ? 14 : ER.dec; // out of a run or a sprint you skid to a stop
     if (quickTap && p.sta > 0) doRoll(wl, wa);
     if (p.buf && p.sta > 0) { var bk = p.buf.k, ar = p.afterRoll;
       if (bk === 'x') { p.buf = null; if (ar) { p.afterRoll = null; startAtk(false, 0, { m: ar.k === 'back' ? 'backatk' : 'rollatk', light: 1 }); } else if (sprint || spdNow > 5.6) startRun(); else if (crouch) startAtk(false, 0, { m: 'crouchatk', light: 1 }); else startAtk(false, 0); }
@@ -142,8 +145,8 @@ function stepPlayer(dt) {
   var fh = floorAt(p.x, p.z);
   if (!p.fall && fh < p.y - 0.6) { p.fall = 1; p.vy = 0; }
   if (p.fall) { p.vy -= 22 * dt; p.y += p.vy * dt;
-    if (p.y <= fh && p.vy <= 0) { var drop = p.fy0 - fh; p.y = fh; p.fall = 0; p.jump = 0; p.vy = 0;
-      if (drop > 4) { p.landT = 0.6; p.hp -= (drop - 4) * 14; sfx.play('land'); KIT.shake(4); } else if (drop > 2) { p.landT = 0.3; sfx.play('land'); } else { p.landT = 0.12; sfx.noise(0.07, 0.07, 450); sfx.tone('sine', 80, 45, 0.07, 0.05); }
+    if (p.y <= fh && p.vy <= 0) { var drop = p.fy0 - fh; p.y = fh; var wj = p.jump; p.fall = 0; p.jump = 0; p.vy = 0;
+      if (drop > 4) { p.landT = 0.6; p.hp -= (drop - 4) * 14; sfx.play('land'); KIT.shake(4); } else if (drop > 2) { p.landT = 0.3; sfx.play('land'); } else { p.landT = wj ? 0.22 : 0.12; sfx.noise(0.07, 0.07, 450); sfx.tone('sine', 80, 45, 0.07, 0.05); }
       if (p.atk && p.atk.air && p.atk.m === 'jl') p.atk = null; } else if (p.y > p.fy0) p.fy0 = p.y;
     if (p.y < -12) p.hp = 0; } else { p.fy0 = p.y; p.y += (fh - p.y) * Math.min(1, dt * 18); }
   // lock on (R3); with nothing to lock on to it puts the camera back behind you
@@ -164,7 +167,7 @@ function stepPlayer(dt) {
 function doRoll(wl, wa) { var p = P, L0 = LOADS[loadOf()]; p.crouch = 0; p.staWait = 0.5; p.qs = 0;
   if (wl > 0.2) { var ra = wa; if (LOCK && LOCK.hp > 0) { var la = Math.atan2(LOCK.x - p.x, LOCK.z - p.z), rel = Math.atan2(Math.sin(wa - la), Math.cos(wa - la)); ra = la + Math.round(rel / (Math.PI / 2)) * (Math.PI / 2); }
     p.sta -= ER.roll * L0.cost; p.st = 'roll'; p.roll = p.rollLen = L0.len; p.rollSp = L0.sp; p.ri0 = L0.i0; p.ri1 = L0.i1; p.rollA = ra; p.a = ra; }
-  else { p.sta -= ER.back; p.st = 'back'; p.roll = p.rollLen = 0.4; }
+  else { p.sta -= ER.back; p.st = 'back'; p.roll = p.rollLen = 0.55; }
   sfx.noise(0.14, 0.07, L0 === LOADS.heavy ? 300 : 600); sfx.tone('sine', 110, 60, 0.1, 0.04); }
 var erStartAtk = startAtk;
 startAtk = function (heavy, combo, o) { o = o || {}; var p = P; erStartAtk(heavy, combo); var A = p.atk; if (!A || A.crit) return;
@@ -189,7 +192,7 @@ _hurtPlayer = function (dmg, fx, fz, unblock) {
   if (arm) return; // hyper armour: it hurts, but you carry on
   p.hitDir = Math.abs(rel) < 0.8 ? 'f' : Math.abs(rel) > 2.3 ? 'b' : rel > 0 ? 'l' : 'r'; p.react = tier;
   p.atk = null; p.crouch = 0; if (p.st === 'drink' || p.st === 'roll' || p.st === 'back') p.st = 'idle';
-  var push = [1.4, 3, 4.4, 6][tier]; p.kx = -Math.sin(a) * push; p.kz = -Math.cos(a) * push;
+  var push = [1.4, 3, 4.4, 7.5][tier]; p.kx = -Math.sin(a) * push; p.kz = -Math.cos(a) * push;
   if (tier === 3 && !p.fall) { p.st = 'down'; p.downT = p.downLen = 1.3; p.hurtT = 0; p.inv = 1.35; }
   else { p.hurtT = [0.3, 0.55, 0.85, 0.85][tier]; p.inv = 0.45; }
 };

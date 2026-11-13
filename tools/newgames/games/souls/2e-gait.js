@@ -27,7 +27,7 @@ function cumRigP() { // Cumhead with separate feet, built once from his normal r
 function drawCum(x, y, z, yaw, P, o) { // drawRig for Cumhead's own legs: pelvis yaw (P.py) apart from the chest, and ankles (P.ank)
   var rig = cumRigP(); o = o || {}; var D = rig.D, S = rig.P, fl = o.flash, tint = o.tint, al = o.alpha;
   if (!P.bp && !o.still) { var lt = KIT.t, br = Math.sin(lt * 1.7); P.lean += br * 0.012; P.sh[0][1] = (P.sh[0][1] || 0) + br * 0.018; P.sh[1][1] = (P.sh[1][1] || 0) + br * 0.018; P.hy += Math.sin(lt * 0.63) * 0.04; P.hp += Math.sin(lt * 0.9) * 0.015; }
-  var hipY = D.lu + D.ll + P.y, body = MD(x, y + (P.bodyY || 0), z, yaw, P.bp || 0, P.br || 0, 1);
+  var bz = P.bodyZ || 0, hipY = D.lu + D.ll + P.y, body = MD(x + Math.sin(yaw) * bz, y + (P.bodyY || 0), z + Math.cos(yaw) * bz, yaw, P.bp || 0, P.br || 0, 1);
   function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: 1 }); }
   var pY = P.py !== undefined ? P.py : P.twist * 0.3, hips = MM(body, MD(0, hipY, 0, pY, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.02, 0, P.twist, P.lean, P.roll * (P.py !== undefined ? -0.6 : 1))); dr(S.torso, tor);
@@ -98,3 +98,46 @@ poseOf = function (e, isP) { var Q = gaitPoseOf(e, isP);
   Q.ank = [0, 0]; Q.twist = 0; Q.roll = 0; Q.lean = 0; Q.hy = 0; Q.hp = 0; gaitPose(Q, e);
   if (keepArms) { Q.sh = sh; Q.el = el; } else { Q.sh[1] = [0.35 + Q.sh[1][0] * 0.45, 0.2, 0.15]; Q.el[1] = 0.5 + Q.el[1] * 0.4; if (kindOf().two) { Q.sh[0] = [0.7, 0.5, 0.6]; Q.el[0] = 1.1; } }
   return Q; };
+
+/* update 148: the moves taken from an Elden Ring reference video (his link: unarmed movement) -
+   the dive roll, the crouched backstep hop, the squat before a jump, the tucked jump and the crouched landing,
+   the skid when he stops from a run or a sprint, being thrown by a big hit, and drinking from the flask in steps */
+function sm(a, b, t) { t = Math.max(0, Math.min(1, (t - a) / (b - a))); return t * t * (3 - 2 * t); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function tumble(Q, ang, c) { Q.bp = ang; Q.bodyY = c - c * Math.cos(ang); Q.bodyZ = -c * Math.sin(ang); } // turn the whole body round a point c up from the feet
+function poseRollER(Q, e) { var k = 1 - e.roll / (e.rollLen || 0.6), hv = e.rollLen > 0.75, dive = hv ? 0.9 : 1.35, c = 0.32;
+  if (k < 0.18) { var a = sm(0, 0.18, k); tumble(Q, a * dive, c); Q.bodyY += 0.12 * Math.sin(a * Math.PI); Q.hip = [lerp(0.3, -0.2, a), lerp(0.2, -0.5, a)]; Q.kn = [lerp(0.6, 0.3, a), lerp(0.4, 0.5, a)]; Q.sh[0] = [lerp(0.4, 1.6, a), 0.3]; Q.sh[1] = [lerp(0.4, 1.4, a), 0.3, 0.2]; Q.el = [0.6, 0.6]; Q.y = -0.12 * a; }
+  else if (k < 0.56) { var b = sm(0.18, 0.56, k); tumble(Q, lerp(dive, Math.PI * 2, b), c * (1 - 0.3 * Math.sin(b * Math.PI))); Q.y = -0.3; Q.hip = [1.5, 1.4]; Q.kn = [2.1, 2.1]; Q.sh[0] = [1.2, 0.2]; Q.sh[1] = [1.1, 0.2, 0.2]; Q.el = [2.0, 2.0]; Q.hp = 0.5; }
+  else if (k < 0.78) { var d = sm(0.56, 0.78, k); Q.bp = 0; Q.y = lerp(-0.34, -0.22, d); Q.hip = [lerp(1.3, 0.9, d), lerp(0.4, 0.2, d)]; Q.kn = [lerp(1.9, 1.3, d), lerp(1.2, 0.7, d)]; Q.lean = lerp(0.6, 0.35, d); Q.sh[0] = [0.5, 0.5]; Q.sh[1] = [0.6, 0.4, 0.2]; Q.el = [0.9, 0.8]; Q.hp = -0.3; }
+  else { var r = sm(0.78, 1, k); Q.bp = 0; Q.y = lerp(-0.22, -0.04, r); Q.hip = [lerp(0.9, 0.15, r), lerp(0.2, 0.05, r)]; Q.kn = [lerp(1.3, 0.2, r), lerp(0.7, 0.15, r)]; Q.lean = lerp(0.35, 0.08, r); Q.sh[0] = [lerp(0.5, 0.1, r), lerp(0.5, 0.15, r)]; Q.el = [lerp(0.9, 0.3, r), lerp(0.8, 0.5, r)]; }
+  if (hv && k > 0.56 && k < 0.85) { Q.y -= 0.05; Q.lean += 0.12; } // the fat roll flops
+  Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+function poseBackER(Q, e) { var k = 1 - e.roll / (e.rollLen || 0.55), up = sm(0, 0.12, k) * (1 - sm(0.62, 1, k)), air = k > 0.12 && k < 0.5 ? Math.sin((k - 0.12) / 0.38 * Math.PI) : 0;
+  Q.bodyY = 0.14 * air; Q.y = -0.3 * up - 0.04; Q.lean = 0.38 * up + 0.05; Q.hp = -0.35 * up;
+  Q.hip = [lerp(0.1, 1.0, up), lerp(0.05, 0.75, up)]; Q.kn = [lerp(0.15, 1.5, up), lerp(0.1, 1.2, up)]; Q.abd = [0.32 * up, -0.32 * up];
+  Q.sh[0] = [lerp(0.1, 0.25, up), lerp(0.1, 1.25, up)]; Q.sh[1] = [lerp(0.4, 0.35, up), lerp(0.2, 1.1, up), 0.2]; Q.el = [lerp(0.3, 0.45, up), lerp(0.5, 0.45, up)];
+  Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+function poseDrinkER(Q, e) { var t = 1.25 - (e.drinkT || 0), reach = sm(0, 0.25, t), lift = sm(0.25, 0.45, t), down = sm(0.9, 1.2, t);
+  var u = lift * (1 - down); Q.sh[0] = [lerp(lerp(0.1, -0.3, reach), 2.5, u), lerp(0.15, -0.15, u), 0.25 * u]; Q.el[0] = lerp(lerp(0.3, 0.9, reach), 1.9, u);
+  Q.hp = -0.55 * sm(0.45, 0.6, t) * (1 - down); Q.lean = -0.08 * u; }
+var p148 = poseOf;
+poseOf = function (e, isP) { var Q = p148(e, isP); if (!isP || e.hp <= 0) return Q;
+  if (e.st === 'roll' && !e.qs && !e.atk) { Q = pose0(); poseRollER(Q, e); return Q; }
+  if (e.st === 'back' && !e.atk) { Q = pose0(); poseBackER(Q, e); return Q; }
+  if (e.st === 'drink') poseDrinkER(Q, e);
+  if (e.jsq > 0 && !e.atk) { var q = 1 - e.jsq / 0.1; Q.y = -0.16 * q; Q.kn = [0.9 * q + 0.1, 0.8 * q + 0.1]; Q.hip = [0.6 * q, 0.5 * q]; Q.lean = 0.3 * q; Q.sh[0] = [-0.5 * q, 0.2]; Q.sh[1] = [-0.3 * q, 0.2, 0.1]; Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+  else if (e.fall && e.jump && !e.atk && e.st !== 'roll' && e.st !== 'back') { var up = e.vy > 0 ? 1 : Math.max(0, 1 + e.vy / 6);
+    Q.hip = [lerp(0.5, 1.35, up), lerp(-0.1, 0.1, up)]; Q.kn = [lerp(0.8, 1.7, up), lerp(0.5, 1.2, up)]; Q.sh[0] = [0.4, 0.9]; Q.sh[1] = [0.3, 0.8, 0.2]; Q.el = [0.6, 0.6]; Q.lean = 0.12; Q.ank = [Q.hip[0] - Q.kn[0] + 0.3, Q.hip[1] - Q.kn[1] + 0.3]; }
+  else if (e.landT > 0 && !e.atk && e.st !== 'down') { var lk = Math.min(1, e.landT / 0.22); Q.y = -0.3 * lk; Q.kn = [1.3 * lk, 1.15 * lk]; Q.hip = [0.95 * lk, 0.8 * lk]; Q.lean = 0.35 * lk; Q.sh[0] = [0.3, 0.6 * lk]; Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+  if (e.st === 'down') { var dk = 1 - e.downT / e.downLen; if (dk < 0.32) { var f = dk / 0.32, back = e.hitDir !== 'b' ? -1 : 1; Q.bodyY = 0.7 * Math.sin(f * Math.PI); Q.bp = back * 1.4 * sm(0, 1, f); Q.hip = [0.7, 0.3]; Q.kn = [0.9, 0.5]; Q.sh[0] = [1.3, 0.9]; Q.sh[1] = [1.1, 0.9, 0.2]; Q.el = [0.4, 0.4]; } }
+  // the skid out of a run or a sprint: lean back, front foot braced, the feet slide
+  var sk = e.gskid || 0; if (sk > 0.01 && !e.atk && e.st !== 'roll' && e.st !== 'back' && !e.fall) { var a1 = legIK(0, 0.34, 0.5), a2 = legIK(0, -0.22, 0.52);
+    Q.hip = [lerp(Q.hip[0], a1[0], sk), lerp(Q.hip[1], a2[0], sk)]; Q.kn = [lerp(Q.kn[0], a1[1], sk), lerp(Q.kn[1], a2[1], sk)]; if (Q.abd) Q.abd = [Q.abd[0] * (1 - sk), Q.abd[1] * (1 - sk)];
+    Q.ank = [lerp(Q.ank ? Q.ank[0] : 0, a1[0] - a1[1] - 0.25, sk), lerp(Q.ank ? Q.ank[1] : 0, a2[0] - a2[1] + 0.2, sk)]; Q.y = lerp(Q.y, -0.08, sk); Q.lean = lerp(Q.lean, -0.32, sk); Q.hp = lerp(Q.hp, 0.15, sk);
+    Q.sh[0] = [lerp(Q.sh[0][0], 0.6, sk), lerp(Q.sh[0][1], 0.4, sk)]; Q.el[0] = lerp(Q.el[0], 0.7, sk); Q.py = (Q.py || 0) * (1 - sk); Q.twist = (Q.twist || 0) * (1 - sk); }
+  return Q; };
+var s148 = stepPlayer;
+stepPlayer = function (dt) { s148(dt); var p = P; if (!p) return; var mv = KIT.stick(0), noIn = Math.hypot(mv.x, mv.y) < 0.15, v = Math.hypot(p.vx || 0, p.vz || 0);
+  var want = noIn && !p.atk && !p.fall && p.st !== 'roll' && p.st !== 'back' && (p.skidOn || v > 3.6) && v > 0.6 ? 1 : 0; p.skidOn = want && v > 0.6;
+  if (want && !p.gskid) sfx.noise(0.25, 0.05, 300);
+  p.gskid = (p.gskid || 0) + (want - (p.gskid || 0)) * Math.min(1, dt * (want ? 16 : 7)); if (p.gskid < 0.02) p.gskid = 0; };

@@ -2300,7 +2300,8 @@ var KEYN = { pad: { use: 'Y', light: 'RB', heavy: 'RT', dodge: 'B' }, kb: { use:
 function keyName(k) { return (KEYN[ERI.dev] || KEYN.kb)[k] || k; }
 function inCombat() { if (G.inArena && BOSS && BOSS.hp > 0) return true;
   for (var i = 0; i < FOE.length; i++) { var f = FOE[i]; if (f.hp > 0 && f.st !== 'idle' && f.st !== 'walk' && f.st !== 'dead' && Math.hypot(f.x - P.x, f.z - P.z) < 20) return true; } return false; }
-function jump() { var p = P; p.sta -= ER.jump; p.staWait = 0.45; p.fall = 1; p.jump = 1; p.vy = ER.jumpV; p.fy0 = p.y; p.crouch = 0; sfx.noise(0.08, 0.06, 900); sfx.tone('triangle', 140, 220, 0.08, 0.04); }
+function jump() { var p = P; p.sta -= ER.jump; p.staWait = 0.45; p.jsq = 0.1; p.crouch = 0; } // update 148: a short squat first, then liftOff()
+function liftOff() { var p = P; p.jsq = 0; p.fall = 1; p.jump = 1; p.vy = ER.jumpV; p.fy0 = p.y; sfx.noise(0.08, 0.06, 900); sfx.tone('triangle', 140, 220, 0.08, 0.04); }
 function useSkill(wl, wa) { var p = P, S0 = skillOf(); if ((p.fp || 0) < S0.fp) { POP.push({ x: p.x, y: p.y + 2.3, z: p.z, s: 'NOT ENOUGH FP', t: 0.8, col: '#6a9aff' }); sfx.tone('square', 200, 150, 0.08, 0.03); return; }
   p.fp -= S0.fp; p.crouch = 0; sfx.tone('sine', 300, 900, 0.18, 0.05); FX.push({ k: 'spark', x: p.x, y: p.y + 1.4, z: p.z, t: 0.3, col: '#6a9aff' });
   if (S0.qs) { var ra = wl > 0.2 ? wa : p.a + Math.PI; p.st = 'roll'; p.qs = 1; p.roll = p.rollLen = 0.32; p.rollSp = 11; p.ri0 = 0; p.ri1 = 1; p.rollA = ra; if (!(LOCK && LOCK.hp > 0)) p.a = ra; return; }
@@ -2322,7 +2323,8 @@ function stepPlayer(dt) {
   if (ip('crouch') && !p.atk && p.st !== 'down' && !p.fall) { p.crouch = !p.crouch; sfx.tone('triangle', p.crouch ? 220 : 300, p.crouch ? 160 : 360, 0.06, 0.03); }
   p.holdA = ih('dodge') ? (p.holdA || 0) + dt : 0; if (ip('dodge')) p.tapA = 1;
   var released = p.tapA && !ih('dodge'), quickTap = released && p.lastHold < ER.tap; if (released) p.tapA = 0; if (ih('dodge')) p.lastHold = p.holdA;
-  var busy = p.atk || p.st === 'roll' || p.st === 'back' || p.st === 'down' || p.hurtT > 0.25 || p.st === 'drink' || p.fall || p.landT > 0.15;
+  if (p.jsq > 0) { p.jsq -= dt; if (p.jsq <= 0) liftOff(); }
+  var busy = p.jsq > 0 || p.atk || p.st === 'roll' || p.st === 'back' || p.st === 'down' || p.hurtT > 0.25 || p.st === 'drink' || p.fall || p.landT > 0.15;
   var wasGuard = p.guard; p.guard = !busy && ih('guard') && p.sta > 0; if (p.guard && !wasGuard) p.guardT = 0; if (p.guard) p.guardT = (p.guardT || 0) + dt;
   var sprint = !busy && !p.guard && ih('dodge') && p.holdA > ER.tap && wl > 0.3 && p.sta > 0, fight = inCombat(); if (sprint) p.crouch = 0;
   if (p.staWait <= 0 && (!busy || p.st === 'drink') && !(sprint && fight)) p.sta = Math.min(maxSta(), p.sta + dt * ER.regen * (p.guard ? 0.5 : 1) * (SV.ring === 'pie' ? 1.35 : 1));
@@ -2330,7 +2332,7 @@ function stepPlayer(dt) {
   p.sprint = sprint;
   var tvx = 0, tvz = 0, acc = ER.acc, spdNow = Math.hypot(p.vx, p.vz);
   if (p.st === 'roll' || p.st === 'back') { p.roll -= dt; var len = p.rollLen || 0.62, k = 1 - p.roll / len, sp;
-    if (p.st === 'roll') { sp = p.qs ? p.rollSp * (1 - k * 0.6) : k < 0.65 ? p.rollSp : p.rollSp * (1 - (k - 0.65) / 0.35); if (k > p.ri0 && k < p.ri1) p.inv = Math.max(p.inv, 0.02); } else { sp = -5.6 * (1 - k); if (k < 0.45) p.inv = Math.max(p.inv, 0.02); }
+    if (p.st === 'roll') { sp = p.qs ? p.rollSp * (1 - k * 0.6) : k < 0.65 ? p.rollSp : p.rollSp * (1 - (k - 0.65) / 0.35); if (k > p.ri0 && k < p.ri1) p.inv = Math.max(p.inv, 0.02); } else { sp = k < 0.12 ? -2 : -6.2 * Math.max(0, 1 - (k - 0.12) / 0.55); if (k < 0.36) p.inv = Math.max(p.inv, 0.02); }
     var ra = p.st === 'roll' ? p.rollA : p.a; tvx = Math.sin(ra) * sp; tvz = Math.cos(ra) * sp; acc = 70;
     if (k > 0.78 && quickTap && p.sta > 0) { p.st = 'idle'; p.qs = 0; doRoll(wl, wa); } // chain another roll in the recovery
     else if (p.roll <= 0) { p.afterRoll = { k: p.st, t: 0.2 }; p.st = 'idle'; p.qs = 0; if (locked) p.a = lockA; } }
@@ -2359,6 +2361,7 @@ function stepPlayer(dt) {
     else if (A.t >= wnd + act + rec * 0.55 && !p.fall && quickTap && p.sta > 0) { p.atk = null; doRoll(wl, wa); }
     else if (A.t >= wnd + act + rec * 0.6 && !p.fall && p.buf && p.buf.k === 'j' && p.sta > 0) { p.buf = null; p.atk = null; jump(); }
     else if (A.t >= wnd + act + rec && !(A.air && p.fall)) p.atk = null; }
+  else if (p.jsq > 0) { tvx = p.vx; tvz = p.vz; acc = 3; }
   else if (p.fall) { // in the air: a little steering, jump attacks
     var ac = wl > 0.15 ? Math.max(spdNow, 2.6) : spdNow; tvx = wl > 0.15 ? wx / Math.max(1e-4, Math.hypot(wx, wz)) * ac : p.vx; tvz = wl > 0.15 ? wz / Math.max(1e-4, Math.hypot(wx, wz)) * ac : p.vz; acc = 4;
     if (p.buf && p.buf.k === 'x' && p.sta > 0) { p.buf = null; startAtk(false, 0, { m: 'jl', air: 1 }); }
@@ -2368,7 +2371,7 @@ function stepPlayer(dt) {
     if (p.landT > 0) spd2 *= 0.35;
     if (wl > 0.15) { tvx = wx / Math.max(0.0001, Math.hypot(wx, wz)) * spd2; tvz = wz / Math.max(0.0001, Math.hypot(wx, wz)) * spd2; }
     if (locked && !sprint) p.a = turnTo(p.a, lockA, dt * ER.turn.lock); else if (wl > 0.15) p.a = turnTo(p.a, wa, dt * (sprint ? ER.turn.sprint : ER.turn.run));
-    acc = wl > 0.15 ? (sprint ? 16 : ER.acc) : spdNow > 5.5 ? 14 : ER.dec; // out of a sprint you skid to a stop
+    acc = wl > 0.15 ? (sprint ? 16 : ER.acc) : spdNow > 3 ? 14 : ER.dec; // out of a run or a sprint you skid to a stop
     if (quickTap && p.sta > 0) doRoll(wl, wa);
     if (p.buf && p.sta > 0) { var bk = p.buf.k, ar = p.afterRoll;
       if (bk === 'x') { p.buf = null; if (ar) { p.afterRoll = null; startAtk(false, 0, { m: ar.k === 'back' ? 'backatk' : 'rollatk', light: 1 }); } else if (sprint || spdNow > 5.6) startRun(); else if (crouch) startAtk(false, 0, { m: 'crouchatk', light: 1 }); else startAtk(false, 0); }
@@ -2387,8 +2390,8 @@ function stepPlayer(dt) {
   var fh = floorAt(p.x, p.z);
   if (!p.fall && fh < p.y - 0.6) { p.fall = 1; p.vy = 0; }
   if (p.fall) { p.vy -= 22 * dt; p.y += p.vy * dt;
-    if (p.y <= fh && p.vy <= 0) { var drop = p.fy0 - fh; p.y = fh; p.fall = 0; p.jump = 0; p.vy = 0;
-      if (drop > 4) { p.landT = 0.6; p.hp -= (drop - 4) * 14; sfx.play('land'); KIT.shake(4); } else if (drop > 2) { p.landT = 0.3; sfx.play('land'); } else { p.landT = 0.12; sfx.noise(0.07, 0.07, 450); sfx.tone('sine', 80, 45, 0.07, 0.05); }
+    if (p.y <= fh && p.vy <= 0) { var drop = p.fy0 - fh; p.y = fh; var wj = p.jump; p.fall = 0; p.jump = 0; p.vy = 0;
+      if (drop > 4) { p.landT = 0.6; p.hp -= (drop - 4) * 14; sfx.play('land'); KIT.shake(4); } else if (drop > 2) { p.landT = 0.3; sfx.play('land'); } else { p.landT = wj ? 0.22 : 0.12; sfx.noise(0.07, 0.07, 450); sfx.tone('sine', 80, 45, 0.07, 0.05); }
       if (p.atk && p.atk.air && p.atk.m === 'jl') p.atk = null; } else if (p.y > p.fy0) p.fy0 = p.y;
     if (p.y < -12) p.hp = 0; } else { p.fy0 = p.y; p.y += (fh - p.y) * Math.min(1, dt * 18); }
   // lock on (R3); with nothing to lock on to it puts the camera back behind you
@@ -2409,7 +2412,7 @@ function stepPlayer(dt) {
 function doRoll(wl, wa) { var p = P, L0 = LOADS[loadOf()]; p.crouch = 0; p.staWait = 0.5; p.qs = 0;
   if (wl > 0.2) { var ra = wa; if (LOCK && LOCK.hp > 0) { var la = Math.atan2(LOCK.x - p.x, LOCK.z - p.z), rel = Math.atan2(Math.sin(wa - la), Math.cos(wa - la)); ra = la + Math.round(rel / (Math.PI / 2)) * (Math.PI / 2); }
     p.sta -= ER.roll * L0.cost; p.st = 'roll'; p.roll = p.rollLen = L0.len; p.rollSp = L0.sp; p.ri0 = L0.i0; p.ri1 = L0.i1; p.rollA = ra; p.a = ra; }
-  else { p.sta -= ER.back; p.st = 'back'; p.roll = p.rollLen = 0.4; }
+  else { p.sta -= ER.back; p.st = 'back'; p.roll = p.rollLen = 0.55; }
   sfx.noise(0.14, 0.07, L0 === LOADS.heavy ? 300 : 600); sfx.tone('sine', 110, 60, 0.1, 0.04); }
 var erStartAtk = startAtk;
 startAtk = function (heavy, combo, o) { o = o || {}; var p = P; erStartAtk(heavy, combo); var A = p.atk; if (!A || A.crit) return;
@@ -2434,7 +2437,7 @@ _hurtPlayer = function (dmg, fx, fz, unblock) {
   if (arm) return; // hyper armour: it hurts, but you carry on
   p.hitDir = Math.abs(rel) < 0.8 ? 'f' : Math.abs(rel) > 2.3 ? 'b' : rel > 0 ? 'l' : 'r'; p.react = tier;
   p.atk = null; p.crouch = 0; if (p.st === 'drink' || p.st === 'roll' || p.st === 'back') p.st = 'idle';
-  var push = [1.4, 3, 4.4, 6][tier]; p.kx = -Math.sin(a) * push; p.kz = -Math.cos(a) * push;
+  var push = [1.4, 3, 4.4, 7.5][tier]; p.kx = -Math.sin(a) * push; p.kz = -Math.cos(a) * push;
   if (tier === 3 && !p.fall) { p.st = 'down'; p.downT = p.downLen = 1.3; p.hurtT = 0; p.inv = 1.35; }
   else { p.hurtT = [0.3, 0.55, 0.85, 0.85][tier]; p.inv = 0.45; }
 };
@@ -2591,7 +2594,7 @@ function cumRigP() { // Cumhead with separate feet, built once from his normal r
 function drawCum(x, y, z, yaw, P, o) { // drawRig for Cumhead's own legs: pelvis yaw (P.py) apart from the chest, and ankles (P.ank)
   var rig = cumRigP(); o = o || {}; var D = rig.D, S = rig.P, fl = o.flash, tint = o.tint, al = o.alpha;
   if (!P.bp && !o.still) { var lt = KIT.t, br = Math.sin(lt * 1.7); P.lean += br * 0.012; P.sh[0][1] = (P.sh[0][1] || 0) + br * 0.018; P.sh[1][1] = (P.sh[1][1] || 0) + br * 0.018; P.hy += Math.sin(lt * 0.63) * 0.04; P.hp += Math.sin(lt * 0.9) * 0.015; }
-  var hipY = D.lu + D.ll + P.y, body = MD(x, y + (P.bodyY || 0), z, yaw, P.bp || 0, P.br || 0, 1);
+  var bz = P.bodyZ || 0, hipY = D.lu + D.ll + P.y, body = MD(x + Math.sin(yaw) * bz, y + (P.bodyY || 0), z + Math.cos(yaw) * bz, yaw, P.bp || 0, P.br || 0, 1);
   function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: 1 }); }
   var pY = P.py !== undefined ? P.py : P.twist * 0.3, hips = MM(body, MD(0, hipY, 0, pY, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.02, 0, P.twist, P.lean, P.roll * (P.py !== undefined ? -0.6 : 1))); dr(S.torso, tor);
@@ -2662,6 +2665,49 @@ poseOf = function (e, isP) { var Q = gaitPoseOf(e, isP);
   Q.ank = [0, 0]; Q.twist = 0; Q.roll = 0; Q.lean = 0; Q.hy = 0; Q.hp = 0; gaitPose(Q, e);
   if (keepArms) { Q.sh = sh; Q.el = el; } else { Q.sh[1] = [0.35 + Q.sh[1][0] * 0.45, 0.2, 0.15]; Q.el[1] = 0.5 + Q.el[1] * 0.4; if (kindOf().two) { Q.sh[0] = [0.7, 0.5, 0.6]; Q.el[0] = 1.1; } }
   return Q; };
+
+/* update 148: the moves taken from an Elden Ring reference video (his link: unarmed movement) -
+   the dive roll, the crouched backstep hop, the squat before a jump, the tucked jump and the crouched landing,
+   the skid when he stops from a run or a sprint, being thrown by a big hit, and drinking from the flask in steps */
+function sm(a, b, t) { t = Math.max(0, Math.min(1, (t - a) / (b - a))); return t * t * (3 - 2 * t); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function tumble(Q, ang, c) { Q.bp = ang; Q.bodyY = c - c * Math.cos(ang); Q.bodyZ = -c * Math.sin(ang); } // turn the whole body round a point c up from the feet
+function poseRollER(Q, e) { var k = 1 - e.roll / (e.rollLen || 0.6), hv = e.rollLen > 0.75, dive = hv ? 0.9 : 1.35, c = 0.32;
+  if (k < 0.18) { var a = sm(0, 0.18, k); tumble(Q, a * dive, c); Q.bodyY += 0.12 * Math.sin(a * Math.PI); Q.hip = [lerp(0.3, -0.2, a), lerp(0.2, -0.5, a)]; Q.kn = [lerp(0.6, 0.3, a), lerp(0.4, 0.5, a)]; Q.sh[0] = [lerp(0.4, 1.6, a), 0.3]; Q.sh[1] = [lerp(0.4, 1.4, a), 0.3, 0.2]; Q.el = [0.6, 0.6]; Q.y = -0.12 * a; }
+  else if (k < 0.56) { var b = sm(0.18, 0.56, k); tumble(Q, lerp(dive, Math.PI * 2, b), c * (1 - 0.3 * Math.sin(b * Math.PI))); Q.y = -0.3; Q.hip = [1.5, 1.4]; Q.kn = [2.1, 2.1]; Q.sh[0] = [1.2, 0.2]; Q.sh[1] = [1.1, 0.2, 0.2]; Q.el = [2.0, 2.0]; Q.hp = 0.5; }
+  else if (k < 0.78) { var d = sm(0.56, 0.78, k); Q.bp = 0; Q.y = lerp(-0.34, -0.22, d); Q.hip = [lerp(1.3, 0.9, d), lerp(0.4, 0.2, d)]; Q.kn = [lerp(1.9, 1.3, d), lerp(1.2, 0.7, d)]; Q.lean = lerp(0.6, 0.35, d); Q.sh[0] = [0.5, 0.5]; Q.sh[1] = [0.6, 0.4, 0.2]; Q.el = [0.9, 0.8]; Q.hp = -0.3; }
+  else { var r = sm(0.78, 1, k); Q.bp = 0; Q.y = lerp(-0.22, -0.04, r); Q.hip = [lerp(0.9, 0.15, r), lerp(0.2, 0.05, r)]; Q.kn = [lerp(1.3, 0.2, r), lerp(0.7, 0.15, r)]; Q.lean = lerp(0.35, 0.08, r); Q.sh[0] = [lerp(0.5, 0.1, r), lerp(0.5, 0.15, r)]; Q.el = [lerp(0.9, 0.3, r), lerp(0.8, 0.5, r)]; }
+  if (hv && k > 0.56 && k < 0.85) { Q.y -= 0.05; Q.lean += 0.12; } // the fat roll flops
+  Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+function poseBackER(Q, e) { var k = 1 - e.roll / (e.rollLen || 0.55), up = sm(0, 0.12, k) * (1 - sm(0.62, 1, k)), air = k > 0.12 && k < 0.5 ? Math.sin((k - 0.12) / 0.38 * Math.PI) : 0;
+  Q.bodyY = 0.14 * air; Q.y = -0.3 * up - 0.04; Q.lean = 0.38 * up + 0.05; Q.hp = -0.35 * up;
+  Q.hip = [lerp(0.1, 1.0, up), lerp(0.05, 0.75, up)]; Q.kn = [lerp(0.15, 1.5, up), lerp(0.1, 1.2, up)]; Q.abd = [0.32 * up, -0.32 * up];
+  Q.sh[0] = [lerp(0.1, 0.25, up), lerp(0.1, 1.25, up)]; Q.sh[1] = [lerp(0.4, 0.35, up), lerp(0.2, 1.1, up), 0.2]; Q.el = [lerp(0.3, 0.45, up), lerp(0.5, 0.45, up)];
+  Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+function poseDrinkER(Q, e) { var t = 1.25 - (e.drinkT || 0), reach = sm(0, 0.25, t), lift = sm(0.25, 0.45, t), down = sm(0.9, 1.2, t);
+  var u = lift * (1 - down); Q.sh[0] = [lerp(lerp(0.1, -0.3, reach), 2.5, u), lerp(0.15, -0.15, u), 0.25 * u]; Q.el[0] = lerp(lerp(0.3, 0.9, reach), 1.9, u);
+  Q.hp = -0.55 * sm(0.45, 0.6, t) * (1 - down); Q.lean = -0.08 * u; }
+var p148 = poseOf;
+poseOf = function (e, isP) { var Q = p148(e, isP); if (!isP || e.hp <= 0) return Q;
+  if (e.st === 'roll' && !e.qs && !e.atk) { Q = pose0(); poseRollER(Q, e); return Q; }
+  if (e.st === 'back' && !e.atk) { Q = pose0(); poseBackER(Q, e); return Q; }
+  if (e.st === 'drink') poseDrinkER(Q, e);
+  if (e.jsq > 0 && !e.atk) { var q = 1 - e.jsq / 0.1; Q.y = -0.16 * q; Q.kn = [0.9 * q + 0.1, 0.8 * q + 0.1]; Q.hip = [0.6 * q, 0.5 * q]; Q.lean = 0.3 * q; Q.sh[0] = [-0.5 * q, 0.2]; Q.sh[1] = [-0.3 * q, 0.2, 0.1]; Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+  else if (e.fall && e.jump && !e.atk && e.st !== 'roll' && e.st !== 'back') { var up = e.vy > 0 ? 1 : Math.max(0, 1 + e.vy / 6);
+    Q.hip = [lerp(0.5, 1.35, up), lerp(-0.1, 0.1, up)]; Q.kn = [lerp(0.8, 1.7, up), lerp(0.5, 1.2, up)]; Q.sh[0] = [0.4, 0.9]; Q.sh[1] = [0.3, 0.8, 0.2]; Q.el = [0.6, 0.6]; Q.lean = 0.12; Q.ank = [Q.hip[0] - Q.kn[0] + 0.3, Q.hip[1] - Q.kn[1] + 0.3]; }
+  else if (e.landT > 0 && !e.atk && e.st !== 'down') { var lk = Math.min(1, e.landT / 0.22); Q.y = -0.3 * lk; Q.kn = [1.3 * lk, 1.15 * lk]; Q.hip = [0.95 * lk, 0.8 * lk]; Q.lean = 0.35 * lk; Q.sh[0] = [0.3, 0.6 * lk]; Q.ank = [Q.hip[0] - Q.kn[0], Q.hip[1] - Q.kn[1]]; }
+  if (e.st === 'down') { var dk = 1 - e.downT / e.downLen; if (dk < 0.32) { var f = dk / 0.32, back = e.hitDir !== 'b' ? -1 : 1; Q.bodyY = 0.7 * Math.sin(f * Math.PI); Q.bp = back * 1.4 * sm(0, 1, f); Q.hip = [0.7, 0.3]; Q.kn = [0.9, 0.5]; Q.sh[0] = [1.3, 0.9]; Q.sh[1] = [1.1, 0.9, 0.2]; Q.el = [0.4, 0.4]; } }
+  // the skid out of a run or a sprint: lean back, front foot braced, the feet slide
+  var sk = e.gskid || 0; if (sk > 0.01 && !e.atk && e.st !== 'roll' && e.st !== 'back' && !e.fall) { var a1 = legIK(0, 0.34, 0.5), a2 = legIK(0, -0.22, 0.52);
+    Q.hip = [lerp(Q.hip[0], a1[0], sk), lerp(Q.hip[1], a2[0], sk)]; Q.kn = [lerp(Q.kn[0], a1[1], sk), lerp(Q.kn[1], a2[1], sk)]; if (Q.abd) Q.abd = [Q.abd[0] * (1 - sk), Q.abd[1] * (1 - sk)];
+    Q.ank = [lerp(Q.ank ? Q.ank[0] : 0, a1[0] - a1[1] - 0.25, sk), lerp(Q.ank ? Q.ank[1] : 0, a2[0] - a2[1] + 0.2, sk)]; Q.y = lerp(Q.y, -0.08, sk); Q.lean = lerp(Q.lean, -0.32, sk); Q.hp = lerp(Q.hp, 0.15, sk);
+    Q.sh[0] = [lerp(Q.sh[0][0], 0.6, sk), lerp(Q.sh[0][1], 0.4, sk)]; Q.el[0] = lerp(Q.el[0], 0.7, sk); Q.py = (Q.py || 0) * (1 - sk); Q.twist = (Q.twist || 0) * (1 - sk); }
+  return Q; };
+var s148 = stepPlayer;
+stepPlayer = function (dt) { s148(dt); var p = P; if (!p) return; var mv = KIT.stick(0), noIn = Math.hypot(mv.x, mv.y) < 0.15, v = Math.hypot(p.vx || 0, p.vz || 0);
+  var want = noIn && !p.atk && !p.fall && p.st !== 'roll' && p.st !== 'back' && (p.skidOn || v > 3.6) && v > 0.6 ? 1 : 0; p.skidOn = want && v > 0.6;
+  if (want && !p.gskid) sfx.noise(0.25, 0.05, 300);
+  p.gskid = (p.gskid || 0) + (want - (p.gskid || 0)) * Math.min(1, dt * (want ? 16 : 7)); if (p.gskid < 0.02) p.gskid = 0; };
 
 /* ---------- the camera, the world, everyone, the HUD ---------- */
 var DYN = null, CAMD = 4.6;
