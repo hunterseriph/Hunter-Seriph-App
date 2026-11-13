@@ -59,7 +59,7 @@ function draw() {
   // people
   var held = RIGS.weap[WEAPONS[SV.wpn].mesh] || OWN[WEAPONS[SV.wpn].mesh];
   var pa = P.inv > 0 && P.hurtT > 0 && Math.floor(G.t * 20) % 2 ? 0.5 : undefined;
-  drawRig(RIGS.cumhead, P.x, P.y + (P.atk && P.atk.jy || 0), P.z, P.a + (P.atk && P.atk.spin || 0), poseOf(P, 1), { held: held, heldP: -Math.PI / 2 - 0.2, alpha: pa });
+  drawCum(P.x, P.y + (P.atk && P.atk.jy || 0), P.z, P.a + (P.atk && P.atk.spin || 0), poseOf(P, 1), { held: held, heldP: -Math.PI / 2 - 0.2, alpha: pa });
   FOE.forEach(function (f) { if (Math.hypot(f.x - P.x, f.z - P.z) > 32) return; if (f.st === 'dead' && f.t > 2) return; var rig = RIGS[f.d.rig] || RIGS.gimp, fl = f.hurt > 0 ? [0.6, 0.6, 0.6] : f.st === 'wind' && (f.wl === undefined || f.wl - f.t < 0.2) && Math.floor(G.t * 14) % 2 ? [0.5, 0.05, 0.05] : null;
     drawRig(rig, f.x, f.y + (f.jy || 0), f.z, f.a, poseOf(f), { flash: fl, held: f.d.held && rig.P[f.d.held] ? rig.P[f.d.held] : null, heldP: -Math.PI / 2, alpha: f.st === 'dead' ? Math.max(0, 1 - (f.t - 1)) : undefined }); });
   if (BOSS && !(BOSS.st === 'dead' && BOSS.t > 3)) { var b = BOSS, brig = RIGS[b.B.rig] || RIGS.butcher, bf = b.hurt > 0 ? [0.6, 0.6, 0.6] : (b.st !== 'idle' && b.st !== 'stun' && b.st !== 'dead' && b.t < 0.6 && Math.floor(G.t * 12) % 2) ? [0.55, 0.05, 0.05] : null;
