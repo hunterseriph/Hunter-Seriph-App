@@ -58,9 +58,12 @@ stepPlayer = function (dt) { gaitStepP(dt); var p = P; if (!p) return;
   var vf = v, gv0 = p.gv || 0; p.gv = gv0 + (v - gv0) * Math.min(1, dt * 12); p.gvf = vf; if (v > 0.2) p.gmu = wrapA(rel - p.gly);
   var yr = wrapA(p.a - (p.gpa === undefined ? p.a : p.gpa)) / Math.max(dt, 1e-3); p.gpa = p.a;
   var av = Math.abs(vf), s = Math.max(0, Math.min(1, (av - 2.2) / 2.6)), sp = Math.max(0, Math.min(1, (av - 5.2) / 1.8)), cr = p.crouch ? 1 : 0, gd = p.guard ? 1 : 0;
-  var beta = 0.6 - 0.24 * s - 0.04 * sp, hj = GAIT.hj - 0.04 - 0.06 * s - 0.02 * sp - 0.17 * cr - 0.05 * gd, h = hj - GAIT.ank, mx = RIGS.cumhead.D.lu + GAIT.la - 0.005;
-  var reachMax = 2 * Math.sqrt(Math.max(0.01, mx * mx - h * h)) * 0.92, L = Math.max(0.5, Math.min(0.55 + 0.3 * av, reachMax / beta)); p.gL = L; p.gp = { s: s, sp: sp, cr: cr, gd: gd, beta: beta, hj: hj };
-  if (v < 0.35 && Math.abs(yr) > 1.5 && !p.atk && !p.fall) { p.gph = ((p.gph || 0) + dt * 1.4) % 1; p.gturn = Math.min(1, (p.gturn || 0) + dt * 6); } else { p.gph = ((p.gph || 0) + dt * v / L) % 1; p.gturn = Math.max(0, (p.gturn || 0) - dt * 4); }
+  // update 149: the steps are timed like a person's (about 2.4 a second walking, 3.2 running, 3.6 sprinting) on his longer legs (drawn CUMS bigger),
+  // and the time a foot spends on the ground is whatever his legs can reach at that pace: a walk always has a foot down, a run has a flight in it
+  var hj = GAIT.hj - 0.08 - 0.02 * s - 0.02 * sp - 0.15 * cr - 0.04 * gd, h = hj - GAIT.ank, mx = 0.33 + GAIT.la - 0.005;
+  var reachMax = 2 * Math.sqrt(Math.max(0.01, mx * mx - h * h)), vm = av / CUMS, rate = av < 1.8 ? 1.4 + av * 0.55 : av < 5 ? 2.4 + (av - 1.8) / 3.2 * 0.8 : 3.2 + Math.min(0.5, (av - 5) * 0.2);
+  var L = Math.max(0.45, 2 * vm / rate), beta = Math.max(0.2, Math.min(0.62 - 0.3 * s - 0.06 * sp, reachMax / L)); p.gL = L; p.gp = { s: s, sp: sp, cr: cr, gd: gd, beta: beta, hj: hj };
+  if (v < 0.35 && Math.abs(yr) > 1.5 && !p.atk && !p.fall) { p.gph = ((p.gph || 0) + dt * 1.4) % 1; p.gturn = Math.min(1, (p.gturn || 0) + dt * 6); } else { p.gph = ((p.gph || 0) + dt * (v / CUMS) / L) % 1; p.gturn = Math.max(0, (p.gturn || 0) - dt * 4); }
   var bank = Math.max(-0.3, Math.min(0.3, -yr * v * 0.022)); p.gbank = (p.gbank || 0) + (bank - (p.gbank || 0)) * Math.min(1, dt * 8);
   var acc = (p.gv - gv0) / Math.max(dt, 1e-3); p.gacc = (p.gacc || 0) + (Math.max(-0.35, Math.min(0.3, acc * 0.028)) - (p.gacc || 0)) * Math.min(1, dt * 6);
   if (!p.gfeet) p.gfeet = [0.07, -0.05]; };
@@ -68,7 +71,7 @@ function gaitPose(Q, p) {
   var G0 = p.gp, vf = p.gvf || 0, av = Math.abs(vf), amt = Math.max(Math.min(1, (p.gv || 0) / 0.7), (p.gturn || 0) * 0.6), s = G0.s, sp = G0.sp, cr = G0.cr, gd = G0.gd;
   var L = p.gL || 0.8, beta = G0.beta, reach = beta * (p.gturn > 0.3 && av < 0.5 ? 0.5 : L), dir = vf < -0.05 ? -1 : 1;
   var hj = G0.hj, f = 0, fwd = [0, 0];
-  var mu = p.gmu || 0, cm = Math.cos(mu), sm = Math.sin(mu), back = cm < -0.3, D = RIGS.cumhead.D, U = [0, 0], SS = [0, 0], LF = [0, 0], PS = [0, 0];
+  var mu = p.gmu || 0, cm = Math.cos(mu), sm = Math.sin(mu), back = cm < -0.3, D = cumRigP().D, U = [0, 0], SS = [0, 0], LF = [0, 0], PS = [0, 0];
   for (var k = 0; k < 2; k++) { // where each foot is along the stride, how high it is lifted and how the foot is tipped
     var u = ((p.gph || 0) + k * 0.5) % 1, S0, lift = 0, psi; U[k] = u;
     if (u < beta) { var q = u / beta; S0 = reach * (0.5 - q); f = Math.max(f, Math.sin(Math.PI * q));

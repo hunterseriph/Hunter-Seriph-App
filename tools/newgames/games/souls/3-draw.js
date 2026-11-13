@@ -43,27 +43,38 @@ function draw() {
   var ctx = KIT.ctx; ctx.clearRect(0, 0, KIT.W, KIT.H);
   if (G.mode === 'nogl') { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, KIT.W, KIT.H); KIT.text('THIS DEVICE CANNOT DRAW 3D (NO WEBGL)', KIT.W / 2, KIT.H / 2, { align: 'center' }); return; }
   if (!WORLD || !P) { if (R3.ok) R3.begin([0.04, 0.0, 0.01]); titleArt(); return; }
-  var A = WORLD.A, C = camPose(); R3.begin(A.fog); R3.setCam(C.eye, C.at, KIT.W < KIT.H ? 1.25 : 1.0);
-  var lights = []; WORLD.things.forEach(function (t, n) { if (t.k !== 'candle' && t.k !== 'torch') return; var x = tx(t.i), z = tx(t.j), d = Math.hypot(x - P.x, z - P.z); if (d > 28) return; var lit = t.k === 'torch' || SV.lit[t.id], fl = 0.9 + Math.sin(G.t * 11 + n) * 0.08 + Math.sin(G.t * 23 + n * 3) * 0.05;
-    if (lit) lights.push({ x: x, y: th(t.i, t.j) + (t.k === 'torch' ? 2.7 : 1.4), z: z, r: t.k === 'torch' ? 11 : 9, c: A.lamp, k: 1.25 * fl, d: d }); });
+  var A = regionAt(P.x, P.z), C = camPose(), L = G.look; // update 149: the look eases from place to place
+  if (!L) L = G.look = { fog: A.fog.slice(), amb: A.amb.slice(), lamp: A.lamp.slice(), fr: A.fogR.slice() };
+  for (var q0 = 0; q0 < 3; q0++) { L.fog[q0] += (A.fog[q0] - L.fog[q0]) * 0.03; L.amb[q0] += (A.amb[q0] - L.amb[q0]) * 0.03; L.lamp[q0] += (A.lamp[q0] - L.lamp[q0]) * 0.03; } L.fr[0] += (A.fogR[0] - L.fr[0]) * 0.03; L.fr[1] += (A.fogR[1] - L.fr[1]) * 0.03;
+  R3.begin(L.fog); R3.setCam(C.eye, C.at, KIT.W < KIT.H ? 1.25 : 1.0);
+  var lights = []; WORLD.things.forEach(function (t, n) { if (t.k !== 'candle' && t.k !== 'torch') return; var x = tx(t.i), z = tx(t.j), d = Math.hypot(x - C.eye[0], z - C.eye[2]); if (d > 34) return; var lit = t.k === 'torch' || SV.lit[t.id], fl = 0.9 + Math.sin(G.t * 11 + n) * 0.08 + Math.sin(G.t * 23 + n * 3) * 0.05;
+    lights.push({ x: x, y: th(t.i, t.j) + (t.k === 'torch' ? 2.7 : 1.4), z: z, r: t.k === 'torch' ? 11 : lit ? 10 : 4, c: lit ? L.lamp : [0.5, 0.3, 0.2], k: (lit ? 1.25 : 0.6) * fl, d: d }); });
   FLAMES.forEach(function (f, n) { if (n % 5) return; var d = Math.hypot(f.x - P.x, f.z - P.z); if (d < 16) lights.push({ x: f.x, y: f.y + 0.3, z: f.z, r: 5, c: [1, 0.6, 0.3], k: 0.9, d: d + 3 }); });
-  lights.sort(function (a, b) { return a.d - b.d; }); lights = lights.slice(0, 6); lights.push({ x: P.x, y: P.y + 2.4, z: P.z, r: 7, c: [1, 0.85, 0.6], k: 0.5 }); // his own little glow so you can always see him
-  R3.scene({ fog: A.fog, fogR: [10, 44], amb: [A.amb[0] * 1.5, A.amb[1] * 1.5, A.amb[2] * 1.5], lights: lights, torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
-  R3.draw(MESH, ATT);
-  // props that change: doors, chests, the fog gate
-  WORLD.things.forEach(function (t) { var x = tx(t.i), z = tx(t.j), h = th(t.i, t.j); if (Math.hypot(x - P.x, z - P.z) > 40) return;
-    if (t.k === 'door' && !SV.doors[t.id]) { var horiz = tk(t.i - 1, t.j) === 1; R3.draw(OWN.door, ATT, { m: R3.model(x, h, z, horiz ? 0 : Math.PI / 2, 0, 0) }); }
+  lights.sort(function (a, b) { return a.d - b.d; }); lights = lights.slice(0, 6); lights.push({ x: P.x, y: P.y + 2.6, z: P.z, r: 7, c: [1, 0.85, 0.6], k: 0.5 }); // his own little glow so you can always see him
+  R3.scene({ fog: L.fog, fogR: L.fr, amb: [L.amb[0] * 1.5, L.amb[1] * 1.5, L.amb[2] * 1.5], lights: lights, torch: { p: [0, -99, 0], d: [0, 1, 0], c: [0, 0, 0] }, t: G.t });
+  if (A.sky) { var md = 46, ma = 2.2, mx = C.eye[0] + Math.sin(ma) * md, mz = C.eye[2] + Math.cos(ma) * md, my = C.eye[1] + 22; if (!OWN.moon) { var mm = new R3.Mesh(); mm.quad([-1, -1, 0], [1, -1, 0], [1, 1, 0], [-1, 1, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL('moon'), [0.5, 0.5, 0.5], [0, 0, 1], 2); OWN.moon = mm.upload(); }
+    R3.draw(OWN.moon, ATT, { m: R3.model(mx, my, mz, ma + Math.PI, 0, 0, 7), lit: false, soft: true, tint: [1, 0.35, 0.3] }); }
+  drawChunks(C.eye, L.fr[1] + 10);
+  // props that change: doors, chests, the fog gates, the Keep's gate, messages
+  WORLD.things.forEach(function (t) { var x = tx(t.i), z = tx(t.j), h = th(t.i, t.j); if (Math.hypot(x - C.eye[0], z - C.eye[2]) > 50) return;
+    if ((t.k === 'sdoor' && !SV.doors[t.id]) || (t.k === 'gate' && !SV.gateOpen)) { var horiz = tk(t.i - 1, t.j) === 1 || tk(t.i - 1, t.j) === 3 || tk(t.i + 1, t.j) === 3; R3.draw(OWN.door, ATT, { m: R3.model(x, h, z, horiz ? 0 : Math.PI / 2, 0, 0, t.k === 'gate' ? 1.4 : 1), tint: t.k === 'gate' ? [0.8, 0.6, 0.4] : undefined }); }
     else if (t.k === 'chest') R3.draw(SV.chests[t.id] ? OWN.chestOpen : OWN.chest, ATT, { m: R3.model(x, h, z, 0, 0, 0) });
-    else if (t.k === 'fog' && G.fogShut) { var a = 0.45 + Math.sin(G.t * 2) * 0.1; R3.draw(OWN.fog, ATT, { m: R3.model(x - TSZ / 2, h, z, 0, 0, 0), alpha: a, lit: false, add: 1 }); }
-    else if (t.k === 'exit' && SV.bosses[WORLD.A.boss]) R3.draw(OWN.fog, ATT, { m: R3.model(x - TSZ / 2, h, z - 0.9, 0, 0, 0), alpha: 0.6, lit: false, add: 1, tint: [1, 0.85, 0.3] }); });
+    else if (t.k === 'fog' && fogUp(t)) { var a = 0.5 + Math.sin(G.t * 2) * 0.1; (t.tiles || []).forEach(function (p2) { var px = tx(p2[0]), pz = tx(p2[1]), ph = th(p2[0], p2[1]); R3.draw(OWN.fog, ATT, { m: t.alongX ? R3.model(px - TSZ / 2, ph, pz, 0, 0, 0) : R3.model(px, ph, pz + TSZ / 2, Math.PI / 2, 0, 0), alpha: a, lit: false, add: 1 }); }); }
+    else if (t.k === 'msg') { var gy = h + 0.03, gs = 0.45; if (!OWN.msg) { var mg = new R3.Mesh(); mg.quad([-1, 0, 1], [1, 0, 1], [1, 0, -1], [-1, 0, -1], [0, 1, 1, 1, 1, 0, 0, 0], TL('glow'), [0.5, 0.5, 0.5], [0, 1, 0], 2); OWN.msg = mg.upload(); }
+      R3.draw(OWN.msg, ATT, { m: R3.model(x, gy, z, G.t * 0.3, 0, 0, gs + Math.sin(G.t * 3 + t.i) * 0.05), lit: false, add: 1, tint: [1, 0.55, 0.15], alpha: 0.8 }); }
+    else if (t.k === 'npc') { var rig = RIGS[t.who]; if (rig) { var Qn = pose0(); Qn.sh[0] = [0.1, 0.15]; Qn.sh[1] = [0.1, 0.15, 0]; Qn.el = [0.3, 0.3]; if (t.who === 'saba') { Qn.sh[0] = [0.5, 0.25]; Qn.el[0] = 1.2; } var ya = Math.atan2(P.x - x, P.z - z); if (Math.hypot(P.x - x, P.z - z) > 6) ya = t.who === 'saba' ? Math.PI : 0.6; t.ya = turnTo(t.ya === undefined ? ya : t.ya, ya, 0.05);
+      drawRig(rig, x, h + (t.who === 'spermaid' ? 0.42 + Math.sin(G.t * 1.6) * 0.04 : 0), z, t.ya, Qn, { noShadow: 1 }); drawShadow(x, h, z, 1); } }
+  });
+  if (G.cine && G.mode === 'intro') { if (G.cine.tb) { var tt = WORLD.things.filter(function (q) { return q.k === 'throne'; })[0], Qt = pose0(); Qt.sh[0] = [0.6, 0.5]; Qt.el[0] = 1.2; Qt.sh[1] = [1.6 + Math.sin(G.t * 3) * 0.2, 0.3, 0.2]; Qt.el[1] = 1.4; Qt.hy = Math.sin(G.t * 5) * 0.2; drawRig(RIGS.tbmad, tx(tt.i), th(tt.i, tt.j), tx(tt.j) + 1.4, 0, Qt, { sc: 2.1, held: RIGS.tbmad.P.bottle || null, heldP: -Math.PI / 2 }); }
+    if (G.cine.boss) { var bt = WORLD.things.filter(function (q) { return q.k === 'boss' && q.f === G.cine.boss; })[0], Bb = BOSSES[G.cine.boss], Qb = pose0(); poseWalk(Qb, G.t * 2, 0.15, 0); drawRig(RIGS[Bb.rig] || RIGS.butcher, tx(bt.i), th(bt.i, bt.j), tx(bt.j), Math.atan2(C.eye[0] - tx(bt.i), C.eye[2] - tx(bt.j)), Qb, { sc: Bb.sc, held: (RIGS[Bb.rig] || RIGS.butcher).P.weapon || null, heldP: -Math.PI / 2 }); } }
   // people
   var held = RIGS.weap[WEAPONS[SV.wpn].mesh] || OWN[WEAPONS[SV.wpn].mesh];
   var pa = P.inv > 0 && P.hurtT > 0 && Math.floor(G.t * 20) % 2 ? 0.5 : undefined;
-  drawCum(P.x, P.y + (P.atk && P.atk.jy || 0), P.z, P.a + (P.atk && P.atk.spin || 0), poseOf(P, 1), { held: held, heldP: -Math.PI / 2 - 0.2, alpha: pa });
-  FOE.forEach(function (f) { if (Math.hypot(f.x - P.x, f.z - P.z) > 32) return; if (f.st === 'dead' && f.t > 2) return; var rig = RIGS[f.d.rig] || RIGS.gimp, fl = f.hurt > 0 ? [0.6, 0.6, 0.6] : f.st === 'wind' && (f.wl === undefined || f.wl - f.t < 0.2) && Math.floor(G.t * 14) % 2 ? [0.5, 0.05, 0.05] : null;
-    drawRig(rig, f.x, f.y + (f.jy || 0), f.z, f.a, poseOf(f), { flash: fl, held: f.d.held && rig.P[f.d.held] ? rig.P[f.d.held] : null, heldP: -Math.PI / 2, alpha: f.st === 'dead' ? Math.max(0, 1 - (f.t - 1)) : undefined }); });
+  drawCum(P.x, P.y + (P.atk && P.atk.jy || 0), P.z, P.a + (P.atk && P.atk.spin || 0), poseOf(P, 1), { held: G.mode === 'intro' || G.wake > 0 ? null : held, heldP: -Math.PI / 2 - 0.2, alpha: pa });
+  FOE.forEach(function (f) { if (Math.hypot(f.x - P.x, f.z - P.z) > 44) return; if (f.st === 'dead' && f.t > 2) return; var rig = RIGS[f.d.rig] || RIGS.gimp, fl = f.hurt > 0 ? [0.6, 0.6, 0.6] : f.st === 'wind' && (f.wl === undefined || f.wl - f.t < 0.2) && Math.floor(G.t * 14) % 2 ? [0.5, 0.05, 0.05] : null;
+    drawShadow(f.x, f.y, f.z, 1); drawRig(rig, f.x, f.y + (f.jy || 0), f.z, f.a, poseOf(f), { noShadow: 1, flash: fl, held: f.d.held && rig.P[f.d.held] ? rig.P[f.d.held] : null, heldP: -Math.PI / 2, alpha: f.st === 'dead' ? Math.max(0, 1 - (f.t - 1)) : undefined }); });
   if (BOSS && !(BOSS.st === 'dead' && BOSS.t > 3)) { var b = BOSS, brig = RIGS[b.B.rig] || RIGS.butcher, bf = b.hurt > 0 ? [0.6, 0.6, 0.6] : (b.st !== 'idle' && b.st !== 'stun' && b.st !== 'dead' && b.t < 0.6 && Math.floor(G.t * 12) % 2) ? [0.55, 0.05, 0.05] : null;
-    drawRig(brig, b.x, b.y + (b.jy || 0), b.z, b.a, poseOf(b), { sc: b.B.sc, flash: bf, held: brig.P.weapon || brig.P.bottle || null, heldP: -Math.PI / 2 }); }
+    drawShadow(b.x, b.y, b.z, b.B.sc); drawRig(brig, b.x, b.y + (b.jy || 0), b.z, b.a, poseOf(b), { noShadow: 1, sc: b.B.sc, flash: bf, held: brig.P.weapon || brig.P.bottle || null, heldP: -Math.PI / 2 }); }
   // billboards: flames, blood, sparks, shots, the bloodstain, tells
   if (!DYN) DYN = new R3.Mesh(); DYN.clear(); var R = R3.cam.right;
   function bb(x, y, z, w, h, T, g) { DYN.quad([x - R[0] * w, y - h, z - R[2] * w], [x + R[0] * w, y - h, z + R[2] * w], [x + R[0] * w, y + h, z + R[2] * w], [x - R[0] * w, y + h, z - R[2] * w], [0, 1, 1, 1, 1, 0, 0, 0], T, [0.5, 0.5, 0.5], [0, 0, 1], g || 1.5); }
@@ -77,6 +88,7 @@ function draw() {
   R3.draw(DYN, ATT, { soft: true, lit: false }); FX.forEach(function (f) { f.t -= 1 / 60; }); FX = FX.filter(function (f) { return f.t > 0; });
   hud();
 }
+function drawShadow(x, y, z, sc) { R3.draw(RIGS.shadow, ATT, { m: MD(x, y + 0.03, z, 0, 0, 0, 1.1 * sc), soft: 1, lit: false, alpha: 0.85, warp: 0 }); }
 function titleArt() { var ctx = KIT.ctx, Wd = KIT.W, Hd = KIT.H; ctx.fillStyle = '#070405'; ctx.fillRect(0, 0, Wd, Hd); ctx.fillStyle = '#4a0a10'; ctx.beginPath(); ctx.arc(Wd / 2, Hd * 0.32, 60, 0, 6.3); ctx.fill(); ctx.fillStyle = '#c4121c'; ctx.beginPath(); ctx.arc(Wd / 2, Hd * 0.32, 52, 0, 6.3); ctx.fill(); for (var i = 0; i < 9; i++) { ctx.fillStyle = '#0e0708'; ctx.fillRect(i * Wd / 9, Hd * 0.5 - (i % 3) * 30 - 40, Wd / 9 - 6, Hd); } }
 var PADR = { t: 0, r: null };
 function padRect() { // the touch buttons' top-left corner in HUD pixels, or null when they are off the picture
