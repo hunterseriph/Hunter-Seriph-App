@@ -156,7 +156,7 @@ var R3 = (function () {
     }
     var cam = { m: null, eye: [0, 0, 0], fwd: [0, 0, 1], right: [1, 0, 0], up: [0, 1, 0] }, warpNow = 0;
     function setCam(eye, at, fov, up) {
-      up = up || [0, 1, 0]; var p = persp(fov, GLW / GLH, 0.08, 120), v = look(eye, at, up); cam.m = mul(p, v); cam.eye = eye;
+      up = up || [0, 1, 0]; var p = persp(fov, GLW / GLH, window.GLNEAR || 0.08, window.GLFAR || 120), v = look(eye, at, up); /* GLNEAR/GLFAR: Cum City Nights sees much further */ cam.m = mul(p, v); cam.eye = eye;
       cam.right = [v[0], v[4], v[8]]; cam.up = [v[1], v[5], v[9]]; cam.fwd = [-v[2], -v[6], -v[10]];
       gl.uniformMatrix4fv(U.uVP, false, cam.m); gl.uniform3f(U.uEye, eye[0], eye[1], eye[2]);
     }

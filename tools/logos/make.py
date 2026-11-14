@@ -451,8 +451,31 @@ def make_sa():
     return compose([('SPERMHOG', 140, dict(arc=8, stretch=1.3)), ('ADVENTURE', 110, dict(stripes=True, st=dict(face=[(0, '#ffffff'), (0.5, '#4adfff'), (1, '#1050c0')], side=['#0a2a5a', '#040a20'])))], st, mascot=team, mascot_y=0.8, extras=_burst(['#c4121c', '#ffe36a'], alpha=70))
 
 
+def make_ccn():
+    """CUM CITY NIGHTS: red neon lettering over a black skyline under the red moon, Cumhead and Shithead Laboozie on the street"""
+    st = dict(face=[(0, '#ffd0d8'), (0.4, '#ff2630'), (1, '#8a0a12')], side=['#4a0a10', '#14020a'], shine='#ffffff', outline=12, rim=3, depth=18, shear=-0.1)
+    duo = Image.new('RGBA', (420, 300), (0, 0, 0, 0))
+    for name, x in (('ch_idle0', 30), ('lab_idle0', 230)):
+        sp = pixel_sprite(name, 5); duo.alpha_composite(sp, (x, 300 - sp.height))
+    def ex(canvas, layers, st):
+        rnd = random.Random(7); d = Image.new('RGBA', canvas.size, (0, 0, 0, 0)); dr = ImageDraw.Draw(d); W0, H0 = canvas.size; cx = W0 // 2
+        r = int(W0 * 0.26); cy = int(H0 * 0.34)
+        for i in range(6, 0, -1): dr.ellipse((cx - r - i * 14, cy - r - i * 14, cx + r + i * 14, cy + r + i * 14), fill=hexc('#c4121c', 10 + (6 - i) * 6))
+        dr.ellipse((cx - r, cy - r, cx + r, cy + r), fill=hexc('#c4121c', 235)); dr.ellipse((cx - r + 30, cy - r + 20, cx + r - 60, cy + r - 70), fill=hexc('#ff4a4a', 70))
+        x = 0; base = int(H0 * 0.78)
+        while x < W0:
+            w = rnd.randint(40, 110); h = rnd.randint(90, 330); dr.rectangle((x, base - h, x + w, H0), fill=INK)
+            if rnd.random() < 0.3: dr.polygon([(x, base - h), (x + w // 2, base - h - rnd.randint(30, 80)), (x + w, base - h)], fill=INK)
+            for wy in range(base - h + 14, base - 10, 22):
+                for wx in range(x + 8, x + w - 10, 16):
+                    if rnd.random() < 0.35: dr.rectangle((wx, wy, wx + 7, wy + 10), fill=hexc(rnd.choice(['#ffe36a', '#ff4a6a', '#ffb070']), 210))
+            x += w + rnd.randint(-6, 6)
+        layers.insert(0, ('stripe', d, (0, 0)))
+    return compose([('CUM CITY', 150, dict(arc=6, stretch=1.3)), ('NIGHTS', 140, dict(stripes=True, st=dict(face=[(0, '#fff6c0'), (0.5, '#ffe36a'), (1, '#c48a10')], side=['#4a2a0a', '#140a02'], shine='#ffffff')))], st, mascot=duo, mascot_y=0.82, extras=ex)
+
+
 LOGOS = {'pn': make_pn, 'sk': make_sk, 'ck': make_ck, 'll': make_ll, 'hog': make_hog, 'meat': make_meat, 'surv': make_surv, 'wn': make_wn, 'sw': make_sw, 'gr': make_gr, 'ao': make_ao, 'jv': make_jv,
-         'ob': make_ob, 'fr': make_fr, 'dk': make_dk, 'lc': make_lc, 'gk': make_gk, 'c3': make_c3, 'sb': make_sb, 'sa': make_sa}
+         'ob': make_ob, 'fr': make_fr, 'dk': make_dk, 'lc': make_lc, 'gk': make_gk, 'c3': make_c3, 'sb': make_sb, 'sa': make_sa, 'ccn': make_ccn}
 
 if __name__ == '__main__':
     want = sys.argv[1:] or list(LOGOS)

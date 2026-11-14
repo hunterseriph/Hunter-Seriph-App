@@ -160,6 +160,7 @@ function openArcadeMenu() {
     { icon: 'cumface', name: 'PLAY CUMHEAD KART', sub: 'Twelve courses, one red moon', fn: function () { openCab('cumhead-kart.html'); } },
     { icon: 'f_blum_0', name: 'PLAY SKEET FIGHTER', sub: 'Six stages to Blumhead', fn: function () { openCab('skeet-fighter.html'); } },
     { icon: 'cumface', name: 'PLAY SPERMHOG ADVENTURE', sub: 'Four stories in 3D', fn: function () { openCab('spermhog-adventure.html'); } },
+    { icon: 'cumface', name: 'PLAY CUM CITY NIGHTS', sub: 'All of Cum City in 3D', fn: function () { openCab('cum-city-nights.html'); } },
     { icon: 'f_knight_0', name: 'PLAY DARK LOADS', sub: 'A souls-like in 3D', fn: function () { openCab('dark-loads.html'); } },
     { icon: 'cumface', name: 'PLAY THE LEGEND OF CUMHEAD', sub: 'Five dungeons, five chalices', fn: function () { openCab('legend-of-cumhead.html'); } },
     { icon: 'f_cultist_0', name: 'PLAY CUMSTEIN 3D', sub: 'Storm Blumhead\'s castle', fn: function () { openCab('cumstein-3d.html'); } },

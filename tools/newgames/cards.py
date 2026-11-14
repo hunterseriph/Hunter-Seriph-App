@@ -52,3 +52,13 @@ card(((40, 30, 24, 255), [(0, 68, (58, 42, 36))]), [(B['h_gloop_baby_run0'], 18,
 card(((30, 26, 28, 255), [(0, 30, (40, 30, 34)), (31, 68, (24, 20, 22))]), [(B['f_cultist_0'], 29, 44, 0.9, False), (B['cumface'], 29, 68, 0.9, False)], 'c3')
 card(((90, 30, 70, 255), [(0, 44, (110, 40, 90)), (45, 68, (240, 120, 180))]), [(_ball, 29, 60, 1, False), (_gr['gr_coin'], 10, 30, 1, False), (_gr['gr_coin'], 48, 24, 1, False)], 'sb')
 card(((30, 8, 14, 255), [(0, 44, (60, 12, 24)), (45, 68, (40, 20, 24))]), [(B['spermaid_s0'], 10, 68, 0.6, False), (B['ch_rn2'], 30, 68, 0.6, False), (B['greebo_s0'], 48, 68, 0.6, True), (B['npc_tb'], 46, 30, 0.7, True)], 'sa')
+# Cum City Nights: the skyline under the red moon, lit windows, Cumhead and Shithead Laboozie on the street
+_cc = Image.new('RGBA', (59, 50)); _d = ImageDraw.Draw(_cc); import random as _r; _rr = _r.Random(5); _x = 0
+while _x < 59:
+    _w = _rr.randint(6, 12); _h = _rr.randint(14, 40); _d.rectangle((_x, 50 - _h, _x + _w - 1, 49), fill=(18, 4, 10, 255))
+    for _y in range(52 - _h, 46, 4):
+        for _q in range(_x + 1, _x + _w - 2, 3):
+            if _rr.random() < 0.4: _d.point((_q, _y), fill=(255, 227, 106, 255) if _rr.random() < 0.7 else (255, 38, 48, 255))
+    _x += _w
+_mn = Image.new('RGBA', (26, 26)); ImageDraw.Draw(_mn).ellipse((1, 1, 24, 24), fill=(196, 18, 28, 255))
+card(((14, 6, 20, 255), [(0, 30, (40, 12, 30)), (31, 50, (70, 20, 36)), (51, 68, (30, 26, 30))]), [(_mn, 40, 30, 1, False), (_cc, 29, 52, 1, False), (B['ch_idle0'], 20, 67, 0.55, False), (B['lab_idle0'], 41, 67, 0.55, True)], 'ccn')

@@ -172,7 +172,7 @@ function drawRig(rig, x, y, z, yaw, P, o) {
   if (!P.bp && !o.still) { var lt = KIT.t, sd0 = x * 1.7 + z * 2.3, br = Math.sin(lt * 1.7 + sd0); // everyone breathes and shifts a little, so nobody stands like a statue
     P.lean += br * 0.012; P.y += br * 0.004; P.sh[0][1] = (P.sh[0][1] || 0) + br * 0.018; P.sh[1][1] = (P.sh[1][1] || 0) + br * 0.018; P.hy += Math.sin(lt * 0.63 + sd0) * 0.05; P.hp += Math.sin(lt * 0.9 + sd0 * 2) * 0.02; P.roll += Math.sin(lt * 0.5 + sd0) * 0.008; }
   var hipY = D.lu + D.ll + P.y, body = MD(x, y + (P.bodyY || 0), z, yaw, P.bp || 0, P.br || 0, sc);
-  function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: 1 }); }
+  function dr(mesh, m) { if (mesh) R3.draw(mesh, ATT, { m: m, flash: fl, tint: tint, alpha: al, warp: 0, rim: window.RIMK === undefined ? 1 : RIMK }); }
   var hips = MM(body, MD(0, hipY, 0, P.twist * 0.3, 0, P.roll * 0.5)); dr(S.hips, hips);
   var tor = MM(hips, MD(0, 0.02, 0, P.twist, P.lean, P.roll)); dr(S.torso, tor);
   var head = MM(tor, MD(0, D.tor + D.neck, 0, P.hy, P.hp, P.hr)); dr(o.head || S.head, head);
