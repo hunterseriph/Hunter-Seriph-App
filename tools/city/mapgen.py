@@ -314,11 +314,13 @@ for (gx, gz), i in gnodes.items():
     dk = D[(z0 + z1) // 2, (x0 + x1) // 2]; style = DIST[dk][2]
     if style not in STY: continue
     blk = K[z0:z1, x0:x1]
-    if (blk == CREAM).any() or (blk == ROAD).any(): continue
+    if (blk == CREAM).any(): continue
+    crossed = (blk == ROAD).any()  # update 156: a road through the block no longer leaves it an empty field: build round it
     lo, hi = STY[style]; r = R.random()
-    if style in ('downtown', 'cafe', 'redlight') and r < 0.08:
+    if crossed and style in ('site', 'suburb', 'industrial', 'labs'): continue
+    if style in ('downtown', 'cafe', 'redlight') and r < 0.05 and not crossed:
         K[z0:z1, x0:x1] = PARK; continue
-    if style in ('downtown', 'industrial', 'docks') and r < 0.12:
+    if style in ('downtown', 'industrial', 'docks') and r < 0.10 and not crossed:
         K[z0:z1, x0:x1] = YARD; B.append([x0, z0, x1, z1, 0, 'carpark', 2, '']); continue
     if style == 'site':  # the Cumstruction Site: half-built towers, cranes, dirt
         K[z0:z1, x0:x1] = DIRT
@@ -335,14 +337,18 @@ for (gx, gz), i in gnodes.items():
     if style == 'labs':
         put(x0 + 1, z0 + 1, x1 - 1, z1 - 1, R.uniform(lo, hi), 'lab', front_of(x0, z0, x1, z1)); continue
     # perimeter buildings
-    K[z0:z1, x0:x1] = LOT
+    sub = K[z0:z1, x0:x1]; sub[np.isin(sub, [GRASS, PARK, FIELD, FOREST, DIRT, SAND])] = LOT
+    def okr(a, za, b, zb): return not np.isin(K[za:zb, a:b], [ROAD, PAVE, BRIDGE, CREAM, WATER, SEA]).any()
     cuts_x = [x0]; x = x0
     while x < x1 - 3: x += R.randint(3, 6); cuts_x.append(min(x, x1))
     cuts_x[-1] = x1
     dep = (z1 - z0) // 2
-    for a, b in zip(cuts_x, cuts_x[1:]):
-        if b - a < 2: continue
-        put(a, z0, b, z0 + dep, R.uniform(lo, hi), style, 0); put(a, z0 + dep, b, z1, R.uniform(lo, hi), style, 2)
+    segs = [(a, b) for a, b in zip(cuts_x, cuts_x[1:]) if b - a >= 2]
+    alley = R.randrange(1, len(segs)) if len(segs) >= 3 else -1  # update 156: a 4 m alley through the block (dressed in the game)
+    for si, (a, b) in enumerate(segs):
+        if si == alley: a += 1
+        if okr(a, z0, b, z0 + dep): put(a, z0, b, z0 + dep, R.uniform(lo, hi), style, 0)
+        if okr(a, z0 + dep, b, z1): put(a, z0 + dep, b, z1, R.uniform(lo, hi), style, 2)
 
 # ---------------------------------------------------------------- shops: every shop front gets a building facing a road
 SHOPS = [  # id, name, district, quote, sells
@@ -392,6 +398,13 @@ poi('quarry', 168, 548, h=float(hgt[548, 168]), name='The Bone Pit')
 # the airport: a runway, terminal, hangars, tower
 rw = flat(206, 628, 384, 646, kind=RUNWAY); flat(206, 646, 384, 690, h=rw, kind=YARD)
 poi('runway', 295, 637, h=rw, x0=206, x1=384, z0=628, z1=646); poi('terminal', 250, 668, h=rw); poi('hangar', 310, 672, h=rw); poi('hangar', 340, 672, h=rw); poi('tower', 370, 660, h=rw)
+# update 156: pavements run right up to the buildings in town (there was a strip of grass between them)
+CITYSTY = {i for i, d in enumerate(DIST) if d[2] in ('downtown', 'redlight', 'cafe', 'docks', 'labs', 'industrial')}
+incity = np.isin(D, list(CITYSTY))
+for _ in range(3):
+    nearpave = ndi.binary_dilation(np.isin(K, [PAVE, ROAD]), iterations=1)
+    nearlot = ndi.binary_dilation(np.isin(K, [LOT]) | occ, iterations=3)
+    K[(K == GRASS) & incity & nearpave & nearlot] = PAVE
 # Ejaculand
 he = flat(440, 600, 604, 700, kind=PAVE)
 for k2, (x, z) in {'ferris': (470, 630), 'coaster': (560, 640), 'carousel': (500, 660), 'clock': (520, 618), 'flume': (590, 676), 'gate': (520, 602), 'bigtop': (465, 682), 'dropper': (580, 610)}.items(): poi(k2, x, z, h=he)

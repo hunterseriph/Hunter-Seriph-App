@@ -17,12 +17,12 @@ function MI(o) { MISSIONS.push(o); return o; }
 var T2 = function () { return pick(TBQUOTES2); };
 /* ---------- Chapter One: Welcome to Cum City ---------- */
 MI({ id: 'lab1', who: 'lab', title: 'Fresh Off the Bus', at: 'shop:club', chap: 'one', pay: 200, steps: [
-  { t: 'talk', lines: [['lab', 'Cumhead! You made it. Welcome to Cum City, the greatest load of a city there ever was.'], ['lab', 'First job, nice and easy. Greebo has a tray of cream pies for the Clubhouse. My old Cumbo is round the side.'], ['lab', 'Get them back here hot. Cold cream pie is a crime even the police care about.']] },
+  { t: 'talk', lines: [['lab', 'Mister Mayor! You made it. Welcome back to Cum City, the greatest load of a city there ever was.'], ['lab', 'First job, nice and easy. Greebo has a tray of cream pies for the Clubhouse. My old Cumbo is round the side.'], ['lab', 'Get them back here hot. Cold cream pie is a crime even the police care about.']] },
   { t: 'getin', type: 'hatch', at: 'road:shop:club', msg: 'Get in Shithead Laboozie\'s Cumbo.' },
   { t: 'go', to: 'shop:greebo', car: 1, msg: 'Drive to Greebo\'s Gourmet Goonery.' },
   { t: 'talk', lines: [['greebo', 'Fresh cream pies. Don\'t ask what\'s in them.'], ['greebo', 'Ninety seconds before they sag. Go, go!']] },
   { t: 'go', to: 'shop:club', car: 1, time: 90, msg: 'Get the pies to the Clubhouse before they go cold.' },
-  { t: 'talk', lines: [['lab', 'Still steaming. You\'re a natural, droplet. Here, have some drops for your trouble.'], ['lab', 'Have a look round. Everyone in this city wants something done.']] }] });
+  { t: 'talk', lines: [['lab', 'Still steaming. The mayor delivers! Here, have some drops for your trouble.'], ['lab', 'Have a look round, Mister Mayor. Everyone in this city wants something done, and the sheriff can\'t do it all.']] }] });
 MI({ id: 'greebo1', who: 'greebo', title: 'Pie in the Sky', at: 'shop:greebo', chap: 'one', req: ['lab1'], pay: 450, steps: [
   { t: 'talk', lines: [['greebo', 'Disaster! My secret ingredient van has been nicked. A Cream Van full of... the secret ingredient.'], ['greebo', 'TB\'s boys took it towards the docks. Bring it back. Do not open the back.']] },
   { t: 'chase', type: 'van', at: 'road:dist:docks', crew: 'gimp', hp: 60, msg: 'Stop the stolen Cream Van: ram it until it stalls.', stall: 1 },

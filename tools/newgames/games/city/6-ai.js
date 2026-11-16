@@ -81,22 +81,24 @@ function spawnTraffic() {
   if (!G.noTraffic && !G.interior) spawnParked();
   var have = VEH.filter(function (v) { return v.ai && !v.ai.cop; }).length, want = trafficTarget();
   if (have >= want) return; var r = spawnPoint(80, 170); if (!r) return; var E = r.E; if (E.len < 20) return;
-  var back = Math.random() < 0.5, lane = E.w / 4, pt = edgeAt(E, r.s, back, lane), k = kAt(pt.x, pt.z); if (k !== K_ROAD && k !== K_BRIDGE) return;
+  var back = Math.random() < 0.5, lane = laneOf(E), pt = edgeAt(E, r.s, back, lane), k = kAt(pt.x, pt.z); if (k !== K_ROAD && k !== K_BRIDGE) return;
   for (var i = 0; i < VEH.length; i++) if (dist2(VEH[i].x, VEH[i].z, pt.x, pt.z) < 12 * 12) return;
   // not right in front of the camera
   var dx = pt.x - CAM.x, dz = pt.z - CAM.z, f = R3.cam.fwd, d = Math.hypot(dx, dz); if (d < 90 && (dx * f[0] + dz * f[2]) / d > 0.5) return;
   var st = dAt(pt.x, pt.z).style, type = pick(TRAFFICTYPES); if (st === 'park' && Math.random() < 0.4) type = 'icecream'; if (st === 'industrial' || st === 'docks') type = Math.random() < 0.5 ? 'truck' : 'van'; if (st === 'cemetery' && Math.random() < 0.5) type = 'hearse';
   if (G.chapter === 'robot' && Math.random() < 0.3) type = 'van';
-  var v = makeVeh(type, pt.x, pt.z, pt.a); v.ai = { E: E, s: r.s, back: back, lane: lane, want: (E.w > 11 ? 20 : 13) + rnd(-2, 3), wait: 0 };
+  var v = makeVeh(type, pt.x, pt.z, pt.a); v.ai = { E: E, s: r.s, back: back, lane: lane, want: (E.w > 11 ? 19 : 13) + rnd(-2, 2), wait: 0 }; v.ai.sp = v.ai.want * 0.7;
   var dr = makePed({ x: v.x, z: v.z, kind: 'cit', rig: rigFor('cit') }); dr.inVeh = v; v.driver = dr; v.sp = v.ai.want * 0.7; v.vx = Math.sin(v.a) * v.sp; v.vz = Math.cos(v.a) * v.sp;
 }
 function stepTraffic(dt) {
   for (var i = 0; i < VEH.length; i++) { var v = VEH[i]; if (v === (P && P.veh)) continue;
-    if (!v.ai || !v.driver || v.dead) { stepVehicle(v, { thr: 0, brk: v.t.cls === 'heli' ? 0 : 1, steer: 0 }, dt); continue; }
-    if (v.ai.hold) { stepVehicle(v, { thr: 0, brk: 1, steer: 0 }, dt); continue; }
+    if (!v.ai || !v.driver || v.dead) { if (Math.abs(v.sp) > 0.05 || v.air || v.t.cls === 'heli' || v.t.cls === 'plane' || dist2(v.x, v.z, P.x, P.z) < 40 * 40 && !v.rest) stepVehicle(v, { thr: 0, brk: 0, park: 1, steer: 0 }, dt); if (Math.abs(v.sp) < 0.05 && !v.air) v.rest = 1; continue; }
+    if (v.ai.hold) { if (!v.ai.phys) { v.ai.sp = Math.max(0, (v.ai.sp || 0) - 14 * dt); railPlace(v, v.ai.sp * dt); } else stepVehicle(v, { thr: 0, brk: 0, park: 1, steer: 0 }, dt); continue; }
+    if (!v.ai.cop && !v.ai.race && !v.ai.manual && !v.ai.phys) { railStep(v, dt); continue; }
     if (dist2(v.x, v.z, P.x, P.z) > 260 * 260 && !v.ai.cop) continue;
     if (v.ai.cop) { copDrive(v, dt); continue; }
     if (v.ai.race || v.ai.manual) continue; // raced or driven by a mission or an event
+    if (v.ai.phys) { stepVehicle(v, { thr: 0, brk: 0, park: 1, steer: 0 }, dt); if (Math.abs(v.sp) < 0.4) { v.ai.physT = (v.ai.physT || 0) + dt; if (v.ai.physT > 2.5 && v.driver && !v.driver.dead && v.driver.inVeh === v && !(v.driver.fear > 0)) { if (railResume(v)) v.ai.physT = 0; else v.ai.physT = 0.5; } } else v.ai.physT = 0; continue; }
     if (v.driver.fear > 0 || v.ai.flee) { // drive off fast, anywhere
       v.ai.want = 26; }
     var A = v.ai, E = A.E; A.s += Math.max(0, v.sp) * dt;
@@ -172,7 +174,7 @@ function money(n) { SV.money = Math.max(0, (SV.money || 0) + n); G.moneyPop = 1;
 
 /* parked cars along the kerbs, free to take (update 155) */
 function spawnParked() { var have = VEH.filter(function (v) { return v.parked && !v.dead && dist2(v.x, v.z, P.x, P.z) < 160 * 160; }).length; if (have >= 14) return;
-  var r = spawnPoint(40, 150); if (!r || r.E.len < 24 || r.E.w < 9) return; var side = Math.random() < 0.5, pt = edgeAt(r.E, clamp(r.s, 8, r.E.len - 8), side, r.E.w / 2 - 1.3), k = kAt(pt.x, pt.z); if (k !== K_ROAD) return;
+  var r = spawnPoint(40, 150); if (!r || r.E.len < 24 || r.E.w < 11) return; var side = Math.random() < 0.5, pt = edgeAt(r.E, clamp(r.s, 10, r.E.len - 10), side, r.E.w / 2 - 0.95), k = kAt(pt.x, pt.z); if (k !== K_ROAD) return;
   for (var i = 0; i < VEH.length; i++) if (dist2(VEH[i].x, VEH[i].z, pt.x, pt.z) < 7 * 7) return;
   var dx = pt.x - CAM.x, dz = pt.z - CAM.z, f = R3.cam.fwd, d = Math.hypot(dx, dz); if (d < 70 && (dx * f[0] + dz * f[2]) / d > 0.4) return;
   var v = makeVeh(pick(['hatch', 'hatch', 'saloon', 'saloon', 'van', 'muscle', 'sports', 'taxi']), pt.x, pt.z, pt.a); v.parked = 1; }

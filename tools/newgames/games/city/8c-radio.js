@@ -94,6 +94,7 @@ var RAD = { st: 0, seg: null, t: 0, on: false, q: [], useReal: false, audio: nul
 function radioInit() { RAD.st = SV.radio || 0; }
 function radioOn(v) { if (SV.radioOff || !v || v.t.cls === 'board') return; RAD.on = true; RAD.seg = null; RAD.t = 0; G.radioName = STATIONS[RAD.st].name; G.radioT = 3; radioNextSeg(); }
 function radioOff() { RAD.on = false; RAD.seg = null; if (RAD.audio) { RAD.audio.pause(); RAD.audio = null; } if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {} if (!G.evMusic) try { music.stop(); } catch (e) {} G.radioSong = null; }
+function radioPrev() { RAD.st = (RAD.st + STATIONS.length - 2) % STATIONS.length; radioNext(); }
 function radioNext() { RAD.st = (RAD.st + 1) % STATIONS.length; SV.radio = RAD.st; if (RAD.audio) { RAD.audio.pause(); RAD.audio = null; } if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {} try { music.stop(); } catch (e) {} G.radioName = STATIONS[RAD.st].name; G.radioT = 3; G.radioSong = STATIONS[RAD.st].tag || null; RAD.seg = null; sfx.play('blip'); if (RAD.on) radioNextSeg(); }
 function radioSpecial(id) { RAD.forced = id; RAD.seg = null; if (!RAD.on) { RAD.on = true; } radioNextSeg(); }
 function radioDuck(t) {}

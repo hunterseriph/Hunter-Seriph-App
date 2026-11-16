@@ -118,7 +118,17 @@ function driver3D(m, k, fr) {
     var lf = -0.22, lu = 1.28; tube(m, fr, W, [lf, 0, 0.98], [lf, 0, 1.08], 0.12, 0.12, PB, 9);
     ball(m, fr, W, lf, 0, lu, 0.44, 0.46, 0.3, PB, DLOD < 1 ? 8 : 12, { rings: DLOD < 1 ? 5 : 8, face: FT ? { T: FT, fz: 0.15, w: 0.92, h: 0.9 } : null });
     ball2(m, fr, W, lf - 0.04, 0, lu + 0.3, 0.32, 0.34, 0.2, PB2, 12, { rings: 6 }); ball2(m, fr, W, lf - 0.06, 0, lu + 0.52, 0.22, 0.23, 0.15, PB, 10, { rings: 5 });
-    tube(m, fr, W, [lf - 0.06, 0, lu + 0.6], [lf - 0.12, 0.05, lu + 0.82], 0.12, 0.0, PB2, 8); return;
+    tube(m, fr, W, [lf - 0.06, 0, lu + 0.6], [lf - 0.12, 0.05, lu + 0.82], 0.12, 0.0, PB2, 8);
+    // update 156 (his rule: he wears camo trousers in every game): camo cargo trousers in patches, side pockets, tan work boots on the pedals
+    var CAMO = ['#5a5a38', '#3a3a24', '#6e6440', '#4a3a26', '#2a2a1c'];
+    ball2(m, fr, W, -0.25, 0, 0.5, 0.24, 0.3, 0.16, CAMO[0], 12, { rings: 5 });
+    [-1, 1].forEach(function (sd) { var A = [-0.18, sd * 0.15, 0.5], B = [0.2, sd * 0.17, 0.64], C2 = [0.36, sd * 0.18, 0.4];
+      for (var q = 0; q < 4; q++) { var u0 = q / 4, u1 = (q + 1) / 4; tube(m, fr, W, [A[0] + (B[0] - A[0]) * u0, A[1] + (B[1] - A[1]) * u0, A[2] + (B[2] - A[2]) * u0], [A[0] + (B[0] - A[0]) * u1, A[1] + (B[1] - A[1]) * u1, A[2] + (B[2] - A[2]) * u1], 0.13 - q * 0.004, 0.126 - q * 0.004, CAMO[(q * 3 + (sd > 0 ? 1 : 0)) % 5], 9); }
+      ball2(m, fr, W, 0.2, sd * 0.17, 0.64, 0.12, 0.12, 0.12, CAMO[2], 9, { rings: 4 });
+      for (var r = 0; r < 3; r++) { var v0 = r / 3, v1 = (r + 1) / 3; tube(m, fr, W, [B[0] + (C2[0] - B[0]) * v0, B[1], B[2] + (C2[2] - B[2]) * v0], [B[0] + (C2[0] - B[0]) * v1, B[1], B[2] + (C2[2] - B[2]) * v1], 0.112, 0.105, CAMO[(r * 2 + 3 + (sd > 0 ? 2 : 0)) % 5], 9); }
+      ball2(m, fr, W, 0.0, sd * 0.29, 0.56, 0.08, 0.04, 0.07, CAMO[1], 7, { rings: 3 }); // the cargo pocket
+      ball2(m, fr, W, 0.44, sd * 0.18, 0.34, 0.13, 0.09, 0.09, '#b08850', 9, { rings: 4 }); tube(m, fr, W, [0.32, sd * 0.18, 0.29], [0.56, sd * 0.18, 0.29], 0.07, 0.068, '#5a3a20', 8, { cap: '#5a3a20', cap0: '#5a3a20' }); });
+    return;
   }
   if (id === 'greebo') { // the cream pie, with his painted face now
     var CR = '#d8943a', CR2 = '#b8742a';

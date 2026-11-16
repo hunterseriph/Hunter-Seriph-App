@@ -21,7 +21,7 @@ function nextWeapon(d) { var i = WORDER.indexOf(P.wpn); for (var k = 0; k < WORD
 /* the stick, turned by the camera */
 function moveInput() { var s = KIT.stick(0), c = Math.cos(CAM.yaw), sn = Math.sin(CAM.yaw); return { x: s.x * -c + -s.y * sn, z: s.x * sn + -s.y * c, m: Math.min(1, Math.hypot(s.x, s.y)), raw: s }; }
 function stepFoot(dt) {
-  var mi = moveInput(), run = KIT.held('b') || KIT.held('run'), swim = P.swim, top = swim ? 2.6 : run ? 7.2 : 3.2, drunk = G.drunk || 0;
+  var mi = moveInput(), run = KIT.held('b') || KIT.held('run'), swim = P.swim, top = (swim ? 2.6 : run ? 7.2 : 3.2) * (G.stim > 0 ? 1.25 : 1), drunk = G.drunk || 0;
   if (drunk > 0.2) { mi.x += Math.sin(G.t * 1.7) * drunk * 0.6; mi.z += Math.cos(G.t * 1.3) * drunk * 0.6; }
   if (P.ragT > 0) { P.ragT -= dt; mi.m = 0; }
   if (G.cut || G.talk) mi.m = 0;
@@ -45,7 +45,7 @@ function stepFoot(dt) {
   P.ph += dt * (P.sp * (run ? 1.6 : 2.4)) ;
   // the weapon
   stepWeapon(dt, mi);
-  if (KIT.pressed('rb')) nextWeapon(1);
+  if (KIT.pressed('rb') || KIT.pressed('swap')) nextWeapon(1);
   // use: a vehicle, a door, a person to talk to
   if (KIT.pressed('y') && !G.cut && !G.talk) { var cn = carNear(), un = nearestUse(); if (cn && (!un || dist2(cn.x, cn.z, P.x, P.z) < dist2(un.x, un.z, P.x, P.z))) enterNearest(); else if (!useNear()) enterNearest(); }
 }
@@ -56,9 +56,9 @@ function nearestUse() { var best = null, bd = 9; ((G.interior ? G.indoorUses : G
 /* ---------- weapons ---------- */
 function stepWeapon(dt, mi) {
   P.cool -= dt; P.atkT = Math.max(0, P.atkT - dt); P.kick = Math.max(0, P.kick - dt * 6);
-  var W0 = WPN[P.wpn]; P.aim = KIT.held('lb') && !W0.melee ? 1 : 0;
+  var W0 = WPN[P.wpn]; P.aim = (KIT.held('lb') || gpHeld(6)) && !W0.melee ? 1 : 0;
   if (P.aim) { if (!P.target || P.target.dead || dist2(P.x, P.z, P.target.x, P.target.z) > W0.range * W0.range) P.target = findTarget(W0.range); } else P.target = null;
-  var fire = W0.auto ? KIT.held('x') : KIT.pressed('x');
+  var fire = W0.auto ? KIT.held('x') || gpHeld(7) : KIT.pressed('x') || gpPressed(7);
   if (fire && P.cool <= 0 && !G.cut && !G.talk && !P.swim) {
     if (W0.melee) { P.cool = W0.rate; P.atkT = 0.35; meleeHit(W0); }
     else if (ammoOf(P.wpn) <= 0) { sfx.play('back'); P.cool = 0.4; nextWeapon(1); }
@@ -149,6 +149,6 @@ function drawPlayer() { if (window.__noP) return;
   if (P.state === 'car' && P.veh && !P.veh.t.carry && P.veh.t.cls !== 'bike' && P.veh.t.cls !== 'board') return; // inside: seen through the glass as nobody (cheap)
   if (P.state === 'foot' && Math.hypot(CAM.x - P.x, CAM.z - P.z) < 0.75 && Math.abs(CAM.y - P.y - 1.5) < 0.9) return;
   var Q = poseOfPlayer(), W0 = WPN[P.wpn], held = W0.mesh ? RIGS[W0.mesh] : null, y = P.y;
-  if (P.state === 'car' && P.veh) { var v = P.veh; Q = pose0(); if (v.t.cls === 'board') poseRideStand(Q); else { poseSit(Q); Q.y = -0.35; } drawPerson(RIGS.cumhead, v.x, v.y + (v.t.cls === 'board' ? 0.15 : 0.35), v.z, v.a, Q, { noShadow: 1 }); return; }
-  drawPerson(RIGS.cumhead, P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: P.hurtT > 0.3 ? [0.5, 0, 0] : null });
+  if (P.state === 'car' && P.veh) { var v = P.veh; Q = pose0(); if (v.t.cls === 'board') poseRideStand(Q); else { poseSit(Q); Q.y = -0.35; } drawPerson(RIGS[P.rig || 'cumhead'], v.x, v.y + (v.t.cls === 'board' ? 0.15 : 0.35), v.z, v.a, Q, { noShadow: 1 }); return; }
+  drawPerson(RIGS[P.rig || 'cumhead'], P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: P.hurtT > 0.3 ? [0.5, 0, 0] : null });
 }

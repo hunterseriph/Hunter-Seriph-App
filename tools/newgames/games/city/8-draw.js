@@ -49,7 +49,7 @@ function drawWorld(look) {
     if (C2.fr && sheetTex()) R3.draw(C2.fr, sheetTex()); if (C2.wat) R3.draw(C2.wat, ATT, { tint: [1, 1, 1] });
     if (C2.glow) R3.draw(C2.glow, ATT, { lit: false, tint: night ? [1.1, 1.1, 1.1] : [0.85, 0.85, 0.85] });
     if (C2.night && dl < 0.6) R3.draw(C2.night, ATT, { lit: false, alpha: clamp((0.6 - dl) * 3, 0, 1) }); }
-  LMK.forEach(function (o) { if (!inView(o.x, o.z, o.r)) return; if (o.m) R3.draw(o.m, ATT); if (o.glow) R3.draw(o.glow, ATT, { lit: false }); o.parts.forEach(function (q) { R3.draw(q.m, ATT, { m: q.f(T) }); }); });
+  LMK.forEach(function (o) { if (!inView(o.x, o.z, o.r)) return; if (o.m) R3.draw(o.m, ATT); if (o.glow) R3.draw(o.glow, ATT, { lit: false }); if (o.fr && sheetTex()) R3.draw(o.fr, sheetTex()); o.parts.forEach(function (q) { R3.draw(q.m, ATT, { m: q.f(T) }); }); });
 }
 var SHTEX2 = null;
 function sheetTex() { if (!SHTEX2 && KIT.sheetReady) SHTEX2 = R3.texture(KIT.sheet); return SHTEX2; }

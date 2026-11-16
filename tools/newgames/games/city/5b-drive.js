@@ -4,7 +4,7 @@ function vehInput() { // the player's hands on the controls
   var kb = !gp && !TOUCHUI(); // the stick's up and down only drive on a keyboard (W / S); pads and touch use the GAS and BRAKE buttons
   var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && s.y > 0.3 ? s.y : 0);
   var steer = -s.x; if (drunk > 0.2) steer += Math.sin(G.t * 1.9) * drunk * 0.5;
-  return { thr: thr, brk: brk, steer: steer, hand: KIT.held('x'), up: KIT.held('a'), down: KIT.held('b'), pitch: s.y, roll: s.x, yaw: -s.x };
+  return { thr: thr, brk: brk, steer: steer, hand: KIT.held('x') || KIT.held('hb'), up: KIT.held('a'), down: KIT.held('b'), pitch: s.y, roll: s.x, yaw: -s.x };
 }
 function stepVehicle(v, inp, dt) {
   var t = v.t, cl = t.cls; v.flash = Math.max(0, (v.flash || 0) - dt);
@@ -19,6 +19,7 @@ function stepVehicle(v, inp, dt) {
   if (inp.thr > 0.05) { if (fs < -0.5) fs += 22 * inp.thr * dt; else fs += t.acc * inp.thr * (1 - Math.max(0, fs) / (top * off)) * dt * (fs < 6 ? 1.6 : 1); }
   if (inp.brk > 0.05) { if (fs > 0.5) fs -= 26 * inp.brk * dt; else fs = Math.max(-top * 0.3, fs - t.acc * 0.6 * inp.brk * dt); }
   if (inp.hand && !boat) fs -= Math.sign(fs) * Math.min(Math.abs(fs), 8 * dt);
+  if (inp.park) fs -= Math.sign(fs) * Math.min(Math.abs(fs), 14 * dt); // nobody driving: it just stops (update 156: 'brake' meant reverse, so empty cars backed off by themselves)
   fs -= fs * (boat ? 0.35 : 0.12) * dt; if (Math.abs(fs) < 0.05 && inp.thr < 0.05) fs = 0;
   ls *= Math.exp(-grip * (boat ? 0.7 : 1) * dt);
   // steering: tighter when slow
@@ -28,10 +29,10 @@ function stepVehicle(v, inp, dt) {
   f = [Math.sin(v.a), Math.cos(v.a)]; r = [Math.cos(v.a), -Math.sin(v.a)];
   v.vx = f[0] * fs + r[0] * ls; v.vz = f[1] * fs + r[1] * ls; v.sp = fs;
   // move, collide with the world
-  var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, rad = Math.max(0.3, t.wid * 0.5), hit = null;
+  var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, rad = Math.max(0.3, t.wid * 0.44), hit = null;
   [t.len * 0.3, -t.len * 0.3].forEach(function (o) { var cx = nx + f[0] * o, cz = nz + f[1] * o, c = collide(cx, cz, rad, v.y + 0.2, t.hgt); if (c.hit) { nx += c.x; nz += c.z; hit = c; } });
   if (boat) { var k2 = kAt(nx + f[0] * t.len * 0.5, nz + f[1] * t.len * 0.5); if (!isWaterK(k2)) { nx = v.x; nz = v.z; hit = hit || { x: -v.vx, z: -v.vz }; } }
-  if (hit) { var imp = Math.abs(fs); if (imp > 6) { hurtVeh(v, (imp - 6) * 2.5, null); sfx.play('crash'); if (v === (P && P.veh)) CAM.shake = 0.35; } var hl = Math.hypot(hit.x, hit.z) || 1, nn = [hit.x / hl, hit.z / hl], vn = v.vx * nn[0] + v.vz * nn[1]; if (vn < 0) { v.vx -= nn[0] * vn * 1.5; v.vz -= nn[1] * vn * 1.5; } v.vx *= 0.6; v.vz *= 0.6; }
+  if (hit) { var imp = Math.abs(fs); if (imp > 6) { hurtVeh(v, (imp - 6) * 2.5, null); if ((imp > 9 || v === (P && P.veh)) && G.t > (v.crashT || 0) && dist2(v.x, v.z, P.x, P.z) < 30 * 30) { v.crashT = G.t + 1.2; sfx.play('crash'); } if (v === (P && P.veh)) CAM.shake = 0.35; } var hl = Math.hypot(hit.x, hit.z) || 1, nn = [hit.x / hl, hit.z / hl], vn = v.vx * nn[0] + v.vz * nn[1]; if (vn < 0) { v.vx -= nn[0] * vn * 1.5; v.vz -= nn[1] * vn * 1.5; } v.vx *= 0.6; v.vz *= 0.6; }
   v.x = clamp(nx, 4, WX - 4); v.z = clamp(nz, 4, WZ - 4);
   // up and down: follow the ground, fly off crests and ramps, fall in the water
   if (boat) { var wy = waterY(v.x, v.z); v.y = (wy > -50 ? wy : v.y) + Math.sin(G.t * 2 + v.x) * 0.05 + 0.1; v.pitch = -clamp(fs / top, 0, 1) * 0.12 + Math.sin(G.t * 1.7) * 0.03; v.roll = -v.steer * clamp(fs / top, 0, 1) * 0.15; }
@@ -105,13 +106,13 @@ function vehPush(o, r) { // people get shoved by cars rather than standing insid
 }
 function carHits(dt) { // the player's car against people and other cars
   var v = P.veh; if (!v || v.t.cls === 'heli' || v.t.cls === 'plane') return; var sp = Math.hypot(v.vx, v.vz), c = Math.cos(v.a), s = Math.sin(v.a);
-  PEDS.forEach(function (p) { if (p.dead || p.inVeh || p.downT > 0) return; var dx = p.x - v.x, dz = p.z - v.z, lx = dx * c - dz * s, lz = dx * s + dz * c; if (Math.abs(lx) < v.t.wid / 2 + 0.3 && Math.abs(lz) < v.t.len / 2 + 0.3) {
+  PEDS.forEach(function (p) { if (p.dead || p.inVeh || p.downT > 0) return; var dx = p.x - v.x, dz = p.z - v.z, lx = dx * c - dz * s, lz = dx * s + dz * c; if (Math.abs(lx) < v.t.wid / 2 + 0.12 && Math.abs(lz) < v.t.len / 2 + 0.12) {
     if (sp > 4) { hurtPed(p, sp * 4, P, [v.vx / sp, 0.5, v.vz / sp], 1); p.vx = v.vx * 0.9; p.vz = v.vz * 0.9; p.vy = 3 + sp * 0.15; if (sp > 15) stuntBonus('splat'); } else { p.x += lx > 0 ? 0.1 : -0.1; } } });
-  VEH.forEach(function (o) { if (o === v || o.t.cls === 'heli' || o.t.cls === 'plane') return; var d = Math.hypot(o.x - v.x, o.z - v.z), m = (o.t.len + v.t.len) * 0.32 + (o.t.wid + v.t.wid) * 0.2; if (d < m && d > 0.01) { var nx = (o.x - v.x) / d, nz = (o.z - v.z) / d, rel = (v.vx - (o.vx || 0)) * nx + (v.vz - (o.vz || 0)) * nz;
-    var push = (m - d) * 0.5; o.x += nx * push; o.z += nz * push; v.x -= nx * push; v.z -= nz * push;
-    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); sfx.play('crash'); CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
+  VEH.forEach(function (o) { if (o === v || o.t.cls === 'heli' || o.t.cls === 'plane') return; if (Math.abs(o.x - v.x) > 9 || Math.abs(o.z - v.z) > 9) return; var hb = obbHit(v, o); if (hb) { var nx = hb.nx, nz = hb.nz, rel = (v.vx - (o.vx || 0)) * nx + (v.vz - (o.vz || 0)) * nz;
+    var push = hb.d * 0.5; o.rest = 0; if (o.ai) o.ai.phys = 1; o.x += nx * push; o.z += nz * push; v.x -= nx * push; v.z -= nz * push;
+    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (o.ai) o.ai.phys = 1; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); if (G.t > (v.crashT || 0)) { v.crashT = G.t + 0.8; sfx.play('crash'); } CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
 }
-function hurtVeh(v, dmg, by, isBoom) { if (v.dead || G.cut) return; if (v === (P && P.veh) && G.god) return; if (dmg < 300) dmg *= (isBoom ? 0.75 : 0.22) * (v.t.heavy ? 0.6 : 1); v.hp -= dmg; /* update 155: cars take about four times the knocks before they burn */ v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
+function hurtVeh(v, dmg, by, isBoom) { if (v.dead || G.cut) return; if (v.ai) v.ai.phys = 1; if (v === (P && P.veh) && G.god) return; if (dmg < 300) dmg *= (isBoom ? 0.75 : 0.22) * (v.t.heavy ? 0.6 : 1); v.hp -= dmg; /* update 155: cars take about four times the knocks before they burn */ v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
 function explodeVeh(v) {
   v.dead = 1; v.hp = 0; boom(v.x, v.y + 1, v.z, 9, v === (P && P.veh) ? null : P); if (v.driver === P) { exitVehicle(true); hurtPlayer(80, 'boom'); } else if (v.driver) { var d = v.driver; v.driver = null; if (d.inVeh) { d.inVeh = null; d.x = v.x + 1.5; d.z = v.z; d.y = v.y; hurtPed(d, 200, null); } }
   v.vy = 7; v.air = 1;
@@ -131,3 +132,9 @@ var PADMODE = '';
 function padMode() { var m = !P || G.mode !== 'play' ? 'foot' : P.state === 'car' && P.veh ? (P.veh.t.cls === 'heli' ? 'heli' : P.veh.t.cls === 'plane' ? 'plane' : 'car') : 'foot'; if (m === PADMODE) return; PADMODE = m;
   var L = { foot: ['RUN', 'JUMP', 'HIT', 'CAR', 'AIM', 'SWAP'], car: ['BRAKE', 'GAS', 'H.BRAKE', 'EXIT', 'LOOK', 'RADIO'], heli: ['DOWN', 'UP', '', 'EXIT', 'LOOK', 'RADIO'], plane: ['BRAKE', 'THRUST', '', 'EXIT', 'LOOK', 'RADIO'] }[m];
   try { var b = document.querySelectorAll('#acts .pbtn small'); for (var i = 0; i < b.length && i < L.length; i++) b[i].textContent = L[i]; } catch (e) {} }
+
+/* update 156: cars hit each other by their real boxes (the old round test made cars bump from 3 m away) */
+function obbHit(a, b) { var A = [[Math.sin(a.a), Math.cos(a.a)], [Math.cos(a.a), -Math.sin(a.a)]], B = [[Math.sin(b.a), Math.cos(b.a)], [Math.cos(b.a), -Math.sin(b.a)]], ha = [a.t.len / 2 * 0.95, a.t.wid / 2], hb = [b.t.len / 2 * 0.95, b.t.wid / 2], dx = b.x - a.x, dz = b.z - a.z, best = 1e9, bn = null;
+  var axes = [A[0], A[1], B[0], B[1]]; for (var i = 0; i < 4; i++) { var ax = axes[i], ra = ha[0] * Math.abs(A[0][0] * ax[0] + A[0][1] * ax[1]) + ha[1] * Math.abs(A[1][0] * ax[0] + A[1][1] * ax[1]), rb = hb[0] * Math.abs(B[0][0] * ax[0] + B[0][1] * ax[1]) + hb[1] * Math.abs(B[1][0] * ax[0] + B[1][1] * ax[1]), dd = dx * ax[0] + dz * ax[1], ov = ra + rb - Math.abs(dd);
+    if (ov <= 0) return null; if (ov < best) { best = ov; bn = dd < 0 ? [-ax[0], -ax[1]] : [ax[0], ax[1]]; } }
+  return { nx: bn[0], nz: bn[1], d: best }; }

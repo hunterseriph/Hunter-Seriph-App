@@ -487,7 +487,7 @@ var KIT = (function () {
     cfg = o; W = o.w || 480; H = o.h || 270; S = 0; fit();
     buildPad(o.pad);
     if (window.HSPad) HSPad.setup({ menu: function () { return menuOpen() ? menuEl : null; }, keys: o.padKeys || { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' },
-      onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
+      idle: o.padIdle, onSelect: o.onSelect, onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
     var mb = document.getElementById('mute'); if (mb) { mb.classList.toggle('off', muted); mb.addEventListener('click', function () { sfx.setMuted(!muted); mb.classList.toggle('off', muted); if (!muted) audioInit(); }); }
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause && !menuOpen()) o.onPause(); });
     requestAnimationFrame(frame);
@@ -641,7 +641,7 @@ var music = (function () {
       else if (ac === 'arp8') for (s = 0; s < bar; s += 2) ev[base + s].push({ k: 'arp', n: tones[[0, 1, 2, 1][(s / 2) % 4]] + 12, d: 1.8 });
       else if (ac === 'organ') ev[base].push({ k: 'organ', ns: tones.map(function (t) { return t - 12; }), d: bar });
       else if (ac === 'stabs') { [4, 8].forEach(function (s2) { ev[base + s2].push({ k: 'stab', ns: tones, d: 2.5 }); }); }
-      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
+      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2 && ev[base + 14]) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
       if (sp.drums) { var kit = KITS[sp.drums], pat = kit[(b % 4 === 3) ? 1 : 0]; for (s = 0; s < bar; s++) { var dch = pat[s % pat.length]; if (dch !== '.') ev[base + s].push({ k: 'drum', t: dch }); } }
       if (sp.acc === 'organ' && sp.bass === 'drone') ev[base].push({ k: 'organ', ns: [root + 12], d: bar });
     }
@@ -1331,7 +1331,7 @@ function lathe(m, P, col, seg, o) {
   function V(k, a) { var p = P[k], rx = p[1], rz = p[2] === undefined ? p[1] : p[2], pn = P[Math.min(n - 1, k + 1)], pp = P[Math.max(0, k - 1)], dy = Math.abs(pn[0] - pp[0]) || 0.001, sl = (pn[1] - pp[1]) / dy, sn = Math.sin(a), cs = Math.cos(a), l = Math.hypot(1, sl);
     return { p: [(p[3] || 0) + sn * rx, p[0], (p[4] || 0) + cs * rz], n: [sn / l, sl / l, cs / l] }; }
   for (var k = 0; k < n - 1; k++) for (var i = 0; i < seg; i++) { var a0 = i / seg * 6.2832, a1 = (i + 1) / seg * 6.2832, v = [V(k, a0), V(k, a1), V(k + 1, a1), V(k + 1, a0)];
-    m.quadN(v.map(function (z) { return z.p; }), [0.1, 0.1, 0.9, 0.1, 0.9, 0.9, 0.1, 0.9], T, c, v.map(function (z) { return z.n; })); }
+    m.quadN(v.map(function (z) { return z.p; }), [0.1, 0.1, 0.9, 0.1, 0.9, 0.9, 0.1, 0.9], T, o.camo ? C(o.camo[((k * 7 + i * 13 + ((i * k) >> 1) * 5) ^ (i >> 1)) % o.camo.length]) : c, v.map(function (z) { return z.n; })); }
   if (o.cap) { var b = P[n - 1]; for (var j = 0; j < seg; j++) { var b0 = j / seg * 6.2832, b1 = (j + 1) / seg * 6.2832; m.tri([b[3] || 0, b[0], b[4] || 0], V(n - 1, b1).p, V(n - 1, b0).p, [0.5, 0.5, 0, 0, 1, 0], T, c, [0, -1, 0]); } }
 }
 function limbs(P, D, c) { // upper and lower arms (elbow, wrist, cuff, a hand with fingers and a thumb) and legs (knee, calf, ankle, a proper shoe with a sole)
@@ -1344,9 +1344,9 @@ function limbs(P, D, c) { // upper and lower arms (elbow, wrist, cuff, a hand wi
     for (var f = 0; f < 4; f++) { var fx = (f - 1.5) * H * 0.4, fy = hy - H * 0.62, fl = H * (f === 0 || f === 3 ? 0.62 : 0.78); tub(al, [fx, fy + H * 0.1, 0.01], [fx, fy - fl * 0.55, 0.035], H * 0.2, H * 0.18, c.hand, 5); tub(al, [fx, fy - fl * 0.55, 0.035], [fx, fy - fl, 0.075], H * 0.18, H * 0.13, c.hand, 5, { cap: 1 }); }
     tub(al, [s * H * 0.6, hy + H * 0.25, 0.02], [s * H * 1.05, hy - H * 0.3, 0.07], H * 0.24, H * 0.2, c.hand, 5); tub(al, [s * H * 1.05, hy - H * 0.3, 0.07], [s * H * 1.0, hy - H * 0.75, 0.11], H * 0.2, H * 0.13, c.hand, 5, { cap: 1 }); // the thumb
     P['al' + sd] = al.upload();
-    var lu = M(); ell(lu, 0, -0.02, 0, L * 1.14, L * 1.12, L * 1.14, c.legs, 10, 5); lathe(lu, [[0, L * 1.08], [-D.lu * 0.3, L * 1.12, L * 1.16], [-D.lu * 0.78, L * 0.92], [-D.lu, L * 0.84]], c.legs, 10); P['lu' + sd] = lu.upload();
+    var lu = M(); ell(lu, 0, -0.02, 0, L * 1.14, L * 1.12, L * 1.14, c.legs, 10, 5); lathe(lu, [[0, L * 1.08], [-D.lu * 0.15, L * 1.11, L * 1.14], [-D.lu * 0.3, L * 1.12, L * 1.16], [-D.lu * 0.55, L * 1.02], [-D.lu * 0.78, L * 0.92], [-D.lu, L * 0.84]], c.legs, 10, { camo: c.camo }); if (c.camo) { ell(lu, s * L * 1.02, -D.lu * 0.52, 0.01, 0.028, 0.075, 0.065, c.camo[2], 6, 3); ell(lu, s * L * 1.05, -D.lu * 0.42, 0.01, 0.025, 0.018, 0.068, c.camo[1], 6, 2); } P['lu' + sd] = lu.upload();
     var ll = M(), ft = -D.ll; ell(ll, 0, 0, 0.012, L * 0.9, L * 0.9, L * 0.92, c.legs, 8, 4); // the knee
-    lathe(ll, [[0, L * 0.86], [-D.ll * 0.3, L * 0.92, L * 0.98, 0, -0.012], [-D.ll * 0.72, L * 0.72], [ft + 0.1, L * 0.66]], c.legs, 10);
+    lathe(ll, [[0, L * 0.86], [-D.ll * 0.15, L * 0.9, L * 0.95, 0, -0.006], [-D.ll * 0.3, L * 0.92, L * 0.98, 0, -0.012], [-D.ll * 0.5, L * 0.84], [-D.ll * 0.72, L * 0.72], [ft + 0.1, L * 0.66]], c.legs, 10, { camo: c.camo });
     if (hem) tub(ll, [0, ft + 0.13, 0], [0, ft + 0.09, 0], L * 0.74, L * 0.8, shade(c.legs, 0.75), 10);
     ell(ll, 0, ft + 0.07, -0.012, L * 0.82, 0.07, L * 0.95, c.boot, 8, 4); ell(ll, 0, ft + 0.055, 0.085, L * 0.86, 0.052, L * 1.45, c.boot, 10, 5); // heel and toe
     bxp(ll, -L * 0.82, ft, -L * 0.95, L * 0.82, ft + 0.022, L * 2.15, shade(c.boot, 0.45)); // the sole
@@ -1384,7 +1384,7 @@ function buildRigs() {
   RIGS.tb = tbRig('f_tb'); RIGS.tbmad = tbRig('f_tbmad'); RIGS.tbclown = tbRig('f_tbclown', 1);
   /* SHITHEAD LABOOZIE (from Hunter's drawing): a swirled poop of a head with big cartoon eyes and a grin, black hoodie,
      white gloves, camo cargo trousers, tan boots */
-  (function () { var D = { lu: 0.4, ll: 0.4, tor: 0.5, shW: 0.23, hipW: 0.11, au: 0.29, al: 0.27, arm: 0.068, hand: 0.075, leg: 0.085, neck: 0.04 }, P = {}, c = { sleeve: '#1e1a20', fore: '#1e1a20', hand: '#f4f0ec', legs: '#5a5a38', boot: '#b08850' };
+  (function () { var D = { lu: 0.4, ll: 0.4, tor: 0.5, shW: 0.23, hipW: 0.11, au: 0.29, al: 0.27, arm: 0.068, hand: 0.075, leg: 0.085, neck: 0.04 }, P = {}, c = { sleeve: '#1e1a20', fore: '#1e1a20', hand: '#f4f0ec', legs: '#5a5a38', boot: '#b08850', camo: ['#5a5a38', '#3a3a24', '#6e6440', '#4a3a26', '#5a5a38', '#2a2a1c', '#6e6440'] };
     var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, '#4a4a30', 8, 4); ell(hp, 0.17, -0.06, 0.02, 0.06, 0.08, 0.07, '#4a4a30', 6, 3); ell(hp, -0.17, -0.06, 0.02, 0.06, 0.08, 0.07, '#4a4a30', 6, 3); P.hips = hp.upload();
     var to = M(); ell(to, 0, D.tor * 0.5, 0, 0.26, D.tor * 0.58, 0.18, '#1e1a20', 10, 6); ell(to, 0, D.tor * 0.92, -0.1, 0.2, 0.12, 0.12, '#262228', 8, 4); // the hood down his back
     ell(to, 0, D.tor * 0.3, 0.15, 0.15, 0.08, 0.05, '#2a262c', 8, 3); tub(to, [0.05, D.tor * 0.9, 0.14], [0.06, D.tor * 0.62, 0.17], 0.01, 0.01, '#d8d0c0', 4); tub(to, [-0.05, D.tor * 0.9, 0.14], [-0.06, D.tor * 0.62, 0.17], 0.01, 0.01, '#d8d0c0', 4); P.torso = to.upload();

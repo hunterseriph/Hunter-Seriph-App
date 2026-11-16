@@ -43,7 +43,23 @@ var BSTY = {
   house: { wall: ['w_house', 'w_house2'], roof: 'roofr' }, suburb: { wall: ['w_house', 'w_house2'], roof: 'roofr' }, shed: { wall: ['w_shed'], roof: 'roofs' }, industrial: { wall: ['w_shed', 'w_dock'], roof: 'roofs' },
   docks: { wall: ['w_dock', 'w_shed'], roof: 'roofs' }, lab: { wall: ['w_lab'], roof: 'roof' }, labs: { wall: ['w_lab'], roof: 'roof' }, frame: { wall: ['w_frame'], roof: 'concrete' }, park: { wall: ['w_cafe'], roof: 'roof' }, airport: { wall: ['w_lab'], roof: 'roofs' }
 };
-var NEONS = ['neon_girls', 'neon_xxx', 'neon_open', 'neon_cum', 'neon_live', 'neon_bar', 'neon_heart'];
+var NEONS = ['neon_girls', 'neon_xxx', 'neon_open', 'neon_cum', 'neon_live', 'neon_bar', 'neon_heart', 'neon_peep', 'neon_sex', 'neon_cock', 'neon_dance'];
+/* update 156 (his ask: the city needs to look cooler, more neon): blade signs that stick out from the wall and read
+   top to bottom, and neon tubes along the roof line and round the ground floor, in the busy districts. */
+var BLADES = [['HOTEL', '#ff2630'], ['BAR', '#ffe36a'], ['XXX', '#ff3aa0'], ['GIRLS', '#ff7ab0'], ['DINER', '#4adfff'], ['PIZZA', '#ffb030'], ['LIVE', '#7aff6a'], ['MOTEL', '#ff2630'], ['CLUB', '#c48aff'], ['LOADS', '#f1e7d0'], ['24HRS', '#7aff6a'], ['TATTOO', '#ff2630'], ['PAWN', '#ffe36a'], ['KARAOKE', '#4adfff'], ['NOODLES', '#ffb030'], ['VAPES', '#7aff6a']];
+var NEONCOL = ['#ff2630', '#ff3aa0', '#4adfff', '#ffe36a', '#c48aff', '#7aff6a', '#ff7ab0'];
+(function () { BLADES.forEach(function (b, i) { HIPAINT['bl_' + i] = function (g) { g.fillStyle = '#12040a'; g.fillRect(8, 0, 48, 64); g.strokeStyle = b[1]; g.lineWidth = 2; g.strokeRect(10, 1, 44, 62); var L = b[0].split(''), sz = Math.min(14, Math.floor(60 / L.length)); g.fillStyle = b[1]; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold ' + sz + 'px "Archivo Narrow", sans-serif'; L.forEach(function (c, k) { g.fillText(c, 32, 32 + (k - (L.length - 1) / 2) * sz * 0.98); }); }; }); })();
+function neonDress(m, glow, b, F, fw, yt, r) { var st = b.style, busy = st === 'redlight' ? 1 : st === 'cafe' ? 0.7 : st === 'downtown' ? 0.45 : st === 'suburb' || st === 'docks' || st === 'industrial' ? 0.12 : 0; if (!busy || fw < 5) return;
+  var c = Math.cos(F.a), s = Math.sin(F.a), col = NEONCOL[Math.floor(hash2(b.i, 7, 7) * NEONCOL.length)], ex = F.n[0], ez = F.n[2];
+  // a blade sign by one corner of the front
+  if (hash2(b.i, 8, 8) < busy) { var u = hash2(b.i, 9, 9) < 0.5 ? 0.2 : 0.8, bx = F.L[0] + (F.R[0] - F.L[0]) * u + ex * 0.9, bz = F.L[1] + (F.R[1] - F.L[1]) * u + ez * 0.9, h0 = b.y0 + 4.6, h1 = Math.min(yt - 0.4, h0 + 6.5), bl = 'bl_' + Math.floor(hash2(b.i, 10, 10) * BLADES.length);
+    if (h1 - h0 > 2.5) { boxC(m, bx - ex * 0.8 - 0.05, h0 + 0.3, bz - ez * 0.8 - 0.05, bx + 0.05, h0 + 0.42, bz + 0.05, '#1a1a1e'); boxC(m, bx - ex * 0.8 - 0.05, h1 - 0.42, bz - ez * 0.8 - 0.05, bx + 0.05, h1 - 0.3, bz + 0.05, '#1a1a1e');
+      standQ(glow, bx, bz, F.a + Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); standQ(glow, bx, bz, F.a - Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); } }
+  // a neon tube along the roof line of the front
+  if (hash2(b.i, 11, 11) < busy) { var tx = ex * 0.08, tz = ez * 0.08; boxC(glow, Math.min(F.L[0], F.R[0]) + tx - (ex ? 0.04 : 0), yt - 0.18, Math.min(F.L[1], F.R[1]) + tz - (ez ? 0.04 : 0), Math.max(F.L[0], F.R[0]) + tx + (ex ? 0.04 : 0), yt - 0.06, Math.max(F.L[1], F.R[1]) + tz + (ez ? 0.04 : 0), col); }
+  // and one over the ground floor
+  if (hash2(b.i, 12, 12) < busy * 0.8) { var col2 = NEONCOL[Math.floor(hash2(b.i, 13, 13) * NEONCOL.length)], tx2 = ex * 0.1, tz2 = ez * 0.1; boxC(glow, Math.min(F.L[0], F.R[0]) + tx2 - (ex ? 0.04 : 0), b.y0 + 4.25, Math.min(F.L[1], F.R[1]) + tz2 - (ez ? 0.04 : 0), Math.max(F.L[0], F.R[0]) + tx2 + (ex ? 0.04 : 0), b.y0 + 4.35, Math.max(F.L[1], F.R[1]) + tz2 + (ez ? 0.04 : 0), col2); }
+}
 var SIGNOF = { ali: 'sign_ali', harold: 'sign_harold', jessiah: 'sign_jessiah', natty: 'sign_natty', judge: 'sign_judge', fate: 'sign_fate', bates: 'sign_bates', motors: 'sign_motors', estate: 'sign_estate', wash: 'sign_wash', wash2: 'sign_wash2', cops: 'sign_cops', hosp: 'sign_hosp', gym: 'sign_gym', bank: 'sign_bank', tattoo: 'sign_tattoo' };
 var FACOF = { club: 'fac_club', saba: 'fac_saba', pulsar: 'fac_pulsar', arcade: 'fac_arcade', sanct: 'fac_sanct', t: 'fac_t', bonjo: 'fac_bonjo', tb: 'fac_tb', cafe: 'fac_cafe', greebo: 'fac_greebo', amy: 'fac_amy', joff: 'fac_joff', beebs: 'fac_beebs' };
 function frontFace(b) { // the corners of the front face, left to right as you look at it, and the way it faces
@@ -81,12 +97,19 @@ function buildChunk(ci, cj) {
       M0.quad([s[2], s[6], s[3]], [s[4], s[7], s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // trees in the forest and parks (season-tinted), graves, rocks, hedges
     var r1 = hash2(i, j, 1), r2 = hash2(i, j, 2), r3 = hash2(i, j, 3);
-    if (k === K_FOREST || (k === K_PARK && r1 < 0.18) || (k === K_GRASS && r1 < 0.035 && d.style !== 'suburb') || (k === K_FIELD && r1 < 0.01)) {
+    if (k === K_FOREST || (k === K_PARK && r1 < (d.id === 'ejac' ? 0.03 : 0.18)) || (k === K_GRASS && r1 < 0.065 && d.style !== 'suburb') || (k === K_FIELD && r1 < 0.01)) {
       var tx = ax + 0.6 + r2 * 2.8, tz = az + 0.6 + r3 * 2.8, ty = groundY(tx, tz), pine = d.style === 'forest' || d.style === 'haunted' ? r1 < 0.75 : d.style === 'castle' || d.style === 'peak' || d.style === 'darkcastle' ? r1 < 0.6 : r1 < 0.2;
       tree(VEG, tx, ty, tz, pine, 0.75 + hash2(i, j, 4) * 0.6, d.style === 'haunted' || d.style === 'darkcastle' || d.style === 'cemetery', d.style === 'isles' && !pine);
       if (first) addPost(tx, tz, 0.35, ty, ty + 6);
       if (k === K_FOREST && r1 < 0.35) { var bx2 = ax + hash2(i, j, 9) * 4, bz2 = az + hash2(i, j, 10) * 4; ell(VEG, bx2, groundY(bx2, bz2) + 0.3, bz2, 0.7, 0.5, 0.7, '#2e4e22', 6, 3); }
     }
+    if ((k === K_GRASS || k === K_FIELD) && r1 >= 0.065 && r1 < 0.16 && d.style !== 'suburb') { var gx2 = ax + 0.5 + r2 * 3, gz2 = az + 0.5 + r3 * 3, gy2 = groundY(gx2, gz2), q4 = hash2(i, j, 5); // update 156: the countryside was empty
+      if (q4 < 0.45) { ell(VEG, gx2, gy2 + 0.35, gz2, 0.8 + r2 * 0.5, 0.55, 0.8, '#2e5222', 6, 3); ell(VEG, gx2 + 0.6, gy2 + 0.3, gz2 + 0.3, 0.6, 0.45, 0.6, '#3a6a2a', 6, 3); }
+      else if (q4 < 0.75) { for (var fl = 0; fl < 5; fl++) ell(VEG, gx2 + Math.cos(fl * 1.3) * 0.7, gy2 + 0.12, gz2 + Math.sin(fl * 1.3) * 0.7, 0.14, 0.1, 0.14, ['#ffe36a', '#f1e7d0', '#c4121c', '#c48aff'][(fl + i) % 4], 4, 2); }
+      else if (q4 < 0.9) { ell(NAT, gx2, gy2, gz2, 0.9 + r3, 0.6 + r2 * 0.6, 0.8, '#6a625c', 6, 3); if (first) addPost(gx2, gz2, 0.8, gy2, gy2 + 1); }
+      else if (k === K_FIELD) { tub(VEG, [gx2, gy2, gz2], [gx2, gy2 + 1.2, gz2], 0.7, 0.7, '#c8a850', 8, { cap: 1 }); if (first) addPost(gx2, gz2, 0.7, gy2, gy2 + 1.2); }
+      else { boxC(VEG, gx2 - 1.5, gy2 + 0.6, gz2 - 0.05, gx2 + 1.5, gy2 + 0.68, gz2 + 0.05, '#6a4a2a'); boxC(VEG, gx2 - 1.5, gy2 + 0.25, gz2 - 0.05, gx2 + 1.5, gy2 + 0.33, gz2 + 0.05, '#6a4a2a'); boxC(VEG, gx2 - 1.5, gy2, gz2 - 0.06, gx2 - 1.38, gy2 + 0.8, gz2 + 0.06, '#5a3a20'); boxC(VEG, gx2 + 1.38, gy2, gz2 - 0.06, gx2 + 1.5, gy2 + 0.8, gz2 + 0.06, '#5a3a20'); } }
+    if (k === K_DIRT && d.style === 'quarry' && r1 < 0.08) { var bx3 = ax + 2, bz3 = az + 2, by3 = groundY(bx3, bz3); ell(M0, bx3, by3 + 0.35, bz3, 0.5, 0.45, 0.55, '#e0d4b8', 7, 4); ell(M0, bx3 + 0.6, by3 + 0.1, bz3 + 0.4, 0.6, 0.1, 0.12, '#d4c8a8', 5, 3); }
     if (k === K_GRAVE && r1 < 0.55 && (i % 2 === 0)) { var gx = ax + 2, gz = az + 1.5, gy = groundY(gx, gz); if (r2 < 0.6) boxT(M0, gx - 0.4, gy, gz - 0.1, gx + 0.4, gy + 0.9 + r3 * 0.4, gz + 0.12, { wall: 'stone', top: 'stone', u: 1, v: 1 }); else { boxC(M0, gx - 0.08, gy, gz - 0.08, gx + 0.08, gy + 1.4, gz + 0.08, '#6a6460'); boxC(M0, gx - 0.4, gy + 0.85, gz - 0.08, gx + 0.4, gy + 1.0, gz + 0.08, '#6a6460'); } }
     if (k === K_ROCK && r1 < 0.08) { var rx = ax + 2, rz = az + 2; ell(M0, rx, groundY(rx, rz), rz, 1 + r2, 0.8 + r3, 1.1, d.style === 'darkcastle' ? '#2a2228' : '#6a625c', 6, 3); if (first) addPost(rx, rz, 1.0, 0, 99); }
     if (k === K_SAND && d.style === 'beach' && r1 < 0.03) { var ux = ax + 2, uz = az + 2, uy = groundY(ux, uz); boxC(M0, ux - 0.04, uy, uz - 0.04, ux + 0.04, uy + 2.2, uz + 0.04, '#d8d0c0'); tub(M0, [ux, uy + 2.2, uz], [ux, uy + 2.7, uz], 1.3, 0.05, r2 < 0.5 ? '#c4121c' : '#f1e7d0', 8); }
@@ -107,6 +130,7 @@ function buildChunk(ci, cj) {
   near(BGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (b) { var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; building(M0, NIGHT, FR, GLOW, b, lamps); });
   BLD.forEach(function (b) { if (b.solid || b.style !== 'carpark') return; var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; carpark(M0, b); });
   buildStreet(M0, GLOW, x0, z0, CS, lamps, first);
+  if (typeof parkDress === 'function') { parkDress(M0, GLOW, x0, z0, CS, lamps, first); alleyDress(M0, GLOW, x0, z0, CS, first); }
   SOLIDDONE[ci + ',' + cj] = 1;
   function up(m) { return m.n ? m.upload() : null; }
   return { ci: ci, cj: cj, x: x0 + CS / 2, z: z0 + CS / 2, m: up(M0), nat: up(NAT), veg: up(VEG), wat: up(WAT), night: up(NIGHT), fr: up(FR), glow: up(GLOW), lamps: lamps };
@@ -154,6 +178,7 @@ function building(m, night, fr, glow, b, lamps) {
   if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)]; standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), b.y0 + 5, b.y0 + 8, TL(nt), 2.0, 1.2); }
   if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); }
   if (!b.shop) genericFronts(m, glow, night, b, F, fw, gh);
+  if (!tall || r < 0.5) neonDress(m, glow, b, F, fw, tall ? b.y0 + 12 : yt, r);
   // shops: their front, or a painted name board
   if (b.shop && FACOF[b.shop] && KIT.SPR[FACOF[b.shop]]) { var s = KIT.SPR[FACOF[b.shop]], wd = Math.min(fw - 0.4, b.shop === 'club' ? 9 : 7.2), ht = wd * s[3] / s[2]; frontQuad(fr, s, mx + F.n[0] * 0.06, mz + F.n[2] * 0.06, F.a, wd, b.y0, b.y0 + ht); }
   else if (b.shop && SIGNOF[b.shop]) { standQ(glow, mx + F.n[0] * 0.08, mz + F.n[2] * 0.08, F.a, Math.min(6, fw - 0.6), b.y0 + 2.8, b.y0 + 5.2, TL(SIGNOF[b.shop]), 1.3, 0.25); standQ(m, mx + F.n[0] * 0.05, mz + F.n[2] * 0.05, F.a, 1.6, b.y0, b.y0 + 2.5, TL('door'), 1); }
@@ -179,7 +204,7 @@ function updateChunks(cx, cz, budget) {
   want.sort(function (a, b) { return a[0] - b[0]; });
   var t0 = performance.now();
   for (var w = 0; w < want.length; w++) { CHUNKS[want[w][3]] = buildChunk(want[w][1], want[w][2]); if (performance.now() - t0 > (budget || 8)) break; }
-  for (var k2 in CHUNKS) { var C = CHUNKS[k2]; if (Math.hypot(C.x - cx, C.z - cz) > R + 140) { ['m', 'nat', 'veg', 'wat', 'night', 'fr', 'glow'].forEach(function (f) { if (C[f]) C[f].free(); }); delete CHUNKS[k2]; } }
+  for (var k2 in CHUNKS) { var C = CHUNKS[k2]; if (Math.hypot(C.x - cx, C.z - cz) > R + 60) { ['m', 'nat', 'veg', 'wat', 'night', 'fr', 'glow'].forEach(function (f) { if (C[f]) C[f].free(); }); delete CHUNKS[k2]; } }
   return want.length;
 }
 function solidsAround(x, z, r) { // the collisions of chunks that have not been drawn yet (a car far from you never needs them)

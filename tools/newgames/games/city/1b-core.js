@@ -14,6 +14,13 @@ function kAt(x, z) { var i = Math.floor(x / CT), j = Math.floor(z / CT); if (i <
 function dAt(x, z) { var i = Math.floor(x / CT), j = Math.floor(z / CT); if (i < 0 || j < 0 || i >= MW || j >= MH) return DIST[0]; return DIST[DM[j * MW + i]]; }
 function isWaterK(k) { return k === K_SEA || k === K_WATER || k === K_CREAM; }
 function isHardK(k) { return k === K_ROAD || k === K_PAVE || k === K_BRIDGE || k === K_YARD || k === K_RUNWAY || k === K_LOT || k === K_PIER; }
+/* update 156: roads and pavements are smoothed along themselves first (he found short steep ramps in the road): each pass
+   pulls a road tile's height towards the average of the road tiles round it; bridges stay where they are */
+(function () { var L = []; for (var t = 0; t < KM.length; t++) { var k = KM[t]; if (k === K_ROAD || k === K_PAVE) L.push(t); } var tmp = new Float32Array(L.length);
+  for (var it = 0; it < 10; it++) { for (var q = 0; q < L.length; q++) { var t2 = L[q], i = t2 % MW, j = (t2 - i) / MW, s = 0, n = 0;
+      for (var dj = -2; dj <= 2; dj++) for (var di = -2; di <= 2; di++) { var a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= MW || b >= MH) continue; var u = b * MW + a, kk = KM[u]; if (kk === K_ROAD || kk === K_PAVE || kk === K_BRIDGE) { s += HT[u]; n++; } }
+      tmp[q] = n ? s / n : HT[t2]; }
+    for (var q2 = 0; q2 < L.length; q2++) HT[L[q2]] = tmp[q2]; } })();
 /* corner heights: the average of the tiles round a corner, but where roads meet the roads win so they stay flat */
 var CH = (function () {
   var c = new Float32Array((MW + 1) * (MH + 1));
@@ -48,6 +55,14 @@ var BLD = CITY.bld.map(function (b, i) {
   var x0 = b[0] * CT, z0 = b[1] * CT, x1 = b[2] * CT, z1 = b[3] * CT, g = Math.min(groundY(x0 + 0.5, z0 + 0.5), groundY(x1 - 0.5, z0 + 0.5), groundY(x0 + 0.5, z1 - 0.5), groundY(x1 - 0.5, z1 - 0.5));
   return { i: i, x0: x0 + 0.4, z0: z0 + 0.4, x1: x1 - 0.4, z1: z1 - 0.4, h: b[4], style: b[5], front: b[6], shop: b[7], y0: g, solid: b[4] > 0 };
 });
+(function () { // update 156: buildings that share a wall touch (the 0.8 m slits between them looked wrong); only open sides stay inset
+  var R = CITY.bld;
+  var near = {}; R.forEach(function (b, i) { var k = Math.floor(b[0] / 16) + ',' + Math.floor(b[1] / 16); (near[k] = near[k] || []).push(i); });
+  BLD.forEach(function (B2, i) { var a = R[i]; if (a[4] <= 0 || a[5] === 'carpark' || a[5] === 'house') return; var cand = []; for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++) { var l = near[(Math.floor(a[0] / 16) + di) + ',' + (Math.floor(a[1] / 16) + dj)]; if (l) cand = cand.concat(l); }
+    function t(side) { for (var q = 0; q < cand.length; q++) { var j = cand[q]; if (j === i) continue; var b = R[j]; if (b[4] <= 0 || b[5] === 'carpark' || b[5] === 'house') continue;
+      if (side === 0 && b[3] === a[1] && b[0] < a[2] && b[2] > a[0]) return true; if (side === 2 && b[1] === a[3] && b[0] < a[2] && b[2] > a[0]) return true;
+      if (side === 3 && b[2] === a[0] && b[1] < a[3] && b[3] > a[1]) return true; if (side === 1 && b[0] === a[2] && b[1] < a[3] && b[3] > a[1]) return true; } return false; }
+    if (t(0)) B2.z0 = a[1] * CT; if (t(2)) B2.z1 = a[3] * CT; if (t(3)) B2.x0 = a[0] * CT; if (t(1)) B2.x1 = a[2] * CT; }); })();
 var BG = 32, BGW = Math.ceil(WX / BG), BGRID = {};
 function gridAdd(G, x0, z0, x1, z1, o) { for (var j = Math.floor(z0 / BG); j <= Math.floor(z1 / BG); j++) for (var i = Math.floor(x0 / BG); i <= Math.floor(x1 / BG); i++) { var k = j * BGW + i; (G[k] || (G[k] = [])).push(o); } }
 BLD.forEach(function (b) { if (b.solid) gridAdd(BGRID, b.x0, b.z0, b.x1, b.z1, b); });

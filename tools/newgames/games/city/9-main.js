@@ -11,18 +11,18 @@ function startGame(fresh) {
   G.time = SV.time; G.day = SV.day; G.chapter = SV.chapter; PEDS = []; VEH = []; PICKUPS = []; FX = [];
   var at = SV.pos || startSpot(); newPlayer(at[0], at[1], at[2] || 0); P.hp = SV.maxHp; CAM.x = P.x - 4; CAM.y = P.y + 3; CAM.z = P.z - 4;
   solidsAround(P.x, P.z, 70); G.mode = 'play'; worldSetup();
-  if (!SV.intro) playIntro(); else bigText(districtName(P.x, P.z), null, '#f1e7d0', 2.5);
+  if (G.guest) {} else if (!SV.intro) playIntro(); else bigText(districtName(P.x, P.z), null, '#f1e7d0', 2.5);
   if (typeof radioInit === 'function') radioInit();
 }
 function playIntro() {
   SV.intro = 1; persist(); G.time = 21.5; var bus = makeVeh('van', P.x + Math.sin(P.a + 1.6) * 5, P.z + Math.cos(P.a + 1.6) * 5, P.a, { col: 2 }); bus.keep = 0;
-  startCutscene([['lab', 'Oi! Cumhead! Over here! Welcome to Cum City!'], ['lab', 'Shithead Laboozie, at your service. I run the Clubhouse now. Well, I sit in it.'], ['lab', 'Every door is open, every car is a taxi if you are brave, and everyone in this city wants a favour.'], ['lab', 'Find the yellow markers. That is where people want you. Come and see me in the Clubhouse when you are ready.'], ['lab', 'And Cumhead? Stay away from the Crimson Peak at midnight. Just... a feeling.']],
+  startCutscene([['lab', 'Oi! Cumhead! Over here! Welcome back to Cum City, Mister Mayor!'], ['lab', 'Shithead Laboozie, Sheriff of Cum City, at your service. Badge and everything. I keep the peace. Mostly I keep the Clubhouse sofa warm.'], ['lab', 'While you were away the place went to the dogs. Somebody has to get it back in line, and the mayor is the man for the job.'], ['lab', 'Every door is open, every car is a taxi if you are brave, and everyone in this city wants a favour.'], ['lab', 'Find the yellow markers. That is where your people want you. Come and see me in the Clubhouse when you are ready. There is a sofa, a telly and a SprayStation in there.'], ['lab', 'And Cumhead? Stay away from the Crimson Peak at midnight. Just... a feeling.']],
     function () { bigText('CUM CITY NIGHTS', 'Clubhouse Row, Cum City', '#c4121c', 4); });
 }
 (function () { ['pn-voice/voices.js', 'ccn-radio/radio.js'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.onerror = function () {}; document.head.appendChild(s); }); })();
 function startSpot() { var d = doorOf(SHOPS.club.b); return [d.x + Math.sin(d.a) * 3, d.z + Math.cos(d.a) * 3, d.a]; }
 function update(dt) {
-  G.t += dt; padMode();
+  G.t += dt; if (G.spray) return; gpStep(); padMode();
   if (G.mode === 'map') { stepMap(dt); return; }
   if (G.mode === 'fly') { flyStep(dt); return; }
   if (G.mode !== 'play' || !P) return;
@@ -34,8 +34,8 @@ function update(dt) {
   if (P.state === 'dead') { G.deadT += dt; if (G.deadT > 3.5) respawn(); }
   else if (P.state === 'foot') stepFoot(dt);
   else if (P.state === 'enter') stepEnter(dt);
-  else if (P.state === 'car' && P.veh) { var inp = vehInput(); stepVehicle(P.veh, inp, dt); carHits(dt); P.x = P.veh.x; P.z = P.veh.z; P.y = P.veh.y; G.lookBack = KIT.held('lb') && P.veh.t.cls === 'car';
-    if (KIT.pressed('y') && !G.cut) { if (G.carUse && !G.mission) G.carUse.fn(); else exitVehicle(); } if (KIT.pressed('rb')) radioNext(); SV.stats.miles += Math.abs(P.veh.sp) * dt / 1609;
+  else if (P.state === 'car' && P.veh) { var inp = vehInput(); stepVehicle(P.veh, inp, dt); carHits(dt); P.x = P.veh.x; P.z = P.veh.z; P.y = P.veh.y; G.lookBack = (KIT.held('lb') || gpHeld(11)) && P.veh.t.cls === 'car';
+    if (KIT.pressed('y') && !G.cut) { if (G.carUse && !G.mission) G.carUse.fn(); else exitVehicle(); } if (KIT.pressed('rb') || gpPressed(15)) radioNext(); if (gpPressed(14)) radioPrev(); if (gpPressed(13)) mapMenu(null); SV.stats.miles += Math.abs(P.veh.sp) * dt / 1609;
     if (P.veh && P.veh.t.cls === 'car' && dayLight(G.time) < 0.5) { var v = P.veh; G.headlight = { p: [v.x + Math.sin(v.a) * v.t.len * 0.5, v.y + 0.9, v.z + Math.cos(v.a) * v.t.len * 0.5], d: [Math.sin(v.a) * 0.96, -0.25, Math.cos(v.a) * 0.96], c: [1.6, 1.4, 1.1] }; } else G.headlight = null; }
   if (P.state !== 'car') G.headlight = null;
   stepCamera(dt);
@@ -46,6 +46,7 @@ function update(dt) {
   if (typeof stepMission === 'function') stepMission(dt);
   if (typeof stepRadio === 'function') stepRadio(dt);
   if (typeof stepDrugs === 'function') stepDrugs(dt);
+  if (typeof stepStim === 'function') stepStim(dt); if (typeof netStep === 'function') netStep(dt); if (typeof stepPets === 'function') stepPets(dt);
   if (G.interior) stepRobbery(dt); if (G.arcade) stepArcade(dt); if (G.noCops > 0) G.noCops -= dt;
   if (G.fade > 0) G.fade -= dt;
   G.dynLights = (G.dynLights || []).filter(function (L) { if (L.life === undefined) return true; L.life -= dt; return L.life > 0; });
@@ -98,7 +99,7 @@ function drawFx() {
 }
 /* ---------- drawing everything ---------- */
 function draw() {
-  var ctx = KIT.ctx; ctx.clearRect(0, 0, KIT.W, KIT.H);
+  if (G.spray) return; var ctx = KIT.ctx; ctx.clearRect(0, 0, KIT.W, KIT.H);
   if (!R3.ok) { tx('This game needs WebGL, and this device has not got it.', 20, 40, { size: 10 }); return; }
   if (G.mode === 'title' || !P) { if (G.mode === 'title') drawTitleBack(); return; }
   if (G.mode === 'map') { drawMap(); return; }
@@ -126,7 +127,7 @@ function drawPed(p) {
   else { if (p.sp > 0.3) poseWalk(Q, p.ph, Math.min(1, p.sp / 1.5), p.sp > 3); if (p.state === 'flee') { Q.sh[0] = [2.4, 0.5, 0]; Q.sh[1] = [2.4, 0.5, 0]; } if (p.handsUp) poseHandsUp(Q); if (p.cower) poseCower(Q); }
   if (p.atkT > 0) { if (p.wpn) poseAim(Q, 'handgun', p.atkT); else posePunch(Q, 1 - p.atkT / 0.35); } else if (p.wpn && p.state === 'fight') poseAim(Q, 'handgun', 0);
   if (p.who === 'tb' && typeof tbTwitch === 'function') tbTwitch(Q, p);
-  drawPerson(p.rig, p.x, p.y, p.z, p.a, Q, { held: p.wpn ? RIGS[WPN[p.wpn].mesh] : p.holding ? RIGS[p.holding] : null, heldP: -Math.PI / 2, flash: p.flash > 0 ? [0.6, 0, 0] : null, sc: p.sc });
+  drawPerson(p.rig, p.x, p.y, p.z, p.a, Q, { held: p.wpn ? RIGS[WPN[p.wpn].mesh] : p.holding ? RIGS[p.holding] : null, heldP: -Math.PI / 2, flash: p.flash > 0 ? [0.6, 0, 0] : null, sc: p.sc, noShadow: dist2(p.x, p.z, CAM.x, CAM.z) > 625 });
   p.flash = Math.max(0, (p.flash || 0) - 1 / 60);
 }
 function drawCutBars() { var ctx = KIT.ctx, h = KIT.H * 0.1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, KIT.W, h); ctx.fillRect(0, KIT.H - h, KIT.W, h);
@@ -135,16 +136,16 @@ function drawCutBars() { var ctx = KIT.ctx, h = KIT.H * 0.1; ctx.fillStyle = '#0
 /* ---------- menus ---------- */
 function pauseMenu() { if (G.mode !== 'play' || !P) return; persist(); KIT.menu({ cls: 'clear', title: 'Paused', sub: districtName(P.x, P.z) + ' · ' + SEASONS[season()] + ' · $' + Math.floor(SV.money).toLocaleString('en-GB'), items: [
   { label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'MAP', fn: function () { mapMenu(); } }, { label: 'MISSIONS', fn: missionsMenu }, { label: 'THE MYSTERY', fn: mysteryMenu }, { label: 'STATS', fn: statsMenu },
-  { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: 'SAVE AND QUIT', fn: function () { persist(); titleMenu(); } }] }); }
+  { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: G.guest ? 'LEAVE CO-OP' : 'SAVE AND QUIT', fn: function () { persist(); if (typeof netLeave === 'function' && NET.role) netLeave(); titleMenu(); } }] }); }
 function statsMenu() { var s = SV.stats; KIT.menu({ title: 'Stats', html: '<p>Money earned: $' + Math.floor(s.earned).toLocaleString('en-GB') + '<br>Miles driven: ' + s.miles.toFixed(1) + '<br>People flattened or worse: ' + s.kills + '<br>Wasted: ' + s.deaths + ' · Busted: ' + s.busted + '<br>Shops robbed: ' + s.robbed + '<br>Stunt jumps: ' + Object.keys(SV.stuntsDone).length + ' of ' + STUNTS.length + '<br>Street races won: ' + Object.keys(SV.races).length + ' of ' + RACES.length + '<br>Lost Loads found: ' + Object.keys(SV.packages).length + ' of ' + PACKAGES.length + '<br>Mystery clues: ' + Object.keys(SV.clues).length + ' of ' + CLUES.length + '<br>Houses owned: ' + SV.houses.length + ' · Cars in your garages: ' + SV.cars.length + '<br>Missions done: ' + Object.keys(SV.done).length + ' of ' + MISSIONS.length + '</p>', items: [{ label: 'BACK', back: true, fn: pauseMenu }] }); }
 function optsMenu() { KIT.menu({ title: 'Options', items: [R3.resItem(optsMenu), { label: 'VIEW DISTANCE: ' + (VIEWR >= 380 ? 'FAR' : VIEWR >= 300 ? 'NORMAL' : 'NEAR'), fn: function () { VIEWR = VIEWR >= 380 ? 200 : VIEWR >= 300 ? 400 : 300; try { localStorage.setItem('ccn-view', VIEWR); } catch (e) {} optsMenu(); } },
   { label: 'RADIO: ' + (SV.radioOff ? 'OFF' : 'ON'), fn: function () { SV.radioOff = !SV.radioOff; if (SV.radioOff) radioOff(); optsMenu(); } }, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>On foot:</b> left stick walks, <b>B</b> (or Shift) runs, <b>A</b> jumps, <b>X</b> hits or shoots, hold <b>LB</b> (Q) to aim and lock on, <b>RB</b> (E key: R) swaps weapons, <b>Y</b> gets in a car, goes through a door or talks.</p><p><b>Driving:</b> stick or <b>A</b> / RT to go, <b>B</b> / LT to brake and reverse, <b>X</b> handbrake, <b>Y</b> to get out, <b>RB</b> changes the radio, hold <b>LB</b> to look behind. Helicopters: A up, B down, the stick flies. Planes: A throttle, pull back to take off.</p><p>Yellow markers are missions. Do crime and the police come: lose them out of sight or wash your car at The Cream Wash. Buy houses at Load Estates to save and keep cars. Cars at Cum Motors. Guns at Saba\'s.</p>', items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
+function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Controller (like GTA):</b> left stick moves, right stick looks. On foot: <b>A</b> sprint, <b>X</b> jump, <b>B</b> punch / hit, <b>LT</b> aim, <b>RT</b> shoot, <b>LB</b> next weapon, <b>Y</b> gets in a car, goes through a door or talks. Driving: <b>RT</b> accelerate, <b>LT</b> brake and reverse, <b>RB</b> handbrake, <b>Y</b> get out, <b>d-pad left / right</b> radio station, <b>d-pad down</b> map, click the right stick to look behind.</p><p><b>Touch:</b> the buttons say what they do and change when you get in a car (GAS, BRAKE, H.BRAKE, EXIT, LOOK, RADIO).</p><p><b>Keyboard:</b> WASD move, Shift run, Space jump / gas, X brake, C hit / handbrake, Q aim, E or F car / door / talk, R radio / next weapon, M map.</p><p>Yellow markers are missions. Do crime and the police come: lose them out of sight or wash your car at The Cream Wash. Buy houses at Load Estates to save and keep cars. Cars at Cum Motors. Guns at Saba\'s.</p>', items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
 function titleMenu() {
   G.mode = 'title'; P = null; KIT.closeMenu(); if (typeof radioOff === 'function') radioOff(); music.play('ccntitle');
   var started = SV.intro;
   KIT.menu({ cls: 'clear', logo: '../assets/ccn-logo.webp', title: 'Cum City Nights', items: [{ label: started ? 'CONTINUE' : 'NEW GAME', cls: 'hot', def: true, fn: function () { startGame(false); } },
-    started ? { label: 'NEW GAME', fn: function () { KIT.confirm({ title: 'Start Again?', sub: 'Everything you own in Cum City is gone.', yesLabel: 'Start again', yes: function () { startGame(true); }, no: titleMenu }); } } : null, { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }] });
+    started ? { label: 'NEW GAME', fn: function () { KIT.confirm({ title: 'Start Again?', sub: 'Everything you own in Cum City is gone.', yesLabel: 'Start again', yes: function () { startGame(true); }, no: titleMenu }); } } : null, { label: 'ONLINE CO-OP', fn: function () { onlineMenu(); } }, { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }] });
 }
 var TITLECAM = 0;
 function drawTitleBack() { // a slow flight over the city behind the menu
@@ -152,9 +153,9 @@ function drawTitleBack() { // a slow flight over the city behind the menu
   updateChunks(x, z, 8); G.time = 20.5; var look = worldLook(); R3.begin([look.fog[0], look.fog[1], look.fog[2]]); R3.setCam([x, y, z], [x + Math.cos(t) * 60, 30, z - Math.sin(t) * 60], 1.0); drawSky(look); drawWorld(look);
 }
 function flyStep(dt) { var s = KIT.stick(0), r = KIT.stick(1), c = G.fly; c.yaw -= r.x * dt * 1.6; c.pit = clamp(c.pit - r.y * dt * 1.2, -1.4, 1.2); var fx = Math.sin(c.yaw), fz = Math.cos(c.yaw), sp = 60; c.x += (fx * -s.y - fz * s.x) * sp * dt; c.z += (fz * -s.y + fx * s.x) * sp * dt; CAM.x = c.x; CAM.y = c.y; CAM.z = c.z; CAM.at = [c.x + fx * Math.cos(c.pit), c.y + Math.sin(c.pit), c.z + fz * Math.cos(c.pit)]; }
-try { var vr = +localStorage.getItem('ccn-view'); if (vr) VIEWR = vr; } catch (e) {}
-KIT.setKeymap({ KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
-KIT.start({ w: W, h: H, flex: 720, update: update, draw: draw, onPause: pauseMenu, startPauses: true, idleUpdate: function (dt) { if (G.mode === 'play' && typeof stepRadio === 'function') stepRadio(dt); },
+try { var vr = +localStorage.getItem('ccn-view'); if (vr) VIEWR = vr; else if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) VIEWR = 240; } catch (e) {} // update 156: phones see a little less by default (less to build and keep)
+KIT.setKeymap({ Shift: 'run', KeyG: 'swap', KeyH: 'hb', KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
+KIT.start({ padIdle: function () { return !!G.spray; }, onSelect: function () { if (G.spray) sprayClose(); }, w: W, h: H, flex: 720, padKeys: { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'Shift', b: 'c', x: 'z', y: 'f', lb: 'g', rb: 'h' }, update: update, draw: draw, onPause: pauseMenu, startPauses: true, idleUpdate: function (dt) { if (G.mode === 'play' && typeof netStep === 'function') netStep(dt); if (G.mode === 'play' && typeof stepRadio === 'function') stepRadio(dt); },
   pad: { sticks: true, btns: [{ k: 'b', label: 'B', sub: 'RUN' }, { k: 'a', label: 'A', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'HIT' }, { k: 'y', label: 'Y', sub: 'CAR' }, { k: 'lb', label: 'LB', sub: 'AIM' }, { k: 'rb', label: 'RB', sub: 'SWAP' }] } });
 titleMenu();
 window.__cc = { G: G, get P() { return P; }, get SV() { return SV; }, get PEDS() { return PEDS; }, get VEH() { return VEH; }, get CHUNKS() { return CHUNKS; }, startGame: startGame, persist: persist,

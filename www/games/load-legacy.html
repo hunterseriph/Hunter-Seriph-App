@@ -501,7 +501,7 @@ var music = (function () {
       else if (ac === 'arp8') for (s = 0; s < bar; s += 2) ev[base + s].push({ k: 'arp', n: tones[[0, 1, 2, 1][(s / 2) % 4]] + 12, d: 1.8 });
       else if (ac === 'organ') ev[base].push({ k: 'organ', ns: tones.map(function (t) { return t - 12; }), d: bar });
       else if (ac === 'stabs') { [4, 8].forEach(function (s2) { ev[base + s2].push({ k: 'stab', ns: tones, d: 2.5 }); }); }
-      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
+      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2 && ev[base + 14]) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
       if (sp.drums) { var kit = KITS[sp.drums], pat = kit[(b % 4 === 3) ? 1 : 0]; for (s = 0; s < bar; s++) { var dch = pat[s % pat.length]; if (dch !== '.') ev[base + s].push({ k: 'drum', t: dch }); } }
       if (sp.acc === 'organ' && sp.bass === 'drone') ev[base].push({ k: 'organ', ns: [root + 12], d: bar });
     }

@@ -487,7 +487,7 @@ var KIT = (function () {
     cfg = o; W = o.w || 480; H = o.h || 270; S = 0; fit();
     buildPad(o.pad);
     if (window.HSPad) HSPad.setup({ menu: function () { return menuOpen() ? menuEl : null; }, keys: o.padKeys || { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' },
-      onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
+      idle: o.padIdle, onSelect: o.onSelect, onStart: function () { if (o.onPause && !menuOpen()) o.onPause(); }, touch: '#pad', toggleAfter: '#mute', toggleClass: 'tbtn' });
     var mb = document.getElementById('mute'); if (mb) { mb.classList.toggle('off', muted); mb.addEventListener('click', function () { sfx.setMuted(!muted); mb.classList.toggle('off', muted); if (!muted) audioInit(); }); }
     var pb = document.getElementById('pauseBtn'); if (pb) pb.addEventListener('click', function () { if (o.onPause && !menuOpen()) o.onPause(); });
     requestAnimationFrame(frame);
@@ -641,7 +641,7 @@ var music = (function () {
       else if (ac === 'arp8') for (s = 0; s < bar; s += 2) ev[base + s].push({ k: 'arp', n: tones[[0, 1, 2, 1][(s / 2) % 4]] + 12, d: 1.8 });
       else if (ac === 'organ') ev[base].push({ k: 'organ', ns: tones.map(function (t) { return t - 12; }), d: bar });
       else if (ac === 'stabs') { [4, 8].forEach(function (s2) { ev[base + s2].push({ k: 'stab', ns: tones, d: 2.5 }); }); }
-      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
+      else if (ac === 'bell') { R = (R * 9301 + 49297) % 233280; if (R % 3 !== 0) ev[base + 6].push({ k: 'bell', n: tones[R % 3] + 12, d: 6 }); R = (R * 9301 + 49297) % 233280; if (R % 2 && ev[base + 14]) ev[base + 14].push({ k: 'bell', n: tones[R % 3] + 24, d: 6 }); }
       if (sp.drums) { var kit = KITS[sp.drums], pat = kit[(b % 4 === 3) ? 1 : 0]; for (s = 0; s < bar; s++) { var dch = pat[s % pat.length]; if (dch !== '.') ev[base + s].push({ k: 'drum', t: dch }); } }
       if (sp.acc === 'organ' && sp.bass === 'drone') ev[base].push({ k: 'organ', ns: [root + 12], d: bar });
     }
@@ -2260,6 +2260,7 @@ SEC.pocket = function (b, gate) { // the cracked wall at the end and what it hid
   b.ground(14); return b; };
 /* ---------- digging the deep ---------- */
 function underRoutes(b, a) {
+  if (a.sonic) { b.unders = []; return; } // update 144: Sonic structure, no single deep under the act (5i-sonic.js)
   /* ONE way under the whole act (his ask: a whole path down there through the different areas, not pockets you have to
      come up out of): from just after the start to just before the sign or the arena. Its roof follows the lowest open
      space of each column above it (street, low roads, tunnels, caves) plus a crust; gaps in the street simply open into it.
@@ -3241,6 +3242,171 @@ function uniqAct(a) {
 (function () { var bA = buildAct; buildAct = function (a) { if (!a.gimDone) uniqAct(a); return bA(a); }; })();
 
 /* =====================================================================================================
+   SONIC 3 STRUCTURE (his ask: the bottom way was one massive cave, the top way one long path, traps lined up, no
+   umph. Sonic 3 levels have mechanics of their own per zone, go up, and sometimes double back to the left).
+   Every act is rebuilt from these pieces instead of long parallel lanes and one continuous deep:
+     switchback  an S climb: run right along the bottom, up at the end, back LEFT along the floor above, up again,
+                 out to the right two (or four) floors higher
+     corkscrew   the same going down through the ground: drop at the end, run back left, drop, out to the right
+     tower       a tall shaft climbed by the zone's own means (lifts, steam, bumpers, crumbling ledges, a fire escape)
+     split       the way forks for a stretch: a high road over the top or down into a trench with its own mechanic,
+                 and they meet again
+   and each zone has its own mechanics (SIG) that come back again and again in new arrangements, the way Carnival Night
+   keeps its barrels and Hydrocity its water, instead of the director handing every act one of everything.
+   The test bot follows the waypoints the pieces leave ('wp' things, LV.wp).
+   ===================================================================================================== */
+function sRect(b, c0, c1, r0, r1, ch) { for (var c = c0; c < c1; c++) for (var r = r0; r < r1; r++) b.set(c, r, ch); }
+function sCol(b, c, top, ch) { for (var r = top; r < b.ROWS; r++) b.set(c, r, '#'); if (ch) b.set(c, top, ch); b.top[c] = top; }
+function sWP(b, c, row, sp) { b.ent('wp', c, row - 1, sp ? { sp: 1 } : null); }
+function sChamber(b, c0, c1) { b.caves.push({ c0: c0, c1: c1, ch: 1 }); } // no shop fronts or street furniture inside, no cave torches
+/* the zone's own things along a floor of a switchback or corkscrew (a .. z columns, surface row, which way you run) */
+function sDress(b, zid, a, z, row, dir, k, hard) {
+  var n = z - a, at = function (f) { return Math.floor(dir > 0 ? a + n * f : z - n * f); };
+  for (var c = a + 2; c < z - 2; c += 3) b.ent('drop', c, row - 2);
+  if (n < 12) return;
+  if (zid === 'city') { b.ent('foe', at(0.5), row, { f: k % 2 ? 'n' : 'm' }); if (hard || k % 2) { b.set(at(0.75), row - 1, '^'); b.set(at(0.75) + 1, row - 1, '^'); } }
+  else if (zid === 'sewer') { var c0 = at(0.25), c1 = at(0.7); for (var c2 = Math.min(c0, c1); c2 < Math.max(c0, c1); c2++) b.set(c2, row, dir > 0 ? '-' : '_'); b.ent('foe', at(0.85), row, { f: 'p' }); } // conveyors running against you
+  else if (zid === 'park') { b.ent('bumper', at(0.4), row - 3); b.ent('foe', at(0.7), row, { f: 'm' }); if (hard) b.ent('bumper', at(0.8), row - 3); }
+  else if (zid === 'bone') { if (k > 0) { var cc = at(0.5); for (var x = 0; x < 3; x++) { b.set(cc + x, row, '.'); b.set(cc + x, row + 1, '.'); b.ent('crumble', cc + x, row, { w: 1 }); } } // crumbles drop you to the floor below: back you go
+    b.ent('foe', at(0.25), row, { f: 'n' }); }
+  else if (zid === 'factory') { var f0 = at(0.15), f1 = at(0.6); for (var c3 = Math.min(f0, f1); c3 < Math.max(f0, f1); c3++) b.set(c3, row, dir > 0 ? '-' : '_'); b.ent('jet', at(0.8), row, { ph: k * 0.7 }); if (hard) b.ent('jet', at(0.35), row, { ph: k * 0.7 + 1 }); }
+  else { var e0 = at(0.3); for (var q = 0; q < 3; q++) b.set(e0 + q, row, 'Q'); b.ent('zap', e0 + 1, row, { ph: k * 0.8 }); b.ent('saw', at(0.7), row - 1, { ph: k, vert: 0 }); }
+}
+function sZone(b) { return b.zone ? b.zone.id : 'city'; }
+
+/* ---------- switchback: up through floors, running right, left, right ---------- */
+SEC.switchback = function (b, floors, len, hard, gate) {
+  floors = floors >= 4 ? 4 : 2; len = Math.max(32, len || 36);
+  var H = b.h; if (H - 8 * floors < HMIN + 2) { if (floors === 4 && H - 16 >= HMIN + 2) floors = 2; else return SEC.corkscrew(b, floors, len, hard, gate, true); }
+  b.ground(4); var c0 = b.col, c1 = c0 + len, top = H - 8 * floors, zid = sZone(b);
+  for (var c = c0; c < c1; c++) sCol(b, c, H);
+  sRect(b, c0, c0 + 1, top - 4, H - 4, '#'); // the left wall: in under it, the floors above end at it
+  sDress(b, zid, c0 + 4, c1 - 10, H, 1, 0, hard);
+  for (var k = 1; k <= floors; k++) {
+    var R = H - 8 * k, left = k % 2 === 1, a = left ? c0 + 1 : c0 + 9, z = left ? c1 - 9 : c1;
+    sRect(b, a, z, R, R + 2, '#'); for (var ce = 0; ce < 3; ce++) { var cx = left ? z - 1 - ce : a + ce; b.set(cx, R, '='); b.set(cx, R + 1, '.'); } // the end you climb onto is a thin lip, so its edge never stops you at chest height
+    for (var cz = a; cz < z; cz++) b.top[cz] = Math.min(b.top[cz] === null || b.top[cz] === undefined ? 999 : b.top[cz], R);
+    // the way up from the floor below: two ledges in the opening
+    var Rb = R + 8;
+    // (the higher ledge stands two columns clear of the floor's end, so there is room to rise above its edge)
+    // and a spring in the corner for the quick way (Sonic style: up, and drift back over the floor above)
+    if (left) { b.ledge(c1 - 5 - b.col, H - (Rb - 3), 3, '='); b.ledge(c1 - 8 - b.col, H - (Rb - 6), 3, '='); b.ent('spring', c1 - 1, Rb, { pow: 1 }); sWP(b, c1 - 1, Rb, 1); }
+    else { b.ledge(c0 + 3 - b.col, H - (Rb - 3), 3, '='); b.ledge(c0 + 6 - b.col, H - (Rb - 6), 3, '='); b.ent('spring', c0 + 1, Rb, { pow: 1 }); sWP(b, c0 + 1, Rb, 1); }
+    if (k < floors) { sDress(b, zid, a + (left ? 1 : 8), z - (left ? 8 : 1), R, left ? -1 : 1, k, hard); sWP(b, left ? a + 3 : z - 4, R); }
+    else { sWP(b, a + 2, R); sDress(b, zid, a + 1, z - 2, R, 1, k, hard); if (gate) b.ent('portal', a + 6, R - 1); }
+  }
+  // a box tucked in the far corner of the first floor up: worth the run back
+  b.ent('box', c0 + 2, H - 8 - 1, { item: hard ? 'shield' : 'drops' });
+  sChamber(b, c0, c1); b.col = c1; b.h = top; b.ground(6); sWP(b, b.col - 3, top); return b;
+};
+/* ---------- corkscrew: down through the ground, running right, left, right ---------- */
+SEC.corkscrew = function (b, floors, len, hard, gate, noFlip) {
+  floors = floors >= 4 ? 4 : 2; len = Math.max(32, len || 36);
+  var H = b.h; if (H + 8 * floors > HMAX) { if (noFlip) { b.ground(len); return b; } return SEC.switchback(b, floors, len, hard, gate); }
+  b.ground(4); var c0 = b.col, c1 = c0 + len, bot = H + 8 * floors, zid = sZone(b);
+  for (var c = c0; c <= c1; c++) sCol(b, c, H);
+  sRect(b, c0 + 1, c1, H + 2, bot, 'k'); // dug out under the floor you came in on
+  sRect(b, c1 - 6, c1, H, H + 2, 'k'); for (var oc = c1 - 6; oc < c1; oc++) b.top[oc] = bot; // the hole at the end of the top floor
+  sDress(b, zid, c0 + 1, c1 - 7, H, 1, 0, hard); sWP(b, c1 - 3, H + 4);
+  for (var k = 1; k <= floors; k++) {
+    var R = H + 8 * k, right = k % 2 === 1, a = right ? c0 + 7 : c0 + 1, z = right ? c1 : (k === floors ? c1 + 1 : c1 - 6);
+    sRect(b, a, z, R, R + 2, '#');
+    if (k < floors) { sDress(b, zid, a + (right ? 1 : 1), z - 1, R, right ? -1 : 1, k, hard); sWP(b, right ? a + 2 : z - 3, R); sWP(b, right ? c0 + 3 : c1 - 3, R + 4); }
+    else sDress(b, zid, a + 2, z - 2, R, 1, k, hard);
+  }
+  sRect(b, c1, c1 + 1, H + 2, bot - 3, '#'); sRect(b, c1, c1 + 1, bot - 3, bot, 'k'); // the cliff face you come out of
+  for (var cb = c1; cb <= c1; cb++) { for (var r = bot; r < b.ROWS; r++) b.set(cb, r, '#'); }
+  if (gate) b.ent('portal', c0 + 4, H + 8 * (floors - 1) - 1);
+  sChamber(b, c0, c1 + 1); b.col = c1 + 1; b.h = bot; b.ground(6); sWP(b, b.col - 3, bot); return b;
+};
+/* ---------- tower: a tall shaft, climbed the zone's way ---------- */
+SEC.tower = function (b, rise, hard, gate) {
+  var H = b.h; rise = Math.min(rise || 24, H - HMIN - 2); if (rise < 15) return SEC.corkscrew(b, 2, 36, hard, gate, true);
+  b.ground(4); var w = 16, c0 = b.col, c1 = c0 + w, zid = sZone(b), m = Math.ceil((rise - 3) / 3);
+  for (var c = c0; c < c1; c++) sCol(b, c, H);
+  sRect(b, c0, c0 + 1, H - rise - 6, H - 4, '#'); // the left wall
+  for (var i = 1; i <= m; i++) {
+    var row = H - 3 * i, R = (m - i) % 2 === 0, cl = R ? c0 + 10 : c0 + 2, cw = R ? 6 : 5, mid = cl + Math.floor(cw / 2);
+    var kind = zid === 'factory' || zid === 'brain' ? (i % 2 && i < m ? 'lift' : 'ledge') : zid === 'bone' ? (i % 3 === 1 && i < m ? 'crumble' : 'ledge') : 'ledge';
+    if (kind === 'lift') b.ent('movv', cl + 1, row, { w: 4, range: 1.2 });
+    else if (kind === 'crumble') for (var x = 0; x < cw; x++) b.ent('crumble', cl + x, row, { w: 1 });
+    else for (var x2 = 0; x2 < cw; x2++) b.set(cl + x2, row, '=');
+    b.ent('drop', mid, row - 2); sWP(b, mid, row);
+    if (zid === 'sewer' && i % 3 === 2) b.ent('vent', mid, row, { ph: i * 0.5 }); // steam helps you up
+    if (zid === 'park' && i % 4 === 2) b.ent('bumper', R ? c0 + 3 : c0 + 13, row - 1); // bumpers by the walls, bouncing you about if you stray
+    if (zid === 'brain' && i % 4 === 3) b.ent('saw', c0 + 8, row - 1, { ph: i, vert: 0 });
+    if (i % 5 === 3) b.ent('foe', c0 + 8, row - 2, { f: 'w' });
+  }
+  if (zid === 'sewer') b.ent('vent', c0 + 7, H, { ph: 0 });
+  if (zid === 'park') b.ent('spring', c0 + 7, H, { pow: 1 }); // a spring shortcut part of the way
+  if (gate) { sRect(b, c0 + 1, c0 + 6, H - 3 * m - 3, H - 3 * m - 1, '#'); b.ent('portal', c0 + 3, H - 3 * m - 4); } // a nook at the top, up and back left
+  else { sRect(b, c0 + 1, c0 + 5, H - 3 * m - 3, H - 3 * m - 1, '#'); b.ent('box', c0 + 3, H - 3 * m - 4, { item: hard ? 'shield' : 'shoes' }); }
+  sChamber(b, c0, c1); b.col = c1; b.h = H - 3 * m; b.ground(8); sWP(b, b.col - 4, b.h); return b;
+};
+/* ---------- split: a high road over the top, or down into a trench with the zone's mechanic ---------- */
+SEC.split = function (b, spec, hard) {
+  var H = b.h, deep = H + 7 <= HMAX ? 7 : 0; spec = spec || {};
+  b.ground(3); var s0 = b.col; b.ledge(1, 3, 3, '='); b.ground(5);
+  if (deep) b.down(deep, true); else b.ground(4);
+  (spec.low || [['run', 20, 'm']]).forEach(function (p) { SEC[p[0]].apply(null, [b].concat(p.slice(1))); });
+  if (deep) b.up(deep, true); b.ground(5); var E = b.col;
+  var T = Builder(b.zone, b.seed + 313 + s0); T.col = s0 + 5; T.h = H - 6;
+  (spec.up || [['run', 10], ['gaps', 2, 4], ['run', 10, 'w']]).forEach(function (p) { if (T.col < E - 14) SEC[p[0]].apply(null, [T].concat(p.slice(1))); });
+  while (T.col < E - 5) T.ground(1);
+  for (var c = s0 + 5; c < E - 5; c++) { var tt = T.top[c]; if (tt === null || tt === undefined) continue;
+    for (var y = tt - 12; y < tt; y++) { var ch = T.get(c, y); if (ch !== '.') b.set(c, y, ch); }
+    b.set(c, tt, T.get(c, tt)); b.set(c, tt + 1, '#');
+    if ((c - s0) % 14 === 7 && deep) for (var y2 = tt + 2; y2 < (b.top[c] === null || b.top[c] === undefined ? H + deep : b.top[c]); y2++) if (b.get(c, y2) === '.') b.set(c, y2, 'k'); } // girders under the deck (behind you, not in the way)
+  T.ents.forEach(function (e) { if (e.c >= s0 + 5 && e.c < E - 5) b.ents.push(e); });
+  if (spec.gate) { var gc = E - 12; while (gc > s0 + 10 && T.top[gc] !== T.top[gc + 1]) gc--; b.ent('portal', gc, (T.top[gc] || H - 6) - 1); }
+  b.ent('box', s0 + 9, H - 7, { item: 'drops' });
+  b.h = H; return b;
+};
+
+/* crumbling bones over a spiked trench you can climb out of (a crumbling bridge over nothing killed you) */
+SEC.crumblePit = function (b, n) { b.ground(3); var c0 = safePit(b, n); for (var x = 0; x < n; x++) b.ent('crumble', c0 + x, b.h, { w: 1 }); b.drops(-n + 1, Math.floor(n / 2), 2, null, 2); b.ground(4); return b; };
+/* ---------- each zone's own mechanics, in four arrangements, and what its splits hold ---------- */
+var SIG = {
+  city: [[['awnings', 3], ['run', 6, 'm'], ['traffic', 36, 'n']], [['grind'], ['run', 6], ['awnings', 2, 'awning']], [['washlines', 3], ['ramps', 1]], [['traffic', 44, 'p'], ['swingbar'], ['awnings', 3]]],
+  sewer: [[['pool', 22], ['vents', 2]], [['tube'], ['run', 6, 'n'], ['conveyor', 16, 1]], [['rapids'], ['pool', 26, 1]], [['vents', 3], ['tube'], ['pool', 20]]],
+  park: [[['bumpers'], ['loop']], [['barrel'], ['run', 6], ['balloon']], [['trampoline'], ['bumpers']], [['flippers'], ['loop'], ['barrel']]],
+  bone: [[['crumblePit', 8], ['graves', 2]], [['vine'], ['run', 6, 'm'], ['quicksand']], [['chase']], [['graves', 3], ['crumblePit', 10], ['vine']]],
+  factory: [[['conveyor', 18, -1, 'm'], ['jets', 3]], [['lift'], ['crushers', 3]], [['pistons'], ['conveyor', 20, 1]], [['magnet'], ['crushers', 3], ['jets', 3]]],
+  brain: [[['electric', 3], ['saws', 2]], [['beatblocks'], ['run', 6], ['electric', 3]], [['lowgrav']], [['doors'], ['saws', 3, 1], ['beatblocks']]]
+};
+var SPLITS = {
+  city: [{ up: [['run', 8], ['gaps', 2, 4], ['run', 6, 'w'], ['gaps', 1, 5], ['run', 10]], low: [['run', 4], ['traffic', 30, 'n'], ['run', 4, 'm']] },
+         { up: [['run', 6], ['swings', 2], ['gaps', 2, 4], ['run', 10, 'w']], low: [['run', 4, 'n'], ['washlines', 2], ['run', 6, 'm']] }],
+  sewer: [{ up: [['run', 8], ['crumbleBridge', 6], ['run', 6, 'w'], ['gaps', 2, 4], ['run', 8]], low: [['run', 3], ['pool', 26, 1], ['run', 4, 'q']] },
+          { up: [['run', 6], ['conveyor', 14, -1], ['gaps', 2, 4], ['run', 10, 'w']], low: [['run', 4], ['subway', 34, 'wave'], ['run', 4]] }],
+  park: [{ up: [['run', 6], ['dash'], ['gaps', 2, 5], ['run', 8, 'w'], ['gaps', 1, 4], ['run', 8]], low: [['run', 4], ['bumpers'], ['run', 6, 'm']] },
+         { up: [['run', 6], ['subway', 30, 'coaster'], ['run', 8]], low: [['run', 4, 'n'], ['traffic', 30, 'm', 'bumper'], ['run', 4]] }],
+  bone: [{ up: [['run', 6], ['crumbleBridge', 8], ['run', 6, 'w'], ['crumbleBridge', 6], ['run', 8]], low: [['run', 4], ['graves', 3], ['run', 4, 'm']] },
+         { up: [['run', 6], ['gaps', 2, 4], ['swings', 1], ['run', 10, 'w']], low: [['run', 4], ['subway', 34, 'ghost'], ['run', 4]] }],
+  factory: [{ up: [['run', 6], ['conveyor', 14, 1], ['gaps', 2, 4], ['run', 10, 'w']], low: [['run', 4], ['traffic', 30, 'n', 'forklift'], ['run', 4]] },
+            { up: [['run', 8], ['gaps', 2, 4], ['run', 6, 'w'], ['gaps', 1, 5], ['run', 8]], low: [['run', 4], ['subway', 34, 'ore'], ['run', 4, 'm']] }],
+  brain: [{ up: [['run', 6], ['saws', 2], ['gaps', 2, 4], ['run', 8, 'w']], low: [['run', 4], ['electric', 3], ['saws', 2], ['run', 4]] },
+          { up: [['run', 8], ['gaps', 2, 5], ['run', 6, 'w'], ['saws', 1, 1], ['run', 8]], low: [['run', 4], ['subway', 34, 'missile'], ['run', 4]] }]
+};
+function harder(list) { return list.map(function (p) { p = p.slice(); if (typeof p[1] === 'number' && ['awnings', 'vents', 'graves', 'crushers', 'jets', 'electric', 'saws', 'washlines', 'swings'].indexOf(p[0]) >= 0) p[1] = p[1] + 1; return p; }); }
+/* an act, Sonic style: five districts, each with its own climb or fall, the zone's mechanics, a fork and a checkpoint */
+function sonicPlan(a) {
+  var zid = ZONES[a.z].id, hard = a.act === 2, S = SIG[zid].map(function (L) { return hard ? harder(L) : L; }), U = SPLITS[zid], P = [], D = [];
+  a.plan.forEach(function (p) { if (p[0] === 'district' || p[0] === 'cave') D.push(p[1]); });
+  function dist(i) { if (D[i]) P.push([i === 0 ? 'district' : 'cave', D[i]]); }
+  function add(L) { P.push.apply(P, L); }
+  dist(0); add([['start'], ['run', 12, 'm']]); add(S[0]); add([['split', { up: U[0].up, low: U[0].low, gate: true }, hard], ['switchback', 2, hard ? 40 : 34, hard], ['check']]);
+  dist(1); add([['run', 8], ['tower', hard ? 30 : 24, hard, true]]); add(S[1]); add([['plunge', 16], ['run', 8, 'n'], ['split', U[1], hard], ['check']]);
+  dist(2); add([['corkscrew', 2, 36, hard]]); add(S[2]); add([['dash'], ['loop'], ['switchback', hard ? 4 : 2, 36, hard], ['check']]);
+  dist(3); add(S[3]); add([['tower', hard ? 32 : 26, hard], ['bigHill', 10], ['corkscrew', 2, 32, hard], ['check']]);
+  dist(4); if (hard) add([['run', 12], ['arena', ZONES[a.z].boss]]); else { add(S[1].slice(0, 2)); add([['switchback', 2, 34, false], ['run', 10], ['dash'], ['run', 12], ['goal']]); }
+  a.plan = P; a.sonic = 1; a.gimDone = 1; // the director's one-of-everything is off: a zone's own mechanics come back on purpose
+}
+ACTS.forEach(sonicPlan);
+/* waypoints are for the test bot only: out of the act's things into LV.wp */
+(function () { var lA = loadAct; loadAct = function (ai) { lA(ai); LV.wp = ENTS.filter(function (e) { return e.k === 'wp'; }).map(function (e) { return { x: e.x, y: e.y, sp: e.sp }; }); ENTS = ENTS.filter(function (e) { return e.k !== 'wp'; }); }; })();
+
+/* =====================================================================================================
    CUMHEAD: momentum along the ground (slopes speed you up going down and slow you going up), a jump and a
    double jump, a shot (B), stomping foes, and Sonic's rules for drops: get hit holding drops and they scatter
    (grab some back); get hit with none and you lose a life.
@@ -3674,7 +3840,7 @@ function drawWorld() {
     g.drawImage(TSET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
   // torches and chains along the walls of caves and tunnels
-  (LV.caves || []).forEach(function (q) { if (q.c1 * TS < cx || q.c0 * TS > cx + W) return; for (var c = q.c0 + 4; c < q.c1 - 2; c += 9) { var r0 = null; for (var y = r0 = Math.floor(cy / TS); y < r1 + 2; y++) if (T(c, y) === 'k' && isSolid(T(c, y + 1), c, y + 1)) { r0 = y; break; } if (r0 === null || T(c, r0) !== 'k') continue;
+  (LV.caves || []).forEach(function (q) { if (q.ch) return; if (q.c1 * TS < cx || q.c0 * TS > cx + W) return; for (var c = q.c0 + 4; c < q.c1 - 2; c += 9) { var r0 = null; for (var y = r0 = Math.floor(cy / TS); y < r1 + 2; y++) if (T(c, y) === 'k' && isSolid(T(c, y + 1), c, y + 1)) { r0 = y; break; } if (r0 === null || T(c, r0) !== 'k') continue;
       var x = c * TS + 8 - cx, y0 = r0 * TS - cy - 30, fl = Math.floor(G.t * 10 + c) % 3; R('#12040a', x - 3, y0, 6, 10); R('#5a545c', x - 2, y0 + 1, 4, 8); R('#12040a', x - 4, y0 - 6, 8, 6); R(fl ? '#ff9a30' : '#ffe36a', x - 2, y0 - 9 - fl, 4, 6); R('#ffe36a', x - 1, y0 - 6, 2, 3);
       for (var k = 0; k < 40; k += 2) for (var j = -k; j <= k; j += 4) if (((j + k) / 2) % 2 === 0) R('#3a1a0a', x + j, y0 - 6 + k * 0.9, 1, 1);
       var ch = q.c0 * 7 + c; if (ch % 2) { for (var cl = 0; cl < 5 + ch % 4; cl++) R(cl % 2 ? '#3a343c' : '#22202a', x + 36, y0 - 60 + cl * 6, 3, 5); } } });

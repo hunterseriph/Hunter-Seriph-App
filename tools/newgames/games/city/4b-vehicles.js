@@ -96,9 +96,10 @@ function makeVeh(type, x, z, a, o) {
   VEH.push(v); return v;
 }
 function drawVeh(v) {
+  var cd2 = (v.x - CAM.x) * (v.x - CAM.x) + (v.z - CAM.z) * (v.z - CAM.z); if (cd2 > 190 * 190 && v !== (P && P.veh)) return; var far = cd2 > 55 * 55; // update 156: far cars are just their body (fewer draws, he saw slowdown with lots of cars)
   var t = v.t, VM = vmesh(v.type, v.col), m = MD(v.x, v.y, v.z, v.a, v.pitch, v.roll), fl = v.flash > 0 ? [0.6, 0.6, 0.6] : null, burnt = v.dead ? [0.25, 0.22, 0.22] : null;
   R3.draw(VM.body, ATT, { m: m, flash: fl, tint: burnt || [0.82, 0.82, 0.82] });
-  var L = t.len / 2, Wd = t.wid / 2;
+  var L = t.len / 2, Wd = t.wid / 2; if (far && t.cls !== 'heli' && t.cls !== 'plane') return;
   if (t.cls === 'car') [[Wd, L * 0.66, 1], [-Wd, L * 0.66, 1], [Wd, -L * 0.66, 0], [-Wd, -L * 0.66, 0]].forEach(function (w) { R3.draw(VM.wheel, ATT, { m: MM(m, MD(w[0] * (w[0] > 0 ? 1 : 1), VM.wr, w[1], w[2] ? v.steer * 0.5 : 0, v.wheelA, 0)), tint: burnt }); });
   else if (t.cls === 'bike') [[0, t.len * 0.36], [0, -t.len * 0.32]].forEach(function (w, i) { R3.draw(VM.wheel, ATT, { m: MM(m, MD(0, VM.wr, w[1], i ? 0 : v.steer * 0.5, v.wheelA, 0)) }); });
   else if (t.cls === 'board') [[0, t.len * 0.38], [0, -t.len * 0.38]].forEach(function (w) { R3.draw(VM.wheel, ATT, { m: MM(m, MD(0, VM.wr, w[1], 0, v.wheelA, 0)) }); });
