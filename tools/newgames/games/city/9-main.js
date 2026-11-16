@@ -22,7 +22,7 @@ function playIntro() {
 (function () { ['pn-voice/voices.js', 'ccn-radio/radio.js'].forEach(function (src) { var s = document.createElement('script'); s.src = src; s.onerror = function () {}; document.head.appendChild(s); }); })();
 function startSpot() { var d = doorOf(SHOPS.club.b); return [d.x + Math.sin(d.a) * 3, d.z + Math.cos(d.a) * 3, d.a]; }
 function update(dt) {
-  G.t += dt;
+  G.t += dt; padMode();
   if (G.mode === 'map') { stepMap(dt); return; }
   if (G.mode === 'fly') { flyStep(dt); return; }
   if (G.mode !== 'play' || !P) return;
@@ -33,6 +33,7 @@ function update(dt) {
   // you
   if (P.state === 'dead') { G.deadT += dt; if (G.deadT > 3.5) respawn(); }
   else if (P.state === 'foot') stepFoot(dt);
+  else if (P.state === 'enter') stepEnter(dt);
   else if (P.state === 'car' && P.veh) { var inp = vehInput(); stepVehicle(P.veh, inp, dt); carHits(dt); P.x = P.veh.x; P.z = P.veh.z; P.y = P.veh.y; G.lookBack = KIT.held('lb') && P.veh.t.cls === 'car';
     if (KIT.pressed('y') && !G.cut) { if (G.carUse && !G.mission) G.carUse.fn(); else exitVehicle(); } if (KIT.pressed('rb')) radioNext(); SV.stats.miles += Math.abs(P.veh.sp) * dt / 1609;
     if (P.veh && P.veh.t.cls === 'car' && dayLight(G.time) < 0.5) { var v = P.veh; G.headlight = { p: [v.x + Math.sin(v.a) * v.t.len * 0.5, v.y + 0.9, v.z + Math.cos(v.a) * v.t.len * 0.5], d: [Math.sin(v.a) * 0.96, -0.25, Math.cos(v.a) * 0.96], c: [1.6, 1.4, 1.1] }; } else G.headlight = null; }
@@ -102,8 +103,8 @@ function draw() {
   if (G.mode === 'title' || !P) { if (G.mode === 'title') drawTitleBack(); return; }
   if (G.mode === 'map') { drawMap(); return; }
   var look = worldLook(); updateChunks(CAM.x, CAM.z, G.mode === 'play' ? 6 : 14);
-  var pk = G.interior ? 0.85 : 1 - 0.34 * clamp(look.dl, 0, 1); G.ptint = [pk, pk, pk]; window.RIMK = G.interior ? 0.15 : 0.12 + 0.6 * (1 - clamp(look.dl, 0, 1)); R3.begin([look.fog[0], look.fog[1], look.fog[2]]); R3.setCam([CAM.x, CAM.y, CAM.z], CAM.at || [P.x, P.y + 1.4, P.z], P.aim ? 0.85 : 1.05 + (P.veh ? clamp(Math.abs(P.veh.sp) / 60, 0, 0.25) : 0));
-  if (G.interior) drawInterior(look); else { drawSky(look); drawWorld(look); }
+  var pk = G.interior ? 0.85 : 1 - 0.34 * clamp(look.dl, 0, 1); G.ptint = [pk, pk, pk]; window.RIMK = G.interior ? 0.15 : 0.12 + 0.6 * (1 - clamp(look.dl, 0, 1)); if (window.__camFix) __camFix(); R3.begin([look.fog[0], look.fog[1], look.fog[2]]); R3.setCam([CAM.x, CAM.y, CAM.z], CAM.at || [P.x, P.y + 1.4, P.z], P.aim ? 0.85 : 1.05 + (P.veh ? clamp(Math.abs(P.veh.sp) / 60, 0, 0.25) : 0));
+  if (G.interior) drawInterior(look); else { drawSky(look); drawWorld(look); if (window.__extra) window.__extra(); }
   // vehicles and people
   VEH.forEach(function (v) { if (!inView(v.x, v.z, 8) || dist2(v.x, v.z, CAM.x, CAM.z) > 230 * 230) return; if (G.interior && !v.inside) return; drawVeh(v); });
   PEDS.forEach(function (p) { if (p.inVeh) { if (p.inVeh.t.cls === 'bike' || p.inVeh.t.cls === 'board') { var Q2 = pose0(); if (p.inVeh.t.cls === 'board') poseRideStand(Q2); else poseSit(Q2); drawPerson(p.rig, p.inVeh.x, p.inVeh.y + 0.35, p.inVeh.z, p.inVeh.a, Q2, { noShadow: 1 }); } return; }

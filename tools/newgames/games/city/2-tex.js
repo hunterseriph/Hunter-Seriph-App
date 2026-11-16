@@ -19,6 +19,10 @@
     concrete: function (p) { p.fill('#7a7a76'); p.speck(['#6a6a66', '#8a8a86', '#5e5e5a'], 380); p.rect(0, 0, 32, 1, '#5a5a56'); p.rect(0, 0, 1, 32, '#5a5a56'); },
     cream: function (p) { p.fill('#ecdcb0'); for (var y = 2; y < 32; y += 6) for (var x = 0; x < 32; x++) p.px(x, y + Math.round(Math.sin(x * 0.4 + y) * 1.2), '#fff2d0'); p.speck(['#d8c898', '#fff8e0'], 80); },
     water: function (p) { p.fill('#1a3050'); for (var y = 1; y < 32; y += 5) for (var x = 0; x < 32; x++) if ((x + y * 3) % 9 < 5) p.px(x, y + Math.round(Math.sin(x * 0.5 + y) * 1), '#2a4a70'); p.speck(['#14284a', '#3a5a80'], 60); },
+    shutter: function (p) { p.fill('#5a5a5e'); for (var y = 0; y < 32; y += 3) { p.rect(0, y, 32, 1, '#3a3a3e'); p.rect(0, y + 1, 32, 1, '#7a7a7e'); } p.rect(0, 29, 32, 3, '#2a2a2e'); p.rect(4, 8, 9, 5, '#c4121c'); p.rect(18, 15, 10, 4, '#2a6a3a'); p.speck(['#4a4a4e', '#8a8a8e'], 30); },
+    shopwin: function (p) { p.fill('#1e2a34'); p.rect(0, 0, 32, 2, '#12040a'); p.rect(0, 30, 32, 2, '#12040a'); p.rect(0, 0, 2, 32, '#12040a'); p.rect(30, 0, 2, 32, '#12040a'); p.rect(15, 0, 2, 32, '#12040a'); p.rect(2, 22, 28, 8, '#3a2a24');
+      for (var k = 0; k < 6; k++) p.rect(3 + k * 4.5, 14 + (k % 3) * 2, 3, 8 - (k % 3) * 2, ['#c4121c', '#ffe36a', '#f1e7d0', '#7a4a2a', '#2a6aff', '#ff7ab0'][k]); p.rect(3, 3, 6, 9, '#3a4a5a'); p.rect(19, 4, 3, 10, '#4a5a6a'); p.rect(2, 2, 10, 1, '#6a7a8a'); },
+    awning: function (p) { p.fill('#f1e7d0'); for (var x = 0; x < 32; x += 8) p.rect(x, 0, 4, 32, '#c8c0b0'); p.rect(0, 29, 32, 3, '#12040a'); },
     kerb: function (p) { p.fill('#9a948e'); p.rect(0, 0, 32, 2, '#c0bab4'); p.rect(0, 28, 32, 4, '#6a6460'); for (var x = 0; x < 32; x += 8) p.rect(x, 0, 1, 32, '#5a5450'); },
     // walls: one tile = one bay (4 m) by one storey (3.5 m)
     w_down: function (p) { p.fill('#3a3c44'); win(p, 3, 4, 26, 20, '#1e2a3a', '#26282e'); p.rect(0, 27, 32, 5, '#2a2c32'); p.rect(15, 4, 2, 20, '#26282e'); },
@@ -73,7 +77,7 @@
     sign_ali: sign("ALI'S\nGARLIC GRUB", '#2a4a1e', '#f1e7d0', 'p', 15), sign_harold: sign("HAROLD'S MAD\nTEA PARTY", '#5a0a14', '#ffe36a', 'p', 13), sign_jessiah: sign("JESSIAH'S", '#3a2a1a', '#f1e7d0', 'p', 18),
     sign_natty: sign('NATTYBORO\nENCHANTING', '#1a0a2a', '#c48aff', 'p', 13), sign_judge: sign('JUDGEMENT\nSPELLS', '#f1e7d0', '#3a2a10', 'p', 14), sign_fate: sign("STACKED\nFATE'S TABLE", '#0a1a0a', '#7aff6a', 'p', 13),
     sign_bates: sign('MASTER BATES\nEMPORIUM', '#3a1a3a', '#ffe36a', 'p', 13), sign_motors: sign('CUM\nMOTORS', '#12040a', '#ff2630', 'p', 20), sign_estate: sign('LOAD\nESTATES', '#f1e7d0', '#12040a', 'p', 18),
-    sign_wash: sign('THE CREAM\nWASH', '#f1e7d0', '#c4121c', 'p', 16, 'LOSE THE HEAT'), sign_wash2: sign('THE CREAM\nWASH', '#f1e7d0', '#c4121c', 'p', 16, 'LOSE THE HEAT'), sign_cops: sign('CUM CITY\nPOLICE', '#1a2a5a', '#f1e7d0', 'a', 14),
+    sign_wash: sign('THE CREAM\nWASH', '#f1e7d0', '#c4121c', 'p', 16, 'LOSE THE HEAT'), sign_cream: sign('CREAM\nDREAM', '#ff9ab4', '#12040a', 'p', 16, 'WHIPPED FRESH'), sign_wash2: sign('THE CREAM\nWASH', '#f1e7d0', '#c4121c', 'p', 16, 'LOSE THE HEAT'), sign_cops: sign('CUM CITY\nPOLICE', '#1a2a5a', '#f1e7d0', 'a', 14),
     sign_hosp: sign('HOSPITAL', '#f1e7d0', '#c4121c', 'a', 15), sign_gym: sign('IRON LOADS\nGYM', '#12040a', '#ffe36a', 'a', 13), sign_bank: sign('BANK OF\nCUM CITY', '#1a3a2a', '#ffe36a', 'p', 14), sign_tattoo: sign('INKED\nLOADS', '#12040a', '#ff2630', 'p', 18),
     sign_home: sign('FOR SALE', '#f1e7d0', '#c4121c', 'a', 16, 'LOAD ESTATES'),
     // billboards and posters: the adverts (his Twitch, YouTube, merch, the other games)

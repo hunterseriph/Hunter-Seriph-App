@@ -1,7 +1,8 @@
 /* ---------- driving: one stepper for every vehicle (the player's and the traffic), by class: car, bike, board, boat, helicopter, plane ---------- */
 function vehInput() { // the player's hands on the controls
   var s = KIT.stick(0), gp = KIT.gamepad, rt = gp && gp.buttons && gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp && gp.buttons && gp.buttons[6] ? gp.buttons[6].value : 0, drunk = G.drunk || 0;
-  var thr = Math.max(KIT.held('a') ? 1 : 0, rt, s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, s.y > 0.3 ? s.y : 0);
+  var kb = !gp && !TOUCHUI(); // the stick's up and down only drive on a keyboard (W / S); pads and touch use the GAS and BRAKE buttons
+  var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && s.y > 0.3 ? s.y : 0);
   var steer = -s.x; if (drunk > 0.2) steer += Math.sin(G.t * 1.9) * drunk * 0.5;
   return { thr: thr, brk: brk, steer: steer, hand: KIT.held('x'), up: KIT.held('a'), down: KIT.held('b'), pitch: s.y, roll: s.x, yaw: -s.x };
 }
@@ -110,7 +111,7 @@ function carHits(dt) { // the player's car against people and other cars
     var push = (m - d) * 0.5; o.x += nx * push; o.z += nz * push; v.x -= nx * push; v.z -= nz * push;
     if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); sfx.play('crash'); CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
 }
-function hurtVeh(v, dmg, by) { if (v.dead || G.cut) return; if (v === (P && P.veh) && G.god) return; v.hp -= dmg; v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
+function hurtVeh(v, dmg, by, isBoom) { if (v.dead || G.cut) return; if (v === (P && P.veh) && G.god) return; if (dmg < 300) dmg *= (isBoom ? 0.75 : 0.22) * (v.t.heavy ? 0.6 : 1); v.hp -= dmg; /* update 155: cars take about four times the knocks before they burn */ v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
 function explodeVeh(v) {
   v.dead = 1; v.hp = 0; boom(v.x, v.y + 1, v.z, 9, v === (P && P.veh) ? null : P); if (v.driver === P) { exitVehicle(true); hurtPlayer(80, 'boom'); } else if (v.driver) { var d = v.driver; v.driver = null; if (d.inVeh) { d.inVeh = null; d.x = v.x + 1.5; d.z = v.z; d.y = v.y; hurtPed(d, 200, null); } }
   v.vy = 7; v.air = 1;
@@ -120,7 +121,13 @@ function boom(x, y, z, r, by) {
   G.dynLights = G.dynLights || []; G.dynLights.push({ x: x, y: y + 2, z: z, r: 22, c: [1, 0.6, 0.2], k: 2.4, life: 0.4 });
   if (P && Math.hypot(P.x - x, P.z - z) < 60) CAM.shake = Math.max(CAM.shake, 0.6 * (1 - Math.hypot(P.x - x, P.z - z) / 60));
   PEDS.forEach(function (p) { var d = Math.hypot(p.x - x, p.z - z); if (d < r && !p.dead) hurtPed(p, (1 - d / r) * 160, by, [(p.x - x) / (d || 1), 1, (p.z - z) / (d || 1)], 1); });
-  VEH.forEach(function (v) { var d = Math.hypot(v.x - x, v.z - z); if (d < r && !v.dead) { hurtVeh(v, (1 - d / r) * 120, by); v.vy = (v.vy || 0) + (1 - d / r) * 6; v.air = 1; } });
+  VEH.forEach(function (v) { var d = Math.hypot(v.x - x, v.z - z); if (d < r && !v.dead) { hurtVeh(v, (1 - d / r) * 120, by, 1); v.vy = (v.vy || 0) + (1 - d / r) * 6; v.air = 1; } });
   if (P && P.state === 'foot') { var dp = Math.hypot(P.x - x, P.z - z); if (dp < r) { hurtPlayer((1 - dp / r) * 90, 'boom'); P.ragT = 1.2; P.vy = 5; } }
   makeNoise(x, z, 120, by);
 }
+
+/* the touch buttons say what they do in a car, a helicopter or a plane */
+var PADMODE = '';
+function padMode() { var m = !P || G.mode !== 'play' ? 'foot' : P.state === 'car' && P.veh ? (P.veh.t.cls === 'heli' ? 'heli' : P.veh.t.cls === 'plane' ? 'plane' : 'car') : 'foot'; if (m === PADMODE) return; PADMODE = m;
+  var L = { foot: ['RUN', 'JUMP', 'HIT', 'CAR', 'AIM', 'SWAP'], car: ['BRAKE', 'GAS', 'H.BRAKE', 'EXIT', 'LOOK', 'RADIO'], heli: ['DOWN', 'UP', '', 'EXIT', 'LOOK', 'RADIO'], plane: ['BRAKE', 'THRUST', '', 'EXIT', 'LOOK', 'RADIO'] }[m];
+  try { var b = document.querySelectorAll('#acts .pbtn small'); for (var i = 0; i < b.length && i < L.length; i++) b[i].textContent = L[i]; } catch (e) {} }

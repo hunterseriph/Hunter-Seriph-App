@@ -72,9 +72,12 @@ function buildChunk(ci, cj) {
       if ((i + j) % 6 === 0) boxC(M0, ax + 1.4, -6, az + 1.4, ax + 2.6, Math.min(h00, h11) - 1.3, az + 2.6, '#5a4a44');
       continue;
     }
-    (natural(k) ? NAT : M0).quad([ax, h00 + raise, az], [ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], UV1, T, col, n);
+    var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK)) outK = nk; }); }
+    else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); if (!nr) outK = -1; }
+    if ((k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && k === K_ROAD) continue;
+    if (!cutT) (natural(k) ? NAT : M0).quad([ax, h00 + raise, az], [ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], UV1, T, col, n);
     // the kerb: a little step where pavement meets road
-    if (k === K_PAVE) [[0, -1, ax, az, bx, az, h00, h10], [1, 0, bx, az, bx, bz, h10, h11], [0, 1, bx, bz, ax, bz, h11, h01], [-1, 0, ax, bz, ax, az, h01, h00]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk !== K_ROAD && nk !== K_BRIDGE) return; var nn = [s[0], 0, s[1]];
+    if (k === K_PAVE && !cutT) [[0, -1, ax, az, bx, az, h00, h10], [1, 0, bx, az, bx, bz, h10, h11], [0, 1, bx, bz, ax, bz, h11, h01], [-1, 0, ax, bz, ax, az, h01, h00]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk !== K_ROAD && nk !== K_BRIDGE) return; if (nk === K_ROAD && roadF((s[2] + s[4]) / 2 + s[0] * 0.3, (s[3] + s[5]) / 2 + s[1] * 0.3) > 0.1) return; var nn = [s[0], 0, s[1]];
       M0.quad([s[2], s[6], s[3]], [s[4], s[7], s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // trees in the forest and parks (season-tinted), graves, rocks, hedges
     var r1 = hash2(i, j, 1), r2 = hash2(i, j, 2), r3 = hash2(i, j, 3);
@@ -88,15 +91,6 @@ function buildChunk(ci, cj) {
     if (k === K_ROCK && r1 < 0.08) { var rx = ax + 2, rz = az + 2; ell(M0, rx, groundY(rx, rz), rz, 1 + r2, 0.8 + r3, 1.1, d.style === 'darkcastle' ? '#2a2228' : '#6a625c', 6, 3); if (first) addPost(rx, rz, 1.0, 0, 99); }
     if (k === K_SAND && d.style === 'beach' && r1 < 0.03) { var ux = ax + 2, uz = az + 2, uy = groundY(ux, uz); boxC(M0, ux - 0.04, uy, uz - 0.04, ux + 0.04, uy + 2.2, uz + 0.04, '#d8d0c0'); tub(M0, [ux, uy + 2.2, uz], [ux, uy + 2.7, uz], 1.3, 0.05, r2 < 0.5 ? '#c4121c' : '#f1e7d0', 8); }
     if (k === K_SAND && d.style === 'isles' && r1 < 0.05) { var px2 = ax + 2, pz2 = az + 2; palm(VEG, px2, groundY(px2, pz2), pz2, r2); if (first) addPost(px2, pz2, 0.3, 0, 99); }
-    // street furniture on the pavements: benches, bins, hydrants, bus stops, postboxes
-    if (k === K_PAVE && r1 < 0.03 && d.style !== 'country') { var fx = ax + 2, fz = az + 2, fy = groundY(fx, fz) + 0.15, kind = Math.floor(r2 * 5), road = nearestRoad(fx, fz, 8), fa = road ? Math.atan2(road.dx, road.dz) : 0;
-      if (kind === 0) { boxR(M0, fx, fz, fa, 0.9, 0.22, fy + 0.4, fy + 0.5, '#5a3a20', 'plank'); boxR(M0, fx, fz, fa, 0.9, 0.05, fy + 0.5, fy + 0.95, '#5a3a20', 'plank'); }
-      else if (kind === 1) { tub(M0, [fx, fy, fz], [fx, fy + 0.9, fz], 0.28, 0.3, '#2a2a2e', 8, { cap: 1 }); }
-      else if (kind === 2) { tub(M0, [fx, fy, fz], [fx, fy + 0.6, fz], 0.14, 0.14, '#c4121c', 6, { cap: 1 }); }
-      else if (kind === 3) { boxC(M0, fx - 0.25, fy, fz - 0.25, fx + 0.25, fy + 1.2, fz + 0.25, '#c4121c'); }
-      else { boxR(M0, fx, fz, fa, 1.4, 0.06, fy, fy + 2.4, '#2a2a2e'); standQ(M0, fx, fz, fa, 2.4, fy + 0.6, fy + 2.2, TL(BILLS[Math.floor(r3 * BILLS.length)]), 1.2, 0.35); }
-      if (first) addPost(fx, fz, 0.4, fy, fy + 2);
-    }
   }
   // roads: centre lines, edge lines and crossings
   near(EGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (E) {
@@ -112,11 +106,7 @@ function buildChunk(ci, cj) {
   // buildings whose middle is in this chunk
   near(BGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (b) { var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; building(M0, NIGHT, FR, GLOW, b, lamps); });
   BLD.forEach(function (b) { if (b.solid || b.style !== 'carpark') return; var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; carpark(M0, b); });
-  // street lamps
-  CITY.lamps.forEach(function (L) { var x = L[0] * CT, z = L[1] * CT; if (x < x0 || x >= x0 + CS || z < z0 || z >= z0 + CS) return; var y = groundY(x, z) + (kAt(x, z) === K_PAVE ? 0.15 : 0), r = nearestRoad(x, z, 12), ox = r ? (r.x - x) : 0, oz = r ? (r.z - z) : 0, ol = Math.hypot(ox, oz) || 1;
-    ox /= ol; oz /= ol; tub(M0, [x, y, z], [x, y + 6.2, z], 0.1, 0.07, '#1a1416', 6); tub(M0, [x, y + 6.2, z], [x + ox * 1.6, y + 6.5, z + oz * 1.6], 0.06, 0.05, '#1a1416', 5);
-    boxC(GLOW, x + ox * 1.6 - 0.3, y + 6.25, z + oz * 1.6 - 0.18, x + ox * 1.6 + 0.3, y + 6.45, z + oz * 1.6 + 0.18, '#fff2c8', 0); lamps.push({ x: x + ox * 1.6, y: y + 6.1, z: z + oz * 1.6 });
-    if (first) addPost(x, z, 0.18, y, y + 6); });
+  buildStreet(M0, GLOW, x0, z0, CS, lamps, first);
   SOLIDDONE[ci + ',' + cj] = 1;
   function up(m) { return m.n ? m.upload() : null; }
   return { ci: ci, cj: cj, x: x0 + CS / 2, z: z0 + CS / 2, m: up(M0), nat: up(NAT), veg: up(VEG), wat: up(WAT), night: up(NIGHT), fr: up(FR), glow: up(GLOW), lamps: lamps };
@@ -163,7 +153,7 @@ function building(m, night, fr, glow, b, lamps) {
   // red light neon and billboards on the roofs downtown
   if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)]; standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), b.y0 + 5, b.y0 + 8, TL(nt), 2.0, 1.2); }
   if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); }
-  if (b.style === 'cafe' && !b.shop && r < 0.5) awning(m, F, b.y0 + 3.2, fw);
+  if (!b.shop) genericFronts(m, glow, night, b, F, fw, gh);
   // shops: their front, or a painted name board
   if (b.shop && FACOF[b.shop] && KIT.SPR[FACOF[b.shop]]) { var s = KIT.SPR[FACOF[b.shop]], wd = Math.min(fw - 0.4, b.shop === 'club' ? 9 : 7.2), ht = wd * s[3] / s[2]; frontQuad(fr, s, mx + F.n[0] * 0.06, mz + F.n[2] * 0.06, F.a, wd, b.y0, b.y0 + ht); }
   else if (b.shop && SIGNOF[b.shop]) { standQ(glow, mx + F.n[0] * 0.08, mz + F.n[2] * 0.08, F.a, Math.min(6, fw - 0.6), b.y0 + 2.8, b.y0 + 5.2, TL(SIGNOF[b.shop]), 1.3, 0.25); standQ(m, mx + F.n[0] * 0.05, mz + F.n[2] * 0.05, F.a, 1.6, b.y0, b.y0 + 2.5, TL('door'), 1); }

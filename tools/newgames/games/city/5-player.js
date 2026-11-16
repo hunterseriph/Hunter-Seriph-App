@@ -47,7 +47,7 @@ function stepFoot(dt) {
   stepWeapon(dt, mi);
   if (KIT.pressed('rb')) nextWeapon(1);
   // use: a vehicle, a door, a person to talk to
-  if (KIT.pressed('y') && !G.cut && !G.talk) { if (!useNear()) enterNearest(); }
+  if (KIT.pressed('y') && !G.cut && !G.talk) { var cn = carNear(), un = nearestUse(); if (cn && (!un || dist2(cn.x, cn.z, P.x, P.z) < dist2(un.x, un.z, P.x, P.z))) enterNearest(); else if (!useNear()) enterNearest(); }
 }
 function useNear() { // doors and people with something to say come before vehicles
   var u = nearestUse(); if (!u) return false; u.fn(); return true;
@@ -135,6 +135,7 @@ function poseOfPlayer() {
   var Q = pose0();
   if (P.state === 'dead') { poseDown(Q, 1, 1); return Q; }
   if (P.swim) { Q.bp = 1.2; Q.bodyY = -0.6; Q.sh[0] = [2.6 + Math.sin(P.ph * 2) * 0.8, 0.3, 0]; Q.sh[1] = [2.6 - Math.sin(P.ph * 2) * 0.8, 0.3, 0]; Q.hip[0] = Math.sin(P.ph * 3) * 0.4; Q.hip[1] = -Q.hip[0]; return Q; }
+  if (P.state === 'enter' && P.ent && P.ent.ph !== 'walk') { poseEnter(Q); return Q; }
   var run = P.sp > 4.2; if (P.sp > 0.3) poseWalk(Q, P.ph, Math.min(1, P.sp / 3), run);
   if (!P.ground) { Q.kn[0] = Q.kn[1] = 0.9; Q.hip[0] = 0.7; Q.hip[1] = 0.2; Q.sh[0] = [0.4, 0.8, 0]; Q.sh[1] = [0.4, 0.8, 0]; }
   var W0 = WPN[P.wpn];
@@ -144,7 +145,7 @@ function poseOfPlayer() {
   if (P.ragT > 0) poseDown(Q, Math.min(1, P.ragT), 0);
   return Q;
 }
-function drawPlayer() {
+function drawPlayer() { if (window.__noP) return;
   if (P.state === 'car' && P.veh && !P.veh.t.carry && P.veh.t.cls !== 'bike' && P.veh.t.cls !== 'board') return; // inside: seen through the glass as nobody (cheap)
   if (P.state === 'foot' && Math.hypot(CAM.x - P.x, CAM.z - P.z) < 0.75 && Math.abs(CAM.y - P.y - 1.5) < 0.9) return;
   var Q = poseOfPlayer(), W0 = WPN[P.wpn], held = W0.mesh ? RIGS[W0.mesh] : null, y = P.y;

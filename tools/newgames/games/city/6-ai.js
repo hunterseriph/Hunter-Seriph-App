@@ -3,7 +3,7 @@ var PEDS = [], PICKUPS = [];
 var DISTCAST = { downtown: ['saba', 'potbelly', 'pulsar', 'spermaid', 'jessiah', 'bates'], redlight: ['t', 'bonjo', 'tb', 'natty', 'judge', 'fate', 'gimp', 'butcher', 'pusher'], cafe: ['amy', 'kaya', 'elden', 'joff', 'ali', 'harold', 'beeb', 'greebo'],
   park: ['clown', 'pieclown', 'strongman', 'acrobat', 'steve', 'steve'], suburb: ['lab', 'amy', 'harold'], industrial: ['gimp', 'butcher'], docks: ['beeb', 'butcher'], site: ['strongman'], cemetery: ['bride'], isles: ['spermaid'], labs: ['pusher'] };
 function popTarget() { var dl = dayLight(G.time); return G.interior ? 0 : Math.round((14 + 14 * dl) * (G.chapter === 'zombie' ? 1.2 : 1)); }
-function trafficTarget() { var dl = dayLight(G.time); return G.interior ? 0 : Math.round(10 + 12 * dl); }
+function trafficTarget() { var dl = dayLight(G.time); return G.interior || G.noTraffic ? 0 : Math.round(20 + 16 * dl); } // update 155: more cars about (he said there were not enough)
 function spawnPoint(minD, maxD, onRoad) {
   for (var k = 0; k < 12; k++) { var a = Math.random() * 6.283, d = rnd(minD, maxD), x = P.x + Math.sin(a) * d, z = P.z + Math.cos(a) * d; if (x < 10 || z < 10 || x > WX - 10 || z > WZ - 10) continue;
     var r = nearestRoad(x, z, 40); if (!r) continue; return r; }
@@ -78,6 +78,7 @@ function hurtPed(p, dmg, by, dir, car) {
 function makeNoise(x, z, r, by) { PEDS.forEach(function (p) { if (p.dead || p.hostile || p.cop || p.ctl) return; if (dist2(p.x, p.z, x, z) < r * r * 0.5) p.fear = 10; }); if (by === P) crime('shots', x, z); }
 /* ---------- traffic ---------- */
 function spawnTraffic() {
+  if (!G.noTraffic && !G.interior) spawnParked();
   var have = VEH.filter(function (v) { return v.ai && !v.ai.cop; }).length, want = trafficTarget();
   if (have >= want) return; var r = spawnPoint(80, 170); if (!r) return; var E = r.E; if (E.len < 20) return;
   var back = Math.random() < 0.5, lane = E.w / 4, pt = edgeAt(E, r.s, back, lane), k = kAt(pt.x, pt.z); if (k !== K_ROAD && k !== K_BRIDGE) return;
@@ -92,6 +93,7 @@ function spawnTraffic() {
 function stepTraffic(dt) {
   for (var i = 0; i < VEH.length; i++) { var v = VEH[i]; if (v === (P && P.veh)) continue;
     if (!v.ai || !v.driver || v.dead) { stepVehicle(v, { thr: 0, brk: v.t.cls === 'heli' ? 0 : 1, steer: 0 }, dt); continue; }
+    if (v.ai.hold) { stepVehicle(v, { thr: 0, brk: 1, steer: 0 }, dt); continue; }
     if (dist2(v.x, v.z, P.x, P.z) > 260 * 260 && !v.ai.cop) continue;
     if (v.ai.cop) { copDrive(v, dt); continue; }
     if (v.ai.race || v.ai.manual) continue; // raced or driven by a mission or an event
@@ -114,7 +116,7 @@ function stepTraffic(dt) {
 }
 function honk(v) { if (dist2(v.x, v.z, P.x, P.z) < 50 * 50) sfx.play('horn'); }
 /* ---------- the police and the wanted level ---------- */
-var CRIMES = { steal: 0.6, copcar: 1.2, assault: 0.5, kill: 1.0, hitcop: 1.2, killcop: 2.0, shootcop: 1.2, shots: 0.4, ram: 0.3, carattack: 0.4, rob: 2.0, speed: 0.1 };
+var CRIMES = { steal: 0.6, jack: 0.7, copcar: 1.2, assault: 0.5, kill: 1.0, hitcop: 1.2, killcop: 2.0, shootcop: 1.2, shots: 0.4, ram: 0.3, carattack: 0.4, rob: 2.0, speed: 0.1 };
 function crime(k, x, z, mul) {
   if (G.noCops) return; var heat = (CRIMES[k] || 0.3) * (mul || 1), seen = false;
   PEDS.forEach(function (p) { if (p.cop && !p.dead && dist2(p.x, p.z, x, z) < 50 * 50) seen = true; }); VEH.forEach(function (v) { if (v.t.cop && v.driver && dist2(v.x, v.z, x, z) < 60 * 60) seen = true; });
@@ -122,11 +124,15 @@ function crime(k, x, z, mul) {
   SV.heat = (SV.heat || 0) + heat; var lv = SV.heat >= 9 ? 5 : SV.heat >= 6 ? 4 : SV.heat >= 3.6 ? 3 : SV.heat >= 1.6 ? 2 : SV.heat >= 0.5 ? 1 : 0; if (lv > SV.wanted) { SV.wanted = lv; G.lostT = 0; sfx.play('alarm'); }
   G.copSeen = 0;
 }
-function stepWanted(dt) {
-  if (SV.wanted <= 0) { SV.heat = Math.max(0, (SV.heat || 0) - dt * 0.05); return; }
-  var seen = false; PEDS.forEach(function (p) { if (p.cop && !p.dead && dist2(p.x, p.z, P.x, P.z) < 40 * 40) seen = true; }); VEH.forEach(function (v) { if (v.t.cop && v.driver && !v.dead && dist2(v.x, v.z, P.x, P.z) < 70 * 70) seen = true; });
-  if (seen) G.lostT = 0; else { G.lostT = (G.lostT || 0) + dt; if (G.lostT > 12 + SV.wanted * 5) { SV.wanted--; SV.heat = [0, 0.5, 1.6, 3.6, 6, 9][SV.wanted]; G.lostT = 0; if (SV.wanted === 0) { toast('You lost them.'); } } }
-  // keep enough police coming
+function copSees(x, y, z, r) { var tx = P.state === 'car' && P.veh ? P.veh : P; if (G.interior) return false; var d = Math.hypot(tx.x - x, tx.z - z); if (d > r) return false; return d < 6 || rayBlock(x, y + 1.5, z, tx.x, (tx.y || 0) + 1.2, tx.z) >= 0.98; }
+function stepWanted(dt) { // update 155: the police have to SEE you. Out of sight they search round where they last saw you, the stars flash, and you lose a star at a time
+  if (SV.wanted <= 0) { SV.heat = Math.max(0, (SV.heat || 0) - dt * 0.05); G.lastSeen = null; return; }
+  var me = P.state === 'car' && P.veh ? P.veh : P, seen = false;
+  PEDS.forEach(function (p) { if (seen || !p.cop || p.dead) return; if (p.inVeh ? copSees(p.inVeh.x, p.inVeh.y, p.inVeh.z, p.inVeh.ai && p.inVeh.ai.copHeli ? 110 : 55) : copSees(p.x, p.y, p.z, 40)) seen = true; });
+  if (seen || !G.lastSeen) { G.lastSeen = { x: me.x, z: me.z }; }
+  if (seen) { G.lostT = 0; } else { var far = Math.hypot(me.x - G.lastSeen.x, me.z - G.lastSeen.z) > 70 + SV.wanted * 25; G.lostT = (G.lostT || 0) + dt * (far ? 2 : 1);
+    if (G.lostT > 8 + SV.wanted * 3) { SV.wanted--; SV.heat = [0, 0.5, 1.6, 3.6, 6, 9][SV.wanted]; G.lostT = 0; G.lastSeen = { x: me.x, z: me.z }; if (SV.wanted === 0) toast('You lost them.'); } }
+  // keep enough police coming: they turn up round where you were last seen
   var cops = VEH.filter(function (v) { return v.ai && v.ai.cop && !v.dead; }).length, want = [0, 1, 2, 3, 4, 6][SV.wanted];
   if (cops < want && Math.random() < dt * 0.5) spawnCop();
   if (SV.wanted >= 3 && !VEH.some(function (v) { return v.ai && v.ai.copHeli && !v.dead; }) && Math.random() < dt * 0.15) spawnCopHeli();
@@ -135,16 +141,19 @@ function spawnCop() { var r = spawnPoint(90, 160); if (!r) return; var pt = edge
   var dr = makePed({ x: v.x, z: v.z, kind: 'cop', cop: 1, rig: rigFor('cop'), hp: 60, wpn: SV.wanted >= 2 ? (SV.wanted >= 4 ? 'smg' : 'pistol') : null }); dr.inVeh = v; v.driver = dr; v.keep = 1; }
 function spawnCopHeli() { var a = Math.random() * 6.28, v = makeVeh('heli', P.x + Math.sin(a) * 150, P.z + Math.cos(a) * 150, 0, { col: 2 }); v.y = groundY(v.x, v.z) + 60; v.ground = 0; v.ai = { cop: 1, copHeli: 1 }; v.keep = 1; var dr = makePed({ x: v.x, z: v.z, kind: 'cop', cop: 1, rig: rigFor('cop'), hp: 60, wpn: 'rifle' }); dr.inVeh = v; v.driver = dr; }
 function copDrive(v, dt) {
-  var tg = P.state === 'car' && P.veh ? P.veh : P, dx = tg.x - v.x, dz = tg.z - v.z, d = Math.hypot(dx, dz);
+  var me = P.state === 'car' && P.veh ? P.veh : P, sees = copSees(v.x, v.y, v.z, v.ai.copHeli ? 110 : 55), tg = me;
+  if (!sees && G.lastSeen) { if (!v.ai.sx || Math.hypot(v.x - v.ai.sx, v.z - v.ai.sz) < 10 || (v.ai.sT = (v.ai.sT || 0) - dt) < 0) { v.ai.sT = 6; v.ai.sx = G.lastSeen.x + rnd(-30, 30); v.ai.sz = G.lastSeen.z + rnd(-30, 30); } tg = { x: v.ai.sx, z: v.ai.sz, y: 0 }; }
+  var dx = tg.x - v.x, dz = tg.z - v.z, d = Math.hypot(dx, dz);
   if (SV.wanted <= 0) { v.ai.cop = 0; v.ai.flee = 1; v.keep = 0; var r = nearestRoad(v.x, v.z, 40); if (r) { v.ai.E = r.E; v.ai.s = r.s; v.ai.back = false; v.ai.lane = r.E.w / 4; v.ai.want = 14; } v.siren = 0; return; }
   if (v.ai.copHeli) { var hy = groundY(tg.x, tg.z) + 26; stepHeli(v, { up: v.y < hy, down: v.y > hy + 6, pitch: d > 30 ? -0.8 : 0, yaw: clamp(angDiff(v.a, Math.atan2(dx, dz)) * 2, -1, 1) }, dt);
-    var dr = v.driver; if (dr && d < 90 && SV.wanted >= 4) { dr.cool -= dt; if (dr.cool <= 0) { dr.cool = 0.5; dr.x = v.x; dr.y = v.y - 1; dr.z = v.z; dr.a = Math.atan2(dx, dz); dr.tgt = P; shoot(dr, WPN.rifle); } }
+    var dr = v.driver; if (dr && sees && d < 90 && SV.wanted >= 4) { dr.cool -= dt; if (dr.cool <= 0) { dr.cool = 0.5; dr.x = v.x; dr.y = v.y - 1; dr.z = v.z; dr.a = Math.atan2(dx, dz); dr.tgt = P; shoot(dr, WPN.rifle); } }
     G.searchlight = { x: tg.x, z: tg.z }; return; }
+  if (!sees) { var st2 = clamp(angDiff(v.a, Math.atan2(dx, dz)) * 2, -1, 1); stepVehicle(v, { thr: d > 10 ? 0.65 : 0, brk: d < 10 ? 1 : 0, steer: st2 }, dt); return; }
   var steer = clamp(angDiff(v.a, Math.atan2(dx, dz)) * 2, -1, 1), thr = d > 12 ? 1 : 0.2, brk = d < 8 ? 1 : 0;
   if (v.sp < 1 && (v.ai.stuck = (v.ai.stuck || 0) + dt) > 2.5) { v.ai.rev = 1.2; v.ai.stuck = 0; } if (v.ai.rev > 0) { v.ai.rev -= dt; thr = 0; brk = 1; steer = -steer; }
   stepVehicle(v, { thr: thr, brk: brk, steer: steer }, dt);
   // close and stopped: the officers get out
-  if (d < 14 && Math.abs(v.sp) < 2 && v.driver && v.driver.inVeh && P.state === 'foot') { var o = v.driver; o.inVeh = null; o.x = v.x + Math.cos(v.a) * 2; o.z = v.z - Math.sin(v.a) * 2; o.y = v.y; v.driver = null; v.ai.parked = 1; o.state = 'fight'; }
+  if (d < 14 && Math.abs(v.sp) < 2 && v.driver && v.driver.inVeh && P.state !== 'car') { var o = v.driver; o.inVeh = null; o.x = v.x + Math.cos(v.a) * 2; o.z = v.z - Math.sin(v.a) * 2; o.y = v.y; v.driver = null; v.ai.parked = 1; o.state = 'fight'; }
 }
 function bustTry(cop) { if (P.state !== 'foot' || G.cut) return; G.bustT = (G.bustT || 0) + 1; if (G.bustT >= 3) { G.bustT = 0; busted(); } }
 /* ---------- pickups ---------- */
@@ -160,3 +169,10 @@ function takePickup(q) {
 }
 function giveWeapon(w, ammo) { SV.weapons[w] = 1; var W0 = WPN[w]; if (W0.ammo) SV.ammo[W0.ammo] = (SV.ammo[W0.ammo] || 0) + (ammo || 0); }
 function money(n) { SV.money = Math.max(0, (SV.money || 0) + n); G.moneyPop = 1; if (n > 0) SV.stats.earned = (SV.stats.earned || 0) + n; }
+
+/* parked cars along the kerbs, free to take (update 155) */
+function spawnParked() { var have = VEH.filter(function (v) { return v.parked && !v.dead && dist2(v.x, v.z, P.x, P.z) < 160 * 160; }).length; if (have >= 14) return;
+  var r = spawnPoint(40, 150); if (!r || r.E.len < 24 || r.E.w < 9) return; var side = Math.random() < 0.5, pt = edgeAt(r.E, clamp(r.s, 8, r.E.len - 8), side, r.E.w / 2 - 1.3), k = kAt(pt.x, pt.z); if (k !== K_ROAD) return;
+  for (var i = 0; i < VEH.length; i++) if (dist2(VEH[i].x, VEH[i].z, pt.x, pt.z) < 7 * 7) return;
+  var dx = pt.x - CAM.x, dz = pt.z - CAM.z, f = R3.cam.fwd, d = Math.hypot(dx, dz); if (d < 70 && (dx * f[0] + dz * f[2]) / d > 0.4) return;
+  var v = makeVeh(pick(['hatch', 'hatch', 'saloon', 'saloon', 'van', 'muscle', 'sports', 'taxi']), pt.x, pt.z, pt.a); v.parked = 1; }
