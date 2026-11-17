@@ -1,6 +1,7 @@
 /* ---------- driving: one stepper for every vehicle (the player's and the traffic), by class: car, bike, board, boat, helicopter, plane ---------- */
 function vehInput() { // the player's hands on the controls
-  var s = KIT.stick(0), gp = KIT.gamepad, rt = gp && gp.buttons && gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp && gp.buttons && gp.buttons[6] ? gp.buttons[6].value : 0, drunk = G.drunk || 0;
+  var gp = KIT.gamepad, s = gp && gp.axes ? (function () { var x = gp.axes[0] || 0, y = gp.axes[1] || 0, m = Math.hypot(x, y); return m < 0.18 ? { x: 0, y: 0 } : { x: x, y: y }; })() : KIT.stick(0), // update 158: on a pad only the stick steers (the d-pad is the radio)
+  rt = gp && gp.buttons && gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp && gp.buttons && gp.buttons[6] ? gp.buttons[6].value : 0, drunk = G.drunk || 0;
   var kb = !gp && !TOUCHUI(); // the stick's up and down only drive on a keyboard (W / S); pads and touch use the GAS and BRAKE buttons
   var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && s.y > 0.3 ? s.y : 0);
   var steer = -s.x; if (drunk > 0.2) steer += Math.sin(G.t * 1.9) * drunk * 0.5;
@@ -30,7 +31,7 @@ function stepVehicle(v, inp, dt) {
   v.vx = f[0] * fs + r[0] * ls; v.vz = f[1] * fs + r[1] * ls; v.sp = fs;
   // move, collide with the world
   var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, rad = Math.max(0.3, t.wid * 0.44), hit = null;
-  [t.len * 0.3, -t.len * 0.3].forEach(function (o) { var cx = nx + f[0] * o, cz = nz + f[1] * o, c = collide(cx, cz, rad, v.y + 0.2, t.hgt); if (c.hit) { nx += c.x; nz += c.z; hit = c; } });
+  COLLV = v; [t.len * 0.3, -t.len * 0.3].forEach(function (o) { var cx = nx + f[0] * o, cz = nz + f[1] * o, c = collide(cx, cz, rad, v.y + 0.2, t.hgt); if (c.hit) { nx += c.x; nz += c.z; hit = c; } }); COLLV = null;
   if (boat) { var k2 = kAt(nx + f[0] * t.len * 0.5, nz + f[1] * t.len * 0.5); if (!isWaterK(k2)) { nx = v.x; nz = v.z; hit = hit || { x: -v.vx, z: -v.vz }; } }
   if (hit) { var imp = Math.abs(fs); if (imp > 6) { hurtVeh(v, (imp - 6) * 2.5, null); if ((imp > 9 || v === (P && P.veh)) && G.t > (v.crashT || 0) && dist2(v.x, v.z, P.x, P.z) < 30 * 30) { v.crashT = G.t + 1.2; sfx.play('crash'); } if (v === (P && P.veh)) CAM.shake = 0.35; } var hl = Math.hypot(hit.x, hit.z) || 1, nn = [hit.x / hl, hit.z / hl], vn = v.vx * nn[0] + v.vz * nn[1]; if (vn < 0) { v.vx -= nn[0] * vn * 1.5; v.vz -= nn[1] * vn * 1.5; } v.vx *= 0.6; v.vz *= 0.6; }
   v.x = clamp(nx, 4, WX - 4); v.z = clamp(nz, 4, WZ - 4);

@@ -44,6 +44,11 @@ function sfDraw(m, kind, x, y, z, a, h) { var c = Math.cos(a), s = Math.sin(a), 
     var a1 = L(0, 0.6), a2 = L(0, 1.4), a3 = L(0, 1.8); tub(m, [x, y + 6.0, z], [a1[0], y + 6.45, a1[1]], 0.06, 0.055, D, 6); tub(m, [a1[0], y + 6.45, a1[1]], [a2[0], y + 6.55, a2[1]], 0.055, 0.05, D, 6); tub(m, [a2[0], y + 6.55, a2[1]], [a3[0], y + 6.45, a3[1]], 0.05, 0.05, D, 6);
     tub(m, [a3[0], y + 6.48, a3[1]], [a3[0], y + 6.3, a3[1]], 0.16, 0.3, D, 8, { cap0: 1 }); tub(h, [a3[0], y + 6.3, a3[1]], [a3[0], y + 6.22, a3[1]], 0.28, 0.24, '#fff2c8', 8, { cap: 1 }); return { x: a3[0], y: y + 6.1, z: a3[1] }; }
 }
+/* update 158 (his ask: a bin would not stop a car): these get knocked flying by cars (7i-fun.js); they are drawn into the
+   chunk's own FURN mesh so it can be rebuilt without them, and their colliders carry their key */
+var KNOCKABLE = { bin: 1, hyd: 1, meter: 1, news: 1, planter: 1, bench: 1 }, CUR_FURN = null, CUR_KP = null;
+function kpDraw(kind, x, y, z, a) { var key = kind + '@' + Math.round(x * 10) + ',' + Math.round(z * 10); if (KNOCKED[key]) return false; var o = { kp: key, kind: kind, x: x, y: y, z: z, a: a, key: key };
+  if (CUR_FURN) { sfDraw(CUR_FURN, kind, x, y, z, a, new R3.Mesh()); CUR_KP.push(o); return o; } return null; }
 function buildStreet(M0, GLOW, x0, z0, CS, lamps, first) { // furniture, lamps, junction lights and signs for one chunk
   var i0 = Math.floor(x0 / CT), j0 = Math.floor(z0 / CT), n = Math.round(CS / CT);
   for (var j = j0; j < Math.min(MH, j0 + n); j++) for (var i = i0; i < Math.min(MW, i0 + n); i++) { var t = j * MW + i; if (KM[t] !== K_PAVE) continue; var d = DIST[DM[t]], set = SFSET[d.style]; if (!set) continue;
@@ -51,8 +56,9 @@ function buildStreet(M0, GLOW, x0, z0, CS, lamps, first) { // furniture, lamps, 
     var nx = (cx - r.x) / (r.d || 1), nz = (cz - r.z) / (r.d || 1); if (r.d < 0.5) { nx = r.dz; nz = -r.dx; } var list = set.split(' '), kind = list[Math.floor(hash2(i, j, 22) * list.length)];
     var off = r.E.w / 2 + (kind === 'bus' ? 2.0 : kind === 'phone' || kind === 'post' ? 2.2 : kind === 'bench' ? 2.4 : 0.8), px = r.x + nx * off, pz = r.z + nz * off;
     if (kAt(px, pz) !== K_PAVE || roadF(px, pz) < off - r.E.w / 2 - 0.4) continue; if (kind === 'bus' || kind === 'bollard' || kind === 'bench' || kind === 'meter') { var e1 = [px + r.dx * 2, pz + r.dz * 2], e2 = [px - r.dx * 2, pz - r.dz * 2]; if (kAt(e1[0], e1[1]) !== K_PAVE || kAt(e2[0], e2[1]) !== K_PAVE) continue; }
-    var a = Math.atan2(-nx, -nz), py = groundY(px, pz) + 0.15; sfDraw(M0, kind, px, py, pz, a, GLOW);
-    if (first) { var rad = { bus: 0.6, bench: 0.5, phone: 0.45, tree: 0.3, planter: 0.55, pole: 0.18, bollard: 0.0, meter: 0.0, hyd: 0.2, bin: 0.28 }[kind]; if (rad === undefined) rad = 0.28; if (rad) addPost(px, pz, rad, py, py + 2.5); } }
+    var a = Math.atan2(-nx, -nz), py = groundY(px, pz) + 0.15, kp = KNOCKABLE[kind] ? kpDraw(kind, px, py, pz, a) : null; if (kp === false) continue; if (!kp) sfDraw(M0, kind, px, py, pz, a, GLOW);
+    if (kind === 'bench' && first) addSeat(px, pz, a, 'bench', { y: py + 0.5 });
+    if (first) { var rad = { bus: 0.6, bench: 0.5, phone: 0.45, tree: 0.3, planter: 0.55, pole: 0.18, bollard: 0.0, meter: 0.12, hyd: 0.2, bin: 0.28, news: 0.3 }[kind]; if (rad === undefined) rad = 0.28; if (rad) addPost(px, pz, rad, py, py + 2.5, kp || undefined); } }
   // junctions: traffic lights and a street-name sign on the corners
   RN.forEach(function (nd, ni) { if (nd.x < x0 || nd.x >= x0 + CS || nd.z < z0 || nd.z >= z0 + CS || nd.e.length < 3) return; var d = dAt(nd.x, nd.z); if (!/downtown|redlight|cafe|suburb|labs|docks|industrial/.test(d.style)) return;
     nd.e.forEach(function (ei, q) { var E = RE[ei], back = E.b === ni, p = edgeAt(E, Math.min(E.len - 1, E.w * 0.75 + 2.2), back, E.w / 2 + 1.0), x = p.x, z = p.z; if (kAt(x, z) !== K_PAVE) return; var y = groundY(x, z) + 0.15, a = Math.atan2(p.dx, p.dz) + (back ? 0 : Math.PI);
@@ -98,8 +104,12 @@ var POSTERS = [['TWITCH.TV/', 'HUNTER', 'SERIPH', '#3a1a6a', '#f1e7d0', 'SOULS-L
   ['LOAD', 'LEGACY', '', '#12040a', '#c4121c', 'EVERY HEIR DIES'], ['DARK', 'LOADS', '', '#1a1418', '#f1e7d0', 'TRY FINGER'], ['PSYCHO', 'NIGHT-', 'MARE', '#12040a', '#7aff6a', 'TAKE YOUR PILLS'], ['EJACU-', 'LAND', '', '#12040a', '#ff2630', 'MUST BE THIS LOADED'],
   ['CUMPU-', 'CCINO', '', '#6a3a1a', '#f1e7d0', "KAYA & ELDEN'S"], ['HITLESS', 'RUNS', 'ONLY', '#2a4a1e', '#f1e7d0', "SABA'S"], ["TB'S", "SUCK N'", 'FUCK', '#12040a', '#ff2a6a', "DON'T MIND THE STAINS"], ['SKEET', 'FIGHTER', '', '#ffe36a', '#12040a', 'ROUND ONE. FIGHT!']];
 (function () { POSTERS.forEach(function (q, i) { HIPAINT['pp_' + i] = function (g) { var H = 107; g.save(); g.scale(1, 64 / H); g.fillStyle = q[3]; g.fillRect(0, 0, 64, H); g.fillStyle = '#12040a'; g.fillRect(0, 0, 64, 3); g.fillRect(0, H - 3, 64, 3); g.fillRect(0, 0, 3, H); g.fillRect(61, 0, 3, H);
-    g.fillStyle = q[4]; g.textAlign = 'center'; g.textBaseline = 'middle'; var L = [q[0], q[1], q[2]].filter(Boolean); L.forEach(function (l, k) { var sz = 17; g.font = sz + 'px "Pirata One", serif'; while (g.measureText(l).width > 56 && sz > 7) { sz--; g.font = sz + 'px "Pirata One", serif'; } g.fillText(l, 32, 30 + k * 19); });
-    g.fillRect(10, 30 + L.length * 19 - 4, 44, 2); var sz2 = 9; g.font = 'bold ' + sz2 + 'px "Archivo Narrow", sans-serif'; var w = q[5].split(' '), lines = [], cur = ''; w.forEach(function (x) { var t = cur ? cur + ' ' + x : x; if (g.measureText(t).width > 54 && cur) { lines.push(cur); cur = x; } else cur = t; }); lines.push(cur);
-    lines.forEach(function (l, k) { g.fillText(l, 32, H - 22 - (lines.length - 1 - k) * 10); }); g.restore(); }; });
-  HIPAINT.glasspane = function (g) { g.fillStyle = 'rgba(190,215,225,0.28)'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2a2226'; g.fillRect(0, 0, 64, 3); g.fillRect(0, 61, 64, 3); g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64); g.fillRect(31, 0, 2, 64);
-    g.fillStyle = 'rgba(225,240,245,0.7)'; for (var k = 0; k < 3; k++) { g.beginPath(); g.moveTo(8 + k * 18, 56); g.lineTo(16 + k * 18, 8); g.lineTo(19 + k * 18, 8); g.lineTo(11 + k * 18, 56); g.fill(); } g.fillStyle = '#c4121c'; g.fillRect(3, 40, 58, 3); }; })();
+    // update 158: the title and the line under it are laid out so they never overlap (TB's poster ran into itself)
+    g.textAlign = 'center'; g.textBaseline = 'middle'; var sz2 = 9; g.font = 'bold ' + sz2 + 'px "Archivo Narrow", sans-serif'; var w = q[5].split(' '), lines = [], cur = ''; w.forEach(function (x) { var t = cur ? cur + ' ' + x : x; if (g.measureText(t).width > 54 && cur) { lines.push(cur); cur = x; } else cur = t; }); lines.push(cur);
+    var subTop = H - 10 - lines.length * 10, L = [q[0], q[1], q[2]].filter(Boolean), area = subTop - 14, step = Math.min(20, area / L.length), top = 8 + (area - step * L.length) / 2;
+    g.fillStyle = q[4]; L.forEach(function (l, k) { var sz = Math.min(17, Math.floor(step * 0.95)); g.font = sz + 'px "Pirata One", serif'; while (g.measureText(l).width > 56 && sz > 7) { sz--; g.font = sz + 'px "Pirata One", serif'; } g.fillText(l, 32, top + step * (k + 0.5)); });
+    g.fillRect(10, subTop - 5, 44, 2); g.font = 'bold ' + sz2 + 'px "Archivo Narrow", sans-serif'; lines.forEach(function (l, k) { g.fillText(l, 32, subTop + 5 + k * 10); }); g.restore(); }; });
+  HIPAINT.glasspane = function (g) { // update 158: solid dark glass with soft sheen bands (the see-through version came out as jagged white streaks)
+    var gr = g.createLinearGradient(0, 0, 64, 64); gr.addColorStop(0, '#3a4a54'); gr.addColorStop(0.5, '#26323a'); gr.addColorStop(1, '#1c242a'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = 'rgba(200,225,235,0.18)'; g.fillRect(6, 4, 10, 56); g.fillStyle = 'rgba(200,225,235,0.1)'; g.fillRect(19, 4, 4, 56); g.fillRect(40, 4, 8, 56);
+    g.fillStyle = '#2a2226'; g.fillRect(0, 0, 64, 3); g.fillRect(0, 61, 64, 3); g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64); g.fillRect(31, 0, 2, 64); g.fillStyle = '#c4121c'; g.fillRect(3, 40, 58, 3); }; })();

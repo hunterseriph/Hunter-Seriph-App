@@ -62,12 +62,12 @@ var BLD = CITY.bld.map(function (b, i) {
     function t(side) { for (var q = 0; q < cand.length; q++) { var j = cand[q]; if (j === i) continue; var b = R[j]; if (b[4] <= 0 || b[5] === 'carpark' || b[5] === 'house') continue;
       if (side === 0 && b[3] === a[1] && b[0] < a[2] && b[2] > a[0]) return true; if (side === 2 && b[1] === a[3] && b[0] < a[2] && b[2] > a[0]) return true;
       if (side === 3 && b[2] === a[0] && b[1] < a[3] && b[3] > a[1]) return true; if (side === 1 && b[0] === a[2] && b[1] < a[3] && b[3] > a[1]) return true; } return false; }
-    if (t(0)) B2.z0 = a[1] * CT; if (t(2)) B2.z1 = a[3] * CT; if (t(3)) B2.x0 = a[0] * CT; if (t(1)) B2.x1 = a[2] * CT; }); })();
+    B2.sh = [t(0), t(1), t(2), t(3)]; if (B2.sh[0]) B2.z0 = a[1] * CT; if (B2.sh[2]) B2.z1 = a[3] * CT; if (B2.sh[3]) B2.x0 = a[0] * CT; if (B2.sh[1]) B2.x1 = a[2] * CT; }); })();
 var BG = 32, BGW = Math.ceil(WX / BG), BGRID = {};
 function gridAdd(G, x0, z0, x1, z1, o) { for (var j = Math.floor(z0 / BG); j <= Math.floor(z1 / BG); j++) for (var i = Math.floor(x0 / BG); i <= Math.floor(x1 / BG); i++) { var k = j * BGW + i; (G[k] || (G[k] = [])).push(o); } }
 BLD.forEach(function (b) { if (b.solid) gridAdd(BGRID, b.x0, b.z0, b.x1, b.z1, b); });
 /* other solid things (castle walls, rides, containers, trees, lamps...) are added as boxes or posts by the world builder */
-var SOLID = {};
+var SOLID = {}, KNOCKED = {}, COLLV = null; // update 158: knocked-over street furniture (by key), the vehicle being moved (it knocks things over instead of stopping)
 function addBox(x0, z0, x1, z1, y0, y1, o) { var b = { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y0: y0, y1: y1, o: o }; gridAdd(SOLID, b.x0, b.z0, b.x1, b.z1, b); return b; }
 function addPost(x, z, r, y0, y1, o) { var b = { post: 1, x: x, z: z, r: r, x0: x - r, z0: z - r, x1: x + r, z1: z + r, y0: y0, y1: y1, o: o }; gridAdd(SOLID, b.x0, b.z0, b.x1, b.z1, b); return b; }
 function near(G, x, z, r) { var out = []; for (var j = Math.floor((z - r) / BG); j <= Math.floor((z + r) / BG); j++) for (var i = Math.floor((x - r) / BG); i <= Math.floor((x + r) / BG); i++) { var l = G[j * BGW + i]; if (l) for (var k = 0; k < l.length; k++) if (out.indexOf(l[k]) < 0) out.push(l[k]); } return out; }
@@ -78,6 +78,7 @@ function collide(x, z, r, y, hh) {
   for (var n = 0; n < 2; n++) {
     var ls = n ? near(SOLID, x, z, r + 1) : L;
     for (var k = 0; k < ls.length; k++) { var b = ls[k], top = n ? b.y1 : b.y0 + b.h, bot = n ? b.y0 : b.y0 - 2; if (y + (hh || 1.6) < bot || y > top - 0.05) continue;
+      if (b.o && b.o.kp) { if (KNOCKED[b.o.kp]) continue; if (COLLV && Math.abs(COLLV.sp) > 2.5 && Math.hypot(x - b.x, z - b.z) < r + b.r) { knockProp(b.o, COLLV); continue; } }
       if (b.post) { var dx = x + px - b.x, dz = z + pz - b.z, d = Math.hypot(dx, dz), m = r + b.r; if (d < m && d > 0.0001) { px += dx / d * (m - d); pz += dz / d * (m - d); hit = b; } continue; }
       var cx = clamp(x + px, b.x0, b.x1), cz = clamp(z + pz, b.z0, b.z1), ex = x + px - cx, ez = z + pz - cz, dd = Math.hypot(ex, ez);
       if (dd < r) { if (dd < 0.0001) { var l = x + px - b.x0, rr = b.x1 - x - px, t = z + pz - b.z0, bb = b.z1 - z - pz, mn = Math.min(l, rr, t, bb); if (mn === l) px -= l + r; else if (mn === rr) px += rr + r; else if (mn === t) pz -= t + r; else pz += bb + r; }
@@ -113,7 +114,7 @@ var RN = CITY.nodes.map(function (n, i) { return { i: i, x: n[0] * CT, z: n[1] *
 var RE = CITY.edges.map(function (e, i) {
   var pts = [[RN[e[0]].x, RN[e[0]].z]].concat(e[3].map(function (p) { return [p[0] * CT, p[1] * CT]; })).concat([[RN[e[1]].x, RN[e[1]].z]]), L = 0, cum = [0];
   for (var k = 1; k < pts.length; k++) { L += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); cum.push(L); }
-  var E = { i: i, a: e[0], b: e[1], w: e[2] * CT, pts: pts, cum: cum, len: L, hs: e[4] }; RN[e[0]].e.push(i); RN[e[1]].e.push(i); return E;
+  var E = { i: i, a: e[0], b: e[1], w: e[2] * CT, pts: pts, cum: cum, len: L, hs: e[4], track: e[5] || 0 }; RN[e[0]].e.push(i); RN[e[1]].e.push(i); return E;
 });
 /* a point along an edge: s metres from a (or from b when back), lane offset to the right of the way of travel */
 function edgeAt(E, s, back, off) {

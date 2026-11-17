@@ -248,3 +248,51 @@ var DUCK = {};
 function duckFor(slot) { DUCK[slot] = 1; duckApply(); }
 function undock(slot) { DUCK[slot] = 0; duckApply(); }
 function duckApply() { var talk = DUCK.line || DUCK.bark, radioTalk = DUCK.radio; try { if (music.duck) music.duck(talk ? 0.22 : radioTalk ? 0.3 : 1); } catch (e) {} if (VOX.radio && VOX.radio !== null) VOX.radio.volume = talk ? 0.25 : 0.95; }
+/* ---------- update 158 (his ask: more jingles and sound effects, and the talking was way louder than the music):
+   - voices on the radio play quieter (0.6) and the music only dips to 40% under them, so talk and songs sit level;
+   - talk has a music bed now: news, weather, adverts and the DJ talk over a low song instead of silence;
+   - station idents (each station has its own jingle) between songs, and more sound effects inside the segments:
+     a teletype under the news, thunder in storm weather, a cash register on adverts, a record scratch and an air horn
+     for the DJs, a banjo twang on Brothers Load, a camera shutter on the gossip, a harp on the horoscopes, the click of
+     a caller going on air. ---------- */
+(function () { var t = sfx.tone, n = sfx.noise;
+  sfx.add('r_typing', function () { for (var i = 0; i < 18; i++) { n(0.025, 0.07, 3200, i * 0.07 + (i % 3) * 0.01); if (i % 6 === 5) t('square', 1800, 1800, 0.05, 0.04, i * 0.07 + 0.03); } });
+  sfx.add('r_thunder', function () { n(2.2, 0.16, 90); n(1.2, 0.1, 160, 0.3); });
+  sfx.add('r_cash', function () { t('square', 2093, 2093, 0.08, 0.05); t('square', 2637, 2637, 0.3, 0.05, 0.08); n(0.2, 0.06, 5000, 0.08); });
+  sfx.add('r_scratch', function () { t('sawtooth', 300, 900, 0.12, 0.06); t('sawtooth', 900, 250, 0.16, 0.06, 0.12); n(0.25, 0.05, 1400); });
+  sfx.add('r_horn', function () { [0, 0.22, 0.44].forEach(function (d) { t('sawtooth', 466, 466, 0.18, 0.06, d); t('sawtooth', 587, 587, 0.18, 0.05, d); }); t('sawtooth', 466, 440, 0.6, 0.06, 0.66); });
+  sfx.add('r_twang', function () { [392, 494, 587, 784].forEach(function (f, i) { t('triangle', f, f * 0.995, 0.5, 0.06, i * 0.09); t('square', f * 2, f * 2, 0.06, 0.02, i * 0.09); }); });
+  sfx.add('r_camera', function () { for (var i = 0; i < 4; i++) { n(0.05, 0.1, 6000, i * 0.18); t('sine', 3000, 4000, 0.04, 0.04, i * 0.18 + 0.02); } });
+  sfx.add('r_harp', function () { [262, 330, 392, 523, 659, 784, 1047, 1319].forEach(function (f, i) { t('triangle', f, f, 0.9, 0.04, i * 0.07); }); });
+  sfx.add('r_click', function () { n(0.04, 0.12, 2000); t('sine', 1200, 1200, 0.05, 0.04, 0.05); });
+  // station idents: a short tune each
+  sfx.add('r_id_hs', function () { [196, 233, 294, 392].forEach(function (f, i) { t('sawtooth', f, f, 0.22, 0.05, i * 0.16); t('sawtooth', f * 1.5, f * 1.5, 0.22, 0.03, i * 0.16); }); t('sawtooth', 392, 370, 0.9, 0.06, 0.64); n(0.7, 0.05, 300, 0.64); });
+  sfx.add('r_id_bl', function () { [392, 392, 523, 659, 587, 523].forEach(function (f, i) { t('triangle', f, f, 0.16, 0.06, i * 0.12); }); t('square', 196, 196, 0.3, 0.04, 0.72); t('triangle', 784, 784, 0.4, 0.05, 0.72); });
+  sfx.add('r_id_po', function () { [523, 659, 784, 1047, 784, 1047, 1319].forEach(function (f, i) { t('sine', f, f, 0.2, 0.05, i * 0.1); t('sine', f / 2, f / 2, 0.2, 0.03, i * 0.1); }); n(0.6, 0.04, 120, 0.7); t('sine', 55, 40, 0.6, 0.12, 0.7); });
+  sfx.add('r_id_talk', function () { [440, 554, 659].forEach(function (f, i) { t('square', f, f, 0.12, 0.04, i * 0.1); }); t('sine', 880, 880, 0.5, 0.05, 0.3); n(0.15, 0.05, 2500, 0.3); });
+})();
+var EXTRA = { news: ['r_typing'], crime: ['r_typing'], ads: ['r_cash'], gossip: ['r_camera'], stars: ['r_harp'], calls: ['r_click'] };
+var BEDK = { news: 1, weather: 1, ads: 1, dj: 1, gossip: 1, stars: 1, sports: 1, traffic: 1 };
+var _radioTalkSeg157 = radioTalkSeg; radioTalkSeg = function (st) { var parts = _radioTalkSeg157(st), first = parts[0], k = null; for (var kk in STING) if (first && STING[kk] === first.sfx) k = kk;
+  if (!k) k = 'dj'; var out = []; if (first && first.sfx) out.push(first);
+  (EXTRA[k] || []).forEach(function (e) { out.push({ sfx: e, t: 0.1 }); }); if (k === 'weather' && (G.weather === 'storm' || G.weather === 'rain')) out.push({ sfx: 'r_thunder', t: 0.6 });
+  if (k === 'dj') out.unshift({ sfx: st.id === 'po' ? 'r_horn' : st.id === 'bl' ? 'r_twang' : st.id === 'hs' ? 'r_scratch' : 'r_click', t: 0.7 });
+  parts.forEach(function (p) { if (p !== first || !first.sfx) out.push(p); }); out.bed = BEDK[k] ? 1 : 0; out.kind = k; return out; };
+radioNextSeg = function () {
+  var st = STATIONS[RAD.st]; if (!RAD.on || st.id === 'off') { G.radioSong = null; try { music.stop(); } catch (e) {} return; }
+  var real = window.CCNRADIO && window.CCNRADIO[st.id] && window.CCNRADIO[st.id].length ? window.CCNRADIO[st.id] : null;
+  if (RAD.forced) { var f = RAD.forced; RAD.forced = null; RAD.seg = { k: 'song', id: f, t: 150 }; music.play(f); G.radioSong = (music.songs[f] && music.songs[f].name ? music.songs[f].name : f) + ' · Brothers Load'; G.radioName = STATIONS[1].name; G.radioT = 5; return; }
+  RAD.count = (RAD.count || 0) + 1;
+  if (st.id === 'talk' || RAD.count % 2 === 0) { var parts = radioTalkSeg(st); // talk: over a low bed of music when it suits
+    if (parts.bed && st.songs.length) { var bed = radioDeal('bed' + st.id, st.songs); try { music.play(bed); } catch (e) {} RAD.bedOn = 1; duckApply(); } else if (parts.bed && st.id === 'talk') { try { music.play(pick(['town', 'park', 'roof'])); } catch (e) {} RAD.bedOn = 1; duckApply(); } else { RAD.bedOn = 0; try { music.stop(); } catch (e) {} }
+    RAD.seg = { k: 'talk', parts: parts, t: 0.3 }; return; }
+  RAD.bedOn = 0; duckApply();
+  if (real) { var src = real[Math.floor(Math.random() * real.length)]; RAD.audio = new Audio(src); RAD.audio.volume = 0.8; RAD.audio.play().catch(function () {}); RAD.seg = { k: 'real', t: 600 }; RAD.audio.onended = function () { RAD.seg = null; radioNextSeg(); }; G.radioSong = src.split('/').pop().replace(/\.mp3$/i, '').replace(/[-_]/g, ' '); return; }
+  if (st.id === 'po' && SV.mixtape && Math.random() < 0.3) st = STATIONS[2];
+  if (Math.random() < 0.6) sfx.play('r_id_' + st.id); // the station's jingle, then the song
+  var id = radioDeal('song' + st.id, st.songs); music.play(id); RAD.seg = { k: 'song', id: id, t: rnd(70, 110) }; G.radioSong = (music.songs[id] && music.songs[id].name ? music.songs[id].name : ({ castle: 'Castle Gates', boss: 'Boss Door', roof: 'Over the Rooftops', town: 'Town Square Two-Step', park: 'Ejaculand Waltz' }[id] || id)) + ' · ' + ({ hs: 'Hunter Seriph', bl: 'Brothers Load', po: 'PulsarOctopus' }[st.id] || '');
+};
+radioSay = function (who, text) { var f = voiceFile(who, text); if (!f) return false; var a = playFile(f, 0.6, 'radio'); if (!a) return false;
+  a.onloadedmetadata = function () { if (RAD.seg && RAD.seg.k === 'talk' && isFinite(a.duration)) RAD.seg.t = a.duration + 0.5; };
+  a.onended = function () { if (RAD.seg && RAD.seg.k === 'talk') RAD.seg.t = Math.min(RAD.seg.t, 0.4); }; a.onerror = function () { if (RAD.seg) RAD.seg.t = 0.2; }; return true; };
+duckApply = function () { var talk = DUCK.line || DUCK.bark, radioTalk = DUCK.radio, bed = RAD.bedOn && RAD.seg && RAD.seg.k === 'talk'; try { if (music.duck) music.duck(talk ? 0.35 : radioTalk ? (bed ? 0.3 : 0.45) : bed ? 0.5 : 1); } catch (e) {} if (VOX.radio && VOX.radio !== null) VOX.radio.volume = talk ? 0.2 : 0.6; };

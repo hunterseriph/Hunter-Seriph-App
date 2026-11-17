@@ -39,7 +39,7 @@ function stepFoot(dt) {
   var nx = P.x + P.vx * dt, nz = P.z + P.vz * dt, c = collide(nx, nz, 0.35, P.y, 1.7); nx += c.x; nz += c.z;
   // step up small things (kerbs, stairs): the ground ahead may be at most 0.6 m up
   var gn = standY(nx, nz, P.y + 0.6); if (gn > P.y + 0.65 && P.ground) { nx = P.x; nz = P.z; }
-  P.x = clamp(nx, 2, WX - 2); P.z = clamp(nz, 2, WZ - 2);
+  if (G.interior) { P.x = nx; P.z = nz; } else { P.x = clamp(nx, 2, WX - 2); P.z = clamp(nz, 2, WZ - 2); } // update 158: the world's edge clamp (2 m) kept you 2 m from every door inside a room
   vehPush(P, 0.4);
   // pose phase
   P.ph += dt * (P.sp * (run ? 1.6 : 2.4)) ;
@@ -128,7 +128,7 @@ function stepCamera(dt) {
   var s = CAM.snap ? 1 : Math.min(1, dt * 14); CAM.snap = 0; CAM.x += (ox - CAM.x) * s; CAM.y += (oy - CAM.y) * s; CAM.z += (oz - CAM.z) * s;
   if (Math.hypot(CAM.x - ox, CAM.z - oz) > 30) { CAM.x = ox; CAM.y = oy; CAM.z = oz; }
   CAM.shake = Math.max(0, CAM.shake - dt); var sh = CAM.shake * 0.25;
-  CAM.at = [tgt[0] + sy * look * 0 + (Math.random() - 0.5) * sh, tgt[1] + (Math.random() - 0.5) * sh, tgt[2] + (Math.random() - 0.5) * sh];
+  CAM.at = [tgt[0] + sy * look * 0 + (Math.random() - 0.5) * sh + (CAM.sway || 0) * 6, tgt[1] + (Math.random() - 0.5) * sh + Math.sin(G.t * 0.9) * (CAM.sway || 0) * 4, tgt[2] + (Math.random() - 0.5) * sh];
   if (P.aim) { var fx = Math.sin(CAM.yaw) * Math.cos(CAM.pit), fz = Math.cos(CAM.yaw) * Math.cos(CAM.pit); CAM.at = [CAM.x + fx * 10, CAM.y + Math.sin(CAM.pit) * 10 + 0.4, CAM.z + fz * 10]; }
 }
 function poseOfPlayer() {

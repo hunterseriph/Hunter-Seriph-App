@@ -7,8 +7,10 @@
    chapel's door now go inside (7h-places.js). Blumhead's Castle is the black, purple and goo version. ---------- */
 var CASTLE_R = 46;
 (function castleGround() {
-  POIS.forEach(function (p) { if (p.k !== 'castle') return; var R = CASTLE_R, ci = Math.floor(p.x / CT), cj = Math.floor(p.z / CT), id = DM[cj * MW + ci], rt = Math.ceil((R + 30) / CT);
-    for (var j = cj - rt; j <= cj + rt + 1; j++) for (var i = ci - rt; i <= ci + rt + 1; i++) { if (i < 0 || j < 0 || i > MW || j > MH) continue; var dx = i * CT - p.x, dz = j * CT - p.z, d = Math.max(Math.abs(dx), Math.abs(dz)); if (d < R + 14) CH[j * (MW + 1) + i] = p.h; }
+  POIS.forEach(function (p) { if (p.k !== 'castle') return; var R = CASTLE_R, ci = Math.floor(p.x / CT), cj = Math.floor(p.z / CT), id = DM[cj * MW + ci], rt = Math.ceil((R + 70) / CT);
+    // update 158 (his ask: still ramps near the castles): level under the walls, then eased out into the hill over 50 m
+    for (var j = cj - rt; j <= cj + rt + 1; j++) for (var i = ci - rt; i <= ci + rt + 1; i++) { if (i < 0 || j < 0 || i > MW || j > MH) continue; var dx = i * CT - p.x, dz = j * CT - p.z, d = Math.max(Math.abs(dx), Math.abs(dz)), u = clamp((d - R - 12) / 50, 0, 1); u = u * u * (3 - 2 * u); var q = j * (MW + 1) + i; CH[q] = p.h + (CH[q] - p.h) * u; }
+    rt = Math.ceil((R + 30) / CT);
     for (var j2 = cj - rt; j2 <= cj + rt; j2++) for (var i2 = ci - rt; i2 <= ci + rt; i2++) { var t = j2 * MW + i2; if (DM[t] !== id) continue; var x = i2 * CT + 2 - p.x, z = j2 * CT + 2 - p.z, dd = Math.max(Math.abs(x), Math.abs(z));
       if (KM[t] === K_ROAD || KM[t] === K_BRIDGE) continue;
       if (dd < R - 1) KM[t] = K_YARD; else if (Math.abs(x) < 6 && z > 0) KM[t] = K_PAVE; else KM[t] = p.dark ? K_DIRT : K_GRASS; } });

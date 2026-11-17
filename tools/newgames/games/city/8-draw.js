@@ -24,6 +24,7 @@ function worldLook() {
   if (wx === 'fog') { fog = [0.55 * dl + 0.12, 0.55 * dl + 0.12, 0.58 * dl + 0.14]; fr = [20, 140]; }
   if (wx === 'snow') { fog = fog.map(function (v) { return v * 0.6 + 0.3 * dl; }); fr = [VIEWR * 0.3, VIEWR * 0.85]; }
   if (in2) { amb = [0.85, 0.8, 0.8]; fog = [0.02, 0.01, 0.02]; fr = [30, 80]; }
+  if (window.__fogFar && !in2) fr = [VIEWR * 2, VIEWR * 3]; // test shots from the air
   return { dl: dl, sky: sk, amb: amb, fog: fog, fogR: fr };
 }
 var FX = [];
@@ -35,7 +36,7 @@ function drawWorld(look) {
   // lights: the nearest lit street lamps, shops, landmarks, the car's headlights as the torch
   var cam = R3.cam.eye, Ls = [];
   if (night || G.interior) { for (var k in CHUNKS) { var C = CHUNKS[k]; if (Math.abs(C.x - cam[0]) > 130 || Math.abs(C.z - cam[2]) > 130) continue; C.lamps.forEach(function (L) { var d = dist2(L.x, L.z, cam[0], cam[2]); if (d < 110 * 110) Ls.push({ x: L.x, y: L.y, z: L.z, r: L.shop ? 9 : 14, c: L.shop ? [1, 0.45, 0.4] : [1, 0.82, 0.55], k: (1 - dl) * 1.15, d: d }); }); } }
-  LMK.forEach(function (o) { (o.lights || []).forEach(function (L) { var d = dist2(L.x, L.z, cam[0], cam[2]); if (d < 160 * 160) Ls.push({ x: L.x, y: L.y, z: L.z, r: L.r, c: L.c, k: 0.4 + (1 - dl) * 1.0, d: d }); }); });
+  LMK.forEach(function (o) { (o.lights || []).forEach(function (L) { var d = dist2(L.x, L.z, cam[0], cam[2]); if (d < 160 * 160) Ls.push({ x: L.x, y: L.y, z: L.z, r: L.r, c: L.c, k: (0.4 + (1 - dl) * 1.0) * (L.k2 || 1), d: d }); }); });
   (G.dynLights || []).forEach(function (L) { L.d = dist2(L.x, L.z, cam[0], cam[2]); Ls.push(L); });
   Ls.sort(function (a, b) { return a.d - b.d; });
   var torch = { p: [0, -999, 0], d: [0, -1, 0], c: [0, 0, 0] };
@@ -45,11 +46,11 @@ function drawWorld(look) {
   if (!G.interior) { if (!SEAM) { SEAM = new R3.Mesh(); var S = 1600; SEAM.quad([-S, 0, -S], [-S, 0, S], [S, 0, S], [S, 0, -S], uvR(S / 2, S / 2), TL('water'), [0.5, 0.5, 0.5], [0, 1, 0]); SEAM.upload(); }
     R3.draw(SEAM, ATT, { m: MD(Math.round(cam[0] / 8) * 8, -0.06, Math.round(cam[2] / 8) * 8, 0, 0, 0) }); }
   for (var k2 in CHUNKS) { var C2 = CHUNKS[k2]; if (!inView(C2.x, C2.z, 50)) continue;
-    if (C2.m) R3.draw(C2.m, ATT); if (C2.nat) R3.draw(C2.nat, ATT, { tint: sl.nat, flash: sl.natAdd }); if (C2.veg) R3.draw(C2.veg, ATT, { tint: sl.veg, flash: sl.vegAdd });
+    if (C2.m) R3.draw(C2.m, ATT); if (C2.furn) R3.draw(C2.furn, ATT); if (C2.nat) R3.draw(C2.nat, ATT, { tint: sl.nat, flash: sl.natAdd }); if (C2.veg) R3.draw(C2.veg, ATT, { tint: sl.veg, flash: sl.vegAdd });
     if (C2.fr && sheetTex()) R3.draw(C2.fr, sheetTex()); if (C2.wat) R3.draw(C2.wat, ATT, { tint: [1, 1, 1] });
     if (C2.glow) R3.draw(C2.glow, ATT, { lit: false, tint: night ? [1.1, 1.1, 1.1] : [0.85, 0.85, 0.85] });
     if (C2.night && dl < 0.6) R3.draw(C2.night, ATT, { lit: false, alpha: clamp((0.6 - dl) * 3, 0, 1) }); }
-  LMK.forEach(function (o) { if (!inView(o.x, o.z, o.r)) return; if (o.m) R3.draw(o.m, ATT); if (o.glow) R3.draw(o.glow, ATT, { lit: false }); if (o.fr && sheetTex()) R3.draw(o.fr, sheetTex()); o.parts.forEach(function (q) { R3.draw(q.m, ATT, { m: q.f(T) }); }); });
+  LMK.forEach(function (o) { if (!inView(o.x, o.z, o.r)) return; if (o.m) R3.draw(o.m, ATT); if (o.glow) R3.draw(o.glow, ATT, { lit: false }); if (o.fr && sheetTex()) R3.draw(o.fr, sheetTex()); o.parts.forEach(function (q) { R3.draw(q.m, ATT, { m: q.f(T) }); }); (o.glowParts || []).forEach(function (q) { R3.draw(q.m, ATT, { m: q.f(T), lit: false }); }); });
 }
 var SHTEX2 = null;
 function sheetTex() { if (!SHTEX2 && KIT.sheetReady) SHTEX2 = R3.texture(KIT.sheet); return SHTEX2; }

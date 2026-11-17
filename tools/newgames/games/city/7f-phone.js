@@ -13,7 +13,12 @@ function phoneOpen() { if (!P || G.mode !== 'play' || G.cut || G.interior || P.s
     { label: 'INSURANCE', cls: 'app ins', fn: function () { phoneAsk('insure'); } },
     { label: 'COMBAT STIMS', cls: 'app stim', fn: function () { phoneAsk('stims'); } },
     { label: 'MAP', cls: 'app map', fn: function () { phoneClose(); mapMenu(null); } },
+    { label: 'JOBS', cls: 'app jobs', fn: function () { jobsMenu(); } },
+    { label: 'CAMERA', cls: 'app cam', fn: function () { phoneClose(); G.flashT = 0.2; sfx.play('blip'); toast(pick(['Click. Nobody will ever look at that again.', 'Click. Blurry, but it has character.', 'Click. A masterpiece of Cum City.'])); } },
     { label: 'HANG UP', back: true, cls: 'app off', fn: phoneClose }] }); }
+function jobsMenu() { // update 158: side jobs (taxi, paramedic, vigilante, pizza) for the vehicle you are in
+  var v = P.veh; KIT.menu({ cls: 'phone', title: 'JOBS', sub: G.job ? 'On shift: ' + JOBS[G.job.k].n : v ? 'In a ' + v.t.n : 'Get in the right vehicle', items: Object.keys(JOBS).map(function (k) { var ok = v && JOBS[k].need.indexOf(v.type) >= 0; return { label: JOBS[k].n, sub: ok ? 'Start a shift' : (k === 'taxi' ? 'Needs a taxi' : k === 'para' ? 'Needs an ambulance' : k === 'vig' ? 'Needs a police car' : 'Needs a scooter or motorbike'), fn: function () { phoneClose(); if (G.job) jobStop(); jobStart(k); } }; })
+    .concat(G.job ? [{ label: 'END THE SHIFT', fn: function () { phoneClose(); jobStop(); } }] : []).concat([{ label: 'BACK', back: true, fn: phoneOpen }]) }); }
 function phoneClose() { G.phone = 0; KIT.closeMenu(); }
 function phoneAsk(what) { if (PHONE && PHONE.st !== 'done') { toast('Something is already on its way.'); return; }
   if (what === 'taxi') KIT.confirm({ title: 'Cum Cabs', sub: 'A cab comes to you. You pay the fare when you pick where to go.', price: 20, have: Math.floor(SV.money), unit: '$', yesLabel: 'Call a cab', yes: function () { phoneCall('taxi'); }, no: phoneOpen });

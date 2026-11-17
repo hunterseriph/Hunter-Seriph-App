@@ -31,7 +31,25 @@
   '#menu.phone .mbtn.ins::after{background:linear-gradient(160deg,#4adfff,#1a5a8a);border-radius:23px 23px 13px 13px}',
   '#menu.phone .mbtn.stim::after{background:linear-gradient(90deg,transparent 38%,#fff 38%,#fff 62%,transparent 62%),linear-gradient(0deg,transparent 38%,#fff 38%,#fff 62%,transparent 62%),linear-gradient(160deg,#ff2630,#8a0c14)}',
   '#menu.phone .mbtn.map::after{background:linear-gradient(160deg,#7aff6a,#1a6a2a)}',
+  '#menu.phone .mbtn.jobs::after{background:linear-gradient(160deg,#4adfff,#12040a);border-radius:8px}',
+  '#menu.phone .mbtn.cam::after{background:radial-gradient(circle at 50% 55%,#12040a 0 9px,#f1e7d0 10px 12px,#2a2a2e 13px)}',
   '#menu.phone .mbtn.off{grid-column:span 2;min-height:46px;justify-content:center;background:#c4121c}#menu.phone .mbtn.off::after{display:none}',
   '#menu.phone .mbtn:not(.app){border-radius:12px;margin-top:2px}',
-  '#phoneBtn{order:-1}'
+  '#phoneBtn{order:-1}',
+  // update 158 (his ask: he could not tell what was selected): the picked row is unmistakable: full red, a gold edge, bright text, a pointer
+  '#menu .mbtn.hs-focus,#menu .mbtn:focus-visible{outline:none!important;box-shadow:inset 3px 0 0 #ffe36a,0 0 0 1px #ff2630!important;background:#c4121c!important}',
+  '#menu .mbtn.hs-focus::before,#menu .mbtn:focus-visible::before{width:100%!important;background:linear-gradient(90deg,#d8141e,#8a0c14)!important}',
+  '#menu .mbtn.hs-focus span,#menu .mbtn:focus-visible span{color:#fff!important}',
+  '#menu .mbtn.hs-focus::after{content:"▶";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#ffe36a;font-size:11px;z-index:2}',
+  '#menu.phone .mbtn.app.hs-focus::after{content:"";right:auto;transform:none;top:14px;outline:2px solid #ffe36a;outline-offset:2px}',
+  '#menu .islot.hs-focus,#menu .itab.hs-focus{outline:2px solid #ffe36a!important;outline-offset:1px}',
+  // tidier: one width for every menu, scrolling list, the close button in line with the title
+  '#menu .mbox{width:min(460px,92vw);max-height:88vh}',
+  '#menu .mlist{scrollbar-width:thin;scrollbar-color:#c4121c transparent}',
+  '#menu .mbtn small{opacity:.8;font-size:12px}'
 ].join('\n'); document.head.appendChild(st); })();
+/* update 158 (his screenshots: the top buttons sat on top of the A and B buttons when the phone is sideways): the top
+   row moves left of the touch buttons whenever they would overlap */
+(function () { function fit() { var top = document.getElementById('top'), acts = document.getElementById('acts'); if (!top) return; top.style.right = '';
+    if (!acts || !acts.offsetParent) return; var a = acts.getBoundingClientRect(), t = top.getBoundingClientRect(); if (t.bottom > a.top - 4 && t.right > a.left) top.style.right = Math.round(window.innerWidth - a.left + 10) + 'px'; }
+  window.addEventListener('resize', function () { setTimeout(fit, 60); }); setInterval(fit, 1500); })();

@@ -174,7 +174,11 @@ function money(n) { SV.money = Math.max(0, (SV.money || 0) + n); G.moneyPop = 1;
 
 /* parked cars along the kerbs, free to take (update 155) */
 function spawnParked() { var have = VEH.filter(function (v) { return v.parked && !v.dead && dist2(v.x, v.z, P.x, P.z) < 160 * 160; }).length; if (have >= 14) return;
-  var r = spawnPoint(40, 150); if (!r || r.E.len < 24 || r.E.w < 11) return; var side = Math.random() < 0.5, pt = edgeAt(r.E, clamp(r.s, 10, r.E.len - 10), side, r.E.w / 2 - 0.95), k = kAt(pt.x, pt.z); if (k !== K_ROAD) return;
+  // update 158 (his ask: too many cars parked by the road in the middle of nowhere): in car parks (painted bays), or at the kerb in town only
+  if (Math.random() < 0.55) { var cps = BLD.filter(function (b) { return b.style === 'carpark' && Math.abs((b.x0 + b.x1) / 2 - P.x) < 150 && Math.abs((b.z0 + b.z1) / 2 - P.z) < 150; }); if (cps.length) { var cp = pick(cps), nb = Math.floor((cp.x1 - cp.x0 - 2) / 3); if (nb < 1) return; var bi = Math.floor(Math.random() * nb), top = Math.random() < 0.5, bx = cp.x0 + 1 + bi * 3 + 1.5, bz = top ? cp.z0 + 3.5 : cp.z1 - 3.5;
+      for (var j = 0; j < VEH.length; j++) if (dist2(VEH[j].x, VEH[j].z, bx, bz) < 9) return; var dx0 = bx - CAM.x, dz0 = bz - CAM.z, f0 = R3.cam.fwd, d0 = Math.hypot(dx0, dz0); if (d0 < 60 && (dx0 * f0[0] + dz0 * f0[2]) / d0 > 0.4) return;
+      var pv = makeVeh(pick(['hatch', 'hatch', 'saloon', 'saloon', 'van', 'muscle', 'sports']), bx, bz, top ? Math.PI : 0); pv.parked = 1; return; } }
+  var r = spawnPoint(40, 150); if (!r || r.E.len < 40 || r.E.w < 11 || r.E.track) return; if (!/downtown|redlight|cafe|suburb|labs|docks|industrial/.test(dAt(r.x, r.z).style)) return; var side = Math.random() < 0.5, pt = edgeAt(r.E, clamp(r.s, 18, r.E.len - 18), side, r.E.w / 2 - 0.95), k = kAt(pt.x, pt.z); if (k !== K_ROAD) return;
   for (var i = 0; i < VEH.length; i++) if (dist2(VEH[i].x, VEH[i].z, pt.x, pt.z) < 7 * 7) return;
   var dx = pt.x - CAM.x, dz = pt.z - CAM.z, f = R3.cam.fwd, d = Math.hypot(dx, dz); if (d < 70 && (dx * f[0] + dz * f[2]) / d > 0.4) return;
   var v = makeVeh(pick(['hatch', 'hatch', 'saloon', 'saloon', 'van', 'muscle', 'sports', 'taxi']), pt.x, pt.z, pt.a); v.parked = 1; }

@@ -3,7 +3,7 @@
 var RNG = srand(4242);
 /* ---------- stunt jumps: ramps at the side of long straight roads, on the river banks and the beach ---------- */
 var STUNTS = (function () { // update 157 (his ask: ramps in the road): stunt ramps stand OFF the road, on open ground beside it, facing along it
-  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.pts.length > 2) return;
+  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.track) return; var q0 = edgeAt(E, E.len * 0.5 - 18, false, 0), q1 = edgeAt(E, E.len * 0.5 + 18, false, 0); if (Math.abs(angDiff(q0.a, q1.a)) > 0.12) return; if (/castle|darkcastle|park|grotto|peak/.test(dAt(q0.x, q0.z).style)) return; // update 158: straight stretches of the curved roads too, never by the castles or in the park
     for (var side = -1; side <= 1; side += 2) for (var off = 9; off <= 18; off += 3) { if (L.length >= 18) return; var p = edgeAt(E, E.len * 0.5, false, side * (E.w / 2 + off)), a = Math.atan2(p.dx, p.dz);
       if (used.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 260; })) return; var ok = true;
       for (var v = -10; v <= 16 && ok; v += 2) for (var u = -3; u <= 3; u += 3) { var x = p.x + Math.sin(a) * v + Math.cos(a) * u, z = p.z + Math.cos(a) * v - Math.sin(a) * u, k = kAt(x, z);

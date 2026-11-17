@@ -265,7 +265,7 @@ function raceAI(v, to, dt) { var r = nearestRoad(v.x, v.z, 60), aim = to; if (r)
 /* the people who give missions stand outside their place */
 function missionGivers() {
   var L = []; MISSIONS.forEach(function (m) { if (!missionAvailable(m)) return; var p = placeOf(m.at); if (!p) return; if (L.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 3; })) return;
-    L.push({ x: p.x, z: p.z, r: 1.8, blip: 'mission', icon: (CAST[m.who] ? CAST[m.who].name : '?')[0], label: 'START: ' + m.title.toUpperCase(), m: m, fn: function () { startMission(m); } }); });
+    L.push({ x: p.x, z: p.z, r: 1.8, blip: 'mission', who: m.who, icon: (CAST[m.who] ? CAST[m.who].name : '?')[0], label: 'START: ' + m.title.toUpperCase(), m: m, fn: function () { startMission(m); } }); });
   return L;
 }
 function missionsMenu() { var av = MISSIONS.filter(missionAvailable), dn = MISSIONS.filter(function (m) { return SV.done[m.id]; });

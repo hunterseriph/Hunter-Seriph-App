@@ -1,23 +1,33 @@
 /* ---------- what is on the screen: the radar, health and armour, money, the wanted stars, the weapon, the clock,
    messages, subtitles, prompts, speech over people's heads, and the full map ---------- */
 var MAPC = null;
-function mapCanvas() {
-  if (MAPC) return MAPC; var c = document.createElement('canvas'); c.width = MW; c.height = MH; var g = c.getContext('2d'), im = g.createImageData(MW, MH), d = im.data;
-  var COL = {}; COL[K_SEA] = [16, 22, 44]; COL[K_WATER] = [26, 40, 70]; COL[K_SAND] = [150, 136, 100]; COL[K_GRASS] = [40, 64, 34]; COL[K_FOREST] = [24, 46, 24]; COL[K_ROAD] = [190, 180, 170]; COL[K_PAVE] = [92, 84, 82]; COL[K_LOT] = [70, 62, 62]; COL[K_PARK] = [48, 84, 40];
-  COL[K_ROCK] = [80, 72, 68]; COL[K_DIRT] = [100, 78, 58]; COL[K_RUNWAY] = [120, 120, 124]; COL[K_GRAVE] = [44, 58, 40]; COL[K_BRIDGE] = [200, 60, 60]; COL[K_CREAM] = [220, 206, 170]; COL[K_PIER] = [110, 80, 50]; COL[K_YARD] = [80, 80, 80]; COL[K_FIELD] = [76, 84, 44];
-  for (var i = 0; i < MW * MH; i++) { var cc = COL[KM[i]] || [0, 0, 0], q = i * 4, h = HT[i]; var k = KM[i] === K_ROAD || KM[i] === K_BRIDGE ? 1 : 0.85 + clamp(h / 120, 0, 0.4); d[q] = cc[0] * k; d[q + 1] = cc[1] * k; d[q + 2] = cc[2] * k; d[q + 3] = 255; }
-  g.putImageData(im, 0, 0); g.fillStyle = '#3a2a2c'; BLD.forEach(function (b) { if (!b.solid) return; g.fillStyle = b.shop ? '#7a1a20' : b.h > 30 ? '#4a3a3c' : '#342628'; g.fillRect(b.x0 / CT, b.z0 / CT, (b.x1 - b.x0) / CT, (b.z1 - b.z0) / CT); });
-  MAPC = c; return c;
+function mapCanvas() { // update 158 (his ask: the map felt basic): drawn at twice the tile size, the land shaded, the roads as smooth lines with kerbs, park paths, buildings with a shadow
+  if (MAPC) return MAPC; var c0 = document.createElement('canvas'); c0.width = MW; c0.height = MH; var g = c0.getContext('2d'), im = g.createImageData(MW, MH), d = im.data;
+  var COL = {}; COL[K_SEA] = [16, 22, 44]; COL[K_WATER] = [26, 40, 70]; COL[K_SAND] = [150, 136, 100]; COL[K_GRASS] = [40, 64, 34]; COL[K_FOREST] = [24, 46, 24]; COL[K_ROAD] = [92, 84, 82]; COL[K_PAVE] = [92, 84, 82]; COL[K_LOT] = [70, 62, 62]; COL[K_PARK] = [48, 84, 40];
+  COL[K_ROCK] = [80, 72, 68]; COL[K_DIRT] = [100, 78, 58]; COL[K_RUNWAY] = [120, 120, 124]; COL[K_GRAVE] = [44, 58, 40]; COL[K_BRIDGE] = [40, 52, 86]; COL[K_CREAM] = [220, 206, 170]; COL[K_PIER] = [110, 80, 50]; COL[K_YARD] = [80, 80, 80]; COL[K_FIELD] = [76, 84, 44];
+  for (var i = 0; i < MW * MH; i++) { var cc = COL[KM[i]] || [0, 0, 0], q = i * 4, h = HT[i], x = i % MW, j = (i - x) / MW, sh = 0;
+    if (x > 0 && j > 0) sh = clamp((HT[i] - HT[i - MW - 1]) * 0.08, -0.18, 0.18); var k = 0.85 + clamp(h / 120, 0, 0.4) + sh; d[q] = cc[0] * k; d[q + 1] = cc[1] * k; d[q + 2] = cc[2] * k; d[q + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  var S = 2, c = document.createElement('canvas'); c.width = MW * S; c.height = MH * S; var g2 = c.getContext('2d'); g2.imageSmoothingEnabled = true; g2.drawImage(c0, 0, 0, MW * S, MH * S);
+  function path(pts) { g2.beginPath(); pts.forEach(function (p, k) { var x = p[0] / CT * S, z = p[1] / CT * S; if (k) g2.lineTo(x, z); else g2.moveTo(x, z); }); }
+  g2.lineCap = 'round'; g2.lineJoin = 'round';
+  RE.forEach(function (E) { path(E.pts); g2.strokeStyle = '#141012'; g2.lineWidth = E.w / CT * S + 2.2; g2.stroke(); });
+  (typeof PPATH !== 'undefined' ? PPATH : []).forEach(function (P0) { path(P0.pts); g2.strokeStyle = '#8a7a72'; g2.lineWidth = P0.w / CT * S; g2.stroke(); });
+  RE.forEach(function (E) { path(E.pts); var br = E.pts.some(function (p) { return kAt(p[0], p[1]) === K_BRIDGE; }); g2.strokeStyle = E.track ? '#9a8a76' : E.w >= 14 ? '#e8dcc8' : '#c8bcb0'; g2.lineWidth = E.w / CT * S; g2.stroke(); if (E.w >= 14) { path(E.pts); g2.strokeStyle = '#c4121c'; g2.lineWidth = 0.6; g2.stroke(); } });
+  BLD.forEach(function (b) { if (!b.solid) return; var x = b.x0 / CT * S, z = b.z0 / CT * S, w = (b.x1 - b.x0) / CT * S, hh = (b.z1 - b.z0) / CT * S; g2.fillStyle = 'rgba(0,0,0,0.35)'; g2.fillRect(x + 1, z + 1, w, hh); g2.fillStyle = b.shop && SHOPS[b.shop] ? '#8a1a20' : b.h > 30 ? '#5a4a4c' : b.style === 'house' ? '#6a3a30' : '#3e3032'; g2.fillRect(x, z, w, hh); });
+  MAPC = c; MAPC.S = S; return c;
 }
+var MAPICON = { petrol: ['P', '#ffb030'], diner: ['D', '#ff7ab0'], motel: ['M', '#ff2630'], jetty: ['F', '#4adfff'], lookout: ['L', '#7aff6a'], view: ['V', '#f1e7d0'], camp: ['C', '#ffb030'], scrapyard: ['S', '#a6968f'], church: ['+', '#f1e7d0'], drivein: ['T', '#ffe36a'], golf: ['G', '#7aff6a'], observatory: ['O', '#4adfff'], village: ['B', '#ffe36a'], cabin: ['H', '#c8a060'], castle: ['K', '#c4121c'], grotto: ['G', '#f1e7d0'] };
 var BLIPS = { shop: '#ffe36a', mission: '#ff2630', house: '#7aff6a', race: '#4adfff', event: '#ff7ab0', clue: '#c48aff', wash: '#f1e7d0', car: '#ffffff', way: '#ffe36a' };
-function blipList() { var L = []; if (G.coop && G.coop.other && G.coop.other.tg) L.push({ x: G.coop.other.x, z: G.coop.other.z, c: '#4adfff', icon: G.guest ? 'C' : 'S', big: 1 }); if (G.coopMark) L.push({ x: G.coopMark.x, z: G.coopMark.z, c: '#ffe36a', big: 1, icon: '!' }); (G.uses || []).forEach(function (u) { if (u.blip) L.push({ x: u.x, z: u.z, c: BLIPS[u.blip] || '#fff', icon: u.icon, big: u.blip === 'mission' }); }); if (G.mission && G.mission.mark) L.push({ x: G.mission.mark.x, z: G.mission.mark.z, c: '#ffe36a', big: 1, icon: '!' }); if (SV.way) L.push({ x: SV.way[0], z: SV.way[1], c: '#ff2630', big: 1, icon: 'X' }); (G.blips || []).forEach(function (b) { L.push(b); }); return L; }
+function blipList() { var L = []; if (G.coop && G.coop.other && G.coop.other.tg) L.push({ x: G.coop.other.x, z: G.coop.other.z, c: '#4adfff', icon: G.guest ? 'C' : 'S', big: 1 }); if (G.coopMark) L.push({ x: G.coopMark.x, z: G.coopMark.z, c: '#ffe36a', big: 1, icon: '!' }); (G.uses || []).forEach(function (u) { if (u.blip) L.push({ x: u.x, z: u.z, c: BLIPS[u.blip] || '#fff', icon: u.icon, big: u.blip === 'mission', who: u.m ? u.m.who : null }); }); if (G.mission && G.mission.mark) L.push({ x: G.mission.mark.x, z: G.mission.mark.z, c: '#ffe36a', big: 1, icon: '!' }); if (SV.way) L.push({ x: SV.way[0], z: SV.way[1], c: '#ff2630', big: 1, icon: 'X' }); (G.blips || []).forEach(function (b) { L.push(b); }); return L; }
 function drawRadar(x, y, r) {
   var ctx = KIT.ctx, mc = mapCanvas(), px = (P.state === 'car' && P.veh ? P.veh.x : P.x), pz = (P.state === 'car' && P.veh ? P.veh.z : P.z), zoom = P.state === 'car' && P.veh && Math.abs(P.veh.sp) > 15 ? 0.55 : 0.85, rot = CAM.yaw;
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = '#070405'; ctx.fill(); ctx.clip();
-  ctx.translate(x, y); ctx.rotate(rot + Math.PI); ctx.scale(zoom, zoom); ctx.imageSmoothingEnabled = false; ctx.drawImage(mc, -px / CT, -pz / CT); ctx.setTransform(KIT.S, 0, 0, KIT.S, 0, 0);
+  ctx.translate(x, y); ctx.rotate(rot + Math.PI); ctx.scale(zoom, zoom); ctx.imageSmoothingEnabled = true; ctx.drawImage(mc, -px / CT, -pz / CT, MW, MH); ctx.setTransform(KIT.S, 0, 0, KIT.S, 0, 0);
   if (typeof gpsDraw === 'function') gpsDraw(ctx, function (wx, wz) { var dx = (wx - px) / CT * zoom, dz = (wz - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI); return [x + dx * c - dz * s, y + dx * s + dz * c]; }, 2.5);
   // blips
   blipList().forEach(function (b) { var dx = (b.x - px) / CT * zoom, dz = (b.z - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI), rx = dx * c - dz * s, rz = dx * s + dz * c, d = Math.hypot(rx, rz); if (d > r - 4) { rx *= (r - 4) / d; rz *= (r - 4) / d; }
+    if (b.who && portraitBlip(ctx, b.who, x + rx, y + rz, 6, b.c)) return;
     ctx.fillStyle = '#12040a'; ctx.fillRect(x + rx - (b.big ? 3 : 2), y + rz - (b.big ? 3 : 2), b.big ? 6 : 4, b.big ? 6 : 4); ctx.fillStyle = b.c; ctx.fillRect(x + rx - (b.big ? 2 : 1), y + rz - (b.big ? 2 : 1), b.big ? 4 : 2, b.big ? 4 : 2); });
   PEDS.forEach(function (p) { if (!(p.cop || p.hostile || p.mission) || p.dead) return; var dx = (p.x - px) / CT * zoom, dz = (p.z - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI), rx = dx * c - dz * s, rz = dx * s + dz * c; if (Math.hypot(rx, rz) > r) return; ctx.fillStyle = p.cop ? (Math.floor(G.t * 6) % 2 ? '#2a6aff' : '#ff2630') : '#ff2630'; ctx.fillRect(x + rx - 1, y + rz - 1, 2, 2); });
   ctx.restore();
@@ -30,12 +40,12 @@ function drawHud() {
   var ctx = KIT.ctx, Wd = KIT.W, Hd = KIT.H, up = Hd > Wd, pad = KIT.padRect ? KIT.padRect() : null;
   if (G.mode !== 'play' || !P) return;
   // radar bottom left (above the touch stick when upright)
-  var rr = up ? 34 : 30, rx = 8 + rr + 5, ry = Hd - rr - 12; drawRadar(rx, ry, rr);
-  tx(districtName(P.x, P.z).toUpperCase(), rx - rr, ry - rr - 12, { col: '#a6968f', size: 6 });
-  // top right: clock, money, weapon, stars
-  var x1 = Wd - 8, hh = Math.floor(G.time), mm = Math.floor((G.time - hh) * 60), clock = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
-  ctx.save(); ctx.translate(0, 18); tx(clock, x1 - tw2(clock, 10), 22, { col: '#f1e7d0', size: 10 }); var sd = SEASONS[season()] + ' · Day ' + (G.day + 1); tx(sd, x1 - tw2(sd, 6), 31, { col: '#a6968f', size: 6 });
-ctx.restore(); drawStatus(ctx);
+  var rr = up ? 34 : 30, rx = 8 + rr + 5, ry = Hd - rr - 12; if (!G.interior) drawRadar(rx, ry, rr); else ry = Hd + 4; // update 158: no radar indoors (it showed the open sea)
+  // update 158 (his ask: neaten the UI; the clock hid under the touch buttons): the clock, the day and where you are sit together over the radar
+  var hh = Math.floor(G.time), mm = Math.floor((G.time - hh) * 60), clock = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm, dn = G.interior ? (G.interior.id && SHOPS[G.interior.id] ? SHOPS[G.interior.id].name.toUpperCase() : 'INSIDE') : districtName(P.x, P.z).toUpperCase(), sd = SEASONS[season()].toUpperCase() + ' · DAY ' + (G.day + 1), by0 = ry - rr - 30, gw = Math.max(tw2(dn, 6), tw2(clock, 10) + 6 + tw2(sd, 5)) + 14;
+  var gg = ctx.createLinearGradient(rx - rr - 4, 0, rx - rr - 4 + gw + 20, 0); gg.addColorStop(0, 'rgba(7,4,5,0.7)'); gg.addColorStop(1, 'rgba(7,4,5,0)'); ctx.fillStyle = gg; ctx.fillRect(rx - rr - 6, by0 - 3, gw + 20, 25); ctx.fillStyle = '#c4121c'; ctx.fillRect(rx - rr - 6, by0 - 3, 2, 25);
+  tx(clock, rx - rr, by0, { col: '#f1e7d0', size: 10 }); tx(sd, rx - rr + tw2(clock, 10) + 6, by0 + 3, { col: '#a6968f', size: 5 }); tx(dn, rx - rr, by0 + 12, { col: '#ffe36a', size: 6 });
+  drawStatus(ctx);
   // drunk/high/pilled and the boost, the radio
   var st = []; if (G.drunk > 0.1) st.push('DRUNK'); if (G.high > 0.1) st.push('HIGH'); if (G.pilled > 0.1) st.push('PILLED'); if (st.length) tx(st.join(' · '), 10, 76, { col: '#c48aff', size: 7 });
   if (G.radioName && G.radioT > 0) { G.radioT -= 1 / 60; var rn = G.radioName; ctx.globalAlpha = Math.min(1, G.radioT); tx(rn, Wd / 2 - tw2(rn, 10) / 2, 26, { col: '#ffe36a', size: 10 }); if (G.radioSong) tx(G.radioSong, Wd / 2 - tw2(G.radioSong, 6) / 2, 36, { col: '#f1e7d0', size: 6 }); ctx.globalAlpha = 1; }
@@ -52,14 +62,22 @@ ctx.restore(); drawStatus(ctx);
   if (G.big && G.big.t > 0) { G.big.t -= 1 / 60; var bs = G.big.sz || 26, bw = tw2(G.big.s, bs, 'title'); tx(G.big.s, Wd / 2 - bw / 2, Hd * 0.38, { col: G.big.col || '#c4121c', size: bs, font: 'title', sh: 1 }); if (G.big.sub) tx(G.big.sub, Wd / 2 - tw2(G.big.sub, 8) / 2, Hd * 0.38 + bs + 4, { col: '#f1e7d0', size: 8 }); }
   // the prompt for whatever is near
   var u = P.state === 'foot' ? nearestUse() : null, pr = u ? (u.label || 'USE') : null; if (!pr && P.state === 'foot' && !G.cut) { var nv = null; VEH.forEach(function (v) { if (!v.dead && dist2(P.x, P.z, v.x, v.z) < Math.pow(v.t.len * 0.6 + 2, 2)) nv = v; }); if (nv) pr = (nv.driver ? 'STEAL ' : 'GET IN ') + nv.t.n.toUpperCase(); }
-  if (P.state === 'car') pr = G.carUse ? G.carUse.label : null; if (pr) { var lab = (TOUCHUI() ? 'Y' : KEYY()) + '  ' + pr, lw = tw2(lab, 7) + 14; ctx.fillStyle = 'rgba(7,4,5,0.8)'; ctx.fillRect(Wd / 2 - lw / 2, Hd * (up ? 0.52 : 0.7), lw, 14); ctx.strokeStyle = '#c4121c'; ctx.strokeRect(Wd / 2 - lw / 2 + 0.5, Hd * (up ? 0.52 : 0.7) + 0.5, lw - 1, 13); tx(lab, Wd / 2 - lw / 2 + 7, Hd * (up ? 0.52 : 0.7) + 4, { col: '#ffe36a', size: 7 }); }
+  if (P.state === 'car') pr = G.carUse ? G.carUse.label : null;
+  if (G.seat) pr = (G.seat.smoke > 0 ? '' : (TOUCHUI() || KIT.gamepad ? 'X' : 'C') + '  LIGHT A JOINT (' + (SV.joints || 0) + ')   ') + (TOUCHUI() ? 'Y' : KEYY()) + '  STAND UP';
+  if (G.fish) pr = G.fish.st === 'bite' ? '!!  PRESS A NOW  !!' : 'WAITING FOR A BITE...   ' + (TOUCHUI() ? 'Y' : KEYY()) + '  STOP';
+  if (pr && (G.seat || G.fish)) { var lw0 = tw2(pr, 7) + 14, py1 = Hd * (up ? 0.52 : 0.7); ctx.fillStyle = 'rgba(7,4,5,0.8)'; ctx.fillRect(Wd / 2 - lw0 / 2, py1, lw0, 14); ctx.strokeStyle = G.fish && G.fish.st === 'bite' ? '#ffe36a' : '#c4121c'; ctx.strokeRect(Wd / 2 - lw0 / 2 + 0.5, py1 + 0.5, lw0 - 1, 13); tx(pr, Wd / 2 - lw0 / 2 + 7, py1 + 4, { col: '#ffe36a', size: 7 }); pr = null; }
+  if (pr) { var lab = (TOUCHUI() ? 'Y' : KEYY()) + '  ' + pr, lw = tw2(lab, 7) + 14; ctx.fillStyle = 'rgba(7,4,5,0.8)'; ctx.fillRect(Wd / 2 - lw / 2, Hd * (up ? 0.52 : 0.7), lw, 14); ctx.strokeStyle = '#c4121c'; ctx.strokeRect(Wd / 2 - lw / 2 + 0.5, Hd * (up ? 0.52 : 0.7) + 0.5, lw - 1, 13); tx(lab, Wd / 2 - lw / 2 + 7, Hd * (up ? 0.52 : 0.7) + 4, { col: '#ffe36a', size: 7 }); }
   // speech over heads
   PEDS.forEach(function (p) { if (!p.said || p.sayT <= 0 || p.dead) return; var s = R3.project(p.x, p.y + 2.3, p.z); if (!s || dist2(p.x, p.z, P.x, P.z) > 30 * 30) return; var w = Math.min(190, tw2(p.said, 8) + 10), L = KIT.wrap ? KIT.wrap(p.said, 180, 8, 'body') : [p.said]; ctx.fillStyle = 'rgba(241,231,208,0.94)'; ctx.fillRect(s.x - w / 2, s.y - L.length * 10 - 5, w, L.length * 10 + 5); L.forEach(function (l, i) { tx(l, s.x - tw2(l, 8) / 2, s.y - L.length * 10 - 1 + i * 10, { col: '#12040a', size: 8 }); }); });
   // aiming: the target ring
   if (P.aim && P.target) { var ts2 = R3.project(P.target.x, P.target.y + 1.2, P.target.z); if (ts2) { ctx.strokeStyle = '#ff2630'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ts2.x, ts2.y, 7, 0, 6.283); ctx.stroke(); ctx.fillStyle = '#ff2630'; ctx.fillRect(ts2.x - 0.5, ts2.y - 0.5, 1, 1); } }
   else if (P.aim) { ctx.fillStyle = '#f1e7d0'; ctx.fillRect(Wd / 2 - 0.5, Hd / 2 - 4, 1, 3); ctx.fillRect(Wd / 2 - 0.5, Hd / 2 + 1, 1, 3); ctx.fillRect(Wd / 2 - 4, Hd / 2 - 0.5, 3, 1); ctx.fillRect(Wd / 2 + 1, Hd / 2 - 0.5, 3, 1); }
   // speed in a vehicle
-  if (P.state === 'car' && P.veh) { var v = P.veh, mph = Math.round(Math.abs(v.sp) * 2.237), sl = mph + ' MPH', vn = v.t.n.toUpperCase(); var sx0 = rx + rr + 10; tx(sl, sx0, Hd - 14, { col: '#f1e7d0', size: 10 }); tx(vn, sx0, Hd - 26, { col: '#a6968f', size: 6 }); if (v.t.cls === 'heli' || v.t.cls === 'plane') { var alt = 'ALT ' + Math.round(v.y - groundY(v.x, v.z)) + ' M'; tx(alt, sx0, Hd - 36, { col: '#4adfff', size: 7 }); } if (v.hp < 40) tx('DAMAGED', sx0, Hd - 46, { col: '#ff2630', size: 7 }); }
+  if (P.state === 'car' && P.veh) { var v = P.veh, mph = '' + Math.round(Math.abs(v.sp) * 2.237), vn = v.t.n.toUpperCase(), sx0 = rx + rr + 10, py0 = Hd - 40, pw = Math.max(70, tw2(vn, 6) + 14), hpk = clamp(v.hp / (v.t.hp || 100), 0, 1);
+    var pg = ctx.createLinearGradient(sx0 - 4, 0, sx0 + pw + 24, 0); pg.addColorStop(0, 'rgba(7,4,5,0.72)'); pg.addColorStop(1, 'rgba(7,4,5,0)'); ctx.fillStyle = pg; ctx.fillRect(sx0 - 4, py0, pw + 28, 32); ctx.fillStyle = '#c4121c'; ctx.fillRect(sx0 - 4, py0, 2, 32);
+    tx(vn, sx0 + 2, py0 + 3, { col: '#a6968f', size: 6 }); tx(mph, sx0 + 2, py0 + 12, { col: '#f1e7d0', size: 14, font: 'title' }); tx('MPH', sx0 + 6 + tw2(mph, 14, 'title'), py0 + 19, { col: '#a6968f', size: 5 });
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sx0 + 2, py0 + 28, pw - 6, 2); ctx.fillStyle = hpk < 0.35 ? (Math.floor(G.t * 4) % 2 ? '#ff2630' : '#8a0c14') : hpk < 0.6 ? '#ffb030' : '#7aff6a'; ctx.fillRect(sx0 + 2, py0 + 28, (pw - 6) * hpk, 2);
+    if (v.t.cls === 'heli' || v.t.cls === 'plane') { var alt = 'ALT ' + Math.round(v.y - groundY(v.x, v.z)) + ' M'; tx(alt, sx0 + 2, py0 - 9, { col: '#4adfff', size: 6 }); } }
   // hurt: red at the edges
   if (P.hp < 30) { ctx.fillStyle = 'rgba(160,0,10,' + (0.12 + 0.08 * Math.sin(G.t * 6)) + ')'; ctx.fillRect(0, 0, Wd, 4); ctx.fillRect(0, Hd - 4, Wd, 4); ctx.fillRect(0, 0, 4, Hd); ctx.fillRect(Wd - 4, 0, 4, Hd); }
 }
@@ -100,11 +118,12 @@ function stepMap(dt) {
 }
 function drawMap() {
   var ctx = KIT.ctx, Wd = KIT.W, Hd = KIT.H, M0 = G.mapOpen, mc = mapCanvas(), sc = Math.min(Wd / MW, Hd / MH) * M0.zoom; ctx.fillStyle = '#0a0c18'; ctx.fillRect(0, 0, Wd, Hd);
-  ctx.save(); ctx.imageSmoothingEnabled = M0.zoom < 1.5; ctx.translate(Wd / 2, Hd / 2); ctx.scale(sc, sc); ctx.drawImage(mc, -M0.x / CT, -M0.z / CT); ctx.restore();
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.translate(Wd / 2, Hd / 2); ctx.scale(sc, sc); ctx.drawImage(mc, -M0.x / CT, -M0.z / CT, MW, MH); ctx.restore();
   function W2S(x, z) { return [Wd / 2 + (x - M0.x) / CT * sc, Hd / 2 + (z - M0.z) / CT * sc]; }
   DIST.forEach(function (d) { if (!d.cx) return; var p = W2S(d.cx, d.cz); tx(d.name.toUpperCase(), p[0] - tw2(d.name.toUpperCase(), 6) / 2, p[1], { col: 'rgba(241,231,208,0.75)', size: 6 }); });
   if (typeof gpsDraw === 'function') gpsDraw(ctx, W2S, 3);
-  blipList().forEach(function (b) { var p = W2S(b.x, b.z); ctx.fillStyle = '#12040a'; ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6); ctx.fillStyle = b.c; ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4); if (b.icon && M0.zoom > 1.2) tx(b.icon, p[0] + 4, p[1] - 4, { col: b.c, size: 6 }); });
+  if (M0.zoom > 0.9) POIS.forEach(function (q) { var ic = MAPICON[q.k]; if (!ic) return; var p = W2S(q.x, q.z); if (p[0] < -10 || p[1] < -10 || p[0] > Wd + 10 || p[1] > Hd + 10) return; ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 6.283); ctx.fill(); ctx.strokeStyle = ic[1]; ctx.lineWidth = 1; ctx.stroke(); tx(ic[0], p[0] - tw2(ic[0], 6) / 2, p[1] - 3, { col: ic[1], size: 6 }); if (M0.zoom > 2.2 && q.name) tx(q.name, p[0] + 7, p[1] - 3, { col: 'rgba(241,231,208,0.8)', size: 5 }); });
+  blipList().forEach(function (b) { var p = W2S(b.x, b.z); if (b.who && portraitBlip(ctx, b.who, p[0], p[1], 9, b.c)) { if (M0.zoom > 1.2 && CAST[b.who]) tx(CAST[b.who].name, p[0] + 11, p[1] - 3, { col: '#f1e7d0', size: 6 }); return; } ctx.fillStyle = '#12040a'; ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6); ctx.fillStyle = b.c; ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4); if (b.icon && M0.zoom > 1.2) tx(b.icon, p[0] + 4, p[1] - 4, { col: b.c, size: 6 }); });
   var pp = W2S(P.x, P.z); ctx.fillStyle = '#ffe36a'; ctx.beginPath(); ctx.arc(pp[0], pp[1], 3, 0, 6.283); ctx.fill();
   ctx.strokeStyle = '#ff2630'; ctx.beginPath(); ctx.moveTo(Wd / 2 - 6, Hd / 2); ctx.lineTo(Wd / 2 + 6, Hd / 2); ctx.moveTo(Wd / 2, Hd / 2 - 6); ctx.lineTo(Wd / 2, Hd / 2 + 6); ctx.stroke();
   tx('CUM CITY', 104, 12, { col: '#c4121c', size: 16, font: 'title' }); tx(districtName(M0.x, M0.z), 104, 32, { col: '#f1e7d0', size: 8 });
@@ -148,3 +167,13 @@ function drawStatus(ctx) { // update 157 (his ask: a sleeker look): no boxed pla
   if (G.stim > 0) { var st = 'STIMS ' + Math.ceil(G.stim); tx(st, mx + 70, by + 14, { col: '#ff2630', size: 6 }); }
 }
 function star(ctx, cx, cy, r, col) { ctx.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = '#12040a'; ctx.lineWidth = 2; ctx.strokeStyle = '#12040a'; ctx.stroke(); ctx.fillStyle = col; ctx.fill(); }
+
+/* update 158 (his ask: an icon for every character so you know who has missions for you): their portrait (the app's
+   profile portraits, www/assets/portraits.png) in a ring on the radar, the map and over their marker */
+var PORTIMG = new Image(); PORTIMG.src = '../assets/portraits.png';
+var PORTIX = { cumhead: 0, spermaid: 1, greebo: 2, amy: 3, tb: 4, saba: 5, joff: 6, kaya: 7, elden: 8, beeb: 9, beebs: 9, ali: 10, potbelly: 11, t: 12, bonjo: 13, pulsar: 14, harold: 15, jessiah: 16, natty: 17, judge: 18, fate: 19, bates: 20, steve: 21, sirj: 22, blum: 23, blumhead: 23, kingblum: 24, lab: 38 };
+function portraitBlip(ctx, who, x, y, r, col) { var i = PORTIX[who]; if (i === undefined || !PORTIMG.complete || !PORTIMG.naturalWidth) return false;
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r + 1.5, 0, 6.283); ctx.fillStyle = col || '#ff2630'; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.clip(); ctx.fillStyle = '#12040a'; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(PORTIMG, (i % 8) * 64 + 6, Math.floor(i / 8) * 64 + 2, 52, 52, x - r, y - r, r * 2, r * 2); ctx.restore(); return true; }
+var _drawHud158 = drawHud; drawHud = function () { _drawHud158(); if (G.mode !== 'play' || !P || G.interior) return; var ctx = KIT.ctx; // faces over the mission markers nearby
+  (G.uses || []).forEach(function (u) { if (u.blip !== 'mission' || !u.m) return; var d = dist2(u.x, u.z, P.x, P.z); if (d > 70 * 70 || d < 9) return; var s = R3.project(u.x, groundY(u.x, u.z) + 3.4, u.z); if (!s) return; var r = clamp(14 - Math.sqrt(d) * 0.12, 7, 13); portraitBlip(ctx, u.m.who, s.x, s.y + Math.sin(G.t * 2) * 2, r, '#ffe36a'); }); };

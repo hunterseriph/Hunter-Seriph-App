@@ -22,7 +22,7 @@ function goods(id) {
   function heal(n, price, what, extra) { G0.push({ n: what, p: price, fn: function () { P.hp = Math.min(SV.maxHp, P.hp + n); if (extra) extra(); toast(what + ': +' + n + ' health'); } }); }
   switch (id) {
     case 'saba': WORDER.forEach(function (w) { var W0 = WPN[w]; if (!W0.cost || w === 'sausage') return; G0.push({ n: SV.weapons[w] ? W0.n + ' ammo (' + W0.ammoN + ')' : W0.n, p: SV.weapons[w] ? (W0.ammoCost || 0) : W0.cost, dis: SV.weapons[w] && !W0.ammo, fn: function () { giveWeapon(w, W0.ammoN || 0); P.wpn = w; SV.wpn = w; } }); });
-      G0.push({ n: 'Box of Condoms (full armour)', p: 400, fn: function () { P.armour = 100; } }); break;
+      G0.push({ n: 'Box of Condoms (full armour)', p: 400, fn: function () { P.armour = 100; } }); G0.push({ n: 'Hemp Joints (5): sit on a bench and spark one', p: 40, fn: function () { SV.joints = (SV.joints || 0) + 5; toast('Five joints. Find a bench.'); } }); break;
     case 'cafe': heal(40, 15, 'Cumpuccino', function () { G.boost = 30; }); heal(60, 25, 'Full Load Breakfast'); break;
     case 'greebo': heal(70, 30, "Greebo's Cream Pie"); G0.push({ n: 'Pie to go (throw it at someone)', p: 40, fn: function () { giveWeapon('pills', 0); giveWeapon('bag', 0); SV.ammo.bag = (SV.ammo.bag || 0) + 1; toast('A pie for later. It flies like a bag of shit.'); } }); break;
     case 'amy': heal(30, 10, 'Mild Willy Chilli'); heal(60, 20, 'Hot Willy Chilli'); G0.push({ n: 'Dynamite Willy Chilli', p: 35, fn: function () { P.hp = SV.maxHp; G.high = Math.max(G.high || 0, 0.4); toast('DYNAMITE. Your eyes are watering.'); } }); break;

@@ -1,6 +1,6 @@
 /* ---------- the game: the save, the loop, dying and getting nicked, the menus, the title ---------- */
 function freshSave() { return { v: 1, money: 500, maxHp: 100, armour: 0, weapons: { sausage: 1 }, ammo: {}, wpn: 'fists', wanted: 0, heat: 0, stats: { kills: 0, earned: 0, stunts: 0, races: 0, miles: 0, robbed: 0, deaths: 0, busted: 0, packages: 0, clues: 0, events: 0 },
-  time: 9.5, day: 0, pos: null, done: {}, chapter: 'one', houses: [], cars: [], clues: {}, packages: {}, stuntsDone: {}, races: {}, radio: 0, str: 0, intro: 0, way: null, seenEvents: {}, tattoo: 0, outfit: 0, lastHouse: null }; }
+  time: 9.5, day: 0, pos: null, done: {}, chapter: 'one', houses: [], cars: [], clues: {}, packages: {}, stuntsDone: {}, races: {}, radio: 0, str: 0, intro: 0, way: null, seenEvents: {}, tattoo: 0, outfit: 0, lastHouse: null, joints: 3, photos: {}, fish: 0, fishBest: 0 }; }
 var SV = (function () { var s = KIT.load('ccn-save', null); if (!s || s.v !== 1) s = freshSave(); var f = freshSave(); for (var k in f) if (s[k] === undefined) s[k] = f[k]; for (var k2 in f.stats) if (s.stats[k2] === undefined) s.stats[k2] = 0; return s; })();
 function persist() { if (P) { SV.pos = [P.x, P.z, P.a]; SV.armour = P.armour; } SV.time = G.time; SV.day = G.day; KIT.save('ccn-save', SV); }
 var G = { mode: 'title', t: 0, time: SV.time, day: SV.day, weather: 'clear', wxT: 300, uses: [], toasts: [], dynLights: [], chapter: SV.chapter };
@@ -9,6 +9,7 @@ function startGame(fresh) {
   KIT.closeMenu(); buildAtlas(); buildCityRigs(); buildLandmarks();
   if (fresh) { SV = freshSave(); persist(); }
   G.time = SV.time; G.day = SV.day; G.chapter = SV.chapter; PEDS = []; VEH = []; PICKUPS = []; FX = [];
+  if (SV.mapv !== CITY.v) { SV.pos = null; SV.mapv = CITY.v; } // update 158: the map was laid out again, an old spot could be inside a building now
   var at = SV.pos || startSpot(); newPlayer(at[0], at[1], at[2] || 0); P.hp = SV.maxHp; CAM.x = P.x - 4; CAM.y = P.y + 3; CAM.z = P.z - 4;
   solidsAround(P.x, P.z, 70); G.mode = 'play'; worldSetup();
   if (G.guest) {} else if (!SV.intro) playIntro(); else bigText(districtName(P.x, P.z), null, '#f1e7d0', 2.5);
@@ -41,7 +42,9 @@ function update(dt) {
   stepCamera(dt);
   // the city
   if (!G.interior) { spawnPeds(); spawnTraffic(); }
-  stepPeds(dt); stepTraffic(dt); for (var vi = 0; vi < VEH.length; vi++) if (VEH[vi].flash > 0) VEH[vi].flash = Math.max(0, VEH[vi].flash - dt); // update 157: a punched parked car stayed light stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar();
+  stepPeds(dt); stepTraffic(dt); for (var vi = 0; vi < VEH.length; vi++) if (VEH[vi].flash > 0) VEH[vi].flash = Math.max(0, VEH[vi].flash - dt); // update 157: a punched parked car stayed light
+  stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar(); // update 158: these had fallen behind the comment above, so smoke hung still, pickups and the wanted level never moved
+  if (typeof stepFun === 'function') stepFun(dt);
   if (typeof stepWorldStuff === 'function') stepWorldStuff(dt);
   if (typeof stepMission === 'function') stepMission(dt);
   if (typeof stepRadio === 'function') stepRadio(dt);
@@ -65,17 +68,17 @@ function respawn() {
   newPlayer(d.x + Math.sin(d.a) * 2, d.z + Math.cos(d.a) * 2, d.a); P.hp = SV.maxHp; G.time = (G.time + 6) % 24; toast((loss ? '$' + loss + ' to get you back on your feet. ' : '') + 'You are fine. Mostly.'); persist();
 }
 /* ---------- effects ---------- */
-function stepFx(dt) { FX = FX.filter(function (f) { f.life -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; } if (f.vy !== undefined) { f.y += f.vy * dt; if (f.k !== 'smoke' && f.k !== 'flame') f.vy -= 16 * dt; }
+function stepFx(dt) { FX = FX.filter(function (f) { f.life -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.z += f.vz * dt; } if (f.vy !== undefined) { f.y += f.vy * dt; if (f.k === 'puff') { f.vy *= (1 - dt * 0.35); if (f.drift) { f.vx += (f.drift[0] - f.vx) * dt * 0.5; f.vz += (f.drift[1] - f.vz) * dt * 0.5; } } else if (f.k === 'paper') { f.vy = Math.max(-1.2, f.vy - 6 * dt); f.vx *= 0.98; f.vz *= 0.98; } else if (f.k !== 'smoke' && f.k !== 'flame') f.vy -= 16 * dt; if (f.floor !== undefined && f.y < f.floor) return false; }
   if (f.k === 'rocket') { var gy = groundY(f.x, f.z), hit = f.y <= gy || collide(f.x, f.z, 0.3, f.y, 0.2).hit; f.vy += 16 * dt; PEDS.forEach(function (p) { if (!p.dead && p !== f.by && dist2(p.x, p.z, f.x, f.z) < 1.5 && Math.abs(p.y + 1 - f.y) < 1.5) hit = true; }); VEH.forEach(function (v) { if (v !== (f.by && f.by.veh) && dist2(v.x, v.z, f.x, f.z) < v.t.len * v.t.len * 0.25 && f.y < v.y + v.t.hgt + 0.5) hit = true; }); if (hit || f.life <= 0) { boom(f.x, f.y, f.z, 10, f.by); return false; } if (Math.random() < 0.5) addFx({ k: 'smoke', x: f.x, y: f.y, z: f.z, vy: 0.5, life: 0.8 }); }
   if (f.k === 'bagf' || f.k === 'pill') { var g2 = groundY(f.x, f.z); if (f.y <= g2 + 0.1) { if (f.k === 'bagf') { boom(f.x, g2, f.z, 4, f.by); G.fires = G.fires || []; G.fires.push({ x: f.x, z: f.z, y: g2, t: 8 }); } else { addFx({ k: 'cloud', x: f.x, y: g2 + 1, z: f.z, life: 6 }); PEDS.forEach(function (p) { if (dist2(p.x, p.z, f.x, f.z) < 36 && !p.dead) { p.tripT = 12; p.fear = 0; p.state = 'idle'; p.danceT = 12; } }); } return false; } }
   return f.life > 0; });
   (G.fires || []).forEach(function (F) { F.t -= dt; if (Math.random() < dt * 14) addFx({ k: 'flame', x: F.x + rnd(-1, 1), y: F.y + 0.2, z: F.z + rnd(-1, 1), vy: 2, life: 0.5 }); PEDS.forEach(function (p) { if (!p.dead && dist2(p.x, p.z, F.x, F.z) < 4) hurtPed(p, dt * 20, null); }); if (P.state === 'foot' && dist2(P.x, P.z, F.x, F.z) < 3) hurtPlayer(dt * 15, 'fire'); }); G.fires = (G.fires || []).filter(function (F) { return F.t > 0; });
 }
-var FXQ = null;
+var FXQ = null, BILLQ = {};
 function drawFx() {
   if (!FXQ) { FXQ = new R3.Mesh(); FXQ.quad([-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL('white'), [0.5, 0.5, 0.5], [0, 0, 1]); FXQ.upload(); }
   var cam = R3.cam.eye;
-  function bill(x, y, z, s, tile, o) { var yaw = Math.atan2(cam[0] - x, cam[2] - z); var m = new R3.Mesh(); m.quad([-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL(tile), [0.5, 0.5, 0.5], [0, 0, 1]); R3.draw(m, ATT, Object.assign({ m: MD(x, y, z, yaw, 0, 0, s), lit: false, soft: 1 }, o || {})); }
+  function bill(x, y, z, s, tile, o) { var yaw = Math.atan2(cam[0] - x, cam[2] - z), m = BILLQ[tile]; if (!m) { m = new R3.Mesh(); m.quad([-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL(tile), [0.5, 0.5, 0.5], [0, 0, 1]); m.upload(); BILLQ[tile] = m; } R3.draw(m, ATT, Object.assign({ m: MD(x, y, z, yaw, 0, 0, s), lit: false, soft: 1 }, o || {})); } // update 158: one quad per tile, not a new mesh every frame
   FX.forEach(function (f) {
     if (f.k === 'tracer') { var m = new R3.Mesh(), dx = f.ex - f.x, dy = f.ey - f.y, dz = f.ez - f.z, l = Math.hypot(dx, dz) || 1, px = -dz / l * 0.03, pz = dx / l * 0.03; m.quad([f.x - px, f.y, f.z - pz], [f.x + px, f.y, f.z + pz], [f.ex + px, f.ey, f.ez + pz], [f.ex - px, f.ey, f.ez - pz], UV1, TL('white'), [0.6, 0.55, 0.4], [0, 1, 0]); R3.draw(m, ATT, { lit: false, add: 1, alpha: 0.9 }); }
     else if (f.k === 'flame') bill(f.x, f.y, f.z, 1.1 * (0.5 + f.life), 'fire', { add: 1 });
@@ -88,6 +91,10 @@ function drawFx() {
     else if (f.k === 'pill') bill(f.x, f.y, f.z, 0.5, 'i_pill');
     else if (f.k === 'confetti') bill(f.x, f.y, f.z, 0.25, 'spark', { tint: f.c || [1, 0.3, 0.6] });
     else if (f.k === 'note') bill(f.x, f.y, f.z, 0.5, 'star', { tint: [1, 0.9, 0.4], add: 1 });
+    else if (f.k === 'puff') { var age = (f.age = (f.age || 0) + 1 / 60), L0 = age + f.life, u = age / L0; bill(f.x, f.y, f.z, (f.s0 || 0.5) + age * (f.grow || 1), 'smoke', { tint: f.col || [0.6, 0.6, 0.6], alpha: (f.a0 || 0.5) * Math.min(1, age * 3) * (1 - u) }); }
+    else if (f.k === 'drop') bill(f.x, f.y, f.z, 0.16, 'halo', { tint: [0.85, 0.9, 1], alpha: 0.7, add: 1 });
+    else if (f.k === 'paper') bill(f.x, f.y, f.z, 0.35, 'white', { tint: [0.8, 0.78, 0.7], soft: 0 });
+    else if (f.k === 'ember') bill(f.x, f.y, f.z, 0.05, 'halo', { tint: [1, 0.4, 0.1], add: 1 });
   });
   // pickups: spinning, glowing
   PICKUPS.forEach(function (q) { var s = q.k === 'cash' ? 'cc_dropT' : null, y = q.y + 0.6 + Math.sin(G.t * 3 + q.x) * 0.15; if (q.k === 'cash') bill(q.x, y, q.z, 0.6, 'drop', { tint: [1, 0.95, 0.75], lit: false }); else if (q.k === 'health') bill(q.x, y, q.z, 0.8, 'i_cracker'); else if (q.k === 'armour') bill(q.x, y, q.z, 0.8, 'halo', { tint: [1, 0.95, 0.85], add: 1 }); else if (q.k === 'wpn') bill(q.x, y, q.z, 0.8, 'i_' + ({ pistol: 'handgun', smg: 'handgun', shotgun: 'shotgun', rifle: 'riflew', knife: 'knife', bat: 'bat' }[q.w] || 'handgun'));
@@ -112,6 +119,7 @@ function draw() {
     if ((G.interior ? G.interior.id : null) !== (p.inside || null)) return; if (dist2(p.x, p.z, CAM.x, CAM.z) > 75 * 75 || !inView(p.x, p.z, 3)) return; drawPed(p); });
   if (P.state !== 'dead' || true) drawPlayer();
   if (typeof drawWorldStuff === 'function') drawWorldStuff();
+  if (!G.interior && typeof drawFun === 'function') drawFun();
   drawFx();
   if (G.flashT > 0) { G.flashT -= 1 / 60; ctx.fillStyle = 'rgba(255,255,255,' + G.flashT * 4 + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
   if (G.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
