@@ -489,6 +489,7 @@ def free(x0, z0, x1, z1, kinds=(GRASS, LOT, FIELD, FOREST, DIRT, YARD, PARK, SAN
     return not occ[z0:z1, x0:x1].any() and np.isin(sub, list(kinds)).all()
 def put(x0, z0, x1, z1, h, style, front=2, shop='', kind=LOT, gap=0):
     x0, z0, x1, z1 = int(x0), int(z0), int(x1), int(z1)
+    if h > 0 and roadm[max(0, z0):z1, max(0, x0):x1].any(): return -1  # update 159: never build on a road (traffic drove through these)
     B.append([x0, z0, x1, z1, round(h, 1), style, front, shop]); occ[max(0, z0 - gap):z1 + gap, max(0, x0 - gap):x1 + gap] = True
     if kind is not None: K[z0:z1, x0:x1] = kind
     return len(B) - 1
@@ -802,7 +803,7 @@ for e in EDGES:
         for (x, z), h in zip(pts, hs):
             for zz in range(int(z - 2), int(z + 3)):
                 for xx in range(int(x - 2), int(x + 3)):
-                    if math.hypot(xx + 0.5 - x, zz + 0.5 - z) <= 1.0 and K[zz, xx] not in (SEA, WATER, CREAM, ROAD, BRIDGE) and not occ[zz, xx]: K[zz, xx] = ROAD; hgt[zz, xx] = h
+                    if math.hypot(xx + 0.5 - x, zz + 0.5 - z) <= 1.5 and K[zz, xx] not in (SEA, WATER, CREAM, ROAD, BRIDGE): K[zz, xx] = ROAD; hgt[zz, xx] = h; roadm[zz, xx] = True
 # the farms' fields round them: crop rows (field tiles)
 for p in POI:
     if p['k'] == 'farm':
@@ -839,6 +840,13 @@ for e in EDGES:
             l = math.hypot(dx, dz) or 1; s = e['w'] / 2 + 0.9
             lamps.append([round(x - dz / l * s, 1), round(z + dx / l * s, 1)])
 
+# update 159: roads that later fills painted over (docks yards, car parks, the airport) come back, and the riverbed sits under the cream
+BM = np.zeros((H, W), bool)
+for b in B:
+    if b[4] > 0: BM[b[1]:b[3], b[0]:b[2]] = True
+lost = roadm & ~bridgem & ~BM & ~np.isin(K, [ROAD, BRIDGE, SEA, WATER, CREAM]) & land
+K[lost] = ROAD; print('roads restored', int(lost.sum()))
+cr_m = (K == CREAM); hgt[cr_m] = np.minimum(hgt[cr_m], -1.2)
 # ---------------------------------------------------------------- write
 def rle(a):
     a = a.astype(np.uint8).ravel(); out = bytearray(); i = 0; n = len(a)

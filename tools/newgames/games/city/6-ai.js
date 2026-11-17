@@ -80,7 +80,7 @@ function makeNoise(x, z, r, by) { PEDS.forEach(function (p) { if (p.dead || p.ho
 function spawnTraffic() {
   if (!G.noTraffic && !G.interior) spawnParked();
   var have = VEH.filter(function (v) { return v.ai && !v.ai.cop; }).length, want = trafficTarget();
-  if (have >= want) return; var r = spawnPoint(80, 170); if (!r) return; var E = r.E; if (E.len < 20) return;
+  if (have >= want) return; var r = spawnPoint(80, 170); if (!r) return; var E = r.E; if (E.len < 20 || E.track) return;
   var back = Math.random() < 0.5, lane = laneOf(E), pt = edgeAt(E, r.s, back, lane), k = kAt(pt.x, pt.z); if (k !== K_ROAD && k !== K_BRIDGE) return;
   for (var i = 0; i < VEH.length; i++) if (dist2(VEH[i].x, VEH[i].z, pt.x, pt.z) < 12 * 12) return;
   // not right in front of the camera
@@ -119,11 +119,16 @@ function stepTraffic(dt) {
 function honk(v) { if (dist2(v.x, v.z, P.x, P.z) < 50 * 50) sfx.play('horn'); }
 /* ---------- the police and the wanted level ---------- */
 var CRIMES = { steal: 0.6, jack: 0.7, copcar: 1.2, assault: 0.5, kill: 1.0, hitcop: 1.2, killcop: 2.0, shootcop: 1.2, shots: 0.4, ram: 0.3, carattack: 0.4, rob: 2.0, speed: 0.1 };
+/* update 159: the stars climb slower (he said far too quickly): two kills used to be three stars */
+var HEATLV = [0, 0.5, 3.5, 8, 15, 26];
+function wantedFor(h) { for (var i = 5; i > 0; i--) if (h >= HEATLV[i]) return i; return 0; }
 function crime(k, x, z, mul) {
-  if (G.noCops) return; var heat = (CRIMES[k] || 0.3) * (mul || 1), seen = false;
+  if (G.noCops) return; var heat = (CRIMES[k] || 0.3) * (mul || 1), seen = false, now = performance.now() / 1000; G.crimeT = G.crimeT || {};
+  /* update 159: the same crime again within a few seconds hardly counts (a burst of shots, one long scrape down a car) */
+  if (/shots|ram|carattack|speed|assault/.test(k) && now - (G.crimeT[k] || -99) < 4) heat *= 0.12; G.crimeT[k] = now;
   PEDS.forEach(function (p) { if (p.cop && !p.dead && dist2(p.x, p.z, x, z) < 50 * 50) seen = true; }); VEH.forEach(function (v) { if (v.t.cop && v.driver && dist2(v.x, v.z, x, z) < 60 * 60) seen = true; });
   if (!seen && heat < 1) { if (Math.random() > heat * 0.6) return; } // somebody may have phoned it in
-  SV.heat = (SV.heat || 0) + heat; var lv = SV.heat >= 9 ? 5 : SV.heat >= 6 ? 4 : SV.heat >= 3.6 ? 3 : SV.heat >= 1.6 ? 2 : SV.heat >= 0.5 ? 1 : 0; if (lv > SV.wanted) { SV.wanted = lv; G.lostT = 0; sfx.play('alarm'); }
+  SV.heat = (SV.heat || 0) + heat; var lv = wantedFor(SV.heat); if (lv > SV.wanted) { SV.wanted = lv; G.lostT = 0; sfx.play('alarm'); }
   G.copSeen = 0;
 }
 function copSees(x, y, z, r) { var tx = P.state === 'car' && P.veh ? P.veh : P; if (G.interior) return false; var d = Math.hypot(tx.x - x, tx.z - z); if (d > r) return false; return d < 6 || rayBlock(x, y + 1.5, z, tx.x, (tx.y || 0) + 1.2, tx.z) >= 0.98; }
@@ -133,7 +138,7 @@ function stepWanted(dt) { // update 155: the police have to SEE you. Out of sigh
   PEDS.forEach(function (p) { if (seen || !p.cop || p.dead) return; if (p.inVeh ? copSees(p.inVeh.x, p.inVeh.y, p.inVeh.z, p.inVeh.ai && p.inVeh.ai.copHeli ? 110 : 55) : copSees(p.x, p.y, p.z, 40)) seen = true; });
   if (seen || !G.lastSeen) { G.lastSeen = { x: me.x, z: me.z }; }
   if (seen) { G.lostT = 0; } else { var far = Math.hypot(me.x - G.lastSeen.x, me.z - G.lastSeen.z) > 70 + SV.wanted * 25; G.lostT = (G.lostT || 0) + dt * (far ? 2 : 1);
-    if (G.lostT > 8 + SV.wanted * 3) { SV.wanted--; SV.heat = [0, 0.5, 1.6, 3.6, 6, 9][SV.wanted]; G.lostT = 0; G.lastSeen = { x: me.x, z: me.z }; if (SV.wanted === 0) toast('You lost them.'); } }
+    if (G.lostT > 8 + SV.wanted * 3) { SV.wanted--; SV.heat = HEATLV[SV.wanted]; G.lostT = 0; G.lastSeen = { x: me.x, z: me.z }; if (SV.wanted === 0) toast('You lost them.'); } }
   // keep enough police coming: they turn up round where you were last seen
   var cops = VEH.filter(function (v) { return v.ai && v.ai.cop && !v.dead; }).length, want = [0, 1, 2, 3, 4, 6][SV.wanted];
   if (cops < want && Math.random() < dt * 0.5) spawnCop();

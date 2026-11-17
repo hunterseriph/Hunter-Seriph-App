@@ -14,7 +14,7 @@ function bez(T, t) { var u = 1 - t, P0 = T.p[0], P1 = T.p[1], P2 = T.p[2], P3 = 
 function railEndNode(A) { return RN[A.back ? A.E.a : A.E.b]; }
 function railCut(E, nd) { return Math.min(nodeR(nd), E.len * 0.42); }
 function railPlan(v) { // the curve through the junction ahead
-  var A = v.ai, E = A.E, nd = railEndNode(A), opts = nd.e.filter(function (e) { return e !== E.i && RE[e].len > 8 && !RE[e].off; });
+  var A = v.ai, E = A.E, nd = railEndNode(A), opts = nd.e.filter(function (e) { return e !== E.i && RE[e].len > 8 && !RE[e].off && !RE[e].track; }); /* update 159: never down a country track: they end inside the farm or the petrol station */
   var NE = opts.length ? RE[pick(opts)] : E, nback = NE === E ? !A.back : NE.b === nd.i, cutE = railCut(E, nd), cutS = railCut(NE, nd);
   var p0 = edgeAt(E, E.len - cutE, A.back, A.lane), p3 = edgeAt(NE, cutS, nback, laneOf(NE)), k = Math.max(2, Math.hypot(p3.x - p0.x, p3.z - p0.z) * 0.45);
   var T = { p: [[p0.x, p0.z], [p0.x + p0.dx * k, p0.z + p0.dz * k], [p3.x - p3.dx * k, p3.z - p3.dz * k], [p3.x, p3.z]], NE: NE, nback: nback, cutS: cutS, node: nd.i, len: 0, lane: laneOf(NE) };
