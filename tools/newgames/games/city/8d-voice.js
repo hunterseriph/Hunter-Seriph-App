@@ -25,7 +25,7 @@ voiceLine = function (who, text) { if (SV.voiceOff) return; if (VOX.line) { VOX.
 var _sayV = say;
 say = function (p, txt) { _sayV(p, txt); if (!p.said || SV.voiceOff || G.cut || p.cutWho) return; var d = Math.hypot(p.x - P.x, p.z - P.z); if (d > 18 || G.t < VOX.barkT) return;
   if ((G.interior ? G.interior.id : null) !== (p.inside || null)) return;
-  var who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : (p.id < 0.5 ? 'pedM' : 'pedF')), f = p.who === 'tb' ? null : voiceFile(who, p.said) || voiceFile('pedM', p.said);
+  var vi = Math.floor((p.id || 0) * 97) % 3, who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : ((p.id || 0) < 0.5 ? 'pedM' : 'pedF') + vi), f = p.who === 'tb' ? null : voiceFile(who, p.said) || voiceFile('pedM' + vi, p.said) || voiceFile('pedF' + vi, p.said);
   if (p.who === 'tb') { var i = TBQUOTES2.indexOf(p.said); if (i >= 0) f = 'pn-voice/tb' + (i < 9 ? '0' : '') + (i + 1) + '.mp3'; }
   if (!f) return; VOX.barkT = G.t + 1.2; playFile(f, Math.max(0.15, 1 - d / 20), 'bark'); };
 document.addEventListener('visibilitychange', function () { if (document.hidden) ['line', 'bark', 'radio'].forEach(function (k) { if (VOX[k]) { VOX[k].pause(); VOX[k] = null; } }); });

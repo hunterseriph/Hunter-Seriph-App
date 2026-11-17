@@ -761,7 +761,7 @@ var music = (function () {
   }
   function stop(sec) { want = null; if (A) fadeOut(sec || 1); cur = null; song = null; }
   setInterval(tick, 40);
-  return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
+  return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, duck: function (k) { if (bus && A) { bus.gain.cancelScheduledValues(A.currentTime); bus.gain.setTargetAtTime(0.6 * OPT.mus * k, A.currentTime, 0.12); } }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
 })();
 
 /* =====================================================================================================
@@ -1970,7 +1970,7 @@ var EGRID = {}; RE.forEach(function (E) { for (var k = 0; k < E.pts.length - 1; 
 /* the nearest road to a point: { E, s (metres along), d (distance), side } */
 function nearestRoad(x, z, maxd) {
   var best = null, bd = (maxd || 60) * (maxd || 60), r = maxd || 60, ls = near(EGRID, x, z, Math.min(r, 64));
-  ls.forEach(function (E) { for (var k = 0; k < E.pts.length - 1; k++) { var a = E.pts[k], b = E.pts[k + 1], vx = b[0] - a[0], vz = b[1] - a[1], l2 = vx * vx + vz * vz || 1, t = clamp(((x - a[0]) * vx + (z - a[1]) * vz) / l2, 0, 1), px = a[0] + vx * t, pz = a[1] + vz * t, d = dist2(x, z, px, pz);
+  ls.forEach(function (E) { if (E.off) return; for (var k = 0; k < E.pts.length - 1; k++) { var a = E.pts[k], b = E.pts[k + 1], vx = b[0] - a[0], vz = b[1] - a[1], l2 = vx * vx + vz * vz || 1, t = clamp(((x - a[0]) * vx + (z - a[1]) * vz) / l2, 0, 1), px = a[0] + vx * t, pz = a[1] + vz * t, d = dist2(x, z, px, pz);
     if (d < bd) { bd = d; best = { E: E, s: E.cum[k] + Math.sqrt(l2) * t, d: Math.sqrt(d), x: px, z: pz, side: (vx * (z - a[1]) - vz * (x - a[0])) > 0 ? 1 : -1, dx: vx / Math.sqrt(l2), dz: vz / Math.sqrt(l2) }; } } });
   return best;
 }
@@ -2272,7 +2272,7 @@ function building(m, night, fr, glow, b, lamps) {
   if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)]; standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), b.y0 + 5, b.y0 + 8, TL(nt), 2.0, 1.2); }
   if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); }
   if (!b.shop) genericFronts(m, glow, night, b, F, fw, gh);
-  if (!tall || r < 0.5) neonDress(m, glow, b, F, fw, tall ? b.y0 + 12 : yt, r);
+  if (!tall) neonDress(m, glow, b, F, fw, yt, r);
   // shops: their front, or a painted name board
   if (b.shop && FACOF[b.shop] && KIT.SPR[FACOF[b.shop]]) { var s = KIT.SPR[FACOF[b.shop]], wd = Math.min(fw - 0.4, b.shop === 'club' ? 9 : 7.2), ht = wd * s[3] / s[2]; frontQuad(fr, s, mx + F.n[0] * 0.06, mz + F.n[2] * 0.06, F.a, wd, b.y0, b.y0 + ht); }
   else if (b.shop && SIGNOF[b.shop]) { standQ(glow, mx + F.n[0] * 0.08, mz + F.n[2] * 0.08, F.a, Math.min(6, fw - 0.6), b.y0 + 2.8, b.y0 + 5.2, TL(SIGNOF[b.shop]), 1.3, 0.25); standQ(m, mx + F.n[0] * 0.05, mz + F.n[2] * 0.05, F.a, 1.6, b.y0, b.y0 + 2.5, TL('door'), 1); }
@@ -2305,6 +2305,12 @@ function solidsAround(x, z, r) { // the collisions of chunks that have not been 
   for (var cj = Math.floor((z - r) / CS); cj <= Math.floor((z + r) / CS); cj++) for (var ci = Math.floor((x - r) / CS); ci <= Math.floor((x + r) / CS); ci++) if (ci >= 0 && cj >= 0 && ci < CXN && cj < CZN && !CHUNKS[chunkKey(ci, cj)]) CHUNKS[chunkKey(ci, cj)] = buildChunk(ci, cj);
 }
 
+/* update 157: some road-graph edges run where the map has no road any more (blocks and yards were laid over them at
+   the docks, Spunk Brain and Ejaculand), so traffic drove through buildings and rides and a taxi dropped him on the
+   swings. An edge with under 60% of its length on road tiles is switched off (`E.off`): no traffic, no GPS, and
+   nearestRoad never returns it. */
+(function () { var n = 0; RE.forEach(function (E) { var k = 0, on = 0; for (var s = 2; s < E.len - 2; s += 3) { var q = edgeAt(E, s, false, 0), t = kAt(q.x, q.z); k++; if (t === K_ROAD || t === K_BRIDGE) on++; } if (k && on / k < 0.6) { E.off = 1; n++; } }); window.__offEdges = n; })();
+
 /* ---------- the big places: castles, the grotto, the asylum, Ejaculand's rides, the airport, the docks, the isles. Built once
    each (they are bigger than a chunk); parts that move (the ferris wheel, the carousel, the dropper) have their own mesh ---------- */
 function LM(p) { var o = { p: p, x: p.x, z: p.z, r: 60, m: new R3.Mesh(), glow: new R3.Mesh(), parts: [] }; LMK.push(o); return o; }
@@ -2316,7 +2322,9 @@ function wallRun(m, ax, az, bx, bz, y, h, th, tex, crenel, solid) { // a thick w
   [[-1, [c, 0, -s]], [1, [-c, 0, s]]].forEach(function (f) { var v = f[0] * hw, n = f[1].map(function (q) { return -q * f[0]; }); m.quad(P(-hl, v, y), P(hl, v, y), P(hl, v, y + h), P(-hl, v, y + h), uvR(L / 4, h / 4), T, lit(n), n); });
   m.quad(P(-hl, -hw, y + h), P(hl, -hw, y + h), P(hl, hw, y + h), P(-hl, hw, y + h), uvR(L / 4, th / 4), T, lit([0, 1, 0]), [0, 1, 0]);
   if (crenel) for (var u = -hl + 0.6; u < hl - 0.6; u += 2.2) { var p0 = P(u, 0, 0); boxC(m, p0[0] - 0.55, y + h, p0[2] - 0.55, p0[0] + 0.55, y + h + 1.2, p0[2] + 0.55, tex === 'darkstone' ? '#2a2228' : '#7a746e'); }
-  if (solid !== false) for (var u2 = -hl; u2 < hl; u2 += Math.max(1, th)) { var q = P(u2 + th / 2, 0, 0); addPost(q[0], q[2], th * 0.75, y - 2, y + h); }
+  if (solid !== false) { // update 157 (his ask: weird collision near some places): a straight wall blocks exactly its own footprint, a slanted one with posts no fatter than it
+    if (Math.abs(s) < 0.02 || Math.abs(c) < 0.02) { var e0 = P(-hl, -hw, 0), e1 = P(hl, hw, 0); addBox(e0[0], e0[2], e1[0], e1[2], y - 2, y + h); }
+    else for (var u2 = -hl; u2 <= hl; u2 += Math.max(0.6, th * 0.6)) { var q = P(u2, 0, 0); addPost(q[0], q[2], hw, y - 2, y + h); } }
 }
 function towerAt(m, x, z, y, r, h, tex, cone, glow, gm) { tub(m, [x, y - 2, z], [x, y + h, z], r, r, '#7a746e', 10, { T: TL(tex), u: 3 }); tub(m, [x, y + h, z], [x, y + h + 1.2, z], r + 0.4, r + 0.4, tex === 'darkstone' ? '#2a2228' : '#6a645e', 10, { T: TL(tex), cap: 1 });
   if (cone) tub(m, [x, y + h + 1.2, z], [x, y + h + 1.2 + r * 2.2, z], r + 0.6, 0, cone, 10, { cap: 1 }); addPost(x, z, r, y - 2, y + h); if (glow && gm) ring(gm, x, 0, z, r + 0.05, 4, function (wx, wz, a) { standQ(gm, wx, wz, Math.PI / 2 - a + Math.PI, 0.8, y + h * 0.6, y + h * 0.6 + 1.4, TL(glow), 1.5, 1); }); }
@@ -2625,18 +2633,86 @@ function parkDress(M0, GLOW, x0, z0, CS, lamps, first) { if (!PARKCELL.length) r
 /* update 156 (his ask: weird spaces between buildings should be alleyways): the yards and gaps between buildings
    (lot tiles no building stands on) get alley clutter: dumpsters, bin bags, crates and pallets, a steaming grate,
    a fire escape ladder's foot, strings of bulbs across in the busy districts. */
-function alleyDress(M0, GLOW, x0, z0, CS, first) { var i0 = Math.floor(x0 / CT), j0 = Math.floor(z0 / CT), n = Math.round(CS / CT);
-  for (var j = j0; j < Math.min(MH, j0 + n); j++) for (var i = i0; i < Math.min(MW, i0 + n); i++) { var t = j * MW + i; if (KM[t] !== K_LOT) continue; var r1 = hash2(i, j, 51); if (r1 > 0.2) continue;
-    var cx = i * CT + 1 + hash2(i, j, 52) * 2, cz = j * CT + 1 + hash2(i, j, 53) * 2, inB = near(BGRID, cx, cz, 3).some(function (b) { return cx > b.x0 - 1 && cx < b.x1 + 1 && cz > b.z0 - 1 && cz < b.z1 + 1; }); if (inB) continue;
-    if (nearestRoad(cx, cz, 4)) continue; var y = groundY(cx, cz), a = Math.floor(hash2(i, j, 54) * 4) * Math.PI / 2, kind = Math.floor(hash2(i, j, 55) * 6), st = DIST[DM[t]].style;
-    if (kind === 0) { boxR(M0, cx, cz, a, 0.95, 0.6, y, y + 1.25, st === 'redlight' ? '#3a1a1e' : '#2e4a34'); boxR(M0, cx, cz, a, 1.0, 0.65, y + 1.25, y + 1.35, '#1a1a1e'); if (first) addPost(cx, cz, 0.8, y, y + 1.4); }
-    else if (kind === 1) { for (var b = 0; b < 4; b++) ell(M0, cx + Math.cos(b * 1.7) * 0.5, y + 0.3, cz + Math.sin(b * 1.7) * 0.5, 0.38, 0.34, 0.36, b % 2 ? '#141416' : '#1e1e22', 6, 4); }
-    else if (kind === 2) { boxR(M0, cx, cz, a, 0.5, 0.5, y, y + 0.9, '#7a5a34', 'plank'); boxR(M0, cx + 0.6, cz + 0.3, a + 0.3, 0.4, 0.4, y, y + 0.7, '#6a4a2a', 'plank'); boxR(M0, cx, cz, a, 0.4, 0.4, y + 0.9, y + 1.6, '#8a6a3a', 'plank'); if (first) addPost(cx, cz, 0.6, y, y + 1.6); }
-    else if (kind === 3) { boxR(M0, cx, cz, a, 0.6, 0.6, y, y + 0.02, '#2a2a2e'); for (var s = 0; s < 4; s++) ell(GLOW, cx, y + 0.6 + s * 0.5, cz, 0.3 + s * 0.15, 0.3, 0.3 + s * 0.15, '#7a7478', 5, 3); }
-    else if (kind === 4) { for (var p2 = 0; p2 < 3; p2++) boxR(M0, cx, cz, a, 0.6, 0.5, y + p2 * 0.15, y + p2 * 0.15 + 0.1, '#8a6a40', 'plank'); }
-    else { boxR(M0, cx, cz, a, 0.3, 0.3, y, y + 0.9, '#3a5a8a'); tub(M0, [cx + 0.5, y, cz], [cx + 0.5, y + 0.6, cz], 0.22, 0.22, '#4a4a4e', 7, { cap: 1 }); if (first) addPost(cx, cz, 0.4, y, y + 0.9); }
-    if (/redlight|cafe|downtown/.test(st) && hash2(i, j, 56) < 0.3) for (var q = 0; q < 8; q++) { var u = q / 7, bx = cx - 4 + u * 8, by = y + 4.2 - Math.sin(u * Math.PI) * 0.6; ell(GLOW, bx, by, cz, 0.1, 0.12, 0.1, ['#ffe36a', '#ff7ab0', '#4adfff'][q % 3], 4, 3); } }
+function alleyDress(M0, GLOW, x0, z0, CS, first) { // update 157: only real alleys (a building close on both sides) get clutter; open lots get parking bays
+  var i0 = Math.floor(x0 / CT), j0 = Math.floor(z0 / CT), n = Math.round(CS / CT);
+  function inB(x, z, m) { return near(BGRID, x, z, 3 + m).some(function (b) { return x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m; }); }
+  function wall(x, z, dx, dz) { for (var d = 0.5; d <= 7; d += 0.5) if (inB(x + dx * d, z + dz * d, 0)) return d; return 0; }
+  for (var j = j0; j < Math.min(MH, j0 + n); j++) for (var i = i0; i < Math.min(MW, i0 + n); i++) { var t = j * MW + i; if (KM[t] !== K_LOT) continue;
+    var cx = i * CT + 2, cz = j * CT + 2; if (inB(cx, cz, 0.3)) continue; var y = groundY(cx, cz), st = DIST[DM[t]].style;
+    var wx0 = wall(cx, cz, -1, 0), wx1 = wall(cx, cz, 1, 0), wz0 = wall(cx, cz, 0, -1), wz1 = wall(cx, cz, 0, 1), alleyX = wx0 && wx1, alleyZ = wz0 && wz1;
+    if (!alleyX && !alleyZ) { // an open lot: white parking bays painted on it
+      if (!nearestRoad(cx, cz, 3)) { var ax = hash2(Math.floor(i / 8), Math.floor(j / 8), 9) < 0.5; for (var q = 0; q < 2; q++) { var o = -1 + q * 2.6; if (ax) M0.quad([cx + o - 0.06, y + 0.03, cz - 1.9], [cx + o - 0.06, y + 0.03, cz + 1.9], [cx + o + 0.06, y + 0.03, cz + 1.9], [cx + o + 0.06, y + 0.03, cz - 1.9], UV1, TL('white'), [0.5, 0.5, 0.48], [0, 1, 0]);
+        else M0.quad([cx - 1.9, y + 0.03, cz + o - 0.06], [cx - 1.9, y + 0.03, cz + o + 0.06], [cx + 1.9, y + 0.03, cz + o + 0.06], [cx + 1.9, y + 0.03, cz + o - 0.06], UV1, TL('white'), [0.5, 0.5, 0.48], [0, 1, 0]); } }
+      continue; }
+    var r1 = hash2(i, j, 51); if (r1 > 0.35) continue; if (nearestRoad(cx, cz, 4)) continue;
+    // clutter stands against one wall of the alley
+    var a = alleyX ? (hash2(i, j, 57) < 0.5 ? Math.PI / 2 : -Math.PI / 2) : (hash2(i, j, 57) < 0.5 ? 0 : Math.PI), wd = alleyX ? (a > 0 ? wx1 : wx0) : (a === 0 ? wz1 : wz0), px = cx + Math.sin(a) * Math.max(0, wd - 0.8), pz = cz + Math.cos(a) * Math.max(0, wd - 0.8), py = groundY(px, pz), kind = Math.floor(hash2(i, j, 55) * 5);
+    if (kind === 0) { boxR(M0, px, pz, a, 0.95, 0.6, py, py + 1.25, st === 'redlight' ? '#3a1a1e' : '#2e4a34'); boxR(M0, px, pz, a, 1.0, 0.65, py + 1.25, py + 1.35, '#1a1a1e'); if (first) addPost(px, pz, 0.7, py, py + 1.4); }
+    else if (kind === 1) { for (var b = 0; b < 4; b++) ell(M0, px + Math.cos(b * 1.7) * 0.45, py + 0.3, pz + Math.sin(b * 1.7) * 0.45, 0.36, 0.33, 0.34, b % 2 ? '#141416' : '#1e1e22', 6, 4); }
+    else if (kind === 2) { boxR(M0, px, pz, a, 0.5, 0.5, py, py + 0.9, '#7a5a34', 'plank'); boxR(M0, px, pz, a, 0.4, 0.4, py + 0.9, py + 1.6, '#8a6a3a', 'plank'); if (first) addPost(px, pz, 0.5, py, py + 1.6); }
+    else if (kind === 3) { for (var p2 = 0; p2 < 3; p2++) boxR(M0, px, pz, a, 0.6, 0.5, py + p2 * 0.15, py + p2 * 0.15 + 0.1, '#8a6a40', 'plank'); }
+    else { boxR(M0, px, pz, a, 0.32, 0.3, py, py + 0.95, '#2a2a2e'); boxR(M0, px, pz, a, 0.34, 0.32, py + 0.95, py + 1.0, '#1a1a1e'); if (first) addPost(px, pz, 0.35, py, py + 1); }
+    // a string of bulbs right across the alley, hooked to both walls
+    if (/redlight|cafe|downtown/.test(st) && hash2(i, j, 56) < 0.4) { var ex0, ez0, ex1, ez1; if (alleyX) { ex0 = cx - wx0; ex1 = cx + wx1; ez0 = ez1 = cz; } else { ez0 = cz - wz0; ez1 = cz + wz1; ex0 = ex1 = cx; }
+      var hy = y + 4.2; tub(M0, [ex0, hy, ez0], [ex1, hy - 0.05, ez1], 0.012, 0.012, '#1a1a1e', 3); boxC(M0, ex0 - 0.08, hy - 0.08, ez0 - 0.08, ex0 + 0.08, hy + 0.08, ez0 + 0.08, '#1a1a1e'); boxC(M0, ex1 - 0.08, hy - 0.08, ez1 - 0.08, ex1 + 0.08, hy + 0.08, ez1 + 0.08, '#1a1a1e');
+      var nb = Math.max(3, Math.round(Math.hypot(ex1 - ex0, ez1 - ez0) / 0.9)); for (var q2 = 1; q2 < nb; q2++) { var u2 = q2 / nb, bx = ex0 + (ex1 - ex0) * u2, bz = ez0 + (ez1 - ez0) * u2, by = hy - Math.sin(u2 * Math.PI) * 0.35; ell(GLOW, bx, by - 0.08, bz, 0.07, 0.09, 0.07, ['#ffe36a', '#ff7ab0', '#4adfff'][q2 % 3], 4, 3); } } }
 }
+
+/* ---------- update 157 (his ask: the places you visit like the castle need to be enterable, fixed and resized).
+   Both castles are rebuilt at castle size: a 96 m curtain wall with a walkway of merlons, round corner towers, wall
+   towers, a gatehouse with an arched passage you drive through, and inside the bailey a keep with four turrets and a
+   great tower, stables, barracks, a well, training dummies, carts, banners and torches. The ground under them is made
+   level first (the walls stood on the slope), the courtyard is cobbles and the land round the walls is grass with an
+   approach road, so it is no longer a castle on a giant car park. The keep's door, the grotto's cave mouth and the
+   chapel's door now go inside (7h-places.js). Blumhead's Castle is the black, purple and goo version. ---------- */
+var CASTLE_R = 46;
+(function castleGround() {
+  POIS.forEach(function (p) { if (p.k !== 'castle') return; var R = CASTLE_R, ci = Math.floor(p.x / CT), cj = Math.floor(p.z / CT), id = DM[cj * MW + ci], rt = Math.ceil((R + 30) / CT);
+    for (var j = cj - rt; j <= cj + rt + 1; j++) for (var i = ci - rt; i <= ci + rt + 1; i++) { if (i < 0 || j < 0 || i > MW || j > MH) continue; var dx = i * CT - p.x, dz = j * CT - p.z, d = Math.max(Math.abs(dx), Math.abs(dz)); if (d < R + 14) CH[j * (MW + 1) + i] = p.h; }
+    for (var j2 = cj - rt; j2 <= cj + rt; j2++) for (var i2 = ci - rt; i2 <= ci + rt; i2++) { var t = j2 * MW + i2; if (DM[t] !== id) continue; var x = i2 * CT + 2 - p.x, z = j2 * CT + 2 - p.z, dd = Math.max(Math.abs(x), Math.abs(z));
+      if (KM[t] === K_ROAD || KM[t] === K_BRIDGE) continue;
+      if (dd < R - 1) KM[t] = K_YARD; else if (Math.abs(x) < 6 && z > 0) KM[t] = K_PAVE; else KM[t] = p.dark ? K_DIRT : K_GRASS; } });
+})();
+LMBUILD.castle = function (o, p) {
+  var y = p.h, dark = p.dark, tex = dark ? 'darkstone' : 'stone', R = CASTLE_R, cone = dark ? '#3a0a2a' : '#8a1a20', win = dark ? 'litwin2' : 'litwin', gate = 6, X = p.x, Z = p.z, trim = dark ? '#2a2228' : '#7a746e', ban = dark ? '#3a0a4a' : '#8a0c14';
+  // the curtain wall, the gate in the south side
+  var C = [[-R, -R], [R, -R], [R, R], [-R, R]];
+  for (var k = 0; k < 4; k++) { var a = C[k], b = C[(k + 1) % 4]; if (k === 2) { wallRun(o.m, X + a[0], Z + a[1], X + gate, Z + b[1], y, 13, 3, tex, 1); wallRun(o.m, X - gate, Z + b[1], X + b[0], Z + b[1], y, 13, 3, tex, 1); }
+    else wallRun(o.m, X + a[0], Z + a[1], X + b[0], Z + b[1], y, 13, 3, tex, 1); towerAt(o.m, X + a[0], Z + a[1], y, 5.5, 22, tex, cone, win, o.glow); }
+  // towers half way along the other three sides
+  [[0, -R], [-R, 0], [R, 0]].forEach(function (q) { towerAt(o.m, X + q[0], Z + q[1], y, 4.2, 18, tex, cone, win, o.glow); });
+  // the gatehouse: two towers and the arch over the way in (only the towers are solid, you drive under the arch)
+  [-1, 1].forEach(function (s) { towerAt(o.m, X + s * (gate + 3.5), Z + R, y, 4.5, 20, tex, cone, win, o.glow); });
+  boxT(o.m, X - gate, y + 9, Z + R - 3, X + gate, y + 17, Z + R + 3, { wall: tex, top: tex }); for (var u = -gate + 0.6; u < gate; u += 2.2) boxC(o.m, X + u - 0.5, y + 17, Z + R + 2, X + u + 0.5, y + 18.2, Z + R + 3, trim);
+  for (var q2 = 0; q2 < 9; q2++) tub(o.m, [X - gate + 0.6 + q2 * 1.35, y + 7.6, Z + R + 1.8], [X - gate + 0.6 + q2 * 1.35, y + 9, Z + R + 1.8], 0.08, 0.08, '#2a2a2e', 4); // the portcullis, raised
+  [-1, 1].forEach(function (s) { boxC(o.m, X + s * (gate - 0.3), y + 3.8, Z + R + 3.05, X + s * (gate - 0.3) + 0.12 * s, y + 4.4, Z + R + 3.3, '#2a2a2a'); ell(o.glow, X + s * (gate - 0.3), y + 4.8, Z + R + 3.3, 0.25, 0.4, 0.25, '#ffb030', 6, 4);
+    standQ(o.m, X + s * (gate + 3.5), Z + R + 4.6, 0, 2.2, y + 8, y + 16, TL('velvet'), 1.1, 0.2); });
+  // the keep: a big block, four turrets, the great tower in the middle, a door with steps
+  var kx0 = X - 16, kx1 = X + 16, kz0 = Z - R + 8, kz1 = Z - 8, KH = 22;
+  boxT(o.m, kx0, y, kz0, kx1, y + KH, kz1, { wall: tex, top: tex, u: 4, v: 4 }); addBox(kx0, kz0, kx1, kz1, y - 2, y + KH);
+  for (var u3 = kx0 + 0.8; u3 < kx1; u3 += 2.2) { boxC(o.m, u3 - 0.5, y + KH, kz1 - 0.6, u3 + 0.5, y + KH + 1.2, kz1, trim); boxC(o.m, u3 - 0.5, y + KH, kz0, u3 + 0.5, y + KH + 1.2, kz0 + 0.6, trim); }
+  [[kx0, kz0], [kx1, kz0], [kx0, kz1], [kx1, kz1]].forEach(function (q) { towerAt(o.m, q[0], q[1], y, 3.2, KH + 6, tex, cone, win, o.glow); });
+  towerAt(o.m, X, (kz0 + kz1) / 2, y + KH, 6, 12, tex, cone, win, o.glow);
+  for (var wx = -12; wx <= 12; wx += 6) if (wx) { standQ(o.glow, X + wx, kz1 + 0.06, 0, 1.4, y + 9, y + 12, TL(win), 1.5, 1); standQ(o.glow, X + wx, kz1 + 0.06, 0, 1.4, y + 15, y + 18, TL(win), 1.5, 1); }
+  standQ(o.m, X, kz1 + 0.08, 0, 4.2, y, y + 6.2, TL('door'), 1.2); boxC(o.m, X - 3.4, y + 6.2, kz1, X + 3.4, y + 7, kz1 + 0.5, trim);
+  for (var st = 0; st < 3; st++) { boxC(o.m, X - 4 - st * 0.3, y, kz1 + st * 0.7, X + 4 + st * 0.3, y + 0.6 - st * 0.2, kz1 + st * 0.7 + 0.7, trim); }
+  [-1, 1].forEach(function (s) { standQ(o.m, X + s * 7, kz1 + 0.07, 0, 2.6, y + 5, y + 17, TL('velvet'), 1.1, 0.2); ell(o.glow, X + s * 3.2, y + 4.2, kz1 + 0.5, 0.25, 0.4, 0.25, '#ffb030', 6, 4); });
+  p.door = { x: X, z: kz1 + 2.6 };
+  // stables along the west wall, barracks along the east, a well, dummies, carts
+  boxT(o.m, X - R + 1.5, y, Z - 18, X - R + 11, y + 6, Z + 26, { wall: 'plank', top: 'roofs', u: 3, v: 2 }); addBox(X - R + 1.5, Z - 18, X - R + 11, Z + 26, y - 2, y + 6);
+  for (var sz = -14; sz < 26; sz += 5) standQ(o.m, X - R + 11.05, Z + sz, Math.PI / 2, 3, y, y + 3, TL('black'), 0.8);
+  boxT(o.m, X + R - 11, y, Z - 30, X + R - 1.5, y + 8, Z + 6, { wall: tex, top: 'roofs', u: 3, v: 2 }); addBox(X + R - 11, Z - 30, X + R - 1.5, Z + 6, y - 2, y + 8);
+  for (var bz = -26; bz < 6; bz += 6) standQ(o.glow, X + R - 11.05, Z + bz, -Math.PI / 2, 1.4, y + 3, y + 5, TL(win), 1.5, 1);
+  tub(o.m, [X + 10, y, Z + 18], [X + 10, y + 1.1, Z + 18], 2, 2, trim, 12, { T: TL(tex), cap0: 1 }); o.m.quad([X + 8.4, y + 0.9, Z + 16.4], [X + 8.4, y + 0.9, Z + 19.6], [X + 11.6, y + 0.9, Z + 19.6], [X + 11.6, y + 0.9, Z + 16.4], UV1, TL(dark ? 'goo' : 'water'), [0.5, 0.5, 0.5], [0, 1, 0]);
+  [-1, 1].forEach(function (s) { tub(o.m, [X + 10 + s * 1.8, y + 1, Z + 18], [X + 10 + s * 1.8, y + 3.5, Z + 18], 0.1, 0.1, '#4a3020', 5); }); boxC(o.m, X + 8, y + 3.4, Z + 17.6, X + 12, y + 3.7, Z + 18.4, '#4a3020'); addPost(X + 10, Z + 18, 2, y, y + 1.2);
+  for (var dm = 0; dm < 3; dm++) { var dx = X - 22 + dm * 4, dz = Z + 30; tub(o.m, [dx, y, dz], [dx, y + 1.8, dz], 0.08, 0.08, '#4a3020', 5); ell(o.m, dx, y + 1.5, dz, 0.4, 0.55, 0.3, '#c8a860', 7, 5); ell(o.m, dx, y + 2.2, dz, 0.25, 0.25, 0.25, '#c8a860', 6, 4); tub(o.m, [dx - 0.6, y + 1.6, dz], [dx + 0.6, y + 1.6, dz], 0.06, 0.06, '#4a3020', 4); addPost(dx, dz, 0.4, y, y + 2); }
+  [[X + 22, Z + 30], [X + 26, Z + 10]].forEach(function (c) { boxR(o.m, c[0], c[1], 0.3, 1.0, 1.8, y + 0.6, y + 1.5, '#6a4a2a', 'plank'); [-1, 1].forEach(function (s) { tub(o.m, [c[0] + s * 1.15, y + 0.6, c[1]], [c[0] + s * 1.25, y + 0.6, c[1]], 0.6, 0.6, '#3a2418', 10, { cap: 1, cap0: 1 }); }); addPost(c[0], c[1], 1.6, y, y + 1.5); });
+  // banners along the curtain wall, torches on the inside
+  for (var bn = -R + 8; bn < R - 8; bn += 12) { standQ(o.m, X + bn, Z - R + 1.52, 0, 2, y + 6, y + 12, TL('velvet'), 1.1, 0.2); standQ(o.m, X - R + 1.52, Z + bn, Math.PI / 2, 2, y + 6, y + 12, TL('velvet'), 1.1, 0.2); }
+  if (dark) { ell(o.glow, X, y + KH + 46, (kz0 + kz1) / 2, 3, 3, 3, '#c040ff', 8, 5); o.m.quad([X - 6, y + 0.05, Z + 4], [X - 6, y + 0.05, Z + 12], [X + 6, y + 0.05, Z + 12], [X + 6, y + 0.05, Z + 4], uvR(3, 2), TL('goo'), [0.5, 0.5, 0.5], [0, 1, 0]); }
+  o.r = 140; o.lights = [{ x: X, y: y + 6, z: Z + R + 5, c: dark ? [0.8, 0.2, 1] : [1, 0.6, 0.3], r: 20 }, { x: X, y: y + 6, z: kz1 + 4, c: dark ? [0.8, 0.2, 1] : [1, 0.6, 0.3], r: 18 }];
+};
+PAINT.goo = function (p) { p.fill('#5a1a7a'); p.speck(['#8a3aaa', '#3a0a5a', '#c070e0'], 140); };
 
 /* ---------- the people of Cum City: every character of ours, the citizens, the police, and the zombies, robots and Blum goons
    of the chapters. Psycho Nightmare's rigs (Cumhead, TB, Shithead Laboozie, TB's boys, the circus) and Spermhog Adventure's
@@ -3084,7 +3160,7 @@ function poseOfPlayer() {
   var W0 = WPN[P.wpn];
   if (P.aim || (P.cool > 0 && !W0.melee && P.atkT === 0 && P.kick > 0)) poseAim(Q, W0.mesh === 'pistolM' ? 'handgun' : 'rifle', P.kick);
   if (P.atkT > 0) { var t = 1 - P.atkT / 0.35; if (W0.swing) poseSwing(Q, t); else posePunch(Q, t); }
-  if (P.hurtT > 0) poseHurt(Q, P.hurtT / 0.4);
+  if (P.hurtT > 0) poseFlinch(Q, 1 - P.hurtT / 0.4); // update 157: a flinch, not a lean back (he said it looked wrong)
   if (P.ragT > 0) poseDown(Q, Math.min(1, P.ragT), 0);
   return Q;
 }
@@ -3093,8 +3169,14 @@ function drawPlayer() { if (window.__noP) return;
   if (P.state === 'foot' && Math.hypot(CAM.x - P.x, CAM.z - P.z) < 0.75 && Math.abs(CAM.y - P.y - 1.5) < 0.9) return;
   var Q = poseOfPlayer(), W0 = WPN[P.wpn], held = W0.mesh ? RIGS[W0.mesh] : null, y = P.y;
   if (P.state === 'car' && P.veh) { var v = P.veh; Q = pose0(); if (v.t.cls === 'board') poseRideStand(Q); else { poseSit(Q); Q.y = -0.35; } drawPerson(RIGS[P.rig || 'cumhead'], v.x, v.y + (v.t.cls === 'board' ? 0.15 : 0.35), v.z, v.a, Q, { noShadow: 1 }); return; }
-  drawPerson(RIGS[P.rig || 'cumhead'], P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: P.hurtT > 0.3 ? [0.5, 0, 0] : null });
+  drawPerson(RIGS[P.rig || 'cumhead'], P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2 });
 }
+
+/* update 157: getting hit. He said Cumhead glowed red and leant back in a way that looked wrong. Now he flinches: hunches,
+   turns his head away, brings both arms up in front of his face, knees dip, and it is over in 0.4 s. No red glow. */
+function poseFlinch(Q, t) { var s = Math.sin(Math.min(1, t) * Math.PI); Q.lean = (Q.lean || 0) + 0.28 * s; Q.twist = (Q.twist || 0) + 0.3 * s; Q.hp = (Q.hp || 0) + 0.3 * s; Q.hy = (Q.hy || 0) - 0.4 * s;
+  Q.sh[0] = [Q.sh[0][0] * (1 - s) + 2.0 * s, 0.3 * s + Q.sh[0][1] * (1 - s), 0.4 * s]; Q.sh[1] = [Q.sh[1][0] * (1 - s) + 1.8 * s, 0.3 * s + Q.sh[1][1] * (1 - s), -0.4 * s]; Q.el[0] = (Q.el[0] || 0) * (1 - s) + 1.9 * s; Q.el[1] = (Q.el[1] || 0) * (1 - s) + 1.9 * s;
+  Q.kn[0] = Math.max(Q.kn[0], 0.35 * s); Q.kn[1] = Math.max(Q.kn[1], 0.35 * s); Q.hip[0] = Math.max(Q.hip[0], 0.18 * s); Q.hip[1] = Math.max(Q.hip[1], 0.18 * s); }
 
 /* ---------- driving: one stepper for every vehicle (the player's and the traffic), by class: car, bike, board, boat, helicopter, plane ---------- */
 function vehInput() { // the player's hands on the controls
@@ -3488,7 +3570,7 @@ function bez(T, t) { var u = 1 - t, P0 = T.p[0], P1 = T.p[1], P2 = T.p[2], P3 = 
 function railEndNode(A) { return RN[A.back ? A.E.a : A.E.b]; }
 function railCut(E, nd) { return Math.min(nodeR(nd), E.len * 0.42); }
 function railPlan(v) { // the curve through the junction ahead
-  var A = v.ai, E = A.E, nd = railEndNode(A), opts = nd.e.filter(function (e) { return e !== E.i && RE[e].len > 8; });
+  var A = v.ai, E = A.E, nd = railEndNode(A), opts = nd.e.filter(function (e) { return e !== E.i && RE[e].len > 8 && !RE[e].off; });
   var NE = opts.length ? RE[pick(opts)] : E, nback = NE === E ? !A.back : NE.b === nd.i, cutE = railCut(E, nd), cutS = railCut(NE, nd);
   var p0 = edgeAt(E, E.len - cutE, A.back, A.lane), p3 = edgeAt(NE, cutS, nback, laneOf(NE)), k = Math.max(2, Math.hypot(p3.x - p0.x, p3.z - p0.z) * 0.45);
   var T = { p: [[p0.x, p0.z], [p0.x + p0.dx * k, p0.z + p0.dz * k], [p3.x - p3.dx * k, p3.z - p3.dz * k], [p3.x, p3.z]], NE: NE, nback: nback, cutS: cutS, node: nd.i, len: 0, lane: laneOf(NE) };
@@ -3589,8 +3671,8 @@ function shopMenu(id, keeper) {
 }
 /* ---------- the rooms ---------- */
 function roomMesh(id) {
-  var R0 = ROOMS[id] || ROOMS.home, w = R0.w || 10, d = R0.d || 9, h = 4, m = M(), wt = TL(R0.wall), ft = TL(R0.floor);
-  m.quad([0, 0, 0], [0, 0, d], [w, 0, d], [w, 0, 0], uvR(w / 2, d / 2), ft, [0.5, 0.5, 0.5], [0, 1, 0]); m.quad([0, h, 0], [w, h, 0], [w, h, d], [0, h, d], uvR(w / 3, d / 3), TL('ceil'), [0.4, 0.4, 0.4], [0, -1, 0]);
+  var R0 = ROOMS[id] || ROOMS.home, w = R0.w || 10, d = R0.d || 9, h = R0.h || 4, m = M(), wt = TL(R0.wall), ft = TL(R0.floor);
+  m.quad([0, 0, 0], [0, 0, d], [w, 0, d], [w, 0, 0], uvR(w / (R0.floor === 'arcarpet' ? 1.2 : 2), d / (R0.floor === 'arcarpet' ? 1.2 : 2)), ft, [0.5, 0.5, 0.5], [0, 1, 0]); m.quad([0, h, 0], [w, h, 0], [w, h, d], [0, h, d], uvR(w / 3, d / 3), TL('ceil'), [0.4, 0.4, 0.4], [0, -1, 0]);
   [[[0, 0, d], [w, 0, d], [0, 0, -1], w], [[w, 0, 0], [0, 0, 0], [0, 0, 1], w], [[w, 0, d], [w, 0, 0], [-1, 0, 0], d], [[0, 0, 0], [0, 0, d], [1, 0, 0], d]].forEach(function (f) { m.quad(f[0], f[1], [f[1][0], h, f[1][2]], [f[0][0], h, f[0][2]], uvR(f[3] / 3, h / 3), wt, lit(f[2]), f[2]); });
   m.quad([w / 2 - 0.8, 0, 0.02], [w / 2 + 0.8, 0, 0.02], [w / 2 + 0.8, 2.4, 0.02], [w / 2 - 0.8, 2.4, 0.02], UV1, TL('door'), [0.5, 0.5, 0.5], [0, 0, 1]);
   var boxes = [], cx = w / 2;
@@ -3931,9 +4013,15 @@ function missionsMenu() { var av = MISSIONS.filter(missionAvailable), dn = MISSI
    the long mystery, world events, garages, the haunted asylum, the dungeons and the sewers, drink and drugs ---------- */
 var RNG = srand(4242);
 /* ---------- stunt jumps: ramps at the side of long straight roads, on the river banks and the beach ---------- */
-var STUNTS = (function () {
-  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.pts.length > 2) return; var p = edgeAt(E, E.len * 0.5, false, E.w / 2 + 3.5); if (isWaterK(kAt(p.x, p.z)) || used.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 260; })) return;
-    var k = kAt(p.x, p.z); if (k === K_BRIDGE) return; used.push(p); L.push({ id: 's' + L.length, x: p.x, z: p.z, a: p.a, y: groundY(p.x, p.z), name: districtName(p.x, p.z) }); });
+var STUNTS = (function () { // update 157 (his ask: ramps in the road): stunt ramps stand OFF the road, on open ground beside it, facing along it
+  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.pts.length > 2) return;
+    for (var side = -1; side <= 1; side += 2) for (var off = 9; off <= 18; off += 3) { if (L.length >= 18) return; var p = edgeAt(E, E.len * 0.5, false, side * (E.w / 2 + off)), a = Math.atan2(p.dx, p.dz);
+      if (used.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 260; })) return; var ok = true;
+      for (var v = -10; v <= 16 && ok; v += 2) for (var u = -3; u <= 3; u += 3) { var x = p.x + Math.sin(a) * v + Math.cos(a) * u, z = p.z + Math.cos(a) * v - Math.sin(a) * u, k = kAt(x, z);
+        if (!(k === K_GRASS || k === K_LOT || k === K_FIELD || k === K_PARK || k === K_DIRT || k === K_SAND || k === K_YARD)) { ok = false; break; }
+        var r = nearestRoad(x, z, 30); if (r && r.d < r.E.w / 2 + 4) { ok = false; break; } if (near(BGRID, x, z, 3).some(function (bb) { return x > bb.x0 - 2 && x < bb.x1 + 2 && z > bb.z0 - 2 && z < bb.z1 + 2; })) { ok = false; break; }
+        if (Math.abs(groundY(x, z) - groundY(p.x, p.z)) > 1.2) { ok = false; break; } }
+      if (!ok) continue; used.push(p); L.push({ id: 's' + L.length, x: p.x, z: p.z, a: a, y: groundY(p.x, p.z), name: districtName(p.x, p.z) }); return; } });
   return L;
 })();
 function buildRamps() { STUNTS.forEach(function (s) { if (s.mesh) return; var m = M(), len = 9, w = 3.4, h = 2.4, c = Math.cos(s.a), sn = Math.sin(s.a); function Pt(u, v, y) { return [s.x + sn * v + c * u, s.y + y, s.z + Math.cos(s.a) * v - sn * u]; }
@@ -4136,7 +4224,7 @@ var ARCADES = {
   HIPAINT.stims = function (c) { c.fillStyle = '#f1e7d0'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#c4121c'; c.fillRect(24, 8, 16, 48); c.fillRect(8, 24, 48, 16); c.fillStyle = '#12040a'; c.textAlign = 'center'; c.font = 'bold 9px "Archivo Narrow", sans-serif'; c.fillText('STIMS', 32, 60); };
 })();
 ROOMS.club.props = ['bar', 'jukebox', 'table', 'bed', 'spraystation', 'stims'];
-['arcade', 'arcade2', 'arcade3', 'arcade4'].forEach(function (id) { ROOMS[id] = { wall: 'wallpaper', floor: 'checker', keeper: 'potbelly', props: ['counter', 'cabinet', 'cabinet', 'cabinet', 'cabinet', 'cabinet', 'cabinet'].slice(0, 1 + ARCADES[id].games.length), cabs: ARCADES[id].games, w: 12, d: 10 }; });
+['arcade', 'arcade2', 'arcade3', 'arcade4'].forEach(function (id) { ROOMS[id] = { wall: 'arcwall', floor: 'arcarpet', keeper: 'potbelly', props: [], arcade: 1, w: 16, d: 14 }; });
 // the new props, drawn into the room mesh
 var _roomMesh = roomMesh;
 roomMesh = function (id) {
@@ -4175,8 +4263,7 @@ goods = function (id) { if (!ARCADES[id]) return _goods(id); SV.carts = SV.carts
 // inside: the cabinets, the sofa and the stash
 var _enterShop2 = enterShop;
 enterShop = function (id, homeId, special) { var r = _enterShop2.apply(this, arguments); var I = G.interior; if (!I || !I.RM) return r;
-  if (ARCADES[id]) { var cabs = ARCADES[id].games, w = I.RM.w; cabs.forEach(function (g, i) { var ax = 1.4 + i * ((w - 2.8) / Math.max(1, cabs.length - 1)); G.indoorUses.push({ x: ax, z: 3.0, r: 0.75, label: 'PLAY ' + SPRAYGAMES[g][0].toUpperCase() + ' ($5)', fn: function () { if (SV.money < 5) { toast('A go is $5.'); return; } money(-5); sprayOpen(g, 'cabinet'); } }); });
-    if (G.keeper) say(G.keeper, pick(['Cabinets are free, kid. Play all you like.', 'Cartridges for the SprayStation, right here.', 'Five drops a go. Bargain.'])); }
+  if (ARCADES[id] && typeof arcadeUses === 'function') arcadeUses(id, I);
   if (id === 'club' && I.RM.club) { var C = I.RM.club; G.indoorUses.push({ x: C.sofa.x, z: C.sofa.z, r: 1.4, label: 'PLAY THE SPRAYSTATION', fn: sprayMenu }); G.indoorUses.push({ x: C.stims.x, z: C.stims.z, r: 1.2, label: 'COMBAT STIMS ($40)', fn: stimMenu }); }
   return r; };
 /* ---------- the SprayStation ---------- */
@@ -4264,6 +4351,247 @@ MI({ id: 'greebo2', who: 'greebo', title: 'Cat Burglars', at: 'shop:greebo', cha
   { t: 'fn', fn: function () { var K = G.caged; if (K) K.open = 1; G.catGone = 0; if (G.ally) { G.ally.catFound = 1; G.ally.cat = K ? { x: K.x, z: K.z, y: K.y, a: 0, sp: 0, ph: 0 } : null; } G.caged = null; sfx.play('coin'); } },
   { t: 'talk', lines: [['greebo', 'SIR JOHNATHAN! My boy! Did they hurt you? Did they feed you?'], ['greebo', 'He says they fed him tuna. From a tin. The monsters.'], ['greebo', 'Thank you, Mister Mayor. Free pies for life. Well. Cheap pies.']] },
   { t: 'go', to: 'shop:greebo', car: 1, msg: 'Drive Greebo and Sir Johnathan home.' }] });
+
+/* ---------- update 157 (his ask): Cumhead's smartphone. D-pad up on a pad, T on a keyboard, or the phone button by the
+   pause button opens it. Three apps, each asks before it spends (KIT.confirm), each with a little scene:
+   CUM CABS: he puts the phone to his ear and calls, a taxi drives up to him (the camera watches it pull in), he gets in
+   and picks where to go; the screen fades and he steps out there.
+   CUM CITY INSURANCE: call it in and a fresh copy of your last car is driven to you (free once you have insured it).
+   COMBAT STIMS: a courier on a scooter rides up, hands them over and rides off; you are on stims at once.
+   The phone works in a car too (the delivery comes to the car); not inside, not in a mission cutscene. ---------- */
+var PHONE = null;
+function phoneOpen() { if (!P || G.mode !== 'play' || G.cut || G.interior || P.state === 'dead' || G.spray) { if (G.interior) toast('No signal in here.'); return; } G.phone = 1; sfx.play('blip');
+  var busy = PHONE && PHONE.st !== 'done';
+  KIT.menu({ cls: 'phone', title: 'CUMPHONE', sub: (G.time | 0) + ':' + ('0' + Math.floor((G.time % 1) * 60)).slice(-2) + '  ·  $' + Math.floor(SV.money).toLocaleString('en-GB') + (busy ? '  ·  ' + PHONE.what + ' on the way' : ''), grid: true, items: [
+    { label: 'CUM CABS', cls: 'app cab', fn: function () { phoneAsk('taxi'); } },
+    { label: 'INSURANCE', cls: 'app ins', fn: function () { phoneAsk('insure'); } },
+    { label: 'COMBAT STIMS', cls: 'app stim', fn: function () { phoneAsk('stims'); } },
+    { label: 'MAP', cls: 'app map', fn: function () { phoneClose(); mapMenu(null); } },
+    { label: 'HANG UP', back: true, cls: 'app off', fn: phoneClose }] }); }
+function phoneClose() { G.phone = 0; KIT.closeMenu(); }
+function phoneAsk(what) { if (PHONE && PHONE.st !== 'done') { toast('Something is already on its way.'); return; }
+  if (what === 'taxi') KIT.confirm({ title: 'Cum Cabs', sub: 'A cab comes to you. You pay the fare when you pick where to go.', price: 20, have: Math.floor(SV.money), unit: '$', yesLabel: 'Call a cab', yes: function () { phoneCall('taxi'); }, no: phoneOpen });
+  else if (what === 'insure') { var last = SV.lastCar && VT[SV.lastCar] ? SV.lastCar : null, ins = SV.insured && last && SV.insured[last];
+    if (!last) { KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Cum City Insurance has no car on file for you. Drive something first.', items: [{ label: 'BACK', back: true, fn: phoneOpen }] }); return; }
+    KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Your car on file: ' + VT[last].n + (ins ? ' (insured)' : ''), items: [
+      { label: ins ? 'SEND MY CAR (FREE)' : 'SEND MY CAR ($250)', fn: function () { if (ins) phoneCall('insure'); else KIT.confirm({ title: 'Replacement ' + VT[last].n, sub: 'A fresh one is driven to you.', price: 250, have: Math.floor(SV.money), unit: '$', yes: function () { money(-250); phoneCall('insure'); }, no: phoneOpen }); } },
+      ins ? null : { label: 'INSURE IT FOR GOOD ($900)', fn: function () { KIT.confirm({ title: 'Insure the ' + VT[last].n, sub: 'From now on a fresh one is sent free whenever you call.', price: 900, have: Math.floor(SV.money), unit: '$', yes: function () { money(-900); SV.insured = SV.insured || {}; SV.insured[last] = 1; persist(); toast('Insured. Call any time.'); phoneOpen(); }, no: phoneOpen }); } },
+      { label: 'BACK', back: true, fn: phoneOpen }] }); }
+  else if (what === 'stims') KIT.confirm({ title: 'Combat Stims, delivered', sub: 'A courier brings them to you. Hit harder, take less, for 90 seconds.', price: 60, have: Math.floor(SV.money), unit: '$', yes: function () { money(-60); phoneCall('stims'); }, no: phoneOpen }); }
+var CALLS = { taxi: [['cumhead', 'Yeah, hi. I need a cab. Where am I? Look for the droplet in the nice shirt.'], ['pedM1', 'Cum Cabs. Two minutes, Mister Mayor. Do not go anywhere.']],
+  insure: [['cumhead', 'Hello, insurance? Yeah, my car is a bit... gone. Can you send another one?'], ['pedF1', 'Cum City Insurance. Of course, Mister Mayor. A fresh one is on its way. Please try not to blow this one up.']],
+  stims: [['cumhead', 'Yeah, can I get some combat stims delivered? The usual.'], ['pedM1', 'Stims for the mayor, coming right up. Five minutes or the next one is free.']] };
+var ARRIVE = { taxi: 'Cab for Mister Mayor! Hop in, where to?', insure: 'Here are your keys, Mister Mayor. Sign here. Do not crash it.', stims: 'Combat stims for the mayor. Enjoy the ride.' };
+function phoneCall(what) { phoneClose(); if (what === 'taxi' && SV.money < 20) { toast('$20 call out.'); return; } if (what === 'taxi') money(-20);
+  PHONE = { what: { taxi: 'Your cab', insure: 'Your car', stims: 'Your stims' }[what], k: what, st: 'call', t: 0, line: 0 };
+  sfx.play('blip'); }
+function phoneVehType(k) { return k === 'taxi' ? 'taxi' : k === 'stims' ? (VT.scooter ? 'scooter' : 'moto') : (SV.lastCar && VT[SV.lastCar] ? SV.lastCar : 'hatch'); }
+function stepPhone(dt) { var S = PHONE; if (!S || S.st === 'done' || !P) return; S.t += dt;
+  if (S.st === 'call') { // the call itself: the phone at his ear, both sides spoken
+    var L = CALLS[S.k]; if (S.t > 0.3 && S.line === 0) { S.line = 1; subtitle(CAST.cumhead.name, L[0][1], 3.5); voiceLine('cumhead', L[0][1]); }
+    if (S.t > 3.9 && S.line === 1) { S.line = 2; subtitle(S.k === 'insure' ? 'Cum City Insurance' : S.k === 'taxi' ? 'Cum Cabs' : 'Stims Courier', L[1][1], 3.5); voiceLine(L[1][0], L[1][1]); }
+    if (S.t > 7.6) { var r = roadNear('xz:' + P.x + ':' + P.z, 90); if (!r || !r.E) { toast('Nobody can find you here.'); S.st = 'done'; return; } var v = makeVeh(phoneVehType(S.k), r.x, r.z, r.a || 0, { col: S.k === 'taxi' ? 3 : 0 }); v.keep = 1; v.phone = 1; v.y = groundY(v.x, v.z);
+      var dr = makePed({ x: v.x, z: v.z, kind: 'cit', rig: rigFor('cit'), keep: 1 }); dr.inVeh = v; v.driver = dr; v.god = 1; v.ai = { manual: 1 }; S.v = v; S.st = 'drive'; S.t = 0; G.sub = null; } return; }
+  var v = S.v; if (!v || v.dead) { S.st = 'done'; toast('Your delivery got wrecked on the way.'); return; }
+  var tx = P.state === 'car' && P.veh ? P.veh.x : P.x, tz = P.state === 'car' && P.veh ? P.veh.z : P.z, d = Math.hypot(v.x - tx, v.z - tz);
+  if (S.st === 'drive') { if (S.t > 30 || d > 400) { var rr = nearestRoad(tx, tz, 60); if (rr) { var b = edgeAt(rr.E, Math.max(1, rr.s - 25), false, laneOf(rr.E)); v.x = b.x; v.z = b.z; v.y = groundY(b.x, b.z); v.a = Math.atan2(b.dx, b.dz); S.t = 0; } }
+    var near = nearestRoad(tx, tz, 40), goal = near ? { x: near.x, z: near.z } : { x: tx, z: tz }; if (d < 45 && !S.cam) S.cam = 3;
+    var dg = Math.hypot(v.x - goal.x, v.z - goal.z); if (dg > 6 && d > 9) { if (dg < 25 && Math.abs(v.sp) > 8) stepVehicle(v, { thr: 0, brk: 1, steer: clamp(angDiff(v.a, Math.atan2(goal.x - v.x, goal.z - v.z)) * 2, -1, 1) }, dt); else raceAI(v, goal, dt); } else { stepVehicle(v, { thr: 0, brk: 1, steer: 0, park: 1 }, dt); if (Math.abs(v.sp) < 1) { S.st = 'arrived'; S.t = 0; say(v.driver, ARRIVE[S.k]); voiceLine('pedM0', ARRIVE[S.k]); arrive(S); } }
+  }
+  else if (S.st === 'arrived') { stepVehicle(v, { park: 1, thr: 0, brk: 1, steer: 0 }, dt); if (S.hand && S.t > 1.2) { S.hand = 0; takeStim(); S.st = 'leave'; S.t = 0; } if (S.k === 'taxi' && S.t > 90) { S.st = 'leave'; S.t = 0; G.phoneUse = null; } }
+  else if (S.st === 'leave') { if (v.driver && v.driver.inVeh === v) { var rl = nearestRoad(v.x, v.z, 20); if (rl && (!v.ai || v.ai.manual)) { v.ai = { E: rl.E, s: rl.s, back: Math.abs(angDiff(v.a, Math.atan2(rl.dx, rl.dz))) > 1.57, lane: laneOf(rl.E), want: 15, wait: 0, sp: 0 }; v.keep = 0; } } S.st = 'done'; }
+  if (S.cam > 0) S.cam -= dt; }
+function arrive(S) { var v = S.v;
+  if (S.k === 'stims') { S.hand = 1; }
+  else if (S.k === 'insure') { var dr = v.driver; dr.inVeh = null; v.driver = null; var D = doorPt(v, 1.2); dr.x = D.x; dr.z = D.z; dr.y = v.y; dr.keep = 0; dr.state = 'walk'; v.owned = 1; v.mine = 1; v.god = 0; v.keep = 1; v.ai = null; S.st = 'done'; toast('Your ' + v.t.n + ' is here. It is yours.'); }
+  else if (S.k === 'taxi') { G.phoneUse = { x: v.x, z: v.z, r: 4, label: 'GET IN THE CAB', fn: taxiMenu, v: v }; } }
+function taxiMenu() { var S = PHONE, v = S && S.v; if (!v) return; var dests = [];
+  if (SV.way) dests.push(['YOUR WAYPOINT', SV.way[0], SV.way[1]]);
+  if (G.mission && G.mission.mark && G.mission.mark.x !== undefined) dests.push(['THE JOB', G.mission.mark.x, G.mission.mark.z]);
+  [['THE CLUBHOUSE', 'shop:club'], ["POTBELLY'S ARCADE", 'shop:arcade'], ['CUM CITY HOSPITAL', 'shop:hosp'], ['CUM MOTORS', 'shop:motors'], ['EJACULAND', 'dist:ejac'], ['THE AIRPORT', 'dist:airport'], ['SEAMEN BEACH', 'dist:beach']].forEach(function (q) { var p = placeOf(q[1]); if (p) dests.push([q[0], p.x, p.z]); });
+  KIT.menu({ cls: 'phone', title: 'CUM CABS', sub: '"Where to, Mister Mayor?"', items: dests.map(function (d) { var fare = Math.max(25, Math.round(Math.hypot(d[1] - P.x, d[2] - P.z) / 18)); return { label: d[0] + '  ·  $' + fare, fn: function () { KIT.confirm({ title: d[0], sub: 'The fare.', price: fare, have: Math.floor(SV.money), unit: '$', yes: function () { money(-fare); KIT.closeMenu(); taxiRide(d[1], d[2]); }, no: taxiMenu }); } }; }).concat([{ label: 'NEVER MIND', back: true, fn: function () { KIT.closeMenu(); } }]) }); }
+function taxiRide(x, z) { var S = PHONE, v = S.v; G.phoneUse = null; G.fade = 2.2; sfx.play('door');
+  setTimeout(function () { var r = nearestRoad(x, z, 300) || { x: x, z: z, dx: 0, dz: 1, E: null }; var lane = r.E ? laneOf(r.E) : 0, px = r.x + r.dz * lane, pz = r.z - r.dx * lane;
+    v.x = px; v.z = pz; v.y = groundY(px, pz); v.a = Math.atan2(r.dx, r.dz); v.vx = v.vz = v.sp = 0; var D = doorPt(v, 1.2); P.x = D.x + (D.x - v.x) * 0.3; P.z = D.z + (D.z - v.z) * 0.3; P.y = standY(P.x, P.z, v.y + 2); P.a = v.a; CAM.yaw = v.a; CAM.snap = 1;
+    if (typeof solidsAround === 'function') solidsAround(P.x, P.z, 70); G.time = (G.time + Math.min(1.5, Math.hypot(x - P.x, z - P.z) / 3000)) % 24;
+    S.st = 'leave'; S.t = 0; say(v.driver, pick(['Pleasure, Mister Mayor.', 'Tip is optional. It is not optional.', 'Mind how you go.'])); }, 900); }
+var _nearestUseP = nearestUse;
+nearestUse = function () { var u = _nearestUseP(); if (G.phoneUse && !G.interior) { var q = G.phoneUse, v = q.v; if (v) { q.x = v.x; q.z = v.z; } var d = dist2(P.x, P.z, q.x, q.z); if (d < q.r * q.r && (!u || d < dist2(P.x, P.z, u.x, u.z))) return q; } return u; };
+var _carNearP = carNear;
+carNear = function () { var v = _carNearP(); return v && v.phone && PHONE && PHONE.st !== 'done' && PHONE.k !== 'insure' ? null : v; };
+/* the scene: while calling, his hand is at his ear with the phone; when the delivery is close the camera watches it pull in */
+var PHONEM = null;
+function drawPhoneProp() { var S = PHONE; if (!S || S.st !== 'call' || P.state !== 'foot') return; if (!PHONEM) { var m = new R3.Mesh(); boxC(m, -0.035, -0.07, -0.01, 0.035, 0.07, 0.01, '#12040a'); boxC(m, -0.03, -0.06, 0.011, 0.03, 0.06, 0.013, '#4adfff'); PHONEM = m.upload(); }
+  var a = P.a, rx = Math.cos(a), rz = -Math.sin(a), sc = 1.22, hx = P.x - rx * 0.24 * sc + Math.sin(a) * 0.05, hz = P.z - rz * 0.24 * sc + Math.cos(a) * 0.05; R3.draw(PHONEM, ATT, { m: MD(hx, P.y + 1.62 * sc, hz, a + 1.4, 0.2, 0) }); }
+var _poseOfPlayerP = poseOfPlayer;
+poseOfPlayer = function () { var Q = _poseOfPlayerP(); if (PHONE && PHONE.st === 'call' && P.state === 'foot') { Q.sh[0] = [1.25, 0.5, 1.2]; Q.el[0] = 2.5; Q.hy = (Q.hy || 0) + 0.15; } return Q; };
+var _dwsPhone = drawWorldStuff; drawWorldStuff = function () { _dwsPhone(); drawPhoneProp(); };
+function phoneCam(dt) { var S = PHONE; if (!S || !(S.cam > 0) || !S.v || G.cut || G.mode !== 'play') return; var v = S.v, tx = P.state === 'car' && P.veh ? P.veh : P, mx = (v.x + tx.x) / 2, mz = (v.z + tx.z) / 2, dx = v.x - tx.x, dz = v.z - tx.z, d = Math.hypot(dx, dz) || 1;
+  var ex = mx - dz / d * (d * 0.7 + 6), ez = mz + dx / d * (d * 0.7 + 6), ey = Math.max(groundY(ex, ez), tx.y) + 3.2; CAM.x += (ex - CAM.x) * Math.min(1, dt * 3); CAM.y += (ey - CAM.y) * Math.min(1, dt * 3); CAM.z += (ez - CAM.z) * Math.min(1, dt * 3); CAM.at = [mx, tx.y + 1.0, mz]; }
+/* the phone button by the pause button, and the keys */
+(function () { function add() { var top = document.getElementById('top'); if (!top || document.getElementById('phoneBtn')) return; var b = document.createElement('button'); b.id = 'phoneBtn'; b.type = 'button'; b.setAttribute('aria-label', 'Phone');
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="#f1e7d0" stroke-width="1.8"/><rect x="9" y="5" width="6" height="11" fill="#c4121c"/><circle cx="12" cy="18.7" r="1" fill="#f1e7d0"/></svg>';
+  b.addEventListener('click', function () { if (G.phone) phoneClose(); else phoneOpen(); }); top.insertBefore(b, top.firstChild); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', add); else add(); setTimeout(add, 500); })();
+var _takeSeatP = takeSeat; takeSeat = function (v, j) { if (v && v.t && v.t.cls === 'car' && v.type !== 'taxi' && !v.t.cop) SV.lastCar = v.type; return _takeSeatP(v, j); };
+function phoneLines() { var L = []; Object.keys(CALLS).forEach(function (k) { CALLS[k].forEach(function (q) { L.push(q); }); L.push(['pedM0', ARRIVE[k]]); }); return L; }
+
+/* ---------- update 157 (his asks): Potbelly's arcades look like arcades. The cabinets stand along the side walls, spaced
+   out and facing into the room; each is dressed for its own game: its logo lit up in the marquee, the body and side art
+   in that game's colours, an attract screen, a stick and buttons, coin door and a glowing trim. Neon strips run round
+   the walls, the carpet is the black cinema kind with neon shapes, posters of the games hang between the cabinets,
+   Potbelly stands at a prize counter with plushies on the shelf behind him, and a change machine sits by the door.
+   The Clubhouse gets a cartridge shelf by the telly: every cartridge you own stands on it with its game's logo on the
+   label. Logos come from the app's own logo pictures (assets/<id>-logo.webp), painted into the texture sheet as they
+   load (`LOGO`, `logoTile`). ---------- */
+var GAMEART = { // logo file id, body colour, accent
+  meatnado: ['meat', '#5a120c', '#ff7a3a'], spermhog: ['hog', '#14205a', '#ffe36a'], survivors: ['surv', '#0a3442', '#4adfff'], willy: ['wn', '#4a1608', '#ffb030'], spuzz: ['sw', '#2e2416', '#7aff6a'],
+  grinding: ['gr', '#2a0a10', '#ff2630'], overdrive: ['ao', '#2a0a3a', '#ff3aa0'], void: ['jv', '#0a1a4a', '#4adfff'], kart: ['ck', '#4a0a0a', '#ffe36a'], skeet: ['sk', '#3a0a0a', '#ffb030'],
+  psycho: ['pn', '#0a1a0a', '#7aff6a'], adv: ['sa', '#0a2a5a', '#ffe36a'], dark: ['dk', '#1a1418', '#c8a040'], legend: ['lc', '#0a3a1a', '#ffe36a'], cumstein: ['c3', '#2e2e30', '#ff2630'],
+  faprooms: ['fr', '#4a4418', '#ffe8a0'], keeper: ['gk', '#2a1a0a', '#ff7a20'], spunky: ['sb', '#3a0a4a', '#4adfff'], octo: ['ob', '#2a0a4a', '#ff3aa0'], cq: ['cq', '#12040a', '#c4121c'], ll: ['ll', '#12040a', '#ffe36a']
+};
+var LOGO = {};
+(function () { Object.keys(GAMEART).forEach(function (g) { var im = new Image(); im.onload = function () { im.ok = 1; logoRefresh(g); }; im.src = '../assets/' + GAMEART[g][0] + '-logo.webp'; LOGO[g] = im; });
+  // the logo tile: the game's logo on its colour, or its name until the picture has loaded (painted big: 128 px)
+  Object.keys(GAMEART).forEach(function (g) { var f = function (c) { logoPaint(c, g); }; f.big = 1; HIPAINT['logo_' + g] = f;
+    HIPAINT['scr_' + g] = function (c) { var A = GAMEART[g]; c.fillStyle = '#05070c'; c.fillRect(0, 0, 64, 64); var gr = c.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, A[1]); gr.addColorStop(1, '#05070c'); c.fillStyle = gr; c.fillRect(2, 2, 60, 46);
+      for (var i = 0; i < 14; i++) { c.fillStyle = i % 3 ? A[2] : '#f1e7d0'; c.fillRect(6 + (i * 37) % 50, 8 + (i * 23) % 34, 3 + i % 3, 3); } c.fillStyle = A[2]; c.fillRect(8, 40, 48, 2);
+      c.fillStyle = '#f1e7d0'; c.font = 'bold 7px "Archivo Narrow", sans-serif'; c.textAlign = 'center'; c.fillText(Math.floor(Date.now() / 1) % 2 ? 'INSERT COIN' : 'INSERT COIN', 32, 57); };
+    HIPAINT['side_' + g] = function (c) { var A = GAMEART[g]; c.fillStyle = A[1]; c.fillRect(0, 0, 64, 64); c.fillStyle = A[2]; c.beginPath(); c.moveTo(0, 40); c.lineTo(64, 8); c.lineTo(64, 24); c.lineTo(0, 56); c.fill(); c.fillStyle = '#12040a'; c.fillRect(0, 0, 64, 3); c.fillRect(0, 61, 64, 3);
+      c.fillStyle = 'rgba(255,255,255,0.12)'; for (var i = 0; i < 6; i++) c.fillRect(6 + i * 10, 46 - i * 5, 4, 4); };
+    HIPAINT['cart_' + g] = function (c) { var A = GAMEART[g]; c.fillStyle = '#2a2a2e'; c.fillRect(0, 0, 64, 64); c.fillStyle = A[1]; c.fillRect(6, 6, 52, 40); c.fillStyle = A[2]; c.fillRect(6, 40, 52, 6); c.fillStyle = '#1a1a1e'; for (var i = 0; i < 8; i++) c.fillRect(8 + i * 6, 54, 3, 8); };
+  });
+  HIPAINT.arcwall = function (c) { c.fillStyle = '#140818'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#1e0c24'; for (var y = 0; y < 64; y += 8) c.fillRect(0, y, 64, 4); c.fillStyle = '#c4121c'; c.fillRect(0, 40, 64, 2); c.fillStyle = '#ff3aa0'; c.fillRect(0, 44, 64, 1); c.fillStyle = '#0a040c'; c.fillRect(0, 46, 64, 18); };
+  HIPAINT.arcarpet = function (c) { c.fillStyle = '#0a070e'; c.fillRect(0, 0, 64, 64); var cols = ['#7a1a5a', '#1a5a7a', '#7a6a1a', '#2a6a2a', '#6a0a10']; for (var i = 0; i < 22; i++) { c.fillStyle = cols[i % 5]; var x = (i * 29 + (i >> 2) * 7) % 62, y = (i * 17 + (i >> 1) * 11) % 62; if (i % 3 === 0) { c.beginPath(); c.arc(x + 1, y + 1, 1.2, 0, 6.3); c.fill(); } else if (i % 3 === 1) { c.fillRect(x, y + 1, 3, 1); c.fillRect(x + 1, y, 1, 3); } else { c.beginPath(); c.moveTo(x, y + 2.5); c.lineTo(x + 1.5, y); c.lineTo(x + 3, y + 2.5); c.fill(); } } };
+  HIPAINT.change = function (c) { c.fillStyle = '#c8c8c0'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#12040a'; c.fillRect(6, 6, 52, 14); c.fillStyle = '#ffe36a'; c.font = 'bold 9px "Archivo Narrow", sans-serif'; c.textAlign = 'center'; c.fillText('CHANGE', 32, 16); c.fillStyle = '#2a2a2e'; c.fillRect(20, 28, 24, 6); c.fillRect(24, 44, 16, 10); };
+})();
+function logoPaint(c, g) { var A = GAMEART[g], im = LOGO[g]; c.fillStyle = A[1]; c.fillRect(0, 0, 64, 64); c.fillStyle = A[2]; c.fillRect(0, 0, 64, 2); c.fillRect(0, 62, 64, 2);
+  if (im && im.ok) { var s = Math.min(60 / im.width, 56 / im.height), w = im.width * s, h = im.height * s; c.drawImage(im, 32 - w / 2, 32 - h / 2, w, h); }
+  else { c.fillStyle = '#f1e7d0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '11px "Pirata One", serif'; var L = SPRAYGAMES[g][0].split(' '); L.forEach(function (l, k) { c.fillText(l, 32, 32 + (k - (L.length - 1) / 2) * 11); }); } }
+function logoRefresh(g) { // a logo that loaded after the texture sheet was made: paint it into its slot and send the sheet again
+  if (!ATL || !ATL.canvas) return; var uv = ATL.tile('logo_' + g); if (!uv) return; var SZ = ATL.canvas.width, x = Math.round(uv[0] * SZ) - 1, y = Math.round(uv[1] * SZ) - 1, B = Math.round(uv[2] * SZ) + 2, c = ATL.canvas.getContext('2d');
+  c.save(); c.clearRect(x, y, B, B); c.beginPath(); c.rect(x, y, B, B); c.clip(); c.translate(x, y); c.scale(B / 64, B / 64); logoPaint(c, g); c.restore();
+  clearTimeout(logoRefresh.t); logoRefresh.t = setTimeout(function () { try { ATT = R3.texture(ATL.canvas, true); } catch (e) {} }, 300); }
+var _buildAtlasL = buildAtlas;
+buildAtlas = function () { var had = !!ATL; _buildAtlasL(); if (!had && ATL) Object.keys(LOGO).forEach(function (g) { if (LOGO[g].ok) logoRefresh(g); }); };
+/* where the cabinets stand: down both side walls, facing in */
+function cabSpots(id, RM) { var cabs = ARCADES[id].games, w = RM.w, d = RM.d, L = [], nL = Math.ceil(cabs.length / 2);
+  cabs.forEach(function (g, i) { var left = i < nL, k = left ? i : i - nL, n = left ? nL : cabs.length - nL, z = 3.2 + k * ((d - 6.8) / Math.max(1, n - 1)); if (n === 1) z = d / 2;
+    L.push({ g: g, x: left ? 0.75 : w - 0.75, z: z, a: left ? Math.PI / 2 : -Math.PI / 2 }); }); return L; }
+function cabinet(m, gl, c) { var g = c.g, A = GAMEART[g], a = c.a, cs = Math.cos(a), sn = Math.sin(a);
+  function P(u, v) { return [c.x + sn * v + cs * u, c.z + Math.cos(a) * v - sn * u]; } // u across, v forward (towards the player)
+  function box(u0, v0, u1, v1, y0, y1, col, T) { var p = P((u0 + u1) / 2, (v0 + v1) / 2); boxR(m, p[0], p[1], a, (u1 - u0) / 2, (v1 - v0) / 2, y0, y1, col, T); }
+  box(-0.42, -0.35, 0.42, 0.25, 0, 0.95, A[1]); box(-0.42, -0.35, 0.42, -0.05, 0.95, 2.05, A[1]); box(-0.45, -0.38, 0.45, 0.28, 2.05, 2.12, '#0a0a0c');
+  [-1, 1].forEach(function (s) { var p = P(s * 0.43, -0.05); standQ(m, p[0], p[1], a + s * Math.PI / 2, 0.62, 0.05, 2.0, TL('side_' + g), 1.2, 0.2); });
+  var mq = P(0, -0.04); boxR(m, mq[0], mq[1], a, 0.42, 0.06, 1.78, 2.05, '#0a0a0c'); standQ(gl, mq[0] + sn * 0.07, mq[1] + Math.cos(a) * 0.07, a, 0.8, 1.79, 2.04, TL('logo_' + g), 1.5, 0.9);
+  var sc = P(0, -0.02); standQ(gl, sc[0] + sn * 0.04, sc[1] + Math.cos(a) * 0.04, a, 0.66, 1.12, 1.66, TL('scr_' + g), 1.4, 0.8); box(-0.4, -0.05, 0.4, 0.02, 1.08, 1.12, '#0a0a0c'); box(-0.4, -0.05, 0.4, 0.02, 1.66, 1.72, '#0a0a0c');
+  box(-0.42, -0.05, 0.42, 0.32, 0.95, 1.02, '#1a1a1e'); var st = P(-0.18, 0.15); tub(m, [st[0], 1.02, st[1]], [st[0], 1.14, st[1]], 0.012, 0.012, '#c8c8c0', 4); ell(gl, st[0], 1.16, st[1], 0.035, 0.035, 0.035, '#ff2630', 6, 4);
+  [0.04, 0.14, 0.24].forEach(function (u, k) { var b = P(u, 0.12 + (k % 2) * 0.05); ell(gl, b[0], 1.03, b[1], 0.03, 0.012, 0.03, [A[2], '#f1e7d0', '#ff3aa0'][k], 6, 3); });
+  var cd = P(0, 0.26); standQ(m, cd[0], cd[1], a, 0.3, 0.3, 0.6, TL('black'), 1, 0); ell(gl, cd[0] + sn * 0.01 - cs * 0.06, 0.48, cd[1] + Math.cos(a) * 0.01 + sn * 0.06, 0.015, 0.03, 0.006, '#ffe36a', 4, 2); ell(gl, cd[0] + sn * 0.01 + cs * 0.06, 0.48, cd[1] + Math.cos(a) * 0.01 - sn * 0.06, 0.015, 0.03, 0.006, '#ffe36a', 4, 2);
+  [-1, 1].forEach(function (s) { box(s * 0.43 - 0.012, -0.35, s * 0.43 + 0.012, 0.25, 0.94, 0.96, A[2]); }); // the trim
+}
+var _roomMeshA = roomMesh;
+roomMesh = function (id) { var RM = _roomMeshA(id), R0 = ROOMS[id]; if (!R0 || (!R0.arcade && id !== 'club')) return RM;
+  var m = new R3.Mesh(), gl = new R3.Mesh(), w = RM.w, d = RM.d, cx = w / 2;
+  if (R0.arcade) {
+    cabSpots(id, RM).forEach(function (c) { cabinet(m, gl, c); RM.boxes.push([c.x - 0.45, c.z - 0.45, c.x + 0.45, c.z + 0.45]); });
+    // posters between them, high on the side walls
+    var gs = ARCADES[id].games; gs.forEach(function (g, i) { var left = i % 2 === 0, z = 4.3 + (i >> 1) * 2.4; if (z > d - 3) return; standQ(m, left ? 0.03 : w - 0.03, z, left ? Math.PI / 2 : -Math.PI / 2, 1.0, 2.5, 3.5, TL('logo_' + g), 1.3, 0.5); });
+    // neon strips round the walls, near the top and above the skirting
+    var NC = ['#ff3aa0', '#4adfff', '#ffe36a', '#c4121c']; [3.6, 0.35].forEach(function (y, k) { var col = NC[(k + id.length) % 4]; boxC(gl, 0.02, y, 0.2, 0.08, y + 0.06, d - 0.2, col); boxC(gl, w - 0.08, y, 0.2, w - 0.02, y + 0.06, d - 0.2, col); boxC(gl, 0.2, y, d - 0.08, w - 0.2, y + 0.06, d - 0.02, NC[(k + 1) % 4]); });
+    // the prize counter, Potbelly behind it, plushies on the shelf
+    boxT(m, cx - 3, 0, d - 3, cx + 3, 1.1, d - 2.2, { wall: 'black', top: 'plank', u: 1.5, v: 1.1 }); boxC(gl, cx - 3, 1.0, d - 2.22, cx + 3, 1.05, d - 2.18, '#ff3aa0'); RM.boxes.push([cx - 3, d - 3, cx + 3, d - 2.2]);
+    boxC(m, cx - 3.2, 1.5, d - 0.5, cx + 3.2, 1.58, d - 0.05, '#3a2418'); boxC(m, cx - 3.2, 2.3, d - 0.5, cx + 3.2, 2.38, d - 0.05, '#3a2418');
+    for (var q = 0; q < 10; q++) { var px = cx - 2.8 + q * 0.62, py = q % 2 ? 1.58 : 2.38, col = ['#12040a', '#f1e7d0', '#ff9ab4', '#c4121c', '#ffe36a'][q % 5]; ell(m, px, py + 0.2, d - 0.28, 0.2, 0.22, 0.17, col, 8, 5); ell(m, px, py + 0.48, d - 0.28, 0.14, 0.14, 0.13, col, 8, 5); if (q % 5 === 0) { ell(gl, px - 0.05, py + 0.5, d - 0.15, 0.025, 0.03, 0.01, '#ff2630', 4, 3); ell(gl, px + 0.05, py + 0.5, d - 0.15, 0.025, 0.03, 0.01, '#ff2630', 4, 3); } }
+    // the change machine by the door
+    boxC(m, w - 2.4, 0, 0.1, w - 1.6, 1.7, 0.6, '#9a9a96'); standQ(m, w - 2.0, 0.61, 0, 0.7, 0.3, 1.6, TL('change'), 1.3, 0.3); RM.boxes.push([w - 2.4, 0.1, w - 1.6, 0.6]);
+    // lights in the ceiling
+    for (var lx = 3; lx < w; lx += 5) for (var lz = 3; lz < d; lz += 4) ell(gl, lx, 3.96, lz, 0.25, 0.03, 0.25, '#fff2d0', 6, 2);
+  }
+  if (id === 'club') { // the cartridge shelf, on the wall beside the telly: three shelves, eight cartridges a shelf, labels facing out
+    var sx = 0.06, z0 = 8.6, SL = 3.0; [0.9, 1.55, 2.2, 2.85].forEach(function (y) { boxC(m, sx, y, z0, sx + 0.36, y + 0.05, z0 + SL, '#3a2418'); }); boxC(m, sx, 0.9, z0 - 0.05, sx + 0.36, 2.9, z0, '#2a1810'); boxC(m, sx, 0.9, z0 + SL, sx + 0.36, 2.9, z0 + SL + 0.05, '#2a1810');
+    var own = Object.keys(SPRAYGAMES).filter(function (g) { return SV.carts && SV.carts[g]; }); own.forEach(function (g, i) { var row = Math.floor(i / 8), k = i % 8, z = z0 + 0.08 + k * 0.36, y = [0.95, 1.6, 2.25][row]; if (row > 2) return;
+      boxC(m, sx + 0.04, y, z, sx + 0.3, y + 0.5, z + 0.32, '#2a2a2e'); boxC(m, sx + 0.04, y + 0.5, z + 0.02, sx + 0.3, y + 0.54, z + 0.3, '#1a1a1e'); standQ(gl, sx + 0.31, z + 0.16, Math.PI / 2, 0.28, y + 0.06, y + 0.46, TL('logo_' + g), 1.3, 0.4); });
+    RM.club.shelf = { x: 0.9, z: z0 + SL / 2 }; RM.boxes.push([0, z0, 0.42, z0 + SL]); }
+  RM.extra2 = m.n ? m.upload() : null; RM.glow2 = gl.n ? gl.upload() : null; return RM; };
+var _drawInteriorA = drawInterior;
+drawInterior = function (look) { var I = G.interior; if (I && ROOMS[I.key] && ROOMS[I.key].arcade) { // the arcade: dim, with the neon and the screens doing the lighting
+    var RM = I.RM; R3.scene({ fog: [0, 0, 0], fogR: [40, 90], amb: [0.32, 0.26, 0.38], lights: [{ x: RM.w / 2, y: 3.6, z: RM.d / 2, r: 12, c: [1, 0.85, 0.75], k: 0.8 }, { x: 1, y: 2.2, z: RM.d / 2, r: 8, c: [1, 0.25, 0.7], k: 1.0 }, { x: RM.w - 1, y: 2.2, z: RM.d / 2, r: 8, c: [0.3, 0.8, 1], k: 1.0 }, { x: RM.w / 2, y: 2.5, z: RM.d - 2, r: 6, c: [1, 0.9, 0.4], k: 0.8 }], torch: { p: [0, -99, 0], d: [0, -1, 0], c: [0, 0, 0] }, t: G.t, hue: G.fxHue || 0, warp: G.fxWarp || 0 });
+    R3.draw(RM.mesh, ATT); if (RM.extra) R3.draw(RM.extra, ATT); } else _drawInteriorA(look);
+  if (I && I.RM.extra2) R3.draw(I.RM.extra2, ATT); if (I && I.RM.glow2) R3.draw(I.RM.glow2, ATT, { lit: false }); };
+function arcadeUses(id, I) { cabSpots(id, I.RM).forEach(function (c) { var g = c.g; G.indoorUses.push({ x: c.x + Math.sin(c.a) * 1.0, z: c.z + Math.cos(c.a) * 1.0, r: 0.8, label: 'PLAY ' + SPRAYGAMES[g][0].toUpperCase() + ' ($5)', fn: function () { if (SV.money < 5) { toast('A go is $5.'); return; } money(-5); sprayOpen(g, 'cabinet'); } }); });
+  if (G.keeper) say(G.keeper, pick(['Cabinets are free, kid. Play all you like.', 'Cartridges for the SprayStation, right here.', 'Five drops a go. Bargain.'])); }
+// the Clubhouse shelf changes with what you own: build its room again each time you go in
+var _enterShopA = enterShop;
+enterShop = function (id, homeId, special) { if (id === 'club' && typeof IMESH !== 'undefined') delete IMESH.club; return _enterShopA.apply(this, arguments); };
+
+/* ---------- update 157 (his ask: the places you visit like the castle need to be enterable): you can walk into the
+   keep of Cumhead's Castle (the great hall: pillars, red carpet, chandeliers, a feast table, the fireplace and the
+   throne on its dais; the mayor can sit on it), Blumhead's Castle (the same hall turned black and purple, goo on the
+   floor, his goons inside and King Blumhead's empty throne), Greebo's Grotto (his cave kitchen: ovens, pies cooling,
+   Sir Johnathan's bed and scratching post, Greebo there with the cat) and the cemetery chapel (pews, altar, candles,
+   stained glass). Each room is built with the room builder (taller rooms: ROOMS[...].h) and dressed here. ---------- */
+ROOMS.keep_cum = { wall: 'stone', floor: 'stone', keeper: null, props: [], w: 24, d: 34, h: 9, place: 'keep' };
+ROOMS.keep_blum = { wall: 'darkstone', floor: 'darkstone', keeper: null, props: [], w: 24, d: 34, h: 9, place: 'keep', dark2: 1 };
+ROOMS.grotto_in = { wall: 'rockg', floor: 'dirt', keeper: null, props: [], w: 20, d: 18, h: 6, place: 'grotto' };
+ROOMS.chapel_in = { wall: 'stone', floor: 'stone', keeper: null, props: [], w: 12, d: 22, h: 8, place: 'chapel' };
+function pillar(m, x, z, h, r, tex) { tub(m, [x, 0, z], [x, h, z], r, r, '#8a8480', 10, { T: TL(tex) }); boxC(m, x - r - 0.15, 0, z - r - 0.15, x + r + 0.15, 0.4, z + r + 0.15, '#6a645e'); boxC(m, x - r - 0.15, h - 0.4, z - r - 0.15, x + r + 0.15, h, z + r + 0.15, '#6a645e'); }
+function chandelier(m, gl, x, z, y) { tub(m, [x, y, z], [x, y + 3, z], 0.03, 0.03, '#2a2a2e', 4); tub(m, [x, y, z], [x, y + 0.12, z], 1.3, 1.3, '#3a3030', 12, { cap: 1, cap0: 1 }); for (var k = 0; k < 8; k++) { var a = k / 8 * 6.283, cx = x + Math.cos(a) * 1.2, cz = z + Math.sin(a) * 1.2; tub(m, [cx, y + 0.12, cz], [cx, y + 0.42, cz], 0.05, 0.05, '#f1e7d0', 5); ell(gl, cx, y + 0.52, cz, 0.06, 0.12, 0.06, '#ffb030', 4, 3); } }
+var _roomMeshP = roomMesh;
+roomMesh = function (id) { var RM = _roomMeshP(id), R0 = ROOMS[id]; if (!R0 || !R0.place) return RM; var m = new R3.Mesh(), gl = new R3.Mesh(), w = RM.w, d = RM.d, cx = w / 2, h = R0.h, dark = R0.dark2, L = [];
+  if (R0.place === 'keep') { var tex = dark ? 'darkstone' : 'stone', run = dark ? '#3a0a4a' : '#8a0c14';
+    m.quad([cx - 1.6, 0.02, 1], [cx - 1.6, 0.02, d - 6], [cx + 1.6, 0.02, d - 6], [cx + 1.6, 0.02, 1], uvR(1, 8), TL('velvet'), [0.5, 0.5, 0.5], [0, 1, 0]); // the carpet
+    for (var z = 5; z < d - 6; z += 5) { pillar(m, 4, z, h, 0.6, tex); pillar(m, w - 4, z, h, 0.6, tex); RM.boxes.push([3.3, z - 0.7, 4.7, z + 0.7], [w - 4.7, z - 0.7, w - 3.3, z + 0.7]); standQ(m, 0.04, z + 2.5, Math.PI / 2, 2, 3, 7.5, TL('velvet'), 1.1, 0.2); standQ(m, w - 0.04, z + 2.5, -Math.PI / 2, 2, 3, 7.5, TL('velvet'), 1.1, 0.2); }
+    // the dais and the throne
+    boxC(m, cx - 4, 0, d - 6, cx + 4, 0.5, d - 0.2, '#6a645e'); boxC(m, cx - 3, 0.5, d - 4.5, cx + 3, 1.0, d - 0.2, '#5a544e'); boxC(m, cx - 1.2, 1.0, d - 2.4, cx + 1.2, 1.6, d - 1.2, dark ? '#2a0a3a' : '#7a0c14');
+    boxC(m, cx - 1.3, 1.0, d - 1.2, cx + 1.3, 5.2, d - 0.8, dark ? '#1a0a1a' : '#c8a040'); boxC(m, cx - 1.0, 1.6, d - 1.25, cx + 1.0, 4.6, d - 1.15, run); [-1, 1].forEach(function (s) { boxC(m, cx + s * 1.3 - 0.2, 1.0, d - 2.4, cx + s * 1.3 + 0.2, 2.2, d - 1.2, dark ? '#1a0a1a' : '#c8a040'); ell(gl, cx + s * 1.3, 5.4, d - 1, 0.25, 0.25, 0.25, dark ? '#c040ff' : '#ffe36a', 6, 4); });
+    // the feast table down one side, a fireplace on the other
+    boxC(m, 6.5, 0.8, 8, 8.5, 0.9, 20, '#5a3a20'); [[6.6, 8.1], [8.4, 8.1], [6.6, 19.9], [8.4, 19.9]].forEach(function (q) { boxC(m, q[0] - 0.08, 0, q[1] - 0.08, q[0] + 0.08, 0.8, q[1] + 0.08, '#4a2a18'); }); RM.boxes.push([6.5, 8, 8.5, 20]);
+    for (var t = 0; t < 6; t++) { var tz = 9 + t * 2; ell(m, 7.5, 1.0, tz, 0.3, 0.08, 0.3, '#c8c8c0', 8, 3); ell(m, 7.5, 1.08, tz, 0.18, 0.12, 0.18, ['#c4121c', '#f1e7d0', '#d8a050'][t % 3], 6, 4); tub(m, [7.0, 0.9, tz + 1], [7.0, 1.25, tz + 1], 0.04, 0.04, '#f1e7d0', 5); ell(gl, 7.0, 1.32, tz + 1, 0.04, 0.08, 0.04, '#ffb030', 4, 3); }
+    boxC(m, w - 1.2, 0, 13, w - 0.05, 4.5, 18, tex === 'stone' ? '#6a645e' : '#2a2228'); boxC(m, w - 1.3, 0, 14, w - 0.6, 2.2, 17, '#0a0606'); ell(gl, w - 0.9, 0.4, 15.5, 0.5, 0.45, 1.0, dark ? '#c040ff' : '#ff7a20', 8, 4); ell(gl, w - 0.9, 0.8, 15.5, 0.3, 0.4, 0.6, '#ffe36a', 6, 4); L.push({ x: w - 2, y: 1.5, z: 15.5, r: 10, c: dark ? [0.7, 0.2, 1] : [1, 0.55, 0.2], k: 1.3 });
+    for (var cz = 7; cz < d - 6; cz += 8) chandelier(m, gl, cx, cz, h - 3.4); for (var lz = 7; lz < d - 6; lz += 8) L.push({ x: cx, y: h - 3.5, z: lz, r: 12, c: dark ? [0.7, 0.35, 1] : [1, 0.75, 0.45], k: 1.0 });
+    [[3, 2.5], [w - 3, 2.5]].forEach(function (q) { tub(m, [q[0], 0, q[1]], [q[0], 1.8, q[1]], 0.25, 0.3, '#9a9aa0', 8, { cap: 1 }); ell(m, q[0], 2.05, q[1], 0.28, 0.32, 0.28, '#9a9aa0', 8, 5); RM.boxes.push([q[0] - 0.4, q[1] - 0.4, q[0] + 0.4, q[1] + 0.4]); }); // suits of armour
+    if (dark) [[cx - 6, 10], [cx + 5, 20], [cx - 3, 24]].forEach(function (q) { m.quad([q[0] - 1.6, 0.03, q[1] - 1.2], [q[0] - 1.6, 0.03, q[1] + 1.2], [q[0] + 1.6, 0.03, q[1] + 1.2], [q[0] + 1.6, 0.03, q[1] - 1.2], uvR(1, 1), TL('goo'), [0.5, 0.5, 0.5], [0, 1, 0]); });
+    RM.throne = { x: cx, z: d - 3.2 }; }
+  else if (R0.place === 'grotto') {
+    for (var k = 0; k < 12; k++) { var a = k / 12 * 6.283; ell(m, cx + Math.cos(a) * 9.5, h - 0.6, d / 2 + Math.sin(a) * 8.5, 1.4, 1.8, 1.4, '#4a5a32', 7, 4); } // the cave's lumpy roof edge
+    for (var o2 = 0; o2 < 3; o2++) { var ox = 3 + o2 * 3.2; boxC(m, ox - 1.2, 0, d - 1.6, ox + 1.2, 2.2, d - 0.1, '#6a3a24'); tub(m, [ox, 2.2, d - 0.85], [ox, 2.2, d - 0.85], 0, 0, '#6a3a24', 4); standQ(gl, ox, d - 1.62, Math.PI, 1.2, 0.5, 1.4, TL('black'), 0.6, 0.6); ell(gl, ox, 0.9, d - 1.55, 0.5, 0.3, 0.05, '#ff7a20', 6, 3); RM.boxes.push([ox - 1.2, d - 1.6, ox + 1.2, d]); L.push({ x: ox, y: 1, z: d - 2.5, r: 6, c: [1, 0.5, 0.2], k: 1.1 }); }
+    [[cx + 2, 8], [cx + 2, 12]].forEach(function (q) { boxC(m, q[0] - 1.5, 0.85, q[1] - 0.8, q[0] + 1.5, 0.95, q[1] + 0.8, '#7a5a34'); [[-1.4, -0.7], [1.4, -0.7], [-1.4, 0.7], [1.4, 0.7]].forEach(function (l) { boxC(m, q[0] + l[0] - 0.06, 0, q[1] + l[1] - 0.06, q[0] + l[0] + 0.06, 0.85, q[1] + l[1] + 0.06, '#5a3a20'); }); RM.boxes.push([q[0] - 1.5, q[1] - 0.8, q[0] + 1.5, q[1] + 0.8]);
+      for (var pi2 = 0; pi2 < 4; pi2++) { var px = q[0] - 1.1 + pi2 * 0.73; tub(m, [px, 0.95, q[1]], [px, 1.05, q[1]], 0.28, 0.26, '#d8a050', 10, { cap: 1 }); ell(m, px, 1.08, q[1], 0.22, 0.1, 0.22, '#fff6dc', 8, 3); } });
+    tub(m, [3, 0, 5], [3, 0.25, 5], 1.0, 1.0, '#c4121c', 12, { cap: 1 }); ell(m, 3, 0.3, 5, 0.85, 0.12, 0.85, '#ff7ab0', 10, 3); // Sir Johnathan's bed
+    tub(m, [w - 2.5, 0, 4], [w - 2.5, 3.5, 4], 0.25, 0.25, '#c8a878', 8, { T: TL('bark') }); [1.2, 2.4].forEach(function (yy) { tub(m, [w - 2.5, yy, 4], [w - 2.5, yy + 0.15, 4], 0.8, 0.8, '#c4121c', 10, { cap: 1, cap0: 1 }); }); RM.boxes.push([w - 3.3, 3.2, w - 1.7, 4.8]);
+    for (var bb = 0; bb < 4; bb++) { tub(m, [1.2, 0, 9 + bb * 1.3], [1.2, 1.1, 9 + bb * 1.3], 0.5, 0.5, '#6a4a2a', 10, { cap: 1, T: TL('plank') }); } RM.boxes.push([0.6, 8.4, 1.8, 13.8]);
+    L.push({ x: cx, y: 3.5, z: d / 2, r: 14, c: [1, 0.8, 0.55], k: 0.9 }); RM.greebo = { x: cx + 2, z: 10.5 }; }
+  else if (R0.place === 'chapel') {
+    for (var r = 0; r < 6; r++) { var pz = 4 + r * 2.2; [-1, 1].forEach(function (s) { var x0 = s < 0 ? 1 : cx + 0.9, x1 = s < 0 ? cx - 0.9 : w - 1; boxC(m, x0, 0.45, pz, x1, 0.55, pz + 0.5, '#4a2a18'); boxC(m, x0, 0.55, pz + 0.45, x1, 1.1, pz + 0.55, '#4a2a18'); boxC(m, x0, 0, pz, x0 + 0.1, 0.45, pz + 0.5, '#3a2010'); boxC(m, x1 - 0.1, 0, pz, x1, 0.45, pz + 0.5, '#3a2010'); RM.boxes.push([x0, pz, x1, pz + 0.55]); }); }
+    boxC(m, cx - 2, 0, d - 3, cx + 2, 0.4, d - 0.2, '#5a544e'); boxC(m, cx - 1.4, 0.4, d - 2.2, cx + 1.4, 1.4, d - 1.4, '#e8e0d0'); RM.boxes.push([cx - 1.4, d - 2.2, cx + 1.4, d - 1.4]);
+    tub(m, [cx, 1.4, d - 1.8], [cx, 2.6, d - 1.8], 0.04, 0.04, '#c8a040', 4); boxC(m, cx - 0.3, 2.2, d - 1.84, cx + 0.3, 2.28, d - 1.76, '#c8a040');
+    for (var c2 = -1; c2 <= 1; c2 += 2) for (var cn = 0; cn < 4; cn++) { var ccx = cx + c2 * (1.8 + cn * 0.35); tub(m, [ccx, 0.4, d - 1.2], [ccx, 0.9 + cn * 0.2, d - 1.2], 0.05, 0.05, '#f1e7d0', 5); ell(gl, ccx, 1.0 + cn * 0.2, d - 1.2, 0.04, 0.08, 0.04, '#ffb030', 4, 3); }
+    var GLASS = ['#c4121c', '#4adfff', '#ffe36a', '#7aff6a', '#c48aff']; for (var gz = 4; gz < d - 3; gz += 4) [-1, 1].forEach(function (s) { var wx = s < 0 ? 0.03 : w - 0.03; for (var q3 = 0; q3 < 4; q3++) { var col = GLASS[(q3 + gz) % 5]; m.quad; standQ(gl, wx, gz + (q3 % 2) * 0.5 - 0.25, s < 0 ? Math.PI / 2 : -Math.PI / 2, 0.5, 3 + Math.floor(q3 / 2) * 1.2, 4.2 + Math.floor(q3 / 2) * 1.2, TL('white'), 1, 0); boxC(gl, wx - 0.02 * s, 3 + Math.floor(q3 / 2) * 1.2, gz + (q3 % 2) * 0.5 - 0.5, wx + 0.01 * s, 4.2 + Math.floor(q3 / 2) * 1.2, gz + (q3 % 2) * 0.5, col); } });
+    L.push({ x: cx, y: 5, z: d / 2, r: 14, c: [0.8, 0.7, 1], k: 0.9 }, { x: cx, y: 1.5, z: d - 2, r: 6, c: [1, 0.7, 0.4], k: 1.1 }); }
+  RM.extra3 = m.n ? m.upload() : null; RM.glow3 = gl.n ? gl.upload() : null; RM.lights = L; return RM; };
+var _drawInteriorP = drawInterior;
+drawInterior = function (look) { var I = G.interior, R0 = I && ROOMS[I.key]; if (R0 && R0.place) { var RM = I.RM;
+    R3.scene({ fog: [0, 0, 0], fogR: [40, 90], amb: R0.dark2 ? [0.42, 0.34, 0.5] : [0.42, 0.38, 0.36], lights: RM.lights.slice(0, 7).concat([{ x: RM.w / 2, y: 2.5, z: 3, r: 10, c: [1, 0.85, 0.7], k: 0.6 }]), torch: { p: [0, -99, 0], d: [0, -1, 0], c: [0, 0, 0] }, t: G.t, hue: G.fxHue || 0, warp: G.fxWarp || 0 });
+    R3.draw(RM.mesh, ATT); if (RM.extra3) R3.draw(RM.extra3, ATT); if (RM.glow3) R3.draw(RM.glow3, ATT, { lit: false }); return; } _drawInteriorP(look); };
+var _enterShopPl = enterShop;
+enterShop = function (id, homeId, special) { var r = _enterShopPl.apply(this, arguments); var I = G.interior, R0 = I && ROOMS[I.key]; if (!special || !R0 || !R0.place) return r;
+  G.indoorUses = G.indoorUses.filter(function (u) { return u.label !== 'SEARCH'; }); var RM = I.RM;
+  if (R0.place === 'keep' && !R0.dark2) G.indoorUses.push({ x: RM.throne.x, z: RM.throne.z - 1.8, r: 1.6, label: 'SIT ON THE THRONE', fn: function () { P.x = RM.throne.x; P.z = RM.throne.z + 0.2; P.y = 1.0; P.a = Math.PI; CAM.yaw = Math.PI; G.sitting = 3; bigText('MAYOR OF CUM CITY', 'Long may he drip', '#ffe36a', 3); sfx.play('coin'); } });
+  if (R0.place === 'keep' && R0.dark2) { for (var k = 0; k < 5; k++) { var g = makePed({ x: 5 + (k % 3) * 7, z: 10 + Math.floor(k / 3) * 9, kind: 'goon', rig: RIGS.goon || RIGS.pusher, hostile: 1, hp: 70, wpn: 'pistol', keep: 1 }); g.inside = I.key; g.angry = 1; }
+    G.indoorUses.push({ x: RM.throne.x, z: RM.throne.z - 1.8, r: 1.6, label: 'SEARCH THE THRONE', fn: function () { if (I.looted) { toast('Just goo.'); return; } I.looted = 1; money(1500); toast('Behind the throne: $1,500 and a note. "BACK SOON. DO NOT TOUCH MY THRONE. -K.B."'); } }); }
+  if (R0.place === 'grotto') { var gr = makePed({ x: RM.greebo.x, z: RM.greebo.z + 2, a: Math.PI, who: 'greebo', rig: rigOf('greebo'), state: 'idle', keep: 1 }); gr.inside = I.key; gr.god = 1;
+    G.indoorUses.push({ x: RM.greebo.x, z: RM.greebo.z + 3.4, r: 1.6, label: 'TALK TO GREEBO', fn: function () { var L = ['Fresh cream pies. Don\'t ask what\'s in them.', 'Sir Johnathan, off the counter! Sorry, Mister Mayor.', 'Welcome to the grotto. Wipe your feet. Not on the pies.']; var s = pick(L); say(gr, s); voiceLine('greebo', s); } });
+    G.indoorUses.push({ x: 3, z: 6.4, r: 1.4, label: 'STROKE SIR JOHNATHAN', fn: function () { toast('Sir Johnathan purrs like a diesel engine.'); P.hp = Math.min(SV.maxHp, P.hp + 15); sfx.play('blip'); } }); }
+  if (R0.place === 'chapel') G.indoorUses.push({ x: RM.w / 2, z: RM.d - 3.6, r: 1.6, label: 'PRAY', fn: function () { if (SV.wanted > 0) { SV.wanted = Math.max(0, SV.wanted - 1); toast('Sanctuary. One star forgiven.'); } else toast('You feel a little less sticky.'); P.hp = SV.maxHp; } });
+  return r; };
+var _worldSetupP = worldSetup;
+worldSetup = function () { _worldSetupP();
+  POIS.forEach(function (p) { if (p.k === 'castle' && p.door) G.uses.push({ x: p.door.x, z: p.door.z, r: 3, label: 'ENTER THE KEEP OF ' + p.name.toUpperCase(), icon: 'K', fn: function () { enterShop(null, null, p.dark ? 'keep_blum' : 'keep_cum'); G.interior.exitX = p.door.x; G.interior.exitZ = p.door.z + 2; G.interior.exitA = 0; } });
+    if (p.k === 'grotto') G.uses.push({ x: p.x, z: p.z + 8.5, r: 3, label: 'ENTER GREEBO\'S GROTTO', icon: 'G', fn: function () { enterShop(null, null, 'grotto_in'); G.interior.exitX = p.x; G.interior.exitZ = p.z + 10; G.interior.exitA = 0; } });
+    if (p.k === 'chapel') G.uses.push({ x: p.x, z: p.z + 6.5, r: 3, label: 'ENTER THE CHAPEL', icon: '+', fn: function () { enterShop(null, null, 'chapel_in'); G.interior.exitX = p.x; G.interior.exitZ = p.z + 8; G.interior.exitA = 0; } }); }); };
+var _poseOfPlayerPl = poseOfPlayer;
+poseOfPlayer = function () { var Q = _poseOfPlayerPl(); if (G.sitting > 0 && G.interior) { var s = KIT.stick(0); if (Math.hypot(s.x, s.y) > 0.5) { G.sitting = 0; P.y = 0; P.z -= 1.6; } else { poseSit(Q); Q.y = -0.45; } } return Q; };
 
 /* ---------- drawing: the sky (time of day, seasons, weather), the chunks, the landmarks, then everything that moves ---------- */
 var SKY = null, STARS = null, SEAM = null, SPRQ = null;
@@ -4360,6 +4688,7 @@ function drawRadar(x, y, r) {
   var ctx = KIT.ctx, mc = mapCanvas(), px = (P.state === 'car' && P.veh ? P.veh.x : P.x), pz = (P.state === 'car' && P.veh ? P.veh.z : P.z), zoom = P.state === 'car' && P.veh && Math.abs(P.veh.sp) > 15 ? 0.55 : 0.85, rot = CAM.yaw;
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = '#070405'; ctx.fill(); ctx.clip();
   ctx.translate(x, y); ctx.rotate(rot + Math.PI); ctx.scale(zoom, zoom); ctx.imageSmoothingEnabled = false; ctx.drawImage(mc, -px / CT, -pz / CT); ctx.setTransform(KIT.S, 0, 0, KIT.S, 0, 0);
+  if (typeof gpsDraw === 'function') gpsDraw(ctx, function (wx, wz) { var dx = (wx - px) / CT * zoom, dz = (wz - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI); return [x + dx * c - dz * s, y + dx * s + dz * c]; }, 2.5);
   // blips
   blipList().forEach(function (b) { var dx = (b.x - px) / CT * zoom, dz = (b.z - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI), rx = dx * c - dz * s, rz = dx * s + dz * c, d = Math.hypot(rx, rz); if (d > r - 4) { rx *= (r - 4) / d; rz *= (r - 4) / d; }
     ctx.fillStyle = '#12040a'; ctx.fillRect(x + rx - (b.big ? 3 : 2), y + rz - (b.big ? 3 : 2), b.big ? 6 : 4, b.big ? 6 : 4); ctx.fillStyle = b.c; ctx.fillRect(x + rx - (b.big ? 2 : 1), y + rz - (b.big ? 2 : 1), b.big ? 4 : 2, b.big ? 4 : 2); });
@@ -4418,7 +4747,8 @@ function mapMenu(back) { // update 155: the map has its own controls (he said th
   KIT.closeMenu(); G.mapOpen = { x: P.x, z: P.z, zoom: 1.4, back: back, ptrs: {}, drag: 0 }; G.mode = 'map'; document.documentElement.classList.add('hs-menu', 'hs-map'); mapPointer(true);
 }
 function mapClose() { var M0 = G.mapOpen; G.mode = 'play'; G.mapOpen = null; mapPointer(false); document.documentElement.classList.remove('hs-menu', 'hs-map'); if (M0 && M0.back) M0.back(); }
-function mapBtns() { var Wd = KIT.W, Hd = KIT.H, s = 30, x = Wd - s - 8; return [{ id: 'close', t: '✕', x: x, y: 34, w: s, h: s }, { id: 'in', t: '+', x: x, y: 34 + s + 8, w: s, h: s }, { id: 'out', t: '−', x: x, y: 34 + (s + 8) * 2, w: s, h: s }, { id: 'me', t: '◎', x: x, y: 34 + (s + 8) * 3, w: s, h: s }, { id: 'clear', t: 'CLEAR', x: x - 26, y: 34 + (s + 8) * 4, w: s + 26, h: 22 }]; }
+function mapBtns() { var Hd = KIT.H, s = 38, x = 10, y0 = 12; // update 157: the buttons live on the LEFT (the app's pause button sat over the old close button, so the map could not be shut)
+  return [{ id: 'close', t: '✕ CLOSE', x: x, y: y0, w: 84, h: s }, { id: 'in', t: '+', x: x, y: y0 + s + 10, w: s, h: s }, { id: 'out', t: '−', x: x + s + 8, y: y0 + s + 10, w: s, h: s }, { id: 'me', t: '◎', x: x, y: y0 + (s + 10) * 2, w: s, h: s }, { id: 'clear', t: 'CLEAR', x: x, y: Hd - 34 - 10, w: 70, h: 30 }]; }
 function mapPress(id) { var M0 = G.mapOpen; if (!M0) return; sfx.play('select'); if (id === 'close') mapClose(); else if (id === 'in') M0.zoom = clamp(M0.zoom * 1.5, 0.5, 6); else if (id === 'out') M0.zoom = clamp(M0.zoom / 1.5, 0.5, 6); else if (id === 'me') { M0.x = P.x; M0.z = P.z; } else if (id === 'clear') SV.way = null; }
 var MAPH = null;
 function mapPointer(on) { var cv = KIT.ctx.canvas; if (!cv) return;
@@ -4446,10 +4776,11 @@ function drawMap() {
   ctx.save(); ctx.imageSmoothingEnabled = M0.zoom < 1.5; ctx.translate(Wd / 2, Hd / 2); ctx.scale(sc, sc); ctx.drawImage(mc, -M0.x / CT, -M0.z / CT); ctx.restore();
   function W2S(x, z) { return [Wd / 2 + (x - M0.x) / CT * sc, Hd / 2 + (z - M0.z) / CT * sc]; }
   DIST.forEach(function (d) { if (!d.cx) return; var p = W2S(d.cx, d.cz); tx(d.name.toUpperCase(), p[0] - tw2(d.name.toUpperCase(), 6) / 2, p[1], { col: 'rgba(241,231,208,0.75)', size: 6 }); });
+  if (typeof gpsDraw === 'function') gpsDraw(ctx, W2S, 3);
   blipList().forEach(function (b) { var p = W2S(b.x, b.z); ctx.fillStyle = '#12040a'; ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6); ctx.fillStyle = b.c; ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4); if (b.icon && M0.zoom > 1.2) tx(b.icon, p[0] + 4, p[1] - 4, { col: b.c, size: 6 }); });
   var pp = W2S(P.x, P.z); ctx.fillStyle = '#ffe36a'; ctx.beginPath(); ctx.arc(pp[0], pp[1], 3, 0, 6.283); ctx.fill();
   ctx.strokeStyle = '#ff2630'; ctx.beginPath(); ctx.moveTo(Wd / 2 - 6, Hd / 2); ctx.lineTo(Wd / 2 + 6, Hd / 2); ctx.moveTo(Wd / 2, Hd / 2 - 6); ctx.lineTo(Wd / 2, Hd / 2 + 6); ctx.stroke();
-  tx('CUM CITY', 10, 12, { col: '#c4121c', size: 16, font: 'title' }); tx(districtName(M0.x, M0.z), 10, 32, { col: '#f1e7d0', size: 8 });
+  tx('CUM CITY', 104, 12, { col: '#c4121c', size: 16, font: 'title' }); tx(districtName(M0.x, M0.z), 104, 32, { col: '#f1e7d0', size: 8 });
   if (SV.way) { var wp = W2S(SV.way[0], SV.way[1]); ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.arc(wp[0], wp[1], 5, 0, 6.3); ctx.fill(); ctx.fillStyle = '#ff2630'; ctx.beginPath(); ctx.arc(wp[0], wp[1], 3.5, 0, 6.3); ctx.fill(); }
   tx(TOUCHUI() ? 'DRAG TO MOVE · PINCH TO ZOOM · TAP TO MARK A PLACE' : KIT.gamepad ? 'A MARK · X CLEAR · Y YOU · LB/RB ZOOM · B BACK' : 'DRAG TO MOVE · WHEEL TO ZOOM · CLICK TO MARK · ESC BACK', 10, Hd - 14, { col: '#a6968f', size: 6 });
   mapBtns().forEach(function (b) { KIT.panel(b.x, b.y, b.w, b.h); tx(b.t, b.x + b.w / 2 - tw2(b.t, b.t.length > 1 ? 7 : 12) / 2, b.y + b.h / 2 - (b.t.length > 1 ? 4 : 7), { col: b.id === 'close' ? '#ff2630' : '#ffe36a', size: b.t.length > 1 ? 7 : 12 }); });
@@ -4477,21 +4808,17 @@ function wIcon(ctx, id, x, y, s) { // little silhouettes, drawn in a 16 x 16 gri
   else if (id === 'pills') { R0(B, 4, 2, 8, 13); R0('#f6f0e4', 5, 6, 6, 8); R0('#c4121c', 5, 3, 6, 3); R0('#ff8ab0', 6, 8, 4, 2); }
   else { R0(B, 3, 3, 10, 10); R0(M, 4, 4, 8, 8); }
   ctx.restore(); }
-function drawStatus(ctx) {
-  var x = 8, y = 8, w = 152, h = 46; KIT.panel(x, y, w, h);
-  // the weapon box
-  var bx = x + 5, by = y + 5, bs = h - 10; ctx.fillStyle = '#070405'; ctx.fillRect(bx, by, bs, bs); ctx.strokeStyle = '#4a1a1c'; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, bs - 1, bs - 1);
-  wIcon(ctx, P.wpn, bx + 5, by + 3, bs - 10); var W0 = WPN[P.wpn]; if (W0.ammo) { var am = '' + ammoOf(P.wpn); tx(am, bx + bs - 3 - tw2(am, 6), by + bs - 9, { col: '#ffe36a', size: 6 }); }
-  // money
-  var mx = bx + bs + 6, mon = '$' + Math.floor(SV.money).toLocaleString('en-GB'), ms = G.moneyPop > 0 ? 13 : 12; G.moneyPop = Math.max(0, (G.moneyPop || 0) - 1 / 60 * 2); tx(mon, mx, y + 6, { col: '#ffe36a', size: ms, font: 'title' });
-  // health: a heart and a red bar; armour (the condom) cream under it
-  var hy = y + 24, bw = x + w - 8 - (mx + 9), flash = P.hp < 25 && Math.floor(G.t * 4) % 2;
-  ctx.fillStyle = flash ? '#ff2630' : '#c4121c'; ctx.beginPath(); ctx.arc(mx + 2, hy + 1.5, 2, 0, 6.3); ctx.arc(mx + 5, hy + 1.5, 2, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.moveTo(mx, hy + 2.5); ctx.lineTo(mx + 7, hy + 2.5); ctx.lineTo(mx + 3.5, hy + 6.5); ctx.closePath(); ctx.fill();
-  KIT.bar(mx + 10, hy, bw, 5, P.hp / SV.maxHp, flash ? '#ff2630' : '#c4121c');
-  var ay = hy + 9; ctx.fillStyle = '#f1e7d0'; ctx.fillRect(mx + 2, ay, 3, 5); ctx.beginPath(); ctx.arc(mx + 3.5, ay, 1.5, Math.PI, 0); ctx.fill();
-  KIT.bar(mx + 10, ay + 1, bw, 3, (P.armour || 0) / 100, '#f1e7d0', '#2a2420');
-  // wanted stars under the plate
-  for (var s = 0; s < 5; s++) { var on = s < SV.wanted, sx = x + 4 + s * 13; ctx.globalAlpha = on ? (G.lostT > 6 && Math.floor(G.t * 3) % 2 ? 0.45 : 1) : 0.28; star(ctx, sx + 6, y + h + 8, 5.5, on ? '#ffe36a' : '#3a2a2c'); ctx.globalAlpha = 1; }
+function drawStatus(ctx) { // update 157 (his ask: a sleeker look): no boxed plate; a round weapon badge, the money in big type, thin bars, stars beside
+  var x = 10, y = 9, R = 17, cx = x + R, cy = y + R, g = ctx.createLinearGradient(x, 0, x + 190, 0); g.addColorStop(0, 'rgba(7,4,5,0.66)'); g.addColorStop(1, 'rgba(7,4,5,0)'); ctx.fillStyle = g; ctx.fillRect(x - 6, y - 5, 196, R * 2 + 22);
+  ctx.fillStyle = '#0b0607'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#c4121c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R - 0.5, 0, 6.283); ctx.stroke();
+  wIcon(ctx, P.wpn, cx - R * 0.6, cy - R * 0.6, R * 1.2); var W0 = WPN[P.wpn]; if (W0.ammo) { var am = '' + ammoOf(P.wpn); ctx.fillStyle = '#c4121c'; var aw = tw2(am, 6) + 6; ctx.fillRect(cx - aw / 2, cy + R - 5, aw, 9); tx(am, cx - tw2(am, 6) / 2, cy + R - 4, { col: '#fff6dc', size: 6 }); }
+  var mx = x + R * 2 + 8, mon = '$' + Math.floor(SV.money).toLocaleString('en-GB'), ms = G.moneyPop > 0 ? 15 : 14; G.moneyPop = Math.max(0, (G.moneyPop || 0) - 1 / 60 * 2);
+  tx(mon, mx + 1, y + 1, { col: 'rgba(0,0,0,0.6)', size: ms, font: 'title' }); tx(mon, mx, y, { col: '#f1e7d0', size: ms, font: 'title' });
+  var by = y + 21, bw = 110, flash = P.hp < 25 && Math.floor(G.t * 4) % 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by, bw, 3); ctx.fillStyle = flash ? '#ff2630' : '#e0202a'; ctx.fillRect(mx, by, bw * clamp(P.hp / SV.maxHp, 0, 1), 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by + 6, bw, 2); ctx.fillStyle = '#f1e7d0'; ctx.fillRect(mx, by + 6, bw * clamp((P.armour || 0) / 100, 0, 1), 2);
+  for (var s = 0; s < 5; s++) { var on = s < SV.wanted, sx = mx + 4 + s * 12; ctx.globalAlpha = on ? (G.lostT > 6 && Math.floor(G.t * 3) % 2 ? 0.45 : 1) : 0.22; star(ctx, sx + 2, by + 18, 4.6, on ? '#ffe36a' : '#6a5a5c'); ctx.globalAlpha = 1; }
+  if (G.stim > 0) { var st = 'STIMS ' + Math.ceil(G.stim); tx(st, mx + 70, by + 14, { col: '#ff2630', size: 6 }); }
 }
 function star(ctx, cx, cy, r, col) { ctx.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = '#12040a'; ctx.lineWidth = 2; ctx.strokeStyle = '#12040a'; ctx.stroke(); ctx.fillStyle = col; ctx.fill(); }
 
@@ -4648,11 +4975,287 @@ voiceLine = function (who, text) { if (SV.voiceOff) return; if (VOX.line) { VOX.
 var _sayV = say;
 say = function (p, txt) { _sayV(p, txt); if (!p.said || SV.voiceOff || G.cut || p.cutWho) return; var d = Math.hypot(p.x - P.x, p.z - P.z); if (d > 18 || G.t < VOX.barkT) return;
   if ((G.interior ? G.interior.id : null) !== (p.inside || null)) return;
-  var who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : (p.id < 0.5 ? 'pedM' : 'pedF')), f = p.who === 'tb' ? null : voiceFile(who, p.said) || voiceFile('pedM', p.said);
+  var vi = Math.floor((p.id || 0) * 97) % 3, who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : ((p.id || 0) < 0.5 ? 'pedM' : 'pedF') + vi), f = p.who === 'tb' ? null : voiceFile(who, p.said) || voiceFile('pedM' + vi, p.said) || voiceFile('pedF' + vi, p.said);
   if (p.who === 'tb') { var i = TBQUOTES2.indexOf(p.said); if (i >= 0) f = 'pn-voice/tb' + (i < 9 ? '0' : '') + (i + 1) + '.mp3'; }
   if (!f) return; VOX.barkT = G.t + 1.2; playFile(f, Math.max(0.15, 1 - d / 20), 'bark'); };
 document.addEventListener('visibilitychange', function () { if (document.hidden) ['line', 'bark', 'radio'].forEach(function (k) { if (VOX[k]) { VOX[k].pause(); VOX[k] = null; } }); });
 (function () { var s = document.createElement('script'); s.src = 'ccn-voice/voices.js'; s.onerror = function () {}; document.head.appendChild(s); })();
+
+/* ---------- update 157 (his ask: the radio repeats itself a lot, needs loads more lines, sound effects like on the news,
+   and more kinds of report). Talk is now built from segments: a sting or sound effect, then one or more voiced lines.
+   Kinds: news, traffic (helicopter), weather (chimes), sports (crowd and whistle), crime watch (siren), celebrity
+   gossip, horoscopes, call-ins (phone ring, a caller, the host answers), adverts (a jingle) and DJ chat. Every pool is
+   a shuffled deck, so nothing comes round again until the whole pool has played (RAD.decks). The music ducks under
+   any voice (music.duck). Voices: news anchor 'news', traffic 'traffic', weather 'weather', sports 'sports', callers
+   'pedM' / 'pedF', the DJs by station id. ---------- */
+(function () { var t = sfx.tone, n = sfx.noise;
+  sfx.add('r_news', function () { [880, 660, 880, 1320].forEach(function (f, i) { t('square', f, f, 0.16, 0.05, i * 0.14); t('sine', f / 2, f / 2, 0.3, 0.05, i * 0.14); }); t('sawtooth', 110, 110, 0.9, 0.04, 0.56); });
+  sfx.add('r_break', function () { for (var i = 0; i < 6; i++) t('square', i % 2 ? 1040 : 780, i % 2 ? 1040 : 780, 0.12, 0.05, i * 0.13); t('sawtooth', 55, 55, 1.0, 0.06, 0.8); });
+  sfx.add('r_traffic', function () { for (var i = 0; i < 14; i++) n(0.06, 0.16, 180, i * 0.085); t('square', 660, 990, 0.2, 0.04, 1.2); });
+  sfx.add('r_weather', function () { [1047, 1319, 1568, 2093, 1568].forEach(function (f, i) { t('sine', f, f, 0.5, 0.05, i * 0.12); }); });
+  sfx.add('r_sports', function () { n(1.4, 0.12, 900); n(1.2, 0.08, 2600, 0.2); t('square', 2600, 2600, 0.12, 0.05, 0.1); t('square', 2600, 2600, 0.5, 0.05, 0.3); });
+  sfx.add('r_crime', function () { for (var i = 0; i < 3; i++) { t('sawtooth', 700, 1100, 0.35, 0.04, i * 0.7); t('sawtooth', 1100, 700, 0.35, 0.04, i * 0.7 + 0.35); } });
+  sfx.add('r_gossip', function () { for (var i = 0; i < 8; i++) t('sine', 1600 + i * 180, 1800 + i * 180, 0.08, 0.04, i * 0.05); t('triangle', 523, 659, 0.3, 0.05, 0.45); });
+  sfx.add('r_stars', function () { for (var i = 0; i < 12; i++) t('sine', 440 * Math.pow(1.12, i), 440 * Math.pow(1.12, i), 0.4, 0.035, i * 0.06); });
+  sfx.add('r_ring', function () { for (var i = 0; i < 2; i++) { t('sine', 440, 440, 0.4, 0.05, i * 0.9); t('sine', 480, 480, 0.4, 0.05, i * 0.9); } });
+  sfx.add('r_jingle', function () { [523, 659, 784, 659, 1047].forEach(function (f, i) { t('triangle', f, f, 0.14, 0.06, i * 0.11); }); t('square', 1047, 1047, 0.3, 0.04, 0.55); });
+  sfx.add('r_sweep', function () { n(0.6, 0.1, 400); t('sine', 200, 1800, 0.6, 0.03); });
+})();
+var RADIO2 = {
+  news: [
+    'Good evening, this is Cum City News. Mayor Cumhead has promised to fix every road in the city. He was then seen driving on the pavement.',
+    'Cum City News. Sheriff Shithead Laboozie says crime is down this week. Crime says it is just resting.',
+    'Breaking news. A giant cream pie has been spotted rolling down Clubhouse Row. Greebo denies everything. His apron says otherwise.',
+    'In tonight\'s news, scientists at Spunk Brain Labs have created a homunculus that can do your taxes. It ate the receipts.',
+    'Cum City News. The Blood Factory has been fined for leaking. Again. Residents are advised not to drink anything red.',
+    'Breaking news. Blumhead has been seen near the docks. Police say do not approach him, do not feed him, and do not let him talk about his plans.',
+    'Ejaculand has reopened the Load Flume after last week\'s incident. Riders are reminded to keep their mouths closed.',
+    'Cum City News. Uncle Beeb has been banned from his own tavern. He has appealed. To himself. The appeal was successful.',
+    'A new study finds ninety percent of Cum City residents have stepped in cream this year. The other ten percent are lying.',
+    'Cum City News. The Cumstruction Site is three years behind schedule. The foreman says the building is ahead of schedule, it is just upside down.',
+    'Breaking news. TB\'s Suck n\' Fuck has passed its health inspection. The inspector has not been seen since.',
+    'In local news, the Crimson Peak cable car is out of order. Hikers are advised to bring snacks. And a will.',
+    'Cum City News. A homunculus has been elected to the council by mistake. Early reports say it is doing better than the others.',
+    'Potbelly\'s Arcade has opened a fourth arcade. Potbelly says it is to serve the community. His accountant says it is for the coins.',
+    'Cum City News. Spermaid has opened a little stall at the beach. She says sweetie a lot. Business is booming.',
+    'Breaking news. Somebody has stolen every bench in Cum Hills. Police are looking for a man with a very big van and nowhere to sit.',
+    'The airport has added a new flight. Cum City to Cum City. It goes round in a circle for an hour. Tickets have sold out.',
+    'Cum City News. Saba completed a hitless run of the tax office. He paid nothing. He was not hit. Nobody knows how.',
+    'Harold\'s Mad Tea Party has introduced a new tea. It is just potion. They have always been just potion.',
+    'Cum City News. A fight broke out at Joff\'s over pineapple on pizza. Joff won. Joff always wins.',
+    'Breaking news. Steve has stopped waving at the Ejaculand gate for the first time in twenty years. He was just scratching his head. He is waving again.',
+    'The Cum City Council has voted to rename the river. The new name is the Cream River. The old name was also the Cream River.',
+    'Cum City News. Master Bates has been asked to leave the library. He says he was only clearing his head before proceeding.',
+    'A homunculus has hatched in the post office. It has been given a job. It is already the best worker there.',
+    'Cum City News. Nattyboro says a blade without a bite is merely a stick. He then enchanted a stick. It bit him.',
+    'Breaking news. The Cream Wash has washed a police car. The police car is now wanted.',
+    'In science news, Spunk Brain Labs say the brain in the big jar is thinking about you. They would not say what.',
+    'Cum City News. Kaya and Elden have invented the Double Cumpuccino. Doctors advise drinking one, then lying down for a week.',
+    'A tourist asked for directions to Night City and was told politely that he is in Cum City, and to get in the cream wash.',
+    'Cum City News. Stacked Fate has predicted tomorrow\'s news. It is this. You are listening to it now.'
+  ],
+  traffic: [
+    'Traffic now. The Cum Ring is solid from the docks to the Bone Pit. A lorry has spilled forty tonnes of cream. Drivers are advised to lick it or leave it.',
+    'Traffic. A herd of homunculi is crossing at Clubhouse Row. They have right of way. They always have right of way.',
+    'Traffic from the chopper. Somebody in a gothic outfit is driving on the pavement in the cafe streets. Just let him through. Trust me.',
+    'Traffic. Roadworks on every road in Cum City. The council says it is all part of the plan. Nobody has seen the plan.',
+    'Traffic. The bridge over the cream river is open again after a tanker of Silly Pills overturned. The fish are very happy.',
+    'Traffic from the chopper. Clear skies over Ejaculand, queues at the Load Flume back to the car park, and a police chase heading your way. Have a nice day.',
+    'Traffic. A taxi has been parked across the airport road for three hours. The driver says he is on his break. He is asleep.',
+    'Traffic. Avoid the red light district tonight, there is a parade. Or a riot. From up here they look the same.',
+    'Traffic. A runaway mine cart is heading down from the Blood Factory. If you see it, do not try to ride it. We know you want to.',
+    'Traffic. Somebody has painted the zebra crossings on Clubhouse Row red. Pedestrians are asked to cross anyway and hope.',
+    'Traffic from the chopper. I can see the whole city from up here. It is mostly cream. Back to you in the studio.',
+    'Traffic. A cow is loose on the country roads. It belongs to Brothers Load. Do not upset it. It knows people.',
+    'Traffic. The tunnel under the docks is closed due to a large cat. It is Sir Johnathan. He is asleep. Nobody is moving him.',
+    'Traffic. Heavy delays near the cemetery due to a funeral procession that keeps getting up again.',
+    'Traffic. All clear on the ring road. That has never happened before. Something is wrong. Stay indoors.'
+  ],
+  weather: [
+    'Weather. Tonight, a red moon over Cum City, light cream showers, and a chance of Blumhead in the north. Wrap up warm.',
+    'Weather. Sunny spells this morning, a fog of cream rolling in from the docks this afternoon. Keep your windows shut.',
+    'Weather. It is going to rain. Properly rain. The kind of rain that gets in your shoes and stays there till Thursday.',
+    'Weather. Hot today. Very hot. Amy says it is dynamite weather. Drink water. Not the river.',
+    'Weather. Snow on the Crimson Peak, ice on the bridges, and Greebo\'s pies cooling on every window ledge. Do not take them.',
+    'Weather. A storm is coming in from the Sperm Isles. Boats back in the harbour, kites back in the cupboard, homunculi back indoors.',
+    'Weather. Windy. Hold on to your hats. Hold on to your hair. Shithead Laboozie, hold on to your head.',
+    'Weather. Clear skies and a full moon. A beautiful night for a drive. A terrible night to be wanted by the police.',
+    'Weather. Grey. Just grey. All day. Like a Monday that got lost.',
+    'Weather. The pollen count is high in Cum Hills. The cream count is high everywhere. Antihistamines will not help with the cream.',
+    'Weather. Thunder and lightning over the Blood Factory. If the lights flicker, it is the storm. If the lights laugh, it is Blumhead.',
+    'Weather. A lovely sunrise tomorrow at six. If you are still awake for it, you have been on TB\'s pills. Go to bed.'
+  ],
+  sports: [
+    'Sports. The Clubhouse Row Loads beat the Cum Hills Droplets four nil. The Droplets are blaming the cream on the pitch.',
+    'Sports. Saba has broken the record for the longest hitless run. He was not hit for six hours. He was also asleep for five of them.',
+    'Sports. The Cumhead Kart grand prix was won by Greebo again. The other drivers have asked for his pie launcher to be tested.',
+    'Sports. Skeet Fighter championships tonight. Expect fireballs, uppercuts and at least one homunculus thrown into the crowd.',
+    'Sports. The Cum City Marathon has been cancelled after every runner took a taxi.',
+    'Sports. Uncle Beeb has won the darts again. He hit the board twice. He hit the barman eleven times.',
+    'Sports. The street racing season is open. The police would like everyone to know it is illegal. They would also like to know where it is.',
+    'Sports. A new record at the Bone Pit drag strip. Two hundred miles an hour, backwards, on fire. The driver is fine. The car is not.',
+    'Sports. The homunculus races at the garden this weekend. Our tip is the Bloodmoon. It is always the Bloodmoon.',
+    'Sports. Brothers Load are back in the rodeo. Piggy rode the bull for eight seconds. The bull says it was four.',
+    'Sports. Football. Cum City United lost again. The manager says the team is rebuilding. The stadium is also rebuilding. It fell down.',
+    'Sports. Boxing. TB fought himself in the mirror at his bar last night. It went twelve rounds. The mirror won.'
+  ],
+  crime: [
+    'Crime Watch. Police are looking for a cream droplet in a Hunter Seriph shirt and trip pants. If you see him, he is probably the mayor. Carry on.',
+    'Crime Watch. A string of car thefts across Cum City. Victims say the thief apologised every time, then drove off on the pavement.',
+    'Crime Watch. Someone has been robbing shops with a banana. Shopkeepers are advised that a banana is not a gun. It is still scary.',
+    'Crime Watch. Sheriff Shithead Laboozie has arrested himself by mistake. He has released himself on good behaviour.',
+    'Crime Watch. Goons in purple have been seen near the docks. They work for Blumhead. They have terrible dental plans.',
+    'Crime Watch. A cat has been kidnapped. A big black cat. If you see Sir Johnathan, call Greebo. If you see the kidnappers, run.',
+    'Crime Watch. The Cream Wash has been reported to the police for helping criminals. The police got their car washed and dropped the case.',
+    'Crime Watch. Somebody stole the bank vault door. Not what was inside it. Just the door. Police are baffled.',
+    'Crime Watch. TB has been reported for handing out Silly Pills at the bus stop. TB says they are mints. They are not mints.',
+    'Crime Watch. Graffiti on Clubhouse Row reads TB WAS HERE. TB says he was not there. TB was there.',
+    'Crime Watch. A man dressed as Steve has been scaring people at Ejaculand. Steve has asked us to say it was not him. It was him.',
+    'Crime Watch. Police chases are up three hundred percent this year. The police say that is mostly one guy.'
+  ],
+  gossip: [
+    'Celebrity gossip. Is Spermaid dating PulsarOctopus? She says they are just friends. He says just vibes. We say we saw them at the beach.',
+    'Gossip. Potbelly has been seen buying a gold toilet. Where does the arcade money go? Now we know.',
+    'Gossip. T from T\'s Hussy House has been spotted at Harold\'s tea party. Two hours. Four pots. The waiter is still recovering.',
+    'Gossip. Greebo has a new hat. It is taller than the old hat. Sources say it is to look down on Joff.',
+    'Gossip. Mayor Cumhead was seen in his pants at three in the morning outside the Clubhouse. His office says he was walking the cat. He does not have a cat.',
+    'Gossip. Bonjo has opened his doors to everyone. He says let me get the door. He will always get the door.',
+    'Gossip. Amy and Ali are feuding over who makes the hottest food in Cum City. Amy says dynamite. Ali says garlic. The fire brigade says both.',
+    'Gossip. Shithead Laboozie has had a haircut. We are not sure how. He does not have hair. He has a swirl.',
+    'Gossip. Kaya and Elden renewed their vows at the Cum Café. The cake was a Cumpuccino. Everyone was awake for three days.',
+    'Gossip. Master Bates was seen at the library again. He says he is clearing his head. Staff say please clear it somewhere else.'
+  ],
+  stars: [
+    'Your stars with Stacked Fate. Aries. Today you will drive into something. It will be a lamppost. It is always a lamppost.',
+    'Your stars. Taurus. Money is coming your way. It is falling out of a wrecked van. Pick it up before the police do.',
+    'Your stars. Gemini. Two of you will argue today. Both of you are wrong. Have a Cumpuccino.',
+    'Your stars. Cancer. Avoid water today. Avoid cream. Avoid Steve. Especially Steve.',
+    'Your stars. Leo. Today you are the main character. Everybody else is getting jacked from their cars.',
+    'Your stars. Virgo. A stranger will offer you a pill. The deck was never yours. Neither was your fate. Do not take the pill.',
+    'Your stars. Libra. Balance in all things. One pie for you, one pie for Greebo, one pie in the face of the man who said pineapple is wrong.',
+    'Your stars. Scorpio. Something follows you tonight. It is the police. Five stars. Good luck.'
+  ],
+  ads: [
+    'Insurance! Wrecked your car? Wrecked somebody else\'s? Cum City Insurance. We pay out. Eventually. Call us on your phone today.',
+    'Hungry? Order Combat Stims straight to your door! Delivered by scooter in under five minutes or your next one is free. Side effects include winning.',
+    'Need a ride? Cum Cabs! Wherever you are, whatever you have done, we will take you there. No questions. Some screaming.',
+    'Cum Motors summer sale! Every car must go. Most of them already went. Somebody keeps stealing them.',
+    'The SprayStation! Every game in Cum City, on your telly, on your sofa. Cartridges at Potbelly\'s Arcade. Four locations. Play responsibly. Or don\'t.',
+    'Joff\'s Pineapple Pizzaria. Pineapple belongs on pizza. Fight me. Two for one on Tuesdays.',
+    'Amy\'s Willy Chilli. Mild, hot or dynamite? If you have to ask, it is dynamite.',
+    'Kaya and Elden\'s Cum Café. Welcome in! Kaya\'s on the coffee, Elden\'s on the grill. Try the Cumpuccino. Everyone does. Eventually.',
+    'Uncle Beeb\'s Tavern. Sit down, lad. First one\'s always warm.',
+    'Ali\'s Garlic Grub. Nuggets? Garlic bread? Everything is better with garlic. Even you.',
+    'Harold\'s Mad Tea Party. Potions? Tea? Same thing, really. Sit, sit!',
+    'T\'s Hussy House. Come in, darling. I\'ll get the doors.',
+    'Bonjo\'s BJ Boutique. Welcome, welcome. Let me get the door.',
+    'TB\'s Suck n\' Fuck. Sit. Stay a while. Don\'t mind the stains.',
+    'PulsarOctopus Beats. Just vibes, friend. Free of charge.',
+    'Iron Loads Gym. Train hard, lift heavy, grunt loudly. The mirrors are free.',
+    'The Bank of Cum City. Your money is safe with us. The vault door is back. We checked.',
+    'Cum City Hospital. Patch me up, they say. And we do. Fifty dollars a time. Loyalty card available.',
+    'Gooning Cave Keeper! Dig the caves, hatch the homunculi, slap them when they slack. In the Hunter Seriph app.',
+    'Spermhog Adventure! Cumhead, Greebo, Spermaid and Shithead Laboozie. Four stories, one Super TB. In the app.',
+    'Super Spunky Ball. Tilt the world. Do not fall off. You will fall off. In the app.',
+    'Pulsar\'s Octobeats. Four lanes, every song in Cum City, and Pulsar watching you miss. In the app.',
+    'The Fap Rooms. You noclipped out of reality. Find the exit. Do not look at the Grinner. In the app.',
+    'Cumstein 3D. Eight floors, five guns, one Blumhead. In the app.',
+    'Spuzzworld. Save the homunculi from the mincer. Cum\'s Oddysee. In the Hunter Seriph app.'
+  ],
+  jokes: [
+    'What do you call Cumhead in a car chase? The mayor. What do you call him when he is caught? Also the mayor. He has immunity.',
+    'Why did Steve stand at the gate for twenty years? Nobody told him he could leave.',
+    'How many homunculi does it take to change a light bulb? None. They ate it.',
+    'Why does Greebo never tell you what is in the pies? Because you would stop buying them.',
+    'What is the difference between TB and a Silly Pill? One of them is good for you. And it is not TB.',
+    'Why did the police stop chasing Cumhead? He drove into the Cream Wash and came out somebody else.',
+    'Why did Shithead Laboozie become sheriff? Nobody else would wear the badge after he touched it.',
+    'What is Saba\'s favourite song? Anything without a hit.',
+    'Why did Sir Johnathan cross the road? To sit in the middle of it and stop all the traffic. He is a cat.',
+    'What do you get if you cross a meatnado with a cream pie? A Tuesday in Cum City.',
+    'Knock knock. Who is there? Bonjo. Bonjo who? Let me get the door.',
+    'Why is Potbelly so round? Five dollars a go, kid. Five dollars a go.',
+    'How do you know if someone has been to Amy\'s? They tell you. And then they cry.',
+    'What did the Blood Factory say to the Cream River? Nothing. They are not speaking since the leak.',
+    'Why did Harold\'s tea party end early? Somebody asked what was in the tea.',
+    'What do you call a homunculus with a degree? Still a homunculus. But smug.',
+    'Why did the taxi driver quit? Cumhead tipped him with a car.',
+    'What do you call a cream pie that has been to space? A meteor-ite. Greebo wants it back.',
+    'Why does the Crimson Peak glow at midnight? Nobody knows. Nobody goes up there to check. Nobody comes back to tell us.',
+    'Why did Pulsar get a job at the radio? Just vibes. And free of charge. We do not pay him.'
+  ],
+  calls: [
+    [['pedM', 'Hello? Yeah, I just want to say somebody stole my car this morning, and then gave it back, washed, with a parking ticket on it.'], [null, 'That was Cumhead. That is just how he says hello.']],
+    [['pedF', 'Hi. I have a question. Is it normal to see a giant pie roll past my window at night?'], [null, 'In Cum City? Madam, that is a quiet night.']],
+    [['pedM', 'Am I on? Right. I want to complain about the potholes. My car went in one and came out in Ejaculand.'], [null, 'Free ride. You are welcome.']],
+    [['pedF', 'I would like to request a song. Something hitless.'], [null, 'Every song on this station is hitless, love. Except the ones that are hits.']],
+    [['pedM', 'Yeah, hi. I think my homunculus is smarter than me. He did the crossword.'], [null, 'Mate, the homunculus is smarter than all of us. Let him drive.']],
+    [['pedF', 'Hello? Is this where I win the prize?'], [null, 'You have won a lovely free Silly Pill from TB. Please do not take it.']],
+    [['pedM', 'Hi. I saw Blumhead buying milk at the corner shop. Is that normal?'], [null, 'Evil needs calcium too, sir. Keep an eye on him.']],
+    [['pedF', 'I would just like to say, Steve waved at me today, and it made my whole week.'], [null, 'Steve waves at everyone, love. But he meant it with you.']],
+    [['pedM', 'Yeah, my mate says the Crimson Peak is haunted. Is it?'], [null, 'Go up there at midnight and let us know. Actually, do not. Nobody comes back.']],
+    [['pedF', 'Hi, I just want to say, the mayor nearly ran me over on the pavement.'], [null, 'Did he say sorry? He always says sorry. Lovely man.']],
+    [['pedM', 'Can you tell Greebo his pies are amazing? I have had nine today.'], [null, 'Sir, please put the pies down and go to Cum City Hospital.']],
+    [['pedF', 'What time does Ejaculand close?'], [null, 'It never closes, love. People just stop coming out.']]
+  ],
+  dj: {
+    hs: ['Hunter Seriph FM. Riffs to die to. You will die. A lot.', 'This one goes out to everybody stuck on the same boss. Forty tries is nothing. Keep going.', 'Bonfire lit. Song on. Do not look at your phone while you drive. Look at the boss.', 'You are listening to Hunter Seriph FM, the only station with no hits allowed.', 'Live on Twitch most nights. Come say hi. Bring your estus.', 'If you are stuck in traffic, roll. Roll through it. I-frames work on cars, probably.', 'Next up, something heavy. Like my sword. Like my heart after that last boss.', 'Red moon over Cum City tonight. Perfect weather for a hitless run.', 'Somebody asked if I would ever play an easy game. No.', 'That was a banger. This is also a banger. Every song here is a banger.', 'Shout out to the chat. You lot are the reason I keep dying on stream.', 'Remember, git gud. And wear your seatbelt.'],
+    bl: ['Brothers Load Radio. Yeehaw, Cum City.', 'Piggy wants to say hi to his mum. Hi, Piggy\'s mum.', 'That was a country song about a pickup truck and a pig. They are all about a pickup truck and a pig.', 'The Cowboy says this next one is his favourite. He says that about every song. He is a liar.', 'Pull over, crack a cold one, and listen to the Brothers Load. Not while driving. Pull over first.', 'Shot Rope is still number one, five years running. Nobody else is allowed to be number one.', 'If you see a big pink pig in a cowboy hat at the bar, buy him a drink. That is Piggy. He is broke.', 'Two brothers, one load, and a radio licence we definitely paid for.', 'Brothers Load Radio. Mugs up. Mind the mugs, the Cowboy throws them.', 'Next song is about a man who lost his boots. Piggy wrote it. It is about Piggy.', 'Saddle up, Cum City. The night is young and the beer is warm.', 'This one is for the truckers on the Cum Ring. Keep on hauling. Mind the cream.'],
+    po: ['PulsarOctopus Beats FM. Just vibes, friend.', 'Eight arms on the decks tonight. Do not ask how I do the decks with eight arms. I just vibe.', 'If you are driving, slow down and feel it. If you are being chased, speed up and feel it.', 'This one is free of charge. They all are. I really should charge.', 'Shout out to everyone at Ejaculand tonight. I can hear you screaming from here. Vibes.', 'Deep breath. In through the nose. Out through the beat.', 'This track was made underwater. That is why it sounds wet.', 'Spermaid says hi. She says sweetie. I say vibes. We are a good team.', 'Turn it up. Turn it all the way up. Your neighbours love it.', 'Pulsar here with the late night beats for the late night loads.', 'Ink in the water, bass in the speakers, cream on the roads.', 'Vibes are free. Petrol is not. Fill up, friend.'],
+    talk: ['Cum Talk FM. Shithead Laboozie here, sheriff by day, radio by night.', 'If you are a criminal listening to this, please stop. If you are the mayor, carry on.', 'Lines are open, people. Call in. Tell me your problems. I will not fix them.', 'This is Cum Talk FM. Talk, adverts, and nothing you need to hear. You are welcome.', 'Sheriff\'s tip of the day. Do not jump out of a moving car. Unless it is on fire. Then definitely do.', 'I have been told I need to read the adverts. Fine. Here come the adverts.', 'Back after this. Do not go anywhere. Seriously, where would you go, it is Cum City.', 'The mayor called. He says do not believe anything on Crime Watch. That is exactly what a criminal would say.', 'Coming up, the news, the traffic, and a man who says his homunculus does his taxes.', 'Shithead Laboozie on Cum Talk. My head is a swirl but my heart is in the right place.', 'You are listening to Cum Talk FM. If you are not listening, how do you know?', 'Stay safe out there, Cum City. Or at least stay interesting.']
+  }
+};
+/* the decks: shuffled pools, never the same line again until the pool is used up */
+function radioDeal(key, pool) { RAD.decks = RAD.decks || {}; var d = RAD.decks[key]; if (!d || !d.length) { d = RAD.decks[key] = pool.map(function (x, i) { return i; }); for (var i = d.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), q = d[i]; d[i] = d[j]; d[j] = q; } if (RAD.lastOf && RAD.lastOf[key] === d[d.length - 1] && d.length > 1) { var tq = d[0]; d[0] = d[d.length - 1]; d[d.length - 1] = tq; } }
+  var k = d.pop(); RAD.lastOf = RAD.lastOf || {}; RAD.lastOf[key] = k; return pool[k]; }
+var STING = { news: 'r_news', traffic: 'r_traffic', weather: 'r_weather', sports: 'r_sports', crime: 'r_crime', gossip: 'r_gossip', stars: 'r_stars', ads: 'r_jingle', calls: 'r_ring', jokes: 'r_sweep', dj: null };
+var ANCHOR = { news: 'news', traffic: 'traffic', weather: 'weather', sports: 'sports', crime: 'news', gossip: 'weather', stars: 'fate' };
+// which kinds each station plays, by weight
+var KINDS = { hs: { dj: 5, ads: 2, news: 1, jokes: 1, sports: 1 }, bl: { dj: 5, ads: 2, traffic: 1, weather: 1, jokes: 1 }, po: { dj: 5, ads: 2, gossip: 1, stars: 1, jokes: 1 }, talk: { news: 3, traffic: 2, weather: 2, sports: 2, crime: 2, gossip: 2, stars: 1, calls: 3, ads: 3, jokes: 2, dj: 2 } };
+function radioTalkSeg(st) { var W = KINDS[st.id] || KINDS.talk, tot = 0, k; for (k in W) tot += W[k]; var r = Math.random() * tot; for (k in W) { r -= W[k]; if (r <= 0) break; }
+  var parts = []; if (STING[k]) parts.push({ sfx: STING[k], t: k === 'calls' ? 1.9 : 1.4 });
+  if (k === 'calls') { var c = radioDeal('calls', RADIO2.calls); parts.push({ who: c[0][0] + '2', s: c[0][1] }); parts.push({ who: st.id === 'off' ? 'talk' : st.id, s: c[1][1] }); }
+  else if (k === 'dj') parts.push({ who: st.id, s: radioDeal('dj' + st.id, RADIO2.dj[st.id] || RADIO2.dj.talk) });
+  else { var line = radioDeal(k, RADIO2[k]); parts.push({ who: k === 'ads' || k === 'jokes' ? st.id : ANCHOR[k] || st.id, s: line }); }
+  return parts; }
+function radioAllLines() { var L = []; ['news', 'traffic', 'weather', 'sports', 'crime', 'gossip', 'stars'].forEach(function (k) { RADIO2[k].forEach(function (s) { L.push([ANCHOR[k], s]); }); });
+  STATIONS.forEach(function (st) { if (st.id === 'off') return; RADIO2.ads.concat(RADIO2.jokes).forEach(function (s) { L.push([st.id, s]); }); (RADIO2.dj[st.id] || []).forEach(function (s) { L.push([st.id, s]); }); RADIO2.calls.forEach(function (c) { L.push([st.id, c[1][1]]); }); });
+  RADIO2.calls.forEach(function (c) { L.push([c[0][0] + '2', c[0][1]]); }); return L; }
+/* the radio's talk is a little queue of parts: a sting, then voices one after another */
+radioNextSeg = function () {
+  var st = STATIONS[RAD.st]; if (!RAD.on || st.id === 'off') { G.radioSong = null; try { music.stop(); } catch (e) {} return; }
+  var real = window.CCNRADIO && window.CCNRADIO[st.id] && window.CCNRADIO[st.id].length ? window.CCNRADIO[st.id] : null;
+  if (RAD.forced) { var f = RAD.forced; RAD.forced = null; RAD.seg = { k: 'song', id: f, t: 150 }; music.play(f); G.radioSong = (music.songs[f] && music.songs[f].name ? music.songs[f].name : f) + ' · Brothers Load'; G.radioName = STATIONS[1].name; G.radioT = 5; return; }
+  RAD.count = (RAD.count || 0) + 1;
+  if (st.id === 'talk' || RAD.count % 2 === 0) { try { music.stop(); } catch (e) {} RAD.seg = { k: 'talk', parts: radioTalkSeg(st), t: 0.3 }; return; }
+  if (real) { var src = real[Math.floor(Math.random() * real.length)]; RAD.audio = new Audio(src); RAD.audio.volume = 0.8; RAD.audio.play().catch(function () {}); RAD.seg = { k: 'real', t: 600 }; RAD.audio.onended = function () { RAD.seg = null; radioNextSeg(); }; G.radioSong = src.split('/').pop().replace(/\.mp3$/i, '').replace(/[-_]/g, ' '); return; }
+  if (st.id === 'po' && SV.mixtape && Math.random() < 0.3) st = STATIONS[2];
+  var id = radioDeal('song' + st.id, st.songs); music.play(id); RAD.seg = { k: 'song', id: id, t: rnd(70, 110) }; G.radioSong = (music.songs[id] && music.songs[id].name ? music.songs[id].name : ({ castle: 'Castle Gates', boss: 'Boss Door', roof: 'Over the Rooftops', town: 'Town Square Two-Step', park: 'Ejaculand Waltz' }[id] || id)) + ' · ' + ({ hs: 'Hunter Seriph', bl: 'Brothers Load', po: 'PulsarOctopus' }[st.id] || '');
+};
+stepRadio = function (dt) {
+  if (!RAD.on) return; if (P && P.state !== 'car') { radioOff(); return; }
+  var S = RAD.seg; if (S) { S.t -= dt;
+    if (S.k === 'talk' && S.t <= 0) { var p = S.parts.shift(); if (!p) { RAD.seg = null; radioNextSeg(); }
+      else if (p.sfx) { sfx.play(p.sfx); S.t = p.t; }
+      else { var st = STATIONS[RAD.st], ok = radioSay(p.who, p.s); S.t = ok ? 30 : Math.max(3, p.s.length * 0.06); S.wait = ok; if (!ok) G.radioLine = { who: st.dj || 'Radio', s: p.s, t: S.t }; } }
+    else if (S.k !== 'talk' && S.t <= 0) { RAD.seg = null; radioNextSeg(); } }
+  if (G.radioLine) { G.radioLine.t -= dt; if (G.radioLine.t <= 0) G.radioLine = null; }
+};
+function radioSay(who, text) { var f = voiceFile(who, text); if (!f) return false; var a = playFile(f, 0.95, 'radio'); if (!a) return false;
+  a.onloadedmetadata = function () { if (RAD.seg && RAD.seg.k === 'talk' && isFinite(a.duration)) RAD.seg.t = a.duration + 0.5; };
+  a.onended = function () { if (RAD.seg && RAD.seg.k === 'talk') RAD.seg.t = Math.min(RAD.seg.t, 0.4); }; a.onerror = function () { if (RAD.seg) RAD.seg.t = 0.2; }; return true; }
+/* the music ducks under any voice: people talking, the DJ, the news */
+var _playFileD = playFile;
+playFile = function (src, vol, slot) { var a = _playFileD(src, vol, slot); if (a) { duckFor(slot); a.addEventListener('ended', function () { undock(slot); }); a.addEventListener('pause', function () { undock(slot); }); a.addEventListener('error', function () { undock(slot); }); } return a; };
+var DUCK = {};
+function duckFor(slot) { DUCK[slot] = 1; duckApply(); }
+function undock(slot) { DUCK[slot] = 0; duckApply(); }
+function duckApply() { var talk = DUCK.line || DUCK.bark, radioTalk = DUCK.radio; try { if (music.duck) music.duck(talk ? 0.22 : radioTalk ? 0.3 : 1); } catch (e) {} if (VOX.radio && VOX.radio !== null) VOX.radio.volume = talk ? 0.25 : 0.95; }
+
+/* ---------- update 157 (his ask: objectives need GPS lines to show you the way): the shortest way along the roads from
+   you to the mission marker (or your own waypoint, or Cumhead's marker in co-op) is worked out with A* over the road
+   graph (RN nodes, RE edges) and drawn as a line on the radar and on the map, GTA style: yellow for a mission, purple for
+   your own waypoint. It is worked out again when the target moves or you leave the line. ---------- */
+var GPS = { path: null, key: '', t: 0 };
+function gpsTarget() { var m = G.mission && G.mission.mark; if (m && m.x !== undefined) return { x: m.x, z: m.z, c: '#ffe36a' }; if (G.coopMark) return { x: G.coopMark.x, z: G.coopMark.z, c: '#ffe36a' }; if (SV.way) return { x: SV.way[0], z: SV.way[1], c: '#c48aff' }; return null; }
+function gpsNode(x, z) { var r = nearestRoad(x, z, 400); if (!r) return null; var A = RN[r.E.a], B = RN[r.E.b]; return { r: r, n: Math.hypot(A.x - r.x, A.z - r.z) < Math.hypot(B.x - r.x, B.z - r.z) ? A.i : B.i, other: Math.hypot(A.x - r.x, A.z - r.z) < Math.hypot(B.x - r.x, B.z - r.z) ? B.i : A.i }; }
+function gpsRoute(sx, sz, tx, tz) { var S = gpsNode(sx, sz), T = gpsNode(tx, tz); if (!S || !T) return null;
+  // A* from both ends of my road to both ends of the target's road
+  var open = [], g = {}, from = {}, closed = {}, goal = {}; goal[T.n] = 1; goal[T.other] = 1;
+  [S.n, S.other].forEach(function (n) { g[n] = Math.hypot(RN[n].x - sx, RN[n].z - sz); open.push(n); from[n] = -1; });
+  var h = function (n) { return Math.hypot(RN[n].x - tx, RN[n].z - tz); }, end = null, guard = 0;
+  while (open.length && guard++ < 6000) { var bi = 0; for (var i = 1; i < open.length; i++) if (g[open[i]] + h(open[i]) < g[open[bi]] + h(open[bi])) bi = i; var cur = open.splice(bi, 1)[0]; if (closed[cur]) continue; closed[cur] = 1; if (goal[cur]) { end = cur; break; }
+    RN[cur].e.forEach(function (ei) { var E = RE[ei]; if (E.off) return; var nb = E.a === cur ? E.b : E.a; if (closed[nb]) return; var ng = g[cur] + E.len; if (g[nb] === undefined || ng < g[nb]) { g[nb] = ng; from[nb] = cur; from[nb + ':e'] = ei; open.push(nb); } }); }
+  if (end === null) return null;
+  var nodes = []; for (var c = end; c !== -1 && c !== undefined; c = from[c]) nodes.unshift(c);
+  var pts = [[sx, sz], [S.r.x, S.r.z]]; for (var k = 0; k < nodes.length; k++) { var ei = from[nodes[k] + ':e']; if (ei !== undefined && k > 0) { var E = RE[ei], fwd = E.a === nodes[k - 1]; var ps = fwd ? E.pts : E.pts.slice().reverse(); ps.forEach(function (p) { pts.push(p); }); } else pts.push([RN[nodes[k]].x, RN[nodes[k]].z]); }
+  pts.push([T.r.x, T.r.z]); pts.push([tx, tz]); return pts; }
+function stepGps(dt) { var T = gpsTarget(); if (!T || !P) { GPS.path = null; return; } var px = P.state === 'car' && P.veh ? P.veh.x : P.x, pz = P.state === 'car' && P.veh ? P.veh.z : P.z, key = Math.round(T.x / 8) + ',' + Math.round(T.z / 8);
+  GPS.t -= dt; var off = GPS.path ? gpsOff(px, pz) : 999; if (key !== GPS.key || off > 25 || GPS.t <= 0) { GPS.key = key; GPS.t = 3; GPS.path = Math.hypot(T.x - px, T.z - pz) < 30 ? null : gpsRoute(px, pz, T.x, T.z); GPS.c = T.c; }
+  if (GPS.path) { GPS.path[0] = [px, pz]; } }
+function gpsOff(x, z) { var P0 = GPS.path, best = 1e9; for (var i = 1; i < Math.min(P0.length, 40); i++) { var a = P0[i - 1], b = P0[i], dx = b[0] - a[0], dz = b[1] - a[1], l = dx * dx + dz * dz || 1, t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l, 0, 1), d = Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z); if (d < best) best = d; } return best; }
+function gpsDraw(ctx, W2S, width) { if (!GPS.path) return; ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath(); GPS.path.forEach(function (p, i) { var s = W2S(p[0], p[1]); if (i) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); });
+  ctx.strokeStyle = '#12040a'; ctx.lineWidth = width + 2; ctx.stroke(); ctx.strokeStyle = GPS.c || '#ffe36a'; ctx.lineWidth = width; ctx.stroke(); ctx.restore(); }
 
 /* ---------- the game: the save, the loop, dying and getting nicked, the menus, the title ---------- */
 function freshSave() { return { v: 1, money: 500, maxHp: 100, armour: 0, weapons: { sausage: 1 }, ammo: {}, wpn: 'fists', wanted: 0, heat: 0, stats: { kills: 0, earned: 0, stunts: 0, races: 0, miles: 0, robbed: 0, deaths: 0, busted: 0, packages: 0, clues: 0, events: 0 },
@@ -4668,7 +5271,7 @@ function startGame(fresh) {
   var at = SV.pos || startSpot(); newPlayer(at[0], at[1], at[2] || 0); P.hp = SV.maxHp; CAM.x = P.x - 4; CAM.y = P.y + 3; CAM.z = P.z - 4;
   solidsAround(P.x, P.z, 70); G.mode = 'play'; worldSetup();
   if (G.guest) {} else if (!SV.intro) playIntro(); else bigText(districtName(P.x, P.z), null, '#f1e7d0', 2.5);
-  if (typeof radioInit === 'function') radioInit();
+  if (typeof radioInit === 'function') radioInit(); try { music.stop(); } catch (e) {} RAD.on = false; // update 157: the title song kept playing into the game
 }
 function playIntro() {
   SV.intro = 1; persist(); G.time = 21.5; var bus = makeVeh('van', P.x + Math.sin(P.a + 1.6) * 5, P.z + Math.cos(P.a + 1.6) * 5, P.a, { col: 2 }); bus.keep = 0;
@@ -4697,12 +5300,12 @@ function update(dt) {
   stepCamera(dt);
   // the city
   if (!G.interior) { spawnPeds(); spawnTraffic(); }
-  stepPeds(dt); stepTraffic(dt); stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar();
+  stepPeds(dt); stepTraffic(dt); for (var vi = 0; vi < VEH.length; vi++) if (VEH[vi].flash > 0) VEH[vi].flash = Math.max(0, VEH[vi].flash - dt); // update 157: a punched parked car stayed light stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar();
   if (typeof stepWorldStuff === 'function') stepWorldStuff(dt);
   if (typeof stepMission === 'function') stepMission(dt);
   if (typeof stepRadio === 'function') stepRadio(dt);
   if (typeof stepDrugs === 'function') stepDrugs(dt);
-  if (typeof stepStim === 'function') stepStim(dt); if (typeof netStep === 'function') netStep(dt); if (typeof stepPets === 'function') stepPets(dt);
+  if (typeof stepStim === 'function') stepStim(dt); if (typeof netStep === 'function') netStep(dt); if (typeof stepGps === 'function') stepGps(dt); if (typeof stepPhone === 'function') { stepPhone(dt); phoneCam(dt); if (gpPressed(12) || KIT.pressed('phone')) phoneOpen(); } if (typeof stepPets === 'function') stepPets(dt);
   if (G.interior) stepRobbery(dt); if (G.arcade) stepArcade(dt); if (G.noCops > 0) G.noCops -= dt;
   if (G.fade > 0) G.fade -= dt;
   G.dynLights = (G.dynLights || []).filter(function (L) { if (L.life === undefined) return true; L.life -= dt; return L.life > 0; });
@@ -4790,7 +5393,7 @@ function drawCutBars() { var ctx = KIT.ctx, h = KIT.H * 0.1; ctx.fillStyle = '#0
   if (G.sub && G.sub.t > 0) { G.sub.t -= 1 / 60; var who = G.sub.who ? G.sub.who + ': ' : '', L = KIT.wrap(who + G.sub.s, KIT.W * 0.84, 9, 'body'); L.forEach(function (l, i) { tx(l, KIT.W / 2 - tw2(l, 9) / 2, KIT.H - h + 4 + i * 10, { col: i === 0 && who ? '#ffe36a' : '#f1e7d0', size: 9 }); }); }
   tx(TOUCHUI() ? 'TAP TO SKIP' : 'A: NEXT', KIT.W - 60, 6, { col: '#a6968f', size: 6 }); }
 /* ---------- menus ---------- */
-function pauseMenu() { if (G.mode !== 'play' || !P) return; persist(); KIT.menu({ cls: 'clear', title: 'Paused', sub: districtName(P.x, P.z) + ' · ' + SEASONS[season()] + ' · $' + Math.floor(SV.money).toLocaleString('en-GB'), items: [
+function pauseMenu() { if (G.mode === 'map') { mapClose(); return; } if (G.phone) { phoneClose(); return; } if (G.mode !== 'play' || !P) return; persist(); KIT.menu({ cls: 'clear', title: 'Paused', sub: districtName(P.x, P.z) + ' · ' + SEASONS[season()] + ' · $' + Math.floor(SV.money).toLocaleString('en-GB'), items: [
   { label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'MAP', fn: function () { mapMenu(); } }, { label: 'MISSIONS', fn: missionsMenu }, { label: 'THE MYSTERY', fn: mysteryMenu }, { label: 'STATS', fn: statsMenu },
   { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: G.guest ? 'LEAVE CO-OP' : 'SAVE AND QUIT', fn: function () { persist(); if (typeof netLeave === 'function' && NET.role) netLeave(); titleMenu(); } }] }); }
 function statsMenu() { var s = SV.stats; KIT.menu({ title: 'Stats', html: '<p>Money earned: $' + Math.floor(s.earned).toLocaleString('en-GB') + '<br>Miles driven: ' + s.miles.toFixed(1) + '<br>People flattened or worse: ' + s.kills + '<br>Wasted: ' + s.deaths + ' · Busted: ' + s.busted + '<br>Shops robbed: ' + s.robbed + '<br>Stunt jumps: ' + Object.keys(SV.stuntsDone).length + ' of ' + STUNTS.length + '<br>Street races won: ' + Object.keys(SV.races).length + ' of ' + RACES.length + '<br>Lost Loads found: ' + Object.keys(SV.packages).length + ' of ' + PACKAGES.length + '<br>Mystery clues: ' + Object.keys(SV.clues).length + ' of ' + CLUES.length + '<br>Houses owned: ' + SV.houses.length + ' · Cars in your garages: ' + SV.cars.length + '<br>Missions done: ' + Object.keys(SV.done).length + ' of ' + MISSIONS.length + '</p>', items: [{ label: 'BACK', back: true, fn: pauseMenu }] }); }
@@ -4810,7 +5413,7 @@ function drawTitleBack() { // a slow flight over the city behind the menu
 }
 function flyStep(dt) { var s = KIT.stick(0), r = KIT.stick(1), c = G.fly; c.yaw -= r.x * dt * 1.6; c.pit = clamp(c.pit - r.y * dt * 1.2, -1.4, 1.2); var fx = Math.sin(c.yaw), fz = Math.cos(c.yaw), sp = 60; c.x += (fx * -s.y - fz * s.x) * sp * dt; c.z += (fz * -s.y + fx * s.x) * sp * dt; CAM.x = c.x; CAM.y = c.y; CAM.z = c.z; CAM.at = [c.x + fx * Math.cos(c.pit), c.y + Math.sin(c.pit), c.z + fz * Math.cos(c.pit)]; }
 try { var vr = +localStorage.getItem('ccn-view'); if (vr) VIEWR = vr; else if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) VIEWR = 240; } catch (e) {} // update 156: phones see a little less by default (less to build and keep)
-KIT.setKeymap({ Shift: 'run', KeyG: 'swap', KeyH: 'hb', KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
+KIT.setKeymap({ Shift: 'run', KeyG: 'swap', KeyH: 'hb', KeyT: 'phone', KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
 KIT.start({ padIdle: function () { return !!G.spray; }, onSelect: function () { if (G.spray) sprayClose(); }, w: W, h: H, flex: 720, padKeys: { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'Shift', b: 'c', x: 'z', y: 'f', lb: 'g', rb: 'h' }, update: update, draw: draw, onPause: pauseMenu, startPauses: true, idleUpdate: function (dt) { if (G.mode === 'play' && typeof netStep === 'function') netStep(dt); if (G.mode === 'play' && typeof stepRadio === 'function') stepRadio(dt); },
   pad: { sticks: true, btns: [{ k: 'b', label: 'B', sub: 'RUN' }, { k: 'a', label: 'A', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'HIT' }, { k: 'y', label: 'Y', sub: 'CAR' }, { k: 'lb', label: 'LB', sub: 'AIM' }, { k: 'rb', label: 'RB', sub: 'SWAP' }] } });
 titleMenu();
@@ -4956,7 +5559,7 @@ drawWorldStuff = function () { _dwsNet(); var R = G.coop && G.coop.other; if (!R
   var rig = RIGS[isGuest() ? 'cumhead' : 'laboozie'];
   if (R.pv) { drawVeh(R.pv); if (R.pv.t.cls === 'bike' || R.pv.t.cls === 'board' || R.pv.t.carry) { var Q2 = pose0(); if (R.pv.t.cls === 'board') poseRideStand(Q2); else { poseSit(Q2); Q2.y = -0.35; } drawPerson(rig, R.pv.x, R.pv.y + (R.pv.t.cls === 'board' ? 0.15 : 0.35), R.pv.z, R.pv.a, Q2, { noShadow: 1 }); } return; }
   var Q = pose0(); if (R.sp > 0.3) poseWalk(Q, R.ph, Math.min(1, R.sp / 5)); var W0 = WPN[R.w] || WPN.fists; if (R.aim && !W0.melee) { Q.sh[0] = [1.5, 0.1, 0]; Q.el[0] = 0.1; }
-  drawPerson(rig, R.x, R.y, R.z, R.a, Q, { held: W0.mesh ? RIGS[W0.mesh] : null, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: R.hurt ? [0.5, 0, 0] : null }); };
+  drawPerson(rig, R.x, R.y, R.z, R.a, Q, { held: W0.mesh ? RIGS[W0.mesh] : null, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2 }); };
 /* ---------- menus ---------- */
 function onlineMenu(err) {
   if (window.HSProfile && HSProfile.has && !HSProfile.has()) { HSProfile.edit(function (p) { if (p) onlineMenu(); else titleMenu(); }, { title: 'YOUR NAME FOR ONLINE' }); return; }
@@ -4983,6 +5586,44 @@ function joinPad(code) {
     if (c.length === 1 && 'ABCDEFGHJKLMNPQRSTUVWXYZ'.indexOf(c) >= 0) { e.preventDefault(); e.stopPropagation(); if (cur.length < 5) joinPad(cur + c); } else if (e.key === 'Backspace') { e.preventDefault(); joinPad(cur.slice(0, -1)); } }, true); })();
 var _missionGiversNet = missionGivers;
 missionGivers = function () { return G.guest ? [] : _missionGiversNet(); };
+
+/* ---------- update 157 (his ask: the menus and UI need a new sleeker look): Cum City Nights' own menu style on top of the
+   kit's: flat dark glass panels with a thin red line, square corners, a short title with a red bar under it, buttons as
+   rows with a red fill that slides in, tidy type. The phone (7f-phone.js) is a phone on screen: rounded body, notch,
+   app tiles. ---------- */
+(function () { var st = document.createElement('style'); st.textContent = [
+  '#menu{background:linear-gradient(90deg,rgba(5,3,4,0.86),rgba(5,3,4,0.55));backdrop-filter:blur(5px)}',
+  '#menu.clear{background:linear-gradient(90deg,rgba(5,3,4,0.82),rgba(5,3,4,0.35))}',
+  '#menu .mbox{clip-path:none;border-radius:4px;background:rgba(12,7,8,0.9);box-shadow:0 0 0 1px rgba(196,18,28,0.65),0 18px 50px rgba(0,0,0,0.6);padding:20px 22px 18px;gap:8px}',
+  '#menu .mbox::before{display:none}',
+  '#menu .mbox h1{text-align:left;font-size:clamp(26px,5vw,36px);color:#f1e7d0;text-shadow:none;padding-bottom:8px;letter-spacing:.02em}',
+  '#menu .mbox h1::after{left:0;right:auto;width:64px;height:3px;bottom:0;background:#c4121c}',
+  '#menu .msub{text-align:left;font-family:var(--body);font-size:14px;color:#a6968f;letter-spacing:.02em}',
+  '#menu .mbtn{background:rgba(255,255,255,0.03);box-shadow:none;border-bottom:1px solid rgba(255,255,255,0.06);font-family:var(--body);font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:11px 14px 11px 16px;transform:none!important;text-shadow:none;overflow:hidden}',
+  '#menu .mbtn::before{width:0;background:#c4121c;transition:width .14s ease-out;z-index:0}',
+  '#menu .mbtn span,#menu .mbtn small{position:relative;z-index:1}',
+  '#menu .mbtn:hover,#menu .mbtn:focus-visible,#menu .mbtn.hs-focus{background:rgba(255,255,255,0.03);box-shadow:none}',
+  '#menu .mbtn:hover::before,#menu .mbtn:focus-visible::before,#menu .mbtn.hs-focus::before{width:100%;background:linear-gradient(90deg,#c4121c,#8a0c14)}',
+  '#menu .mbtn.hot{background:#c4121c;box-shadow:none}#menu .mbtn.hot::before{background:#ff2630}',
+  '#menu .mbtn small{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:400}',
+  '#menu .mclose{border-radius:3px}',
+  '#menu .mbox.title{background:none;box-shadow:none}#menu .mbox.title .mbtn{font-family:var(--display);text-transform:none;letter-spacing:.01em;font-size:24px;font-weight:400;border-bottom:0}',
+  // the phone
+  '#menu.phone{background:rgba(5,3,4,0.45);backdrop-filter:blur(3px)}',
+  '#menu.phone .mbox{width:min(300px,92vw);min-height:min(540px,86vh);border-radius:34px;padding:42px 18px 26px;background:linear-gradient(170deg,#1a0d10,#070405 60%);box-shadow:0 0 0 8px #0b0b0d,0 0 0 9px #3a3a40,0 30px 60px rgba(0,0,0,0.7)}',
+  '#menu.phone .mbox::after{content:"";position:absolute;top:14px;left:50%;width:84px;height:16px;margin-left:-42px;border-radius:10px;background:#0b0b0d}',
+  '#menu.phone .mbox h1{font-size:24px;text-align:center}#menu.phone .mbox h1::after{left:50%;margin-left:-32px}#menu.phone .msub{text-align:center;font-size:13px}',
+  '#menu.phone .mlist.grid{grid-template-columns:repeat(2,1fr);gap:14px;margin-top:10px}',
+  '#menu.phone .mbtn.app{flex-direction:column;align-items:center;justify-content:flex-end;min-height:100px;border-radius:18px;border:0;padding:10px 6px;font-size:12px;letter-spacing:.06em;text-align:center}',
+  '#menu.phone .mbtn.app::after{content:"";position:absolute;left:50%;top:14px;width:46px;height:46px;margin-left:-23px;border-radius:13px;background:#333}',
+  '#menu.phone .mbtn.cab::after{background:linear-gradient(160deg,#ffe36a,#c89a10);box-shadow:inset 0 -12px 0 #12040a}',
+  '#menu.phone .mbtn.ins::after{background:linear-gradient(160deg,#4adfff,#1a5a8a);border-radius:23px 23px 13px 13px}',
+  '#menu.phone .mbtn.stim::after{background:linear-gradient(90deg,transparent 38%,#fff 38%,#fff 62%,transparent 62%),linear-gradient(0deg,transparent 38%,#fff 38%,#fff 62%,transparent 62%),linear-gradient(160deg,#ff2630,#8a0c14)}',
+  '#menu.phone .mbtn.map::after{background:linear-gradient(160deg,#7aff6a,#1a6a2a)}',
+  '#menu.phone .mbtn.off{grid-column:span 2;min-height:46px;justify-content:center;background:#c4121c}#menu.phone .mbtn.off::after{display:none}',
+  '#menu.phone .mbtn:not(.app){border-radius:12px;margin-top:2px}',
+  '#phoneBtn{order:-1}'
+].join('\n'); document.head.appendChild(st); })();
 
 </script>
 </body></html>

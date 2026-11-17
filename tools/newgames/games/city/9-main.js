@@ -12,7 +12,7 @@ function startGame(fresh) {
   var at = SV.pos || startSpot(); newPlayer(at[0], at[1], at[2] || 0); P.hp = SV.maxHp; CAM.x = P.x - 4; CAM.y = P.y + 3; CAM.z = P.z - 4;
   solidsAround(P.x, P.z, 70); G.mode = 'play'; worldSetup();
   if (G.guest) {} else if (!SV.intro) playIntro(); else bigText(districtName(P.x, P.z), null, '#f1e7d0', 2.5);
-  if (typeof radioInit === 'function') radioInit();
+  if (typeof radioInit === 'function') radioInit(); try { music.stop(); } catch (e) {} RAD.on = false; // update 157: the title song kept playing into the game
 }
 function playIntro() {
   SV.intro = 1; persist(); G.time = 21.5; var bus = makeVeh('van', P.x + Math.sin(P.a + 1.6) * 5, P.z + Math.cos(P.a + 1.6) * 5, P.a, { col: 2 }); bus.keep = 0;
@@ -41,12 +41,12 @@ function update(dt) {
   stepCamera(dt);
   // the city
   if (!G.interior) { spawnPeds(); spawnTraffic(); }
-  stepPeds(dt); stepTraffic(dt); stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar();
+  stepPeds(dt); stepTraffic(dt); for (var vi = 0; vi < VEH.length; vi++) if (VEH[vi].flash > 0) VEH[vi].flash = Math.max(0, VEH[vi].flash - dt); // update 157: a punched parked car stayed light stepWanted(dt); stepPickups(dt); stepFx(dt); despawnFar();
   if (typeof stepWorldStuff === 'function') stepWorldStuff(dt);
   if (typeof stepMission === 'function') stepMission(dt);
   if (typeof stepRadio === 'function') stepRadio(dt);
   if (typeof stepDrugs === 'function') stepDrugs(dt);
-  if (typeof stepStim === 'function') stepStim(dt); if (typeof netStep === 'function') netStep(dt); if (typeof stepPets === 'function') stepPets(dt);
+  if (typeof stepStim === 'function') stepStim(dt); if (typeof netStep === 'function') netStep(dt); if (typeof stepGps === 'function') stepGps(dt); if (typeof stepPhone === 'function') { stepPhone(dt); phoneCam(dt); if (gpPressed(12) || KIT.pressed('phone')) phoneOpen(); } if (typeof stepPets === 'function') stepPets(dt);
   if (G.interior) stepRobbery(dt); if (G.arcade) stepArcade(dt); if (G.noCops > 0) G.noCops -= dt;
   if (G.fade > 0) G.fade -= dt;
   G.dynLights = (G.dynLights || []).filter(function (L) { if (L.life === undefined) return true; L.life -= dt; return L.life > 0; });
@@ -134,7 +134,7 @@ function drawCutBars() { var ctx = KIT.ctx, h = KIT.H * 0.1; ctx.fillStyle = '#0
   if (G.sub && G.sub.t > 0) { G.sub.t -= 1 / 60; var who = G.sub.who ? G.sub.who + ': ' : '', L = KIT.wrap(who + G.sub.s, KIT.W * 0.84, 9, 'body'); L.forEach(function (l, i) { tx(l, KIT.W / 2 - tw2(l, 9) / 2, KIT.H - h + 4 + i * 10, { col: i === 0 && who ? '#ffe36a' : '#f1e7d0', size: 9 }); }); }
   tx(TOUCHUI() ? 'TAP TO SKIP' : 'A: NEXT', KIT.W - 60, 6, { col: '#a6968f', size: 6 }); }
 /* ---------- menus ---------- */
-function pauseMenu() { if (G.mode !== 'play' || !P) return; persist(); KIT.menu({ cls: 'clear', title: 'Paused', sub: districtName(P.x, P.z) + ' · ' + SEASONS[season()] + ' · $' + Math.floor(SV.money).toLocaleString('en-GB'), items: [
+function pauseMenu() { if (G.mode === 'map') { mapClose(); return; } if (G.phone) { phoneClose(); return; } if (G.mode !== 'play' || !P) return; persist(); KIT.menu({ cls: 'clear', title: 'Paused', sub: districtName(P.x, P.z) + ' · ' + SEASONS[season()] + ' · $' + Math.floor(SV.money).toLocaleString('en-GB'), items: [
   { label: 'CARRY ON', back: true, def: true, fn: KIT.closeMenu }, { label: 'MAP', fn: function () { mapMenu(); } }, { label: 'MISSIONS', fn: missionsMenu }, { label: 'THE MYSTERY', fn: mysteryMenu }, { label: 'STATS', fn: statsMenu },
   { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: G.guest ? 'LEAVE CO-OP' : 'SAVE AND QUIT', fn: function () { persist(); if (typeof netLeave === 'function' && NET.role) netLeave(); titleMenu(); } }] }); }
 function statsMenu() { var s = SV.stats; KIT.menu({ title: 'Stats', html: '<p>Money earned: $' + Math.floor(s.earned).toLocaleString('en-GB') + '<br>Miles driven: ' + s.miles.toFixed(1) + '<br>People flattened or worse: ' + s.kills + '<br>Wasted: ' + s.deaths + ' · Busted: ' + s.busted + '<br>Shops robbed: ' + s.robbed + '<br>Stunt jumps: ' + Object.keys(SV.stuntsDone).length + ' of ' + STUNTS.length + '<br>Street races won: ' + Object.keys(SV.races).length + ' of ' + RACES.length + '<br>Lost Loads found: ' + Object.keys(SV.packages).length + ' of ' + PACKAGES.length + '<br>Mystery clues: ' + Object.keys(SV.clues).length + ' of ' + CLUES.length + '<br>Houses owned: ' + SV.houses.length + ' · Cars in your garages: ' + SV.cars.length + '<br>Missions done: ' + Object.keys(SV.done).length + ' of ' + MISSIONS.length + '</p>', items: [{ label: 'BACK', back: true, fn: pauseMenu }] }); }
@@ -154,7 +154,7 @@ function drawTitleBack() { // a slow flight over the city behind the menu
 }
 function flyStep(dt) { var s = KIT.stick(0), r = KIT.stick(1), c = G.fly; c.yaw -= r.x * dt * 1.6; c.pit = clamp(c.pit - r.y * dt * 1.2, -1.4, 1.2); var fx = Math.sin(c.yaw), fz = Math.cos(c.yaw), sp = 60; c.x += (fx * -s.y - fz * s.x) * sp * dt; c.z += (fz * -s.y + fx * s.x) * sp * dt; CAM.x = c.x; CAM.y = c.y; CAM.z = c.z; CAM.at = [c.x + fx * Math.cos(c.pit), c.y + Math.sin(c.pit), c.z + fz * Math.cos(c.pit)]; }
 try { var vr = +localStorage.getItem('ccn-view'); if (vr) VIEWR = vr; else if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) VIEWR = 240; } catch (e) {} // update 156: phones see a little less by default (less to build and keep)
-KIT.setKeymap({ Shift: 'run', KeyG: 'swap', KeyH: 'hb', KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
+KIT.setKeymap({ Shift: 'run', KeyG: 'swap', KeyH: 'hb', KeyT: 'phone', KeyI: 'sup', KeyK: 'sdown', KeyJ: 'sleft', KeyL: 'sright', KeyQ: 'lb', KeyR: 'rb', KeyE: 'y', KeyF: 'y', KeyX: 'b', ShiftLeft: 'run', ShiftRight: 'run', Space: 'a', KeyZ: 'a', KeyC: 'x', ControlLeft: 'x', KeyM: 'map', Tab: 'rb' });
 KIT.start({ padIdle: function () { return !!G.spray; }, onSelect: function () { if (G.spray) sprayClose(); }, w: W, h: H, flex: 720, padKeys: { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', a: 'Shift', b: 'c', x: 'z', y: 'f', lb: 'g', rb: 'h' }, update: update, draw: draw, onPause: pauseMenu, startPauses: true, idleUpdate: function (dt) { if (G.mode === 'play' && typeof netStep === 'function') netStep(dt); if (G.mode === 'play' && typeof stepRadio === 'function') stepRadio(dt); },
   pad: { sticks: true, btns: [{ k: 'b', label: 'B', sub: 'RUN' }, { k: 'a', label: 'A', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'HIT' }, { k: 'y', label: 'Y', sub: 'CAR' }, { k: 'lb', label: 'LB', sub: 'AIM' }, { k: 'rb', label: 'RB', sub: 'SWAP' }] } });
 titleMenu();

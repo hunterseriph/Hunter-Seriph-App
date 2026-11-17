@@ -2,9 +2,15 @@
    the long mystery, world events, garages, the haunted asylum, the dungeons and the sewers, drink and drugs ---------- */
 var RNG = srand(4242);
 /* ---------- stunt jumps: ramps at the side of long straight roads, on the river banks and the beach ---------- */
-var STUNTS = (function () {
-  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.pts.length > 2) return; var p = edgeAt(E, E.len * 0.5, false, E.w / 2 + 3.5); if (isWaterK(kAt(p.x, p.z)) || used.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 260; })) return;
-    var k = kAt(p.x, p.z); if (k === K_BRIDGE) return; used.push(p); L.push({ id: 's' + L.length, x: p.x, z: p.z, a: p.a, y: groundY(p.x, p.z), name: districtName(p.x, p.z) }); });
+var STUNTS = (function () { // update 157 (his ask: ramps in the road): stunt ramps stand OFF the road, on open ground beside it, facing along it
+  var L = [], used = []; RE.slice().sort(function (a, b) { return hash2(a.i, 1, 3) - hash2(b.i, 1, 3); }).forEach(function (E) { if (L.length >= 18 || E.len < 90 || E.pts.length > 2) return;
+    for (var side = -1; side <= 1; side += 2) for (var off = 9; off <= 18; off += 3) { if (L.length >= 18) return; var p = edgeAt(E, E.len * 0.5, false, side * (E.w / 2 + off)), a = Math.atan2(p.dx, p.dz);
+      if (used.some(function (u) { return Math.hypot(u.x - p.x, u.z - p.z) < 260; })) return; var ok = true;
+      for (var v = -10; v <= 16 && ok; v += 2) for (var u = -3; u <= 3; u += 3) { var x = p.x + Math.sin(a) * v + Math.cos(a) * u, z = p.z + Math.cos(a) * v - Math.sin(a) * u, k = kAt(x, z);
+        if (!(k === K_GRASS || k === K_LOT || k === K_FIELD || k === K_PARK || k === K_DIRT || k === K_SAND || k === K_YARD)) { ok = false; break; }
+        var r = nearestRoad(x, z, 30); if (r && r.d < r.E.w / 2 + 4) { ok = false; break; } if (near(BGRID, x, z, 3).some(function (bb) { return x > bb.x0 - 2 && x < bb.x1 + 2 && z > bb.z0 - 2 && z < bb.z1 + 2; })) { ok = false; break; }
+        if (Math.abs(groundY(x, z) - groundY(p.x, p.z)) > 1.2) { ok = false; break; } }
+      if (!ok) continue; used.push(p); L.push({ id: 's' + L.length, x: p.x, z: p.z, a: a, y: groundY(p.x, p.z), name: districtName(p.x, p.z) }); return; } });
   return L;
 })();
 function buildRamps() { STUNTS.forEach(function (s) { if (s.mesh) return; var m = M(), len = 9, w = 3.4, h = 2.4, c = Math.cos(s.a), sn = Math.sin(s.a); function Pt(u, v, y) { return [s.x + sn * v + c * u, s.y + y, s.z + Math.cos(s.a) * v - sn * u]; }

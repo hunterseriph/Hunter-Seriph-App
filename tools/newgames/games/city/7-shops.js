@@ -60,8 +60,8 @@ function shopMenu(id, keeper) {
 }
 /* ---------- the rooms ---------- */
 function roomMesh(id) {
-  var R0 = ROOMS[id] || ROOMS.home, w = R0.w || 10, d = R0.d || 9, h = 4, m = M(), wt = TL(R0.wall), ft = TL(R0.floor);
-  m.quad([0, 0, 0], [0, 0, d], [w, 0, d], [w, 0, 0], uvR(w / 2, d / 2), ft, [0.5, 0.5, 0.5], [0, 1, 0]); m.quad([0, h, 0], [w, h, 0], [w, h, d], [0, h, d], uvR(w / 3, d / 3), TL('ceil'), [0.4, 0.4, 0.4], [0, -1, 0]);
+  var R0 = ROOMS[id] || ROOMS.home, w = R0.w || 10, d = R0.d || 9, h = R0.h || 4, m = M(), wt = TL(R0.wall), ft = TL(R0.floor);
+  m.quad([0, 0, 0], [0, 0, d], [w, 0, d], [w, 0, 0], uvR(w / (R0.floor === 'arcarpet' ? 1.2 : 2), d / (R0.floor === 'arcarpet' ? 1.2 : 2)), ft, [0.5, 0.5, 0.5], [0, 1, 0]); m.quad([0, h, 0], [w, h, 0], [w, h, d], [0, h, d], uvR(w / 3, d / 3), TL('ceil'), [0.4, 0.4, 0.4], [0, -1, 0]);
   [[[0, 0, d], [w, 0, d], [0, 0, -1], w], [[w, 0, 0], [0, 0, 0], [0, 0, 1], w], [[w, 0, d], [w, 0, 0], [-1, 0, 0], d], [[0, 0, 0], [0, 0, d], [1, 0, 0], d]].forEach(function (f) { m.quad(f[0], f[1], [f[1][0], h, f[1][2]], [f[0][0], h, f[0][2]], uvR(f[3] / 3, h / 3), wt, lit(f[2]), f[2]); });
   m.quad([w / 2 - 0.8, 0, 0.02], [w / 2 + 0.8, 0, 0.02], [w / 2 + 0.8, 2.4, 0.02], [w / 2 - 0.8, 2.4, 0.02], UV1, TL('door'), [0.5, 0.5, 0.5], [0, 0, 1]);
   var boxes = [], cx = w / 2;

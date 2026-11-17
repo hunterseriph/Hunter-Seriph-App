@@ -15,6 +15,7 @@ function drawRadar(x, y, r) {
   var ctx = KIT.ctx, mc = mapCanvas(), px = (P.state === 'car' && P.veh ? P.veh.x : P.x), pz = (P.state === 'car' && P.veh ? P.veh.z : P.z), zoom = P.state === 'car' && P.veh && Math.abs(P.veh.sp) > 15 ? 0.55 : 0.85, rot = CAM.yaw;
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = '#070405'; ctx.fill(); ctx.clip();
   ctx.translate(x, y); ctx.rotate(rot + Math.PI); ctx.scale(zoom, zoom); ctx.imageSmoothingEnabled = false; ctx.drawImage(mc, -px / CT, -pz / CT); ctx.setTransform(KIT.S, 0, 0, KIT.S, 0, 0);
+  if (typeof gpsDraw === 'function') gpsDraw(ctx, function (wx, wz) { var dx = (wx - px) / CT * zoom, dz = (wz - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI); return [x + dx * c - dz * s, y + dx * s + dz * c]; }, 2.5);
   // blips
   blipList().forEach(function (b) { var dx = (b.x - px) / CT * zoom, dz = (b.z - pz) / CT * zoom, c = Math.cos(rot + Math.PI), s = Math.sin(rot + Math.PI), rx = dx * c - dz * s, rz = dx * s + dz * c, d = Math.hypot(rx, rz); if (d > r - 4) { rx *= (r - 4) / d; rz *= (r - 4) / d; }
     ctx.fillStyle = '#12040a'; ctx.fillRect(x + rx - (b.big ? 3 : 2), y + rz - (b.big ? 3 : 2), b.big ? 6 : 4, b.big ? 6 : 4); ctx.fillStyle = b.c; ctx.fillRect(x + rx - (b.big ? 2 : 1), y + rz - (b.big ? 2 : 1), b.big ? 4 : 2, b.big ? 4 : 2); });
@@ -73,7 +74,8 @@ function mapMenu(back) { // update 155: the map has its own controls (he said th
   KIT.closeMenu(); G.mapOpen = { x: P.x, z: P.z, zoom: 1.4, back: back, ptrs: {}, drag: 0 }; G.mode = 'map'; document.documentElement.classList.add('hs-menu', 'hs-map'); mapPointer(true);
 }
 function mapClose() { var M0 = G.mapOpen; G.mode = 'play'; G.mapOpen = null; mapPointer(false); document.documentElement.classList.remove('hs-menu', 'hs-map'); if (M0 && M0.back) M0.back(); }
-function mapBtns() { var Wd = KIT.W, Hd = KIT.H, s = 30, x = Wd - s - 8; return [{ id: 'close', t: '✕', x: x, y: 34, w: s, h: s }, { id: 'in', t: '+', x: x, y: 34 + s + 8, w: s, h: s }, { id: 'out', t: '−', x: x, y: 34 + (s + 8) * 2, w: s, h: s }, { id: 'me', t: '◎', x: x, y: 34 + (s + 8) * 3, w: s, h: s }, { id: 'clear', t: 'CLEAR', x: x - 26, y: 34 + (s + 8) * 4, w: s + 26, h: 22 }]; }
+function mapBtns() { var Hd = KIT.H, s = 38, x = 10, y0 = 12; // update 157: the buttons live on the LEFT (the app's pause button sat over the old close button, so the map could not be shut)
+  return [{ id: 'close', t: '✕ CLOSE', x: x, y: y0, w: 84, h: s }, { id: 'in', t: '+', x: x, y: y0 + s + 10, w: s, h: s }, { id: 'out', t: '−', x: x + s + 8, y: y0 + s + 10, w: s, h: s }, { id: 'me', t: '◎', x: x, y: y0 + (s + 10) * 2, w: s, h: s }, { id: 'clear', t: 'CLEAR', x: x, y: Hd - 34 - 10, w: 70, h: 30 }]; }
 function mapPress(id) { var M0 = G.mapOpen; if (!M0) return; sfx.play('select'); if (id === 'close') mapClose(); else if (id === 'in') M0.zoom = clamp(M0.zoom * 1.5, 0.5, 6); else if (id === 'out') M0.zoom = clamp(M0.zoom / 1.5, 0.5, 6); else if (id === 'me') { M0.x = P.x; M0.z = P.z; } else if (id === 'clear') SV.way = null; }
 var MAPH = null;
 function mapPointer(on) { var cv = KIT.ctx.canvas; if (!cv) return;
@@ -101,10 +103,11 @@ function drawMap() {
   ctx.save(); ctx.imageSmoothingEnabled = M0.zoom < 1.5; ctx.translate(Wd / 2, Hd / 2); ctx.scale(sc, sc); ctx.drawImage(mc, -M0.x / CT, -M0.z / CT); ctx.restore();
   function W2S(x, z) { return [Wd / 2 + (x - M0.x) / CT * sc, Hd / 2 + (z - M0.z) / CT * sc]; }
   DIST.forEach(function (d) { if (!d.cx) return; var p = W2S(d.cx, d.cz); tx(d.name.toUpperCase(), p[0] - tw2(d.name.toUpperCase(), 6) / 2, p[1], { col: 'rgba(241,231,208,0.75)', size: 6 }); });
+  if (typeof gpsDraw === 'function') gpsDraw(ctx, W2S, 3);
   blipList().forEach(function (b) { var p = W2S(b.x, b.z); ctx.fillStyle = '#12040a'; ctx.fillRect(p[0] - 3, p[1] - 3, 6, 6); ctx.fillStyle = b.c; ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4); if (b.icon && M0.zoom > 1.2) tx(b.icon, p[0] + 4, p[1] - 4, { col: b.c, size: 6 }); });
   var pp = W2S(P.x, P.z); ctx.fillStyle = '#ffe36a'; ctx.beginPath(); ctx.arc(pp[0], pp[1], 3, 0, 6.283); ctx.fill();
   ctx.strokeStyle = '#ff2630'; ctx.beginPath(); ctx.moveTo(Wd / 2 - 6, Hd / 2); ctx.lineTo(Wd / 2 + 6, Hd / 2); ctx.moveTo(Wd / 2, Hd / 2 - 6); ctx.lineTo(Wd / 2, Hd / 2 + 6); ctx.stroke();
-  tx('CUM CITY', 10, 12, { col: '#c4121c', size: 16, font: 'title' }); tx(districtName(M0.x, M0.z), 10, 32, { col: '#f1e7d0', size: 8 });
+  tx('CUM CITY', 104, 12, { col: '#c4121c', size: 16, font: 'title' }); tx(districtName(M0.x, M0.z), 104, 32, { col: '#f1e7d0', size: 8 });
   if (SV.way) { var wp = W2S(SV.way[0], SV.way[1]); ctx.fillStyle = '#12040a'; ctx.beginPath(); ctx.arc(wp[0], wp[1], 5, 0, 6.3); ctx.fill(); ctx.fillStyle = '#ff2630'; ctx.beginPath(); ctx.arc(wp[0], wp[1], 3.5, 0, 6.3); ctx.fill(); }
   tx(TOUCHUI() ? 'DRAG TO MOVE · PINCH TO ZOOM · TAP TO MARK A PLACE' : KIT.gamepad ? 'A MARK · X CLEAR · Y YOU · LB/RB ZOOM · B BACK' : 'DRAG TO MOVE · WHEEL TO ZOOM · CLICK TO MARK · ESC BACK', 10, Hd - 14, { col: '#a6968f', size: 6 });
   mapBtns().forEach(function (b) { KIT.panel(b.x, b.y, b.w, b.h); tx(b.t, b.x + b.w / 2 - tw2(b.t, b.t.length > 1 ? 7 : 12) / 2, b.y + b.h / 2 - (b.t.length > 1 ? 4 : 7), { col: b.id === 'close' ? '#ff2630' : '#ffe36a', size: b.t.length > 1 ? 7 : 12 }); });
@@ -132,20 +135,16 @@ function wIcon(ctx, id, x, y, s) { // little silhouettes, drawn in a 16 x 16 gri
   else if (id === 'pills') { R0(B, 4, 2, 8, 13); R0('#f6f0e4', 5, 6, 6, 8); R0('#c4121c', 5, 3, 6, 3); R0('#ff8ab0', 6, 8, 4, 2); }
   else { R0(B, 3, 3, 10, 10); R0(M, 4, 4, 8, 8); }
   ctx.restore(); }
-function drawStatus(ctx) {
-  var x = 8, y = 8, w = 152, h = 46; KIT.panel(x, y, w, h);
-  // the weapon box
-  var bx = x + 5, by = y + 5, bs = h - 10; ctx.fillStyle = '#070405'; ctx.fillRect(bx, by, bs, bs); ctx.strokeStyle = '#4a1a1c'; ctx.lineWidth = 1; ctx.strokeRect(bx + 0.5, by + 0.5, bs - 1, bs - 1);
-  wIcon(ctx, P.wpn, bx + 5, by + 3, bs - 10); var W0 = WPN[P.wpn]; if (W0.ammo) { var am = '' + ammoOf(P.wpn); tx(am, bx + bs - 3 - tw2(am, 6), by + bs - 9, { col: '#ffe36a', size: 6 }); }
-  // money
-  var mx = bx + bs + 6, mon = '$' + Math.floor(SV.money).toLocaleString('en-GB'), ms = G.moneyPop > 0 ? 13 : 12; G.moneyPop = Math.max(0, (G.moneyPop || 0) - 1 / 60 * 2); tx(mon, mx, y + 6, { col: '#ffe36a', size: ms, font: 'title' });
-  // health: a heart and a red bar; armour (the condom) cream under it
-  var hy = y + 24, bw = x + w - 8 - (mx + 9), flash = P.hp < 25 && Math.floor(G.t * 4) % 2;
-  ctx.fillStyle = flash ? '#ff2630' : '#c4121c'; ctx.beginPath(); ctx.arc(mx + 2, hy + 1.5, 2, 0, 6.3); ctx.arc(mx + 5, hy + 1.5, 2, 0, 6.3); ctx.fill(); ctx.beginPath(); ctx.moveTo(mx, hy + 2.5); ctx.lineTo(mx + 7, hy + 2.5); ctx.lineTo(mx + 3.5, hy + 6.5); ctx.closePath(); ctx.fill();
-  KIT.bar(mx + 10, hy, bw, 5, P.hp / SV.maxHp, flash ? '#ff2630' : '#c4121c');
-  var ay = hy + 9; ctx.fillStyle = '#f1e7d0'; ctx.fillRect(mx + 2, ay, 3, 5); ctx.beginPath(); ctx.arc(mx + 3.5, ay, 1.5, Math.PI, 0); ctx.fill();
-  KIT.bar(mx + 10, ay + 1, bw, 3, (P.armour || 0) / 100, '#f1e7d0', '#2a2420');
-  // wanted stars under the plate
-  for (var s = 0; s < 5; s++) { var on = s < SV.wanted, sx = x + 4 + s * 13; ctx.globalAlpha = on ? (G.lostT > 6 && Math.floor(G.t * 3) % 2 ? 0.45 : 1) : 0.28; star(ctx, sx + 6, y + h + 8, 5.5, on ? '#ffe36a' : '#3a2a2c'); ctx.globalAlpha = 1; }
+function drawStatus(ctx) { // update 157 (his ask: a sleeker look): no boxed plate; a round weapon badge, the money in big type, thin bars, stars beside
+  var x = 10, y = 9, R = 17, cx = x + R, cy = y + R, g = ctx.createLinearGradient(x, 0, x + 190, 0); g.addColorStop(0, 'rgba(7,4,5,0.66)'); g.addColorStop(1, 'rgba(7,4,5,0)'); ctx.fillStyle = g; ctx.fillRect(x - 6, y - 5, 196, R * 2 + 22);
+  ctx.fillStyle = '#0b0607'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#c4121c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R - 0.5, 0, 6.283); ctx.stroke();
+  wIcon(ctx, P.wpn, cx - R * 0.6, cy - R * 0.6, R * 1.2); var W0 = WPN[P.wpn]; if (W0.ammo) { var am = '' + ammoOf(P.wpn); ctx.fillStyle = '#c4121c'; var aw = tw2(am, 6) + 6; ctx.fillRect(cx - aw / 2, cy + R - 5, aw, 9); tx(am, cx - tw2(am, 6) / 2, cy + R - 4, { col: '#fff6dc', size: 6 }); }
+  var mx = x + R * 2 + 8, mon = '$' + Math.floor(SV.money).toLocaleString('en-GB'), ms = G.moneyPop > 0 ? 15 : 14; G.moneyPop = Math.max(0, (G.moneyPop || 0) - 1 / 60 * 2);
+  tx(mon, mx + 1, y + 1, { col: 'rgba(0,0,0,0.6)', size: ms, font: 'title' }); tx(mon, mx, y, { col: '#f1e7d0', size: ms, font: 'title' });
+  var by = y + 21, bw = 110, flash = P.hp < 25 && Math.floor(G.t * 4) % 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by, bw, 3); ctx.fillStyle = flash ? '#ff2630' : '#e0202a'; ctx.fillRect(mx, by, bw * clamp(P.hp / SV.maxHp, 0, 1), 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by + 6, bw, 2); ctx.fillStyle = '#f1e7d0'; ctx.fillRect(mx, by + 6, bw * clamp((P.armour || 0) / 100, 0, 1), 2);
+  for (var s = 0; s < 5; s++) { var on = s < SV.wanted, sx = mx + 4 + s * 12; ctx.globalAlpha = on ? (G.lostT > 6 && Math.floor(G.t * 3) % 2 ? 0.45 : 1) : 0.22; star(ctx, sx + 2, by + 18, 4.6, on ? '#ffe36a' : '#6a5a5c'); ctx.globalAlpha = 1; }
+  if (G.stim > 0) { var st = 'STIMS ' + Math.ceil(G.stim); tx(st, mx + 70, by + 14, { col: '#ff2630', size: 6 }); }
 }
 function star(ctx, cx, cy, r, col) { ctx.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = '#12040a'; ctx.lineWidth = 2; ctx.strokeStyle = '#12040a'; ctx.stroke(); ctx.fillStyle = col; ctx.fill(); }

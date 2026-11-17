@@ -125,7 +125,7 @@ var EGRID = {}; RE.forEach(function (E) { for (var k = 0; k < E.pts.length - 1; 
 /* the nearest road to a point: { E, s (metres along), d (distance), side } */
 function nearestRoad(x, z, maxd) {
   var best = null, bd = (maxd || 60) * (maxd || 60), r = maxd || 60, ls = near(EGRID, x, z, Math.min(r, 64));
-  ls.forEach(function (E) { for (var k = 0; k < E.pts.length - 1; k++) { var a = E.pts[k], b = E.pts[k + 1], vx = b[0] - a[0], vz = b[1] - a[1], l2 = vx * vx + vz * vz || 1, t = clamp(((x - a[0]) * vx + (z - a[1]) * vz) / l2, 0, 1), px = a[0] + vx * t, pz = a[1] + vz * t, d = dist2(x, z, px, pz);
+  ls.forEach(function (E) { if (E.off) return; for (var k = 0; k < E.pts.length - 1; k++) { var a = E.pts[k], b = E.pts[k + 1], vx = b[0] - a[0], vz = b[1] - a[1], l2 = vx * vx + vz * vz || 1, t = clamp(((x - a[0]) * vx + (z - a[1]) * vz) / l2, 0, 1), px = a[0] + vx * t, pz = a[1] + vz * t, d = dist2(x, z, px, pz);
     if (d < bd) { bd = d; best = { E: E, s: E.cum[k] + Math.sqrt(l2) * t, d: Math.sqrt(d), x: px, z: pz, side: (vx * (z - a[1]) - vz * (x - a[0])) > 0 ? 1 : -1, dx: vx / Math.sqrt(l2), dz: vz / Math.sqrt(l2) }; } } });
   return best;
 }

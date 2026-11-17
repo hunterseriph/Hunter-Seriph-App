@@ -141,7 +141,7 @@ function poseOfPlayer() {
   var W0 = WPN[P.wpn];
   if (P.aim || (P.cool > 0 && !W0.melee && P.atkT === 0 && P.kick > 0)) poseAim(Q, W0.mesh === 'pistolM' ? 'handgun' : 'rifle', P.kick);
   if (P.atkT > 0) { var t = 1 - P.atkT / 0.35; if (W0.swing) poseSwing(Q, t); else posePunch(Q, t); }
-  if (P.hurtT > 0) poseHurt(Q, P.hurtT / 0.4);
+  if (P.hurtT > 0) poseFlinch(Q, 1 - P.hurtT / 0.4); // update 157: a flinch, not a lean back (he said it looked wrong)
   if (P.ragT > 0) poseDown(Q, Math.min(1, P.ragT), 0);
   return Q;
 }
@@ -150,5 +150,11 @@ function drawPlayer() { if (window.__noP) return;
   if (P.state === 'foot' && Math.hypot(CAM.x - P.x, CAM.z - P.z) < 0.75 && Math.abs(CAM.y - P.y - 1.5) < 0.9) return;
   var Q = poseOfPlayer(), W0 = WPN[P.wpn], held = W0.mesh ? RIGS[W0.mesh] : null, y = P.y;
   if (P.state === 'car' && P.veh) { var v = P.veh; Q = pose0(); if (v.t.cls === 'board') poseRideStand(Q); else { poseSit(Q); Q.y = -0.35; } drawPerson(RIGS[P.rig || 'cumhead'], v.x, v.y + (v.t.cls === 'board' ? 0.15 : 0.35), v.z, v.a, Q, { noShadow: 1 }); return; }
-  drawPerson(RIGS[P.rig || 'cumhead'], P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: P.hurtT > 0.3 ? [0.5, 0, 0] : null });
+  drawPerson(RIGS[P.rig || 'cumhead'], P.x, y, P.z, P.a, Q, { held: held, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2 });
 }
+
+/* update 157: getting hit. He said Cumhead glowed red and leant back in a way that looked wrong. Now he flinches: hunches,
+   turns his head away, brings both arms up in front of his face, knees dip, and it is over in 0.4 s. No red glow. */
+function poseFlinch(Q, t) { var s = Math.sin(Math.min(1, t) * Math.PI); Q.lean = (Q.lean || 0) + 0.28 * s; Q.twist = (Q.twist || 0) + 0.3 * s; Q.hp = (Q.hp || 0) + 0.3 * s; Q.hy = (Q.hy || 0) - 0.4 * s;
+  Q.sh[0] = [Q.sh[0][0] * (1 - s) + 2.0 * s, 0.3 * s + Q.sh[0][1] * (1 - s), 0.4 * s]; Q.sh[1] = [Q.sh[1][0] * (1 - s) + 1.8 * s, 0.3 * s + Q.sh[1][1] * (1 - s), -0.4 * s]; Q.el[0] = (Q.el[0] || 0) * (1 - s) + 1.9 * s; Q.el[1] = (Q.el[1] || 0) * (1 - s) + 1.9 * s;
+  Q.kn[0] = Math.max(Q.kn[0], 0.35 * s); Q.kn[1] = Math.max(Q.kn[1], 0.35 * s); Q.hip[0] = Math.max(Q.hip[0], 0.18 * s); Q.hip[1] = Math.max(Q.hip[1], 0.18 * s); }

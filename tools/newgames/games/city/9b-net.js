@@ -137,7 +137,7 @@ drawWorldStuff = function () { _dwsNet(); var R = G.coop && G.coop.other; if (!R
   var rig = RIGS[isGuest() ? 'cumhead' : 'laboozie'];
   if (R.pv) { drawVeh(R.pv); if (R.pv.t.cls === 'bike' || R.pv.t.cls === 'board' || R.pv.t.carry) { var Q2 = pose0(); if (R.pv.t.cls === 'board') poseRideStand(Q2); else { poseSit(Q2); Q2.y = -0.35; } drawPerson(rig, R.pv.x, R.pv.y + (R.pv.t.cls === 'board' ? 0.15 : 0.35), R.pv.z, R.pv.a, Q2, { noShadow: 1 }); } return; }
   var Q = pose0(); if (R.sp > 0.3) poseWalk(Q, R.ph, Math.min(1, R.sp / 5)); var W0 = WPN[R.w] || WPN.fists; if (R.aim && !W0.melee) { Q.sh[0] = [1.5, 0.1, 0]; Q.el[0] = 0.1; }
-  drawPerson(rig, R.x, R.y, R.z, R.a, Q, { held: W0.mesh ? RIGS[W0.mesh] : null, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2, flash: R.hurt ? [0.5, 0, 0] : null }); };
+  drawPerson(rig, R.x, R.y, R.z, R.a, Q, { held: W0.mesh ? RIGS[W0.mesh] : null, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2 }); };
 /* ---------- menus ---------- */
 function onlineMenu(err) {
   if (window.HSProfile && HSProfile.has && !HSProfile.has()) { HSProfile.edit(function (p) { if (p) onlineMenu(); else titleMenu(); }, { title: 'YOUR NAME FOR ONLINE' }); return; }

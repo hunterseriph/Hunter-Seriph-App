@@ -26,7 +26,7 @@ var ARCADES = {
   HIPAINT.stims = function (c) { c.fillStyle = '#f1e7d0'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#c4121c'; c.fillRect(24, 8, 16, 48); c.fillRect(8, 24, 48, 16); c.fillStyle = '#12040a'; c.textAlign = 'center'; c.font = 'bold 9px "Archivo Narrow", sans-serif'; c.fillText('STIMS', 32, 60); };
 })();
 ROOMS.club.props = ['bar', 'jukebox', 'table', 'bed', 'spraystation', 'stims'];
-['arcade', 'arcade2', 'arcade3', 'arcade4'].forEach(function (id) { ROOMS[id] = { wall: 'wallpaper', floor: 'checker', keeper: 'potbelly', props: ['counter', 'cabinet', 'cabinet', 'cabinet', 'cabinet', 'cabinet', 'cabinet'].slice(0, 1 + ARCADES[id].games.length), cabs: ARCADES[id].games, w: 12, d: 10 }; });
+['arcade', 'arcade2', 'arcade3', 'arcade4'].forEach(function (id) { ROOMS[id] = { wall: 'arcwall', floor: 'arcarpet', keeper: 'potbelly', props: [], arcade: 1, w: 16, d: 14 }; });
 // the new props, drawn into the room mesh
 var _roomMesh = roomMesh;
 roomMesh = function (id) {
@@ -65,8 +65,7 @@ goods = function (id) { if (!ARCADES[id]) return _goods(id); SV.carts = SV.carts
 // inside: the cabinets, the sofa and the stash
 var _enterShop2 = enterShop;
 enterShop = function (id, homeId, special) { var r = _enterShop2.apply(this, arguments); var I = G.interior; if (!I || !I.RM) return r;
-  if (ARCADES[id]) { var cabs = ARCADES[id].games, w = I.RM.w; cabs.forEach(function (g, i) { var ax = 1.4 + i * ((w - 2.8) / Math.max(1, cabs.length - 1)); G.indoorUses.push({ x: ax, z: 3.0, r: 0.75, label: 'PLAY ' + SPRAYGAMES[g][0].toUpperCase() + ' ($5)', fn: function () { if (SV.money < 5) { toast('A go is $5.'); return; } money(-5); sprayOpen(g, 'cabinet'); } }); });
-    if (G.keeper) say(G.keeper, pick(['Cabinets are free, kid. Play all you like.', 'Cartridges for the SprayStation, right here.', 'Five drops a go. Bargain.'])); }
+  if (ARCADES[id] && typeof arcadeUses === 'function') arcadeUses(id, I);
   if (id === 'club' && I.RM.club) { var C = I.RM.club; G.indoorUses.push({ x: C.sofa.x, z: C.sofa.z, r: 1.4, label: 'PLAY THE SPRAYSTATION', fn: sprayMenu }); G.indoorUses.push({ x: C.stims.x, z: C.stims.z, r: 1.2, label: 'COMBAT STIMS ($40)', fn: stimMenu }); }
   return r; };
 /* ---------- the SprayStation ---------- */

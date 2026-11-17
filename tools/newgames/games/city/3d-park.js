@@ -106,15 +106,27 @@ function parkDress(M0, GLOW, x0, z0, CS, lamps, first) { if (!PARKCELL.length) r
 /* update 156 (his ask: weird spaces between buildings should be alleyways): the yards and gaps between buildings
    (lot tiles no building stands on) get alley clutter: dumpsters, bin bags, crates and pallets, a steaming grate,
    a fire escape ladder's foot, strings of bulbs across in the busy districts. */
-function alleyDress(M0, GLOW, x0, z0, CS, first) { var i0 = Math.floor(x0 / CT), j0 = Math.floor(z0 / CT), n = Math.round(CS / CT);
-  for (var j = j0; j < Math.min(MH, j0 + n); j++) for (var i = i0; i < Math.min(MW, i0 + n); i++) { var t = j * MW + i; if (KM[t] !== K_LOT) continue; var r1 = hash2(i, j, 51); if (r1 > 0.2) continue;
-    var cx = i * CT + 1 + hash2(i, j, 52) * 2, cz = j * CT + 1 + hash2(i, j, 53) * 2, inB = near(BGRID, cx, cz, 3).some(function (b) { return cx > b.x0 - 1 && cx < b.x1 + 1 && cz > b.z0 - 1 && cz < b.z1 + 1; }); if (inB) continue;
-    if (nearestRoad(cx, cz, 4)) continue; var y = groundY(cx, cz), a = Math.floor(hash2(i, j, 54) * 4) * Math.PI / 2, kind = Math.floor(hash2(i, j, 55) * 6), st = DIST[DM[t]].style;
-    if (kind === 0) { boxR(M0, cx, cz, a, 0.95, 0.6, y, y + 1.25, st === 'redlight' ? '#3a1a1e' : '#2e4a34'); boxR(M0, cx, cz, a, 1.0, 0.65, y + 1.25, y + 1.35, '#1a1a1e'); if (first) addPost(cx, cz, 0.8, y, y + 1.4); }
-    else if (kind === 1) { for (var b = 0; b < 4; b++) ell(M0, cx + Math.cos(b * 1.7) * 0.5, y + 0.3, cz + Math.sin(b * 1.7) * 0.5, 0.38, 0.34, 0.36, b % 2 ? '#141416' : '#1e1e22', 6, 4); }
-    else if (kind === 2) { boxR(M0, cx, cz, a, 0.5, 0.5, y, y + 0.9, '#7a5a34', 'plank'); boxR(M0, cx + 0.6, cz + 0.3, a + 0.3, 0.4, 0.4, y, y + 0.7, '#6a4a2a', 'plank'); boxR(M0, cx, cz, a, 0.4, 0.4, y + 0.9, y + 1.6, '#8a6a3a', 'plank'); if (first) addPost(cx, cz, 0.6, y, y + 1.6); }
-    else if (kind === 3) { boxR(M0, cx, cz, a, 0.6, 0.6, y, y + 0.02, '#2a2a2e'); for (var s = 0; s < 4; s++) ell(GLOW, cx, y + 0.6 + s * 0.5, cz, 0.3 + s * 0.15, 0.3, 0.3 + s * 0.15, '#7a7478', 5, 3); }
-    else if (kind === 4) { for (var p2 = 0; p2 < 3; p2++) boxR(M0, cx, cz, a, 0.6, 0.5, y + p2 * 0.15, y + p2 * 0.15 + 0.1, '#8a6a40', 'plank'); }
-    else { boxR(M0, cx, cz, a, 0.3, 0.3, y, y + 0.9, '#3a5a8a'); tub(M0, [cx + 0.5, y, cz], [cx + 0.5, y + 0.6, cz], 0.22, 0.22, '#4a4a4e', 7, { cap: 1 }); if (first) addPost(cx, cz, 0.4, y, y + 0.9); }
-    if (/redlight|cafe|downtown/.test(st) && hash2(i, j, 56) < 0.3) for (var q = 0; q < 8; q++) { var u = q / 7, bx = cx - 4 + u * 8, by = y + 4.2 - Math.sin(u * Math.PI) * 0.6; ell(GLOW, bx, by, cz, 0.1, 0.12, 0.1, ['#ffe36a', '#ff7ab0', '#4adfff'][q % 3], 4, 3); } }
+function alleyDress(M0, GLOW, x0, z0, CS, first) { // update 157: only real alleys (a building close on both sides) get clutter; open lots get parking bays
+  var i0 = Math.floor(x0 / CT), j0 = Math.floor(z0 / CT), n = Math.round(CS / CT);
+  function inB(x, z, m) { return near(BGRID, x, z, 3 + m).some(function (b) { return x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m; }); }
+  function wall(x, z, dx, dz) { for (var d = 0.5; d <= 7; d += 0.5) if (inB(x + dx * d, z + dz * d, 0)) return d; return 0; }
+  for (var j = j0; j < Math.min(MH, j0 + n); j++) for (var i = i0; i < Math.min(MW, i0 + n); i++) { var t = j * MW + i; if (KM[t] !== K_LOT) continue;
+    var cx = i * CT + 2, cz = j * CT + 2; if (inB(cx, cz, 0.3)) continue; var y = groundY(cx, cz), st = DIST[DM[t]].style;
+    var wx0 = wall(cx, cz, -1, 0), wx1 = wall(cx, cz, 1, 0), wz0 = wall(cx, cz, 0, -1), wz1 = wall(cx, cz, 0, 1), alleyX = wx0 && wx1, alleyZ = wz0 && wz1;
+    if (!alleyX && !alleyZ) { // an open lot: white parking bays painted on it
+      if (!nearestRoad(cx, cz, 3)) { var ax = hash2(Math.floor(i / 8), Math.floor(j / 8), 9) < 0.5; for (var q = 0; q < 2; q++) { var o = -1 + q * 2.6; if (ax) M0.quad([cx + o - 0.06, y + 0.03, cz - 1.9], [cx + o - 0.06, y + 0.03, cz + 1.9], [cx + o + 0.06, y + 0.03, cz + 1.9], [cx + o + 0.06, y + 0.03, cz - 1.9], UV1, TL('white'), [0.5, 0.5, 0.48], [0, 1, 0]);
+        else M0.quad([cx - 1.9, y + 0.03, cz + o - 0.06], [cx - 1.9, y + 0.03, cz + o + 0.06], [cx + 1.9, y + 0.03, cz + o + 0.06], [cx + 1.9, y + 0.03, cz + o - 0.06], UV1, TL('white'), [0.5, 0.5, 0.48], [0, 1, 0]); } }
+      continue; }
+    var r1 = hash2(i, j, 51); if (r1 > 0.35) continue; if (nearestRoad(cx, cz, 4)) continue;
+    // clutter stands against one wall of the alley
+    var a = alleyX ? (hash2(i, j, 57) < 0.5 ? Math.PI / 2 : -Math.PI / 2) : (hash2(i, j, 57) < 0.5 ? 0 : Math.PI), wd = alleyX ? (a > 0 ? wx1 : wx0) : (a === 0 ? wz1 : wz0), px = cx + Math.sin(a) * Math.max(0, wd - 0.8), pz = cz + Math.cos(a) * Math.max(0, wd - 0.8), py = groundY(px, pz), kind = Math.floor(hash2(i, j, 55) * 5);
+    if (kind === 0) { boxR(M0, px, pz, a, 0.95, 0.6, py, py + 1.25, st === 'redlight' ? '#3a1a1e' : '#2e4a34'); boxR(M0, px, pz, a, 1.0, 0.65, py + 1.25, py + 1.35, '#1a1a1e'); if (first) addPost(px, pz, 0.7, py, py + 1.4); }
+    else if (kind === 1) { for (var b = 0; b < 4; b++) ell(M0, px + Math.cos(b * 1.7) * 0.45, py + 0.3, pz + Math.sin(b * 1.7) * 0.45, 0.36, 0.33, 0.34, b % 2 ? '#141416' : '#1e1e22', 6, 4); }
+    else if (kind === 2) { boxR(M0, px, pz, a, 0.5, 0.5, py, py + 0.9, '#7a5a34', 'plank'); boxR(M0, px, pz, a, 0.4, 0.4, py + 0.9, py + 1.6, '#8a6a3a', 'plank'); if (first) addPost(px, pz, 0.5, py, py + 1.6); }
+    else if (kind === 3) { for (var p2 = 0; p2 < 3; p2++) boxR(M0, px, pz, a, 0.6, 0.5, py + p2 * 0.15, py + p2 * 0.15 + 0.1, '#8a6a40', 'plank'); }
+    else { boxR(M0, px, pz, a, 0.32, 0.3, py, py + 0.95, '#2a2a2e'); boxR(M0, px, pz, a, 0.34, 0.32, py + 0.95, py + 1.0, '#1a1a1e'); if (first) addPost(px, pz, 0.35, py, py + 1); }
+    // a string of bulbs right across the alley, hooked to both walls
+    if (/redlight|cafe|downtown/.test(st) && hash2(i, j, 56) < 0.4) { var ex0, ez0, ex1, ez1; if (alleyX) { ex0 = cx - wx0; ex1 = cx + wx1; ez0 = ez1 = cz; } else { ez0 = cz - wz0; ez1 = cz + wz1; ex0 = ex1 = cx; }
+      var hy = y + 4.2; tub(M0, [ex0, hy, ez0], [ex1, hy - 0.05, ez1], 0.012, 0.012, '#1a1a1e', 3); boxC(M0, ex0 - 0.08, hy - 0.08, ez0 - 0.08, ex0 + 0.08, hy + 0.08, ez0 + 0.08, '#1a1a1e'); boxC(M0, ex1 - 0.08, hy - 0.08, ez1 - 0.08, ex1 + 0.08, hy + 0.08, ez1 + 0.08, '#1a1a1e');
+      var nb = Math.max(3, Math.round(Math.hypot(ex1 - ex0, ez1 - ez0) / 0.9)); for (var q2 = 1; q2 < nb; q2++) { var u2 = q2 / nb, bx = ex0 + (ex1 - ex0) * u2, bz = ez0 + (ez1 - ez0) * u2, by = hy - Math.sin(u2 * Math.PI) * 0.35; ell(GLOW, bx, by - 0.08, bz, 0.07, 0.09, 0.07, ['#ffe36a', '#ff7ab0', '#4adfff'][q2 % 3], 4, 3); } } }
 }

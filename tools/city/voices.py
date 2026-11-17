@@ -20,18 +20,21 @@ PIPER = sys.argv[2] if len(sys.argv) > 2 else '/home/claude/piper-dl'
 OUT = os.path.join(ROOT, 'www', 'games', 'ccn-voice'); REC = os.path.join(HERE, 'voice-rec')
 LT = 'en-us-libritts-high'
 # who: (model, speaker, slowness, pitch, extra ffmpeg filters)
-V = {
- 'lab': (LT, 51, 0.95, 1.06, ''), 'cumhead': (LT, 66, 1.0, 1.04, ''), 'greebo': (LT, 54, 0.95, 1.12, ''), 'spermaid': (LT, 9, 1.0, 1.05, ''),
- 'amy': (LT, 21, 0.95, 1.0, ''), 'saba': (LT, 27, 1.1, 0.95, ''), 'joff': (LT, 57, 0.95, 1.0, ''), 'beeb': (LT, 90, 1.05, 0.95, ''),
- 'harold': (LT, 105, 0.9, 1.06, ''), 'kaya': (LT, 15, 0.95, 1.0, ''), 'elden': (LT, 72, 1.0, 1.0, ''), 'ali': (LT, 78, 0.95, 1.0, ''),
- 'potbelly': (LT, 102, 1.0, 0.94, ''), 'pulsar': (LT, 117, 1.12, 1.1, 'aecho=0.8:0.4:40:0.15'), 'bonjo': (LT, 69, 1.0, 1.02, ''), 't': (LT, 0, 1.12, 0.94, ''),
- 'jessiah': (LT, 6, 1.05, 0.96, ''), 'natty': (LT, 114, 1.05, 0.95, ''), 'judge': (LT, 48, 1.1, 0.92, 'aecho=0.8:0.5:50:0.15'), 'fate': (LT, 60, 1.2, 0.9, 'aecho=0.8:0.5:70:0.2'),
- 'bates': (LT, 24, 1.15, 0.9, ''), 'blumhead': (LT, 42, 1.1, 0.85, 'aecho=0.8:0.6:60:0.25'), 'clown': (LT, 81, 0.9, 1.15, ''),
+V = { # update 157 (he said people sounded robotic and weird): no pitch shifting any more (it smeared the voices), natural
+  # pace, a little more expression from Piper (noise settings in speak), and each character keeps one real speaker.
+ 'lab': (LT, 51, 1.0, 1.0, ''), 'cumhead': (LT, 66, 1.0, 1.0, ''), 'greebo': (LT, 54, 0.98, 1.0, ''), 'spermaid': (LT, 9, 1.0, 1.0, ''),
+ 'amy': (LT, 21, 0.98, 1.0, ''), 'saba': (LT, 27, 1.06, 1.0, ''), 'joff': (LT, 57, 0.98, 1.0, ''), 'beeb': (LT, 90, 1.04, 1.0, ''),
+ 'harold': (LT, 105, 0.95, 1.0, ''), 'kaya': (LT, 15, 0.98, 1.0, ''), 'elden': (LT, 72, 1.0, 1.0, ''), 'ali': (LT, 78, 0.98, 1.0, ''),
+ 'potbelly': (LT, 102, 1.02, 1.0, ''), 'pulsar': (LT, 117, 1.08, 1.0, ''), 'bonjo': (LT, 69, 1.0, 1.0, ''), 't': (LT, 0, 1.08, 1.0, ''),
+ 'jessiah': (LT, 6, 1.04, 1.0, ''), 'natty': (LT, 114, 1.04, 1.0, ''), 'judge': (LT, 48, 1.08, 1.0, 'aecho=0.8:0.4:40:0.1'), 'fate': (LT, 60, 1.12, 1.0, 'aecho=0.8:0.4:60:0.12'),
+ 'bates': (LT, 24, 1.1, 1.0, ''), 'blumhead': (LT, 42, 1.08, 1.0, 'aecho=0.8:0.5:50:0.18'), 'clown': (LT, 81, 0.95, 1.0, ''),
  'tb': ('en-us-ryan-medium', None, 1.42, 0.86, 'acompressor=threshold=-20dB:ratio=3,aecho=0.8:0.5:38:0.18,bass=g=5'),
- # the radio DJs
- 'hs': (LT, 81, 1.0, 0.96, 'highpass=f=120,lowpass=f=6500'), 'bl': (LT, 90, 1.08, 0.9, 'highpass=f=150,lowpass=f=5000'), 'po': (LT, 117, 1.1, 1.1, 'highpass=f=120,lowpass=f=6500'), 'talk': (LT, 51, 0.95, 1.06, 'highpass=f=150,lowpass=f=5500'),
- # people in the street and the police
- 'pedM': (LT, 111, 1.0, 1.0, ''), 'pedF': (LT, 30, 1.0, 1.0, ''), 'cop': (LT, 3, 1.0, 1.0, ''),
+ # the radio: DJs by station, the news desk
+ 'hs': (LT, 81, 1.0, 1.0, 'highpass=f=100,lowpass=f=7000'), 'bl': (LT, 90, 1.05, 1.0, 'highpass=f=120,lowpass=f=6000'), 'po': (LT, 117, 1.08, 1.0, 'highpass=f=100,lowpass=f=7000'), 'talk': (LT, 51, 1.0, 1.0, 'highpass=f=120,lowpass=f=6500'),
+ 'news': (LT, 39, 0.98, 1.0, 'highpass=f=100,lowpass=f=7500'), 'traffic': (LT, 24, 0.95, 1.0, 'highpass=f=300,lowpass=f=3400'), 'weather': (LT, 45, 1.0, 1.0, 'highpass=f=100,lowpass=f=7500'), 'sports': (LT, 3, 0.96, 1.0, 'highpass=f=100,lowpass=f=7500'),
+ # people in the street (three of each), callers and the police
+ 'pedM0': (LT, 111, 1.0, 1.0, ''), 'pedM1': (LT, 57, 1.0, 1.0, ''), 'pedM2': (LT, 6, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'), 'pedF0': (LT, 30, 1.0, 1.0, ''), 'pedF1': (LT, 75, 1.0, 1.0, ''), 'pedF2': (LT, 84, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'),
+ 'cop': (LT, 3, 1.0, 1.0, ''),
 }
 def key(who, text):
     h = 0x811c9dc5; s = (who + '|' + text).encode('utf-16-le')
@@ -44,25 +47,32 @@ def key(who, text):
     return 'v' + out
 def speak(text, v, out):
     model, sp, slow, pitch, fx = v; raw = out + '.raw.wav'
-    cmd = [os.path.join(PIPER, 'piper', 'piper'), '--model', os.path.join(PIPER, 'v', model + '.onnx'), '--length_scale', str(slow), '--sentence_silence', '0.2', '--output_file', raw]
+    cmd = [os.path.join(PIPER, 'piper', 'piper'), '--model', os.path.join(PIPER, 'v', model + '.onnx'), '--length_scale', str(slow), '--noise_scale', '0.75', '--noise_w', '0.9', '--sentence_silence', '0.28', '--output_file', raw]
     if sp is not None: cmd += ['--speaker', str(sp)]
     subprocess.run(cmd, input=text.encode(), check=True, capture_output=True)
-    af = 'asetrate=22050*%s,aresample=22050,atempo=%s,silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,loudnorm=I=-16:TP=-1.5' % (pitch, min(2, max(0.5, 1 / pitch)))
+    af = ('asetrate=22050*%s,aresample=22050,atempo=%s,' % (pitch, min(2, max(0.5, 1 / pitch))) if pitch != 1.0 else '') + 'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,loudnorm=I=-16:TP=-1.5'
     if fx: af += ',' + fx
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', raw, '-af', af, '-ac', '1', '-ar', '22050', '-b:a', '32k', out], check=True); os.remove(raw)
+def job(q):
+    who, text, out, real = q
+    try:
+        if real: subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', real, '-af', 'loudnorm=I=-16:TP=-1.5', '-ac', '1', '-ar', '22050', '-b:a', '40k', out], check=True)
+        else: speak(text.replace('...', ', '), V[who], out)
+    except Exception as e: return str(e)
 def main():
-    os.makedirs(OUT, exist_ok=True); lines = json.load(open(LINES)); done = {}; n = 0
+    import multiprocessing
+    os.makedirs(OUT, exist_ok=True); lines = json.load(open(LINES)); done = {}; todo = []
     for who, text in lines:
         if who == 'steve' or who not in V: continue
         k = key(who, text); out = os.path.join(OUT, k + '.mp3'); done[k] = 1
         real = [os.path.join(REC, k + e) for e in ('.wav', '.mp3', '.m4a', '.ogg') if os.path.exists(os.path.join(REC, k + e))]
-        if os.path.exists(out) and not real: continue
-        if real: subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', real[0], '-af', 'loudnorm=I=-16:TP=-1.5', '-ac', '1', '-ar', '22050', '-b:a', '40k', out], check=True)
-        else: speak(text.replace('...', ', '), V[who], out)
-        n += 1
+        if os.path.exists(out) and not real and '--all' not in sys.argv: continue
+        todo.append((who, text, out, real[0] if real else None))
+    with multiprocessing.Pool(int(os.environ.get('JOBS', '3'))) as pool:
+        errs = [e for e in pool.map(job, todo) if e]
     for f in os.listdir(OUT):  # lines that are no longer in the game
         if f.endswith('.mp3') and f[:-4] not in done: os.remove(os.path.join(OUT, f))
     open(os.path.join(OUT, 'voices.js'), 'w').write('window.CCNVOICE = ' + json.dumps(done, separators=(',', ':')) + ';\n')
     size = sum(os.path.getsize(os.path.join(OUT, f)) for f in os.listdir(OUT))
-    print(n, 'made,', len(done), 'lines,', round(size / 1e6, 2), 'MB')
+    print(len(todo), 'made,', len(done), 'lines,', round(size / 1e6, 2), 'MB', 'errors', errs[:3])
 main()

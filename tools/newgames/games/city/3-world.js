@@ -178,7 +178,7 @@ function building(m, night, fr, glow, b, lamps) {
   if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)]; standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), b.y0 + 5, b.y0 + 8, TL(nt), 2.0, 1.2); }
   if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); }
   if (!b.shop) genericFronts(m, glow, night, b, F, fw, gh);
-  if (!tall || r < 0.5) neonDress(m, glow, b, F, fw, tall ? b.y0 + 12 : yt, r);
+  if (!tall) neonDress(m, glow, b, F, fw, yt, r);
   // shops: their front, or a painted name board
   if (b.shop && FACOF[b.shop] && KIT.SPR[FACOF[b.shop]]) { var s = KIT.SPR[FACOF[b.shop]], wd = Math.min(fw - 0.4, b.shop === 'club' ? 9 : 7.2), ht = wd * s[3] / s[2]; frontQuad(fr, s, mx + F.n[0] * 0.06, mz + F.n[2] * 0.06, F.a, wd, b.y0, b.y0 + ht); }
   else if (b.shop && SIGNOF[b.shop]) { standQ(glow, mx + F.n[0] * 0.08, mz + F.n[2] * 0.08, F.a, Math.min(6, fw - 0.6), b.y0 + 2.8, b.y0 + 5.2, TL(SIGNOF[b.shop]), 1.3, 0.25); standQ(m, mx + F.n[0] * 0.05, mz + F.n[2] * 0.05, F.a, 1.6, b.y0, b.y0 + 2.5, TL('door'), 1); }

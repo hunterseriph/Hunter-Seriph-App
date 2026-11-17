@@ -9,7 +9,9 @@ function wallRun(m, ax, az, bx, bz, y, h, th, tex, crenel, solid) { // a thick w
   [[-1, [c, 0, -s]], [1, [-c, 0, s]]].forEach(function (f) { var v = f[0] * hw, n = f[1].map(function (q) { return -q * f[0]; }); m.quad(P(-hl, v, y), P(hl, v, y), P(hl, v, y + h), P(-hl, v, y + h), uvR(L / 4, h / 4), T, lit(n), n); });
   m.quad(P(-hl, -hw, y + h), P(hl, -hw, y + h), P(hl, hw, y + h), P(-hl, hw, y + h), uvR(L / 4, th / 4), T, lit([0, 1, 0]), [0, 1, 0]);
   if (crenel) for (var u = -hl + 0.6; u < hl - 0.6; u += 2.2) { var p0 = P(u, 0, 0); boxC(m, p0[0] - 0.55, y + h, p0[2] - 0.55, p0[0] + 0.55, y + h + 1.2, p0[2] + 0.55, tex === 'darkstone' ? '#2a2228' : '#7a746e'); }
-  if (solid !== false) for (var u2 = -hl; u2 < hl; u2 += Math.max(1, th)) { var q = P(u2 + th / 2, 0, 0); addPost(q[0], q[2], th * 0.75, y - 2, y + h); }
+  if (solid !== false) { // update 157 (his ask: weird collision near some places): a straight wall blocks exactly its own footprint, a slanted one with posts no fatter than it
+    if (Math.abs(s) < 0.02 || Math.abs(c) < 0.02) { var e0 = P(-hl, -hw, 0), e1 = P(hl, hw, 0); addBox(e0[0], e0[2], e1[0], e1[2], y - 2, y + h); }
+    else for (var u2 = -hl; u2 <= hl; u2 += Math.max(0.6, th * 0.6)) { var q = P(u2, 0, 0); addPost(q[0], q[2], hw, y - 2, y + h); } }
 }
 function towerAt(m, x, z, y, r, h, tex, cone, glow, gm) { tub(m, [x, y - 2, z], [x, y + h, z], r, r, '#7a746e', 10, { T: TL(tex), u: 3 }); tub(m, [x, y + h, z], [x, y + h + 1.2, z], r + 0.4, r + 0.4, tex === 'darkstone' ? '#2a2228' : '#6a645e', 10, { T: TL(tex), cap: 1 });
   if (cone) tub(m, [x, y + h + 1.2, z], [x, y + h + 1.2 + r * 2.2, z], r + 0.6, 0, cone, 10, { cap: 1 }); addPost(x, z, r, y - 2, y + h); if (glow && gm) ring(gm, x, 0, z, r + 0.05, 4, function (wx, wz, a) { standQ(gm, wx, wz, Math.PI / 2 - a + Math.PI, 0.8, y + h * 0.6, y + h * 0.6 + 1.4, TL(glow), 1.5, 1); }); }
