@@ -122,7 +122,7 @@ function draw() {
   if (!G.interior && typeof drawFun === 'function') drawFun();
   drawFx();
   if (G.flashT > 0) { G.flashT -= 1 / 60; ctx.fillStyle = 'rgba(255,255,255,' + G.flashT * 4 + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
-  if (G.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
+  if (G.fade > 0) { if (G.mode !== 'play') G.fade -= 1 / 60; /* update 165: a fade never sticks when the game is not running (black screen) */ ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
   if (G.cut) drawCutBars(); else { drawHud(); if (G.arcade) drawArcade(); }
 }
 function drawPed(p) {

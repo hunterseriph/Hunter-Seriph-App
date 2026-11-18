@@ -1454,7 +1454,7 @@ function drawRig(rig, x, y, z, yaw, P, o) {
     var up = MM(tor, MD(sx, D.tor * 0.86, 0, a[2] || 0, -a[0], k ? -a[1] : a[1])); dr(S['au' + sd], up);
     var lo = MM(up, MD(0, -D.au, 0, 0, -P.el[k], 0)); dr(S['al' + sd], lo);
     if (k === 1) out.hand = MM(lo, MD(0, -D.al - D.hand * 0.7, 0.02, 0, Math.PI, 0)); else out.handL = MM(lo, MD(0, -D.al - D.hand * 0.7, 0.02, 0, Math.PI, 0));
-    var hx = k ? -D.hipW : D.hipW, th = MM(hips, MD(hx, -0.02, 0, 0, -P.hip[k], 0)); dr(S['lu' + sd], th);
+    var hx = k ? -D.hipW : D.hipW, th = MM(hips, MD(hx, -0.02, 0, 0, -P.hip[k], P.hab ? (k ? -P.hab : P.hab) : 0)); /* update 165: P.hab spreads the legs (riding a horse) */ dr(S['lu' + sd], th);
     dr(S['ll' + sd], MM(th, MD(0, -D.lu, 0, 0, P.kn[k], 0)));
   });
   if (o.held && out.hand) dr(o.held, MM(out.hand, MD(0, 0, 0, 0, o.heldP || 0, 0)));
@@ -2192,7 +2192,7 @@ function buildChunk(ci, cj) {
       continue;
     }
     if (typeof SHOREWL !== 'undefined' && SHOREWL[t] > -50 && Math.min(h00, h10, h01, h11) < SHOREWL[t]) { var swl = SHOREWL[t], sc = Math.abs(swl - CREAMY) < 0.01; WAT.quad([ax, swl, az], [ax, swl, bz], [bx, swl, bz], [bx, swl, az], UV1, TL(sc ? 'cream' : 'water'), sc ? [0.55, 0.55, 0.55] : [0.5, 0.5, 0.5], [0, 1, 0], sc ? 0.15 : 0); } // update 161: the water runs up the smoothed shore
-    var raise = k === K_PAVE ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
+    var raise = k === K_PAVE && !window.RIBBON ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
     if (k === K_BRIDGE && typeof BCOV !== 'undefined' && BCOV[t]) { underBridge(WAT, M0, i, j); continue; } // update 160: a smooth deck along the road is drawn instead (bridgeDress)
     if (k === K_BRIDGE) { // the deck, a girder down each open side, railings, a pier every few tiles
       M0.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, T, lit([0, 1, 0]), [0, 1, 0]);
@@ -2204,9 +2204,11 @@ function buildChunk(ci, cj) {
       if ((i + j) % 6 === 0) boxC(M0, ax + 1.4, -6, az + 1.4, ax + 2.6, Math.min(h00, h11) - 1.3, az + 2.6, '#5a4a44');
       continue;
     }
+    if (window.RIBBON && (k === K_ROAD || k === K_PAVE)) { ribbonTile(M0, NAT, i, j, k, d, h00, h10, h01, h11); continue; }
+    if (window.RIBBON && grassPave(M0, NAT, i, j, k, d)) continue; /* update 165: roads are drawn as smooth surfaces along the road graph (roadRibbons) */
     var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK || nk === K_ROCK || nk === K_FOREST || nk === K_GRAVE)) outK = nk; }); if (outK < 0) for (var rr = 1; rr <= 2 && outK < 0; rr++) for (var qj = -rr; qj <= rr && outK < 0; qj++) for (var qi = -rr; qi <= rr; qi++) { var ni3 = i + qi, nj3 = j + qj; if (ni3 < 0 || nj3 < 0 || ni3 >= MW || nj3 >= MH) continue; var nk3 = KM[nj3 * MW + ni3]; if (nk3 === K_PAVE) break; if (nk3 === K_GRASS || nk3 === K_FIELD || nk3 === K_DIRT || nk3 === K_SAND || nk3 === K_PARK || nk3 === K_ROCK || nk3 === K_FOREST || nk3 === K_GRAVE) { outK = nk3; break; } } /* update 161: a road square past the road's real edge with road all round it still gets cut (they stuck out as teeth) */ }
     else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK || k === K_ROCK || k === K_FOREST || k === K_GRAVE) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); /* update 161: corner neighbours too, so the road's edge has no teeth */ if (!nr) outK = -1; }
-    if ((k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && typeof cutSkirts === 'function') cutSkirts(M0, i, j); if (cutT && k === K_ROAD) continue;
+    if (!window.RIBBON && (k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && typeof cutSkirts === 'function') cutSkirts(M0, i, j); if (cutT && k === K_ROAD) continue;
     if (!cutT && k === K_PAVE && paveOuter(M0, NAT, i, j, d, [h00, h10, h01, h11])) { if (typeof cutSkirts === 'function') cutSkirts(M0, i, j); continue; } // update 160: the back of the pavement follows the road's curve
     if (!cutT && typeof softPiece === 'function' && softPiece(M0, NAT, i, j, k, d, [h00, h10, h01, h11])) cutT = 1; // update 161: soft edges between ground kinds
     if (!cutT && (natural(k) || k === K_SAND || k === K_ROCK || k === K_DIRT)) col = [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)]; /* update 161: smooth shading across the hills, not a flat shade per square */
@@ -2236,15 +2238,17 @@ function buildChunk(ci, cj) {
     if (k === K_SAND && d.style === 'beach' && r1 < 0.03) { var ux = ax + 2, uz = az + 2, uy = groundY(ux, uz); boxC(M0, ux - 0.04, uy, uz - 0.04, ux + 0.04, uy + 2.2, uz + 0.04, '#d8d0c0'); tub(M0, [ux, uy + 2.2, uz], [ux, uy + 2.7, uz], 1.3, 0.05, r2 < 0.5 ? '#c4121c' : '#f1e7d0', 8); }
     if (k === K_SAND && d.style === 'isles' && r1 < 0.05) { var px2 = ax + 2, pz2 = az + 2; palm(VEG, px2, groundY(px2, pz2), pz2, r2); if (first) addPost(px2, pz2, 0.3, 0, 99); }
   }
+  if (window.RIBBON) roadRibbons(M0, x0, z0, CS, first);
   // roads: centre lines, edge lines and crossings
   near(EGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (E) {
+    if (window.RIBBON && (E.off || E.track)) return; /* update 165: switched-off edges are not drawn, so no lines or crossings on them */
     var step = 6, double = E.w >= 11;
     for (var s = 2; s < E.len - 2; s += step) { var p = edgeAt(E, s, false, 0); if (p.x < x0 || p.x >= x0 + CS || p.z < z0 || p.z >= z0 + CS) continue;
       var a0 = RN[E.a], a1 = RN[E.b]; if (Math.hypot(p.x - a0.x, p.z - a0.z) < E.w * 0.8 || Math.hypot(p.x - a1.x, p.z - a1.z) < E.w * 0.8) continue;
-      var y = groundY(p.x, p.z) + 0.04, ca = p.dz, sa = -p.dx, l = 1.6, wd = double ? 0.5 : 0.18, T = TL(double ? 'yline' : 'dash');
+      var y = groundY(p.x, p.z) + 0.085, ca = p.dz, sa = -p.dx, l = 1.6, wd = double ? 0.5 : 0.18, T = TL(double ? 'yline' : 'dash');
       M0.quad([p.x - ca * wd - p.dx * l, y, p.z - sa * wd - p.dz * l], [p.x + ca * wd - p.dx * l, y, p.z + sa * wd - p.dz * l], [p.x + ca * wd + p.dx * l, y, p.z + sa * wd + p.dz * l], [p.x - ca * wd + p.dx * l, y, p.z - sa * wd + p.dz * l], [0, 1, 1, 1, 1, 0, 0, 0], T, [0.55, 0.55, 0.55], [0, 1, 0]); }
     [[E.a, false], [E.b, true]].forEach(function (q) { var nd = RN[q[0]]; if (nd.e.length < 3) return; var p = edgeAt(E, E.w * 0.75 + 1.5, q[1], 0); if (p.x < x0 || p.x >= x0 + CS || p.z < z0 || p.z >= z0 + CS) return; if (kAt(p.x, p.z) !== K_ROAD) return;
-      var y = groundY(p.x, p.z) + 0.05, ca = p.dz, sa = -p.dx, hw = E.w / 2 - 0.3, l = 1.4;
+      var y = groundY(p.x, p.z) + 0.09, ca = p.dz, sa = -p.dx, hw = E.w / 2 - 0.3, l = 1.4;
       M0.quad([p.x - ca * hw - p.dx * l, y, p.z - sa * hw - p.dz * l], [p.x + ca * hw - p.dx * l, y, p.z + sa * hw - p.dz * l], [p.x + ca * hw + p.dx * l, y, p.z + sa * hw + p.dz * l], [p.x - ca * hw + p.dx * l, y, p.z - sa * hw + p.dz * l], [0, 0, hw / 2, 0, hw / 2, 1, 0, 1], TL('zebra'), [0.55, 0.55, 0.55], [0, 1, 0]); });
   });
   // buildings whose middle is in this chunk
@@ -2657,17 +2661,18 @@ function onParkPath(x, z, m) { m = m || 0; for (var q = 0; q < PPATH.length; q++
   for (var d = 0; d < PDISC.length; d++) if (Math.hypot(PDISC[d].x - x, PDISC[d].z - z) < PDISC[d].r + m) return true; return false; }
 function parkDress(M0, GLOW, x0, z0, CS, lamps, first) { if (!PPATH.length) return; var BUNT = ['#c4121c', '#ffe36a', '#f1e7d0', '#ff7ab0', '#12040a'], T = TL('paver');
   function inC(x, z) { return x >= x0 && x < x0 + CS && z >= z0 && z < z0 + CS; }
+  if (window.PARKMASK) parkSurface(M0, x0, z0, CS);
   PPATH.forEach(function (P0, pi) { var pts = P0.pts, hw = P0.w / 2;
     for (var k = 0; k < pts.length - 1; k++) { var a = pts[k], b = pts[k + 1]; if (!inC((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
       var ta = k > 0 ? [b[0] - pts[k - 1][0], b[1] - pts[k - 1][1]] : [b[0] - a[0], b[1] - a[1]], tb = k + 2 < pts.length ? [pts[k + 2][0] - a[0], pts[k + 2][1] - a[1]] : [b[0] - a[0], b[1] - a[1]], la = Math.hypot(ta[0], ta[1]) || 1, lb = Math.hypot(tb[0], tb[1]) || 1;
       var na = [-ta[1] / la * hw, ta[0] / la * hw], nb = [-tb[1] / lb * hw, tb[0] / lb * hw], u0 = P0.cum[k] / 4, u1 = P0.cum[k + 1] / 4, A1 = [a[0] + na[0], a[1] + na[1]], A2 = [a[0] - na[0], a[1] - na[1]], B1 = [b[0] + nb[0], b[1] + nb[1]], B2 = [b[0] - nb[0], b[1] - nb[1]];
-      (function () { /* update 164: cut into small pieces that follow the ground, each path a hair above the last (they flickered against the grass and each other) */
+      if (!window.PARKMASK) (function () { /* update 164: cut into small pieces that follow the ground, each path a hair above the last (they flickered against the grass and each other) */
         var off = 0.1 + (pi % 6) * 0.007, nA = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2)), nW = Math.max(1, Math.ceil(P0.w / 2.5));
         function at(t, w) { var L1 = [A1[0] + (B1[0] - A1[0]) * t, A1[1] + (B1[1] - A1[1]) * t], L2 = [A2[0] + (B2[0] - A2[0]) * t, A2[1] + (B2[1] - A2[1]) * t], x = L1[0] + (L2[0] - L1[0]) * w, z = L1[1] + (L2[1] - L1[1]) * w; return [x, groundY(x, z) + off, z]; }
         for (var ia = 0; ia < nA; ia++) for (var iw = 0; iw < nW; iw++) { var t0 = ia / nA, t1 = (ia + 1) / nA, w0 = iw / nW, w1 = (iw + 1) / nW, U0 = u0 + (u1 - u0) * t0, U1 = u0 + (u1 - u0) * t1, W0 = P0.w / 4 * w0, W1 = P0.w / 4 * w1;
           M0.quad(at(t0, w0), at(t0, w1), at(t1, w1), at(t1, w0), [W0, U0, W1, U0, W1, U1, W0, U1], T, lit([0, 1, 0]), [0, 1, 0]); } })();
       // a kerb of dark stone along both edges
-      [[A1, B1], [A2, B2]].forEach(function (e) { var ya = groundY(e[0][0], e[0][1]), yb = groundY(e[1][0], e[1][1]); M0.quad([e[0][0], ya + 0.02, e[0][1]], [e[1][0], yb + 0.02, e[1][1]], [e[1][0], yb + 0.13, e[1][1]], [e[0][0], ya + 0.13, e[0][1]], uvR(1, 0.1), TL('kerb'), lit([0, 1, 0]), [0, 1, 0]); }); }
+      if (!window.PARKMASK) [[A1, B1], [A2, B2]].forEach(function (e) { var ya = groundY(e[0][0], e[0][1]), yb = groundY(e[1][0], e[1][1]); M0.quad([e[0][0], ya + 0.02, e[0][1]], [e[1][0], yb + 0.02, e[1][1]], [e[1][0], yb + 0.13, e[1][1]], [e[0][0], ya + 0.13, e[0][1]], uvR(1, 0.1), TL('kerb'), lit([0, 1, 0]), [0, 1, 0]); }); }
     // lamps in pairs with bunting across, benches and bins between them
     var step = 22; for (var s = 8 + (pi % 3) * 4; s < P0.cum[P0.cum.length - 1] - 4; s += step) { var k2 = 0; while (k2 < P0.cum.length - 2 && P0.cum[k2 + 1] < s) k2++; var a2 = pts[k2], b2 = pts[k2 + 1], l2 = Math.hypot(b2[0] - a2[0], b2[1] - a2[1]) || 1, tx = (b2[0] - a2[0]) / l2, tz = (b2[1] - a2[1]) / l2, t2 = (s - P0.cum[k2]) / l2, cx = a2[0] + (b2[0] - a2[0]) * t2, cz = a2[1] + (b2[1] - a2[1]) * t2, nx = -tz, nz = tx;
       if (!inC(cx, cz)) continue; var lp = [], big = P0.w > 7;
@@ -2681,7 +2686,7 @@ function parkDress(M0, GLOW, x0, z0, CS, lamps, first) { if (!PPATH.length) retu
         var fx = hx - nx * (hw + 1.3) * sd2, fz = hz - nz * (hw + 1.3) * sd2; if (!onParkPath(fx, fz, 0.6) && inC(fx, fz)) { var gy = groundY(fx, fz); boxR(M0, fx, fz, Math.atan2(tx, tz), 0.6, 2.2, gy - 0.1, gy + 0.22, '#3a2418');
           for (var f2 = 0; f2 < 6; f2++) { var px = fx + tx * (-1.8 + f2 * 0.72), pz = fz + tz * (-1.8 + f2 * 0.72); ell(M0, px, gy + 0.42, pz, 0.3, 0.26, 0.3, ['#c4121c', '#ffe36a', '#ff7ab0', '#f1e7d0', '#c48aff'][(f2 + k3) % 5], 5, 3); ell(M0, px, gy + 0.3, pz, 0.34, 0.16, 0.34, '#2e5222', 5, 3); } } } } });
   PDISC.forEach(function (D0) { if (!inC(D0.x, D0.z)) return; var n = 24; for (var k = 0; k < n; k++) { var a = k / n * 6.283, b = (k + 1) / n * 6.283, P1 = [D0.x + Math.cos(a) * D0.r, D0.z + Math.sin(a) * D0.r], P2 = [D0.x + Math.cos(b) * D0.r, D0.z + Math.sin(b) * D0.r];
-    var nr = Math.max(1, Math.ceil(D0.r / 2)), doff = 0.15 + (PDISC.indexOf(D0) % 4) * 0.007; for (var ri = 0; ri < nr; ri++) { var r0 = D0.r * ri / nr, r1 = D0.r * (ri + 1) / nr; function dp(rr, aa) { var x = D0.x + Math.cos(aa) * rr, z = D0.z + Math.sin(aa) * rr; return [x, groundY(x, z) + doff, z]; } function duv(rr, aa) { return [Math.cos(aa) * rr / 8 + 0.5, Math.sin(aa) * rr / 8 + 0.5]; }
+    if (window.PARKMASK) break; var nr = Math.max(1, Math.ceil(D0.r / 2)), doff = 0.15 + (PDISC.indexOf(D0) % 4) * 0.007; for (var ri = 0; ri < nr; ri++) { var r0 = D0.r * ri / nr, r1 = D0.r * (ri + 1) / nr; function dp(rr, aa) { var x = D0.x + Math.cos(aa) * rr, z = D0.z + Math.sin(aa) * rr; return [x, groundY(x, z) + doff, z]; } function duv(rr, aa) { return [Math.cos(aa) * rr / 8 + 0.5, Math.sin(aa) * rr / 8 + 0.5]; }
       var p00 = dp(r0, a), p01 = dp(r0, b), p11 = dp(r1, b), p10 = dp(r1, a), q00 = duv(r0, a), q01 = duv(r0, b), q11 = duv(r1, b), q10 = duv(r1, a); M0.quad(p00, p01, p11, p10, [q00[0], q00[1], q01[0], q01[1], q11[0], q11[1], q10[0], q10[1]], TL('paver'), lit([0, 1, 0]), [0, 1, 0]); } }
     for (var q = 0; q < 8; q++) { var aq = q / 8 * 6.283 + 0.2, ex = D0.x + Math.cos(aq) * (D0.r - 1), ez = D0.z + Math.sin(aq) * (D0.r - 1), y = groundY(ex, ez); if (q % 2) { sfDraw(M0, 'bench', ex, y, ez, Math.atan2(-Math.cos(aq), -Math.sin(aq)), GLOW); if (first) { addPost(ex, ez, 0.6, y, y + 1); if (typeof addSeat === 'function') addSeat(ex, ez, Math.atan2(-Math.cos(aq), -Math.sin(aq)), 'bench'); } } else { var L = sfDraw(M0, 'lamp', ex, y, ez, 0, GLOW); if (L) lamps.push(L); if (first) addPost(ex, ez, 0.16, y, y + 5); } } });
   // the railing round the park, gaps at the gate and the pier
@@ -3222,12 +3227,12 @@ function placeClinics() { if (CLINICS.length) return;
     return r; }
   function place(cx, cz, kind, name, R, maxR) { for (var rad = 8; rad < (maxR || 300); rad += 6) for (var k = 0; k < 28; k++) { var a = k / 28 * 6.283 + rad * 0.37, x = cx + Math.sin(a) * rad, z = cz + Math.cos(a) * rad, r = free(x, z, R); if (!r) continue;
       var q = edgeAt(r.E, r.s, false, 0), ang = Math.atan2(q.x - x, q.z - z), y = groundY(x, z);
-      var C = { k: kind, x: x, z: z, a: ang, y: y, name: name, h: y, door: { x: x + Math.sin(ang) * (R + 1.2), z: z + Math.cos(ang) * (R + 1.2), a: ang } }; CLINICS.push(C); POIS.push(C);
+      var C = { k: kind, x: x, z: z, a: ang, y: y, name: name, h: y, R: R, door: { x: x + Math.sin(ang) * (R + 1.2), z: z + Math.cos(ang) * (R + 1.2), a: ang } }; CLINICS.push(C); POIS.push(C);
       for (var j = Math.floor((z - R - 2) / CT); j <= Math.floor((z + R + 2) / CT); j++) for (var i = Math.floor((x - R - 2) / CT); i <= Math.floor((x + R + 2) / CT); i++) if (i >= 0 && j >= 0 && i < MW && j < MH) CLR[j * MW + i] = 1;
       return C; } return null; }
   var H = SHOPS.hosp && doorOf(SHOPS.hosp.b); if (H) CLINICS.push({ k: 'hosp', x: H.x, z: H.z, door: H, name: 'Cum City Hospital' });
-  DIST.forEach(function (d) { if (!(d.cx > 0) || d.id === 'sea' || d.id === 'ejac' || d.id === 'cafe') return; if (!place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 6, d.id === 'isles' ? 160 : 420)) place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 4.5, 420); });
-  poisOf('village').concat(poisOf('motel')).forEach(function (p) { place(p.x, p.z, 'clinic', 'Country Clinic', 6, 120); });
+  DIST.forEach(function (d) { if (!(d.cx > 0) || d.id === 'sea' || d.id === 'ejac' || d.id === 'cafe') return; if (!place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 10, d.id === 'isles' ? 160 : 420) && !place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 6, d.id === 'isles' ? 160 : 420)) place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 4.5, 420); });
+  poisOf('village').concat(poisOf('motel')).forEach(function (p) { place(p.x, p.z, 'clinic', 'Country Clinic', 10, 120) || place(p.x, p.z, 'clinic', 'Country Clinic', 6, 120); });
   var gate = poisOf('gate')[0], ej = DIST.filter(function (d) { return d.id === 'ejac'; })[0]; if (gate || ej) place((gate || ej).x || ej.cx, (gate || ej).z || ej.cz, 'firstaid', 'First Aid Tent', 3.5, 200);
 }
 (function () { var bl = buildLandmarks; buildLandmarks = function () { placeClinics(); return bl.apply(this, arguments); }; })();
@@ -3339,7 +3344,7 @@ function drawPerson(rig, x, y, z, yaw, Q, o) {
   o = o || {}; if (rig === 'steve' || (rig && rig === RIGS.steve)) { R3.draw(RIGS.steveM, ATT, { m: MD(x, y + Math.abs(Math.sin(G.t * 6 + x)) * 0.1, z, yaw, 0, 0, o.sc || 1.3), rim: 1 }); R3.draw(RIGS.shadowC, ATT, { m: MD(x, groundY(x, z) + 0.02, z, 0, 0, 0, 1.2), soft: 1, lit: false, alpha: 0.7 }); return {}; }
   if (typeof rig === 'string') rig = rigOf(rig);
   var out = drawRig(rig, x, y, z, yaw, Q, { noShadow: 1, held: o.held, heldP: o.heldP, heldL: o.heldL, flash: o.flash, tint: o.tint || G.ptint, sc: o.sc, alpha: o.alpha, still: o.still, noDrip: o.noDrip });
-  window.LASTHAND = out && out.hand; /* update 164: the joint is drawn in this hand */
+  window.LASTHAND = out && out.hand; window.LASTHEAD = out && out.head; /* update 164: the joint is drawn in this hand */
   if (!o.noShadow) R3.draw(RIGS.shadowC, ATT, { m: MD(x, standY(x, z, y) + 0.03, z, 0, 0, 0, 1.1 * (o.sc || 1)), soft: 1, lit: false, alpha: 0.75 });
   return out;
 }
@@ -3787,7 +3792,7 @@ function stepHeli(v, inp, dt) {
   var fwd = v.ground ? 0 : -(inp.pitch || 0) * t.top, side = 0, ty = v.ground ? 0 : (inp.yaw || 0) * 1.4;
   v.a += ty * dt; v.vx += ((f[0] * fwd) - v.vx) * Math.min(1, dt * 1.2); v.vz += ((f[1] * fwd) - v.vz) * Math.min(1, dt * 1.2);
   var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, ny = Math.min(320, v.y + v.vy * dt), c = collide(nx, nz, 2.2, ny, 3);
-  if (c.hit) { var sp = Math.hypot(v.vx, v.vz); if (sp > 6) { hurtVeh(v, sp * 2, null); sfx.play('crash'); } nx = v.x + c.x * 0.5; nz = v.z + c.z * 0.5; v.vx *= -0.3; v.vz *= -0.3; }
+  if (c.hit) { var sp = Math.hypot(v.vx, v.vz); if (sp > 6) { hurtVeh(v, sp * 2, null); if (sp > 8 && G.t > (v.crashT || 0) && dist2(v.x, v.z, P.x, P.z) < 35 * 35) { v.crashT = G.t + 1.5; sfx.play('crash'); } } nx = v.x + c.x * 0.5; nz = v.z + c.z * 0.5; v.vx *= -0.3; v.vz *= -0.3; }
   if (ny < g && !v.ground) { if (v.vy < -6) hurtVeh(v, -v.vy * 4, null); ny = g; }
   v.x = clamp(nx, 4, WX - 4); v.z = clamp(nz, 4, WZ - 4); v.y = Math.max(ny, g);
   v.pitch += (((inp.pitch || 0) * 0.25 * (v.ground ? 0 : 1)) - v.pitch) * Math.min(1, dt * 3); v.roll += (((inp.yaw || 0) * -0.18 * (v.ground ? 0 : 1)) - v.roll) * Math.min(1, dt * 3);
@@ -3837,7 +3842,7 @@ function carHits(dt) { // the player's car against people and other cars
     if (sp > 4) { hurtPed(p, sp * 4, P, [v.vx / sp, 0.5, v.vz / sp], 1); p.vx = v.vx * 0.9; p.vz = v.vz * 0.9; p.vy = 3 + sp * 0.15; if (sp > 15) stuntBonus('splat'); } else { p.x += lx > 0 ? 0.1 : -0.1; } } });
   VEH.forEach(function (o) { if (o === v || o.t.cls === 'heli' || o.t.cls === 'plane') return; if (Math.abs(o.x - v.x) > 9 || Math.abs(o.z - v.z) > 9) return; var hb = obbHit(v, o); if (hb) { var nx = hb.nx, nz = hb.nz, rel = (v.vx - (o.vx || 0)) * nx + (v.vz - (o.vz || 0)) * nz;
     var push = hb.d * 0.5; o.rest = 0; if (o.ai) o.ai.phys = 1; o.x += nx * push; o.z += nz * push; v.x -= nx * push; v.z -= nz * push;
-    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (o.ai) o.ai.phys = 1; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); if (G.t > (v.crashT || 0)) { v.crashT = G.t + 0.8; sfx.play('crash'); } CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
+    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (o.ai) o.ai.phys = 1; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); if (G.t > (v.crashT || 0) && rel > 3 && dist2(v.x, v.z, P.x, P.z) < 35 * 35) { v.crashT = G.t + 1.2; sfx.play('crash'); } CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
 }
 function hurtVeh(v, dmg, by, isBoom) { if (v.dead || G.cut) return; if (v.ai) v.ai.phys = 1; if (v === (P && P.veh) && G.god) return; if (dmg < 300) dmg *= (isBoom ? 0.75 : 0.22) * (v.t.heavy ? 0.6 : 1); v.hp -= dmg; /* update 155: cars take about four times the knocks before they burn */ v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
 function explodeVeh(v) {
@@ -6787,7 +6792,7 @@ function draw() {
   if (!G.interior && typeof drawFun === 'function') drawFun();
   drawFx();
   if (G.flashT > 0) { G.flashT -= 1 / 60; ctx.fillStyle = 'rgba(255,255,255,' + G.flashT * 4 + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
-  if (G.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
+  if (G.fade > 0) { if (G.mode !== 'play') G.fade -= 1 / 60; /* update 165: a fade never sticks when the game is not running (black screen) */ ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, G.fade) + ')'; ctx.fillRect(0, 0, KIT.W, KIT.H); }
   if (G.cut) drawCutBars(); else { drawHud(); if (G.arcade) drawArcade(); }
 }
 function drawPed(p) {
@@ -7213,7 +7218,7 @@ lightJoint = function () { var S = G.seat; if (!S || S.lit) return; var m = same
     var mine = holding(S); if (mine !== S.wasHold) { if (S.wasHold !== undefined && !S.lit) S.passA = 0.7; S.wasHold = mine; }
     if (S.passA > 0) S.passA -= dt;
     if (mine) { S.puffT -= dt; G.high = Math.min(0.75, (G.high || 0) + dt * 0.03); P.hp = Math.min(SV.maxHp, P.hp + dt * 1.5);
-      if (S.puffT <= 0) { S.puffT = 2.4; var hx = P.x + Math.sin(P.a) * 0.35, hz = P.z + Math.cos(P.a) * 0.35; for (var k = 0; k < 4; k++) addFx({ k: 'puff', x: hx, y: P.y + 1.15, z: hz, vx: Math.sin(P.a) * 0.4 + rnd(-0.2, 0.2), vy: rnd(0.3, 0.6), vz: Math.cos(P.a) * 0.4 + rnd(-0.2, 0.2), life: 2.6 + k * 0.3, s0: 0.25, grow: 0.6, col: [0.85, 0.85, 0.82], a0: 0.45 }); } }
+      if (S.puffT <= 0 && !window.SMOKE165) { S.puffT = 2.4; var hx = P.x + Math.sin(P.a) * 0.35, hz = P.z + Math.cos(P.a) * 0.35; for (var k = 0; k < 4; k++) addFx({ k: 'puff', x: hx, y: P.y + 1.15, z: hz, vx: Math.sin(P.a) * 0.4 + rnd(-0.2, 0.2), vy: rnd(0.3, 0.6), vz: Math.cos(P.a) * 0.4 + rnd(-0.2, 0.2), life: 2.6 + k * 0.3, s0: 0.25, grow: 0.6, col: [0.85, 0.85, 0.82], a0: 0.45 }); } }
     if (s.fire && P.hp < SV.maxHp) P.hp = Math.min(SV.maxHp, P.hp + dt * 4); };
   // the pose: sat down; the smoking arm comes up to the mouth every couple of seconds; reaching across when it is passed
   function smokeArm(Q, t, passA, sd) { var c = (t % 2.4) / 2.4, up = c < 0.35 ? Math.sin(c / 0.35 * Math.PI) : 0; Q.sh[1] = [0.55 + up * 1.05, -0.15, 0.2 - up * 0.05]; Q.el[1] = 1.3 + up * 1.05; /* update 164: resting by the chest, raised to the mouth for a drag */ Q.hp = -0.1 * up;
@@ -7359,7 +7364,7 @@ function stepStreetLife(dt) { if (G.interior || !P || G.mode !== 'play') return;
   if (roll < 0.86 && night && st === 'redlight') { for (var d2 = 0; d2 < 3; d2++) { var pd = mk(rnd(-1.5, 1.5), rnd(-1.5, 1.5), Math.random() * 6.283, null); pd.danceT = 1e9; } return; }
   if (roll < 0.95 && (st === 'downtown' || st === 'cafe') && !mine.some(function (p) { return p.busk; })) { mk(0, 0, Math.random() * 6.283, poseBusk, { busk: 1, holding: 'guitar' in RIGS ? 'guitar' : null }); return; }
 }
-(function () { var sl = stepFun; stepFun = function (dt) { sl(dt); stepStreetLife(dt); if (Math.random() < dt * 0.6) PEDS.forEach(function (p) { if (p.life2 && p.smoke && dist2(p.x, p.z, CAM.x, CAM.z) < 40 * 40) addFx({ k: 'puff', x: p.x + Math.sin(p.a) * 0.3, y: p.y + 0.75, z: p.z + Math.cos(p.a) * 0.3, vx: 0, vy: 0.4, vz: 0, life: 2, s0: 0.12, grow: 0.4, col: [0.85, 0.85, 0.82], a0: 0.4 }); }); };
+(function () { var sl = stepFun; stepFun = function (dt) { sl(dt); stepStreetLife(dt); if (!window.SMOKE165 && Math.random() < dt * 0.6) PEDS.forEach(function (p) { if (p.life2 && p.smoke && dist2(p.x, p.z, CAM.x, CAM.z) < 40 * 40) addFx({ k: 'puff', x: p.x + Math.sin(p.a) * 0.3, y: p.y + 0.75, z: p.z + Math.cos(p.a) * 0.3, vx: 0, vy: 0.4, vz: 0, life: 2, s0: 0.12, grow: 0.4, col: [0.85, 0.85, 0.82], a0: 0.4 }); }); };
   var dp = drawPed; drawPed = function (p) { dp(p); if (p.life2 && p.smoke && typeof drawJoint === 'function') drawJoint(p.x, p.y, p.z, p.a, G.t + p.id * 3); };
   var df = despawnFar; despawnFar = function () { df(); if (typeof SEATS !== 'undefined') SEATS.forEach(function (s) { if (s.taken && !PEDS.some(function (p) { return p.seat === s; })) s.taken = 0; }); };
   // shoved or scared: they stop what they were doing
@@ -7715,6 +7720,545 @@ function personFace2(skin, o) { o = o || {}; return face(function (g) {
     if (o.specs) [-1, 1].forEach(function (s) { tub(hd, [s * 0.08, 0.25, 0.19], [s * 0.08, 0.25, 0.205], 0.05, 0.05, '#ffc840', 12); });
     P.head = hd.upload(); }
   return R; }; })();
+
+/* ---------- update 165 (his playtest) ---------- */
+
+/* ---- ROADS (his ask: "look at the roads", jagged corners, bits of road not joined to anything). Road surfaces are no
+   longer cut out of the 4 m squares: every road edge is drawn as a smooth strip of its real width along its curve
+   (`roadRibbons`), every junction and bend gets a round fill, turning circles their full circle, and a kerb runs along
+   the side of the road wherever a pavement is beside it (it stops at junction mouths by itself, because the other road
+   is there). The squares under the roads are drawn as whatever is beside the road (pavement, grass...), so a road
+   square with no road edge through it is no longer a lone bit of tarmac. Pavements are flat now (they stood 15 cm up and
+   that step is what left Cumhead floating by the cut corners); the kerb is a stone lip along the road. ---- */
+window.RIBBON = 1;
+var RIBY = 0.045;
+function ribbonTile(M0, NAT, i, j, k, d, h00, h10, h01, h11) {
+  var ax = i * CT, az = j * CT, bx = ax + CT, bz = az + CT, kk = k;
+  if (k === K_ROAD) { var f = roadF(ax + 2, az + 2);
+    if (f > -1.6) { kk = -1; var nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+      for (var q = 0; q < nb.length && kk !== K_PAVE; q++) { var ni = i + nb[q][0], nj = j + nb[q][1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) continue; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) kk = K_PAVE; else if (kk < 0 && nk !== K_ROAD && nk !== K_BRIDGE && !isWaterK(nk)) kk = nk; }
+      if (kk < 0) kk = K_PAVE; } }
+  if (kk === K_PAVE) { var pe = paveEdge(M0, NAT, i, j, d); if (pe === true) return; if (pe) kk = pe; }
+  var nat = natural(kk) || kk === K_SAND || kk === K_DIRT || kk === K_ROCK, M = natural(kk) ? NAT : M0, T = TL(groundTile(kk, d)), n = groundN(ax + 2, az + 2);
+  var col = nat ? [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)] : lit(n);
+  if (Math.abs(h00 - h11) > Math.abs(h10 - h01) + 0.01) M.quad([ax, h01, bz], [bx, h11, bz], [bx, h10, az], [ax, h00, az], UVR1, T, col.length === 4 ? [col[1], col[2], col[3], col[0]] : col, n);
+  else M.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, T, col, n);
+}
+RE.forEach(function (E, i) { E.__ri = i; });
+/* the back of a pavement next to grass follows the road's curve (cut on a 1 m grid, so the edge is smooth, not 4 m steps) */
+function paveEdge(M0, NAT, i, j, d, own) {
+  var ax = i * CT, az = j * CT, nk = own === undefined ? -1 : own;
+  [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var k2 = KM[nj * MW + ni]; if (nk < 0 && (k2 === K_GRASS || k2 === K_FOREST || k2 === K_FIELD || k2 === K_PARK || k2 === K_DIRT)) nk = k2; }); if (nk < 0) return false;
+  var N = 4, c = CT / N, F = []; for (var v = 0; v <= N; v++) for (var u = 0; u <= N; u++) F.push(roadF(ax + u * c, az + v * c) - PAVEW);
+  if (F.every(function (x) { return x <= 0; })) { if (own === undefined) return false; } else if (F.every(function (x) { return x > 0; }) && own !== undefined) return false; if (own === undefined && F.every(function (x) { return x > 0; })) return nk; /* a pavement square wholly past the pavement's width, beside grass, is grass (the 4 m steps in the countryside) */
+  var TP = TL(groundTile(K_PAVE, d)), TN = TL(groundTile(nk, d)), up = [0, 1, 0];
+  function poly(pts, T, M, colf) { if (pts.length < 3) return; for (var q = 1; q < pts.length - 1; q++) { var A = pts[0], B = pts[q], C2 = pts[q + 1]; M.tri([A[0], groundY(A[0], A[1]), A[1]], [B[0], groundY(B[0], B[1]), B[1]], [C2[0], groundY(C2[0], C2[1]), C2[1]], [(A[0] - ax) / CT, (A[1] - az) / CT, (B[0] - ax) / CT, (B[1] - az) / CT, (C2[0] - ax) / CT, (C2[1] - az) / CT], T, colf, up); } }
+  for (var v2 = 0; v2 < N; v2++) for (var u2 = 0; u2 < N; u2++) { var C = [[ax + u2 * c, az + v2 * c], [ax + (u2 + 1) * c, az + v2 * c], [ax + (u2 + 1) * c, az + (v2 + 1) * c], [ax + u2 * c, az + (v2 + 1) * c]], f = [F[v2 * (N + 1) + u2], F[v2 * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2]];
+    [[1, TP, M0], [-1, TN, natural(nk) ? NAT : M0]].forEach(function (S) { var out = []; for (var q = 0; q < 4; q++) { var a = C[q], b = C[(q + 1) % 4], fa = -f[q] * S[0], fb = -f[(q + 1) % 4] * S[0]; if (fa >= 0) out.push(a); if ((fa >= 0) !== (fb >= 0)) { var t2 = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * t2, a[1] + (b[1] - a[1]) * t2]); } } poly(out, S[1], S[2], S[0] > 0 ? lit(up) : cLit(i, j)); }); }
+  return true; }
+function ribSkip(x, z) { var t = kAt(x, z); if (t === K_BRIDGE) return true; if (typeof BCOV !== 'undefined') { var i = Math.floor(x / CT), j = Math.floor(z / CT); if (BCOV[j * MW + i]) return true; } return isWaterK(t); }
+function roadRibbons(M0, x0, z0, CS, first) {
+  var seen = {}, up = [0, 1, 0], L = lit(up);
+  function uv(p) { return [p[0] / 7, p[2] / 7]; }
+  function Y(x, z, lo) { return groundY(x, z) + RIBY - (lo ? 0.012 : 0); }
+  function quadW(a, b, c, e, T) { var A = uv(a), B = uv(b), C2 = uv(c), D = uv(e); M0.quad(a, b, c, e, [A[0], A[1], B[0], B[1], C2[0], C2[1], D[0], D[1]], T, L, up); }
+  near(EGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (E) { if (seen[E.__ri]) return; seen[E.__ri] = 1; if (E.off) return;
+    var hw = E.w / 2, step = 2, dd = DIST[DM[Math.floor((RN[E.a].z) / CT) * MW + Math.floor(RN[E.a].x / CT)]] || DIST[0], T = TL(E.track ? 'dirt' : groundTile(K_ROAD, dd));
+    for (var s = 0; s < E.len - 0.01; s += step) { var s1 = Math.min(E.len, s + step), m = edgeAt(E, (s + s1) / 2, false, 0); if (m.x < x0 || m.x >= x0 + CS || m.z < z0 || m.z >= z0 + CS) continue; if (ribSkip(m.x, m.z)) continue;
+      var Lp = [edgeAt(E, s, false, hw), edgeAt(E, s1, false, hw)], Cp = [edgeAt(E, s, false, 0), edgeAt(E, s1, false, 0)], Rp = [edgeAt(E, s, false, -hw), edgeAt(E, s1, false, -hw)];
+      function P(o) { return [o.x, Y(o.x, o.z, E.track), o.z]; } /* tracks sit a hair under tarmac where they meet it */
+      quadW(P(Lp[0]), P(Cp[0]), P(Cp[1]), P(Lp[1]), T); quadW(P(Cp[0]), P(Rp[0]), P(Rp[1]), P(Cp[1]), T);
+      /* the kerb: a stone lip along this side wherever a pavement (not another road) is beside it */
+      [1, -1].forEach(function (sd) { var A0 = sd > 0 ? Lp[0] : Rp[0], A1 = sd > 0 ? Lp[1] : Rp[1], nx = -m.dz * sd, nz = m.dx * sd, mx = (A0.x + A1.x) / 2 + nx * 0.7, mz = (A0.z + A1.z) / 2 + nz * 0.7;
+        if (E.track || roadF(mx, mz) < 0.25 || kAt(mx, mz) !== K_PAVE) return; kerbSeg(M0, A0.x, A0.z, A1.x, A1.z, nx, nz); }); }
+  });
+  /* junctions, bends and turning circles: a round fill so nothing is left open between the strips */
+  for (var ci = 0; ci < RN.length; ci++) { var nd = RN[ci]; if (nd.x < x0 || nd.x >= x0 + CS || nd.z < z0 || nd.z >= z0 + CS) continue; if (ribSkip(nd.x, nd.z)) continue;
+    var r = 0, trk = true; nd.e.forEach(function (ei) { var E = RE[ei]; if (E.off) return; r = Math.max(r, E.w / 2); if (!E.track) trk = false; }); if (!r) continue;
+    var bulb = typeof BULBS !== 'undefined' && BULBS.indexOf(nd) >= 0; if (bulb) r = 12; else if (nd.e.length < 2) r = r; else r += 0.15;
+    var dd2 = DIST[DM[Math.floor(nd.z / CT) * MW + Math.floor(nd.x / CT)]] || DIST[0], T2 = TL(trk ? 'dirt' : groundTile(K_ROAD, dd2)), N = bulb ? 32 : 20, cy = Y(nd.x, nd.z);
+    for (var q = 0; q < N; q++) { var a0 = q / N * 6.2832, a1 = (q + 1) / N * 6.2832, p0 = [nd.x + Math.cos(a0) * r, 0, nd.z + Math.sin(a0) * r], p1 = [nd.x + Math.cos(a1) * r, 0, nd.z + Math.sin(a1) * r]; p0[1] = Y(p0[0], p0[2]); p1[1] = Y(p1[0], p1[2]);
+      var mx2 = (p0[0] + p1[0]) / 2, mz2 = (p0[2] + p1[2]) / 2, h2 = [nd.x + (mx2 - nd.x) * 0.5, 0, nd.z + (mz2 - nd.z) * 0.5]; h2[1] = Y(h2[0], h2[2]);
+      var A = uv([nd.x, cy, nd.z]), B = uv(p1), C2 = uv(p0); M0.tri([nd.x, Math.max(cy, h2[1]), nd.z], p1, p0, [A[0], A[1], B[0], B[1], C2[0], C2[1]], T2, L, up);
+      if (bulb) { var ox = Math.cos((a0 + a1) / 2), oz = Math.sin((a0 + a1) / 2), kx = nd.x + ox * (r + 0.7), kz = nd.z + oz * (r + 0.7); if (roadF(kx, kz) > 0.25 && kAt(kx, kz) === K_PAVE) kerbSeg(M0, p0[0], p0[2], p1[0], p1[2], ox, oz); } } }
+}
+/* a kerb stone lip from a to b along the road's edge; (nx, nz) points away from the road */
+function kerbSeg(M0, ax, az, bx, bz, nx, nz) { var w = 0.32, h = 0.13, ya = groundY(ax, az) + RIBY, yb = groundY(bx, bz) + RIBY, T = TL('kerb'), nn = [-nx, 0, -nz], top = [0, 1, 0];
+  var ax2 = ax + nx * w, az2 = az + nz * w, bx2 = bx + nx * w, bz2 = bz + nz * w, ya2 = groundY(ax2, az2), yb2 = groundY(bx2, bz2);
+  M0.quad([ax, ya - 0.03, az], [bx, yb - 0.03, bz], [bx, yb + h, bz], [ax, ya + h, az], uvR(1, 0.12), T, lit(nn, 0.9), nn);
+  M0.quad([ax, ya + h, az], [bx, yb + h, bz], [bx2, Math.max(yb2, yb) + h, bz2], [ax2, Math.max(ya2, ya) + h, az2], uvR(1, 0.12), T, lit(top, 1.15), top);
+  M0.quad([ax2, Math.max(ya2, ya) + h, az2], [bx2, Math.max(yb2, yb) + h, bz2], [bx2, yb2 - 0.02, bz2], [ax2, ya2 - 0.02, az2], uvR(1, 0.12), T, lit([nx, 0, nz]), [nx, 0, nz]); }
+/* standing: pavements are flat now (the bridge decks, ramps and roofs still count) */
+(function () { var sy = standY; standY = function (x, z, y) { var g = sy(x, z, y); if (G.interior) return g; var k = kAt(x, z); if (k !== K_PAVE && k !== K_ROAD) return g; var gy = groundY(x, z); return g > gy + 0.05 && g < gy + 0.25 ? gy : g; };
+  window.meshRaise = function (x, z) { var ii = Math.floor(x / CT), jj = Math.floor(z / CT); if (ii < 0 || jj < 0 || ii >= MW || jj >= MH) return -1; var k = KM[jj * MW + ii]; /* never kAt here: buildStreet swaps kAt for one that calls this */ if (k !== K_PAVE && k !== K_ROAD) return -1; return roadF(x, z) > 0.35 ? 1 : 0; }; /* furniture keeps off the real road surface (paveSafe reads this) */
+  if (typeof raisedAt === 'function') raisedAt = function () { return false; }; })();
+/* grass beside a pavement, within the pavement's width of the road, is pavement up to the curve (so the pavement is one even band) */
+function grassPave(M0, NAT, i, j, k, d) { if (!(natural(k) || k === K_DIRT)) return false; var pv = false;
+  [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_PAVE) pv = true; }); if (!pv) return false;
+  if (roadF(i * CT + 2, j * CT + 2) > PAVEW + 3) return false; return paveEdge(M0, NAT, i, j, d, k) === true; }
+
+/* ---- EJACULAND'S GROUND (his ask: "do you really think this ground placement is acceptable"): the paths, the plazas
+   and the turning circles were separate strips and discs laid on top of each other (overlaps, steps, jagged ends).
+   Now they are ONE surface: the distance to the nearest path or plaza is worked out on a 1 m grid and the walkway is
+   cut along where it reaches zero (marching squares), so paths join, bend and open into plazas in one smooth piece,
+   with a single stone border all the way round its outside edge. ---- */
+window.PARKMASK = 1;
+function parkSurface(M0, x0, z0, CS) {
+  var segs = [], discs = [], pad = 14;
+  PPATH.forEach(function (P0) { for (var k = 0; k < P0.pts.length - 1; k++) { var a = P0.pts[k], b = P0.pts[k + 1]; if (Math.max(a[0], b[0]) < x0 - pad || Math.min(a[0], b[0]) > x0 + CS + pad || Math.max(a[1], b[1]) < z0 - pad || Math.min(a[1], b[1]) > z0 + CS + pad) continue; segs.push([a[0], a[1], b[0], b[1], P0.w / 2]); } });
+  PDISC.forEach(function (D) { if (D.x + D.r < x0 - 2 || D.x - D.r > x0 + CS + 2 || D.z + D.r < z0 - 2 || D.z - D.r > z0 + CS + 2) return; discs.push(D); });
+  if (!segs.length && !discs.length) return;
+  function F(x, z) { var d = 99; for (var q = 0; q < segs.length; q++) { var S = segs[q], vx = S[2] - S[0], vz = S[3] - S[1], l2 = vx * vx + vz * vz || 1, t = clamp(((x - S[0]) * vx + (z - S[1]) * vz) / l2, 0, 1), e = Math.hypot(x - S[0] - vx * t, z - S[1] - vz * t) - S[4]; if (e < d) d = e; }
+    for (var q2 = 0; q2 < discs.length; q2++) { var D = discs[q2], e2 = Math.hypot(x - D.x, z - D.z) - D.r; if (e2 < d) d = e2; } return d; }
+  var g = 1, N = Math.round(CS / g), V = new Float32Array((N + 1) * (N + 1)); for (var j = 0; j <= N; j++) for (var i = 0; i <= N; i++) V[j * (N + 1) + i] = F(x0 + i * g, z0 + j * g);
+  var T = TL('paver'), TB = TL('kerb'), up = [0, 1, 0], L = lit(up), OFF = 0.075;
+  function Y(x, z) { return groundY(x, z) + OFF; }
+  function P3(p) { return [p[0], Y(p[0], p[1]), p[1]]; }
+  for (var j2 = 0; j2 < N; j2++) for (var i2 = 0; i2 < N; i2++) { var C = [[x0 + i2 * g, z0 + j2 * g], [x0 + (i2 + 1) * g, z0 + j2 * g], [x0 + (i2 + 1) * g, z0 + (j2 + 1) * g], [x0 + i2 * g, z0 + (j2 + 1) * g]], f = [V[j2 * (N + 1) + i2], V[j2 * (N + 1) + i2 + 1], V[(j2 + 1) * (N + 1) + i2 + 1], V[(j2 + 1) * (N + 1) + i2]];
+    if (f[0] > 0 && f[1] > 0 && f[2] > 0 && f[3] > 0) continue;
+    var out = [], cut = []; for (var q = 0; q < 4; q++) { var a = C[q], b = C[(q + 1) % 4], fa = f[q], fb = f[(q + 1) % 4]; if (fa <= 0) out.push(a); if ((fa <= 0) !== (fb <= 0)) { var t2 = fa / (fa - fb), p = [a[0] + (b[0] - a[0]) * t2, a[1] + (b[1] - a[1]) * t2]; out.push(p); cut.push(p); } }
+    for (var q3 = 1; q3 < out.length - 1; q3++) { var A = out[0], B = out[q3], C2 = out[q3 + 1]; M0.tri(P3(A), P3(C2), P3(B), [A[0] / 3, A[1] / 3, C2[0] / 3, C2[1] / 3, B[0] / 3, B[1] / 3], T, L, up); }
+    if (cut.length === 2) { /* the border: a dark stone lip just outside the edge */ var p0 = cut[0], p1 = cut[1], ex = p1[0] - p0[0], ez = p1[1] - p0[1], el = Math.hypot(ex, ez) || 1, nx = ez / el, nz = -ex / el, mx = (p0[0] + p1[0]) / 2, mz = (p0[1] + p1[1]) / 2;
+      if (F(mx + nx * 0.3, mz + nz * 0.3) < F(mx - nx * 0.3, mz - nz * 0.3)) { nx = -nx; nz = -nz; }
+      var w = 0.28, h = 0.07, q0 = [p0[0] + nx * w, p0[1] + nz * w], q1 = [p1[0] + nx * w, p1[1] + nz * w], ya = Y(p0[0], p0[1]), yb = Y(p1[0], p1[1]);
+      M0.quad([p0[0], ya + h, p0[1]], [p1[0], yb + h, p1[1]], [q1[0], Y(q1[0], q1[1]) + h, q1[1]], [q0[0], Y(q0[0], q0[1]) + h, q0[1]], uvR(el / 2, 0.15), TB, lit(up, 0.75), up);
+      M0.quad([p0[0], ya - 0.02, p0[1]], [p1[0], yb - 0.02, p1[1]], [p1[0], yb + h, p1[1]], [p0[0], ya + h, p0[1]], uvR(el / 2, 0.1), TB, lit([-nx, 0, -nz], 0.7), [-nx, 0, -nz]);
+      M0.quad([q0[0], Y(q0[0], q0[1]) + h, q0[1]], [q1[0], Y(q1[0], q1[1]) + h, q1[1]], [q1[0], groundY(q1[0], q1[1]) - 0.02, q1[1]], [q0[0], groundY(q0[0], q0[1]) - 0.02, q0[1]], uvR(el / 2, 0.1), TB, lit([nx, 0, nz], 0.7), [nx, 0, nz]); } }
+}
+
+/* ---- SHARPER SIGNS AND SPRITES (his ask: the Ejaculand sign was pixelated and stretched, fix all the graphics,
+   the sprites too). The texture sheet is 4096 wide when the phone allows it (`TA`), and every sign, billboard,
+   poster, shop board, blade sign and neon is painted at twice the resolution into it (`.big`). The sprite sheet (the
+   shop fronts and other pixel art stuck into the 3D city) is enlarged 4x with the Scale2x (EPX) rule, twice, before
+   it becomes a texture, so its edges are smoothed out instead of blown-up squares. ---- */
+(function () { try { var c = document.createElement('canvas'), gl = c.getContext('webgl'); var m = gl && gl.getParameter(gl.MAX_TEXTURE_SIZE); if (m >= 4096) { TA = 4096; window.BIGSIGNS = 1; } var lc = gl && gl.getExtension('WEBGL_lose_context'); if (lc) lc.loseContext(); } catch (e) {} })();
+(function () { if (!window.BIGSIGNS) return; var re = /^(sign|bb|pp|gs|st|bl|n|neon|sg|poster|poster2|pk|redcross|esign)(_|\d|$)/;
+  function mark() { Object.keys(HIPAINT).forEach(function (k) { if (re.test(k) && typeof HIPAINT[k] === 'function') HIPAINT[k].big = true; }); }
+  mark(); var bt = buildAtlas; buildAtlas = function () { mark(); return bt.apply(this, arguments); }; })();
+function scale2x(src) { var w = src.width, h = src.height, sd = src.getContext('2d').getImageData(0, 0, w, h).data, out = document.createElement('canvas'); out.width = w * 2; out.height = h * 2; var og = out.getContext('2d'), im = og.createImageData(w * 2, h * 2), od = new Uint32Array(im.data.buffer), s32 = new Uint32Array(sd.buffer.slice(0));
+  function P(x, y) { x = x < 0 ? 0 : x >= w ? w - 1 : x; y = y < 0 ? 0 : y >= h ? h - 1 : y; return s32[y * w + x]; }
+  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) { var E = s32[y * w + x], B = P(x, y - 1), D = P(x - 1, y), F = P(x + 1, y), H = P(x, y + 1), E0 = E, E1 = E, E2 = E, E3 = E;
+    if (B !== H && D !== F) { E0 = D === B ? D : E; E1 = B === F ? F : E; E2 = D === H ? D : E; E3 = H === F ? F : E; }
+    var o = (y * 2) * w * 2 + x * 2; od[o] = E0; od[o + 1] = E1; od[o + w * 2] = E2; od[o + w * 2 + 1] = E3; }
+  og.putImageData(im, 0, 0); return out; }
+(function () { var SHX = null; sheetTex = function () { if (!SHX && KIT.sheetReady) { var c = KIT.sheet; try { if (c.width * 4 <= 8192) c = scale2x(scale2x(KIT.sheet)); } catch (e) { c = KIT.sheet; } SHX = R3.texture(c); } return SHX; }; })();
+/* the Ejaculand gate sign: one 768 x 128 picture (6:1, the board's own shape) cut into six hi-res slots */
+var ESIGN = null, ESN = 6;
+function esignCanvas() { if (ESIGN) return ESIGN; var W = 128 * ESN, H = 128, c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d');
+  var bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1a0608'); bg.addColorStop(0.5, '#0a0204'); bg.addColorStop(1, '#1a0608'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#c4121c'; g.lineWidth = 5; g.strokeRect(9, 9, W - 18, H - 18); g.strokeStyle = '#5a0a10'; g.lineWidth = 2; g.strokeRect(17, 17, W - 34, H - 34);
+  for (var x = 14; x < W - 8; x += 22) [7, H - 7].forEach(function (y) { var gl = g.createRadialGradient(x, y, 0, x, y, 7); gl.addColorStop(0, 'rgba(255,240,180,1)'); gl.addColorStop(0.45, 'rgba(255,200,90,0.9)'); gl.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y, 7, 0, 6.3); g.fill(); });
+  for (var y2 = 30; y2 < H - 20; y2 += 22) [7, W - 7].forEach(function (x2) { var gl = g.createRadialGradient(x2, y2, 0, x2, y2, 7); gl.addColorStop(0, 'rgba(255,240,180,1)'); gl.addColorStop(0.45, 'rgba(255,200,90,0.9)'); gl.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x2, y2, 7, 0, 6.3); g.fill(); });
+  function steve(cx, cy, s, flip) { g.save(); g.translate(cx, cy); g.scale(flip ? -s : s, s); g.beginPath(); g.moveTo(0, -38); g.bezierCurveTo(6, -24, 26, -10, 26, 10); g.bezierCurveTo(26, 30, 12, 38, 0, 38); g.bezierCurveTo(-12, 38, -26, 30, -26, 10); g.bezierCurveTo(-26, -6, -6, -18, -4, -30); g.quadraticCurveTo(-3, -36, 0, -38); g.closePath(); g.fillStyle = '#0a0506'; g.fill(); g.lineWidth = 3.5; g.strokeStyle = '#ff2630'; g.stroke();
+    g.fillStyle = '#ff2630'; g.beginPath(); g.ellipse(-9, 4, 4, 6.5, 0, 0, 6.3); g.ellipse(9, 4, 4, 6.5, 0, 0, 6.3); g.fill(); g.beginPath(); g.moveTo(-14, 16); g.quadraticCurveTo(0, 15, 14, 16); g.quadraticCurveTo(12, 30, 0, 31); g.quadraticCurveTo(-12, 30, -14, 16); g.fillStyle = '#2a0608'; g.fill(); g.lineWidth = 2.5; g.stroke(); g.restore(); }
+  steve(70, 64, 1.05, false); steve(W - 70, 64, 1.05, true);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; var fs = 96; g.font = fs + 'px "Pirata One", serif'; while (g.measureText('EJACULAND').width > W - 260 && fs > 40) { fs -= 2; g.font = fs + 'px "Pirata One", serif'; }
+  g.shadowColor = 'rgba(255,38,48,0.9)'; g.shadowBlur = 18; g.fillStyle = '#ff2630'; g.fillText('EJACULAND', W / 2, H / 2 + 4); g.shadowBlur = 0; g.lineWidth = 3; g.strokeStyle = '#3a0408'; g.strokeText('EJACULAND', W / 2, H / 2 + 4);
+  g.fillStyle = 'rgba(255,220,200,0.35)'; g.fillText('EJACULAND', W / 2, H / 2 + 1); g.fillStyle = '#ff2630'; g.fillText('EJACULAND', W / 2, H / 2 + 4);
+  ESIGN = c; return c; }
+for (var esk = 0; esk < ESN; esk++) (function (k) { var f = function (g) { g.drawImage(esignCanvas(), k * 128, 0, 128, 128, 0, 0, 64, 64); }; f.big = true; HIPAINT['esign' + k] = f; })(esk);
+LMBUILD.gate = function (o, p) { var y = p.h; [-1, 1].forEach(function (s) { boxT(o.m, p.x + s * 9 - 1.5, y, p.z - 1.5, p.x + s * 9 + 1.5, y + 12, p.z + 1.5, { wall: 'w_redbrick', top: 'roof' }); addBox(p.x + s * 9 - 1.5, p.z - 1.5, p.x + s * 9 + 1.5, p.z + 1.5, y - 2, y + 12); tub(o.m, [p.x + s * 9, y + 12, p.z], [p.x + s * 9, y + 16, p.z], 2.2, 0, '#c4121c', 8, { cap: 1 }); });
+  boxC(o.m, p.x - 8, y + 9, p.z - 0.5, p.x + 8, y + 12, p.z + 0.5, '#12040a'); var SW = 15, sw = SW / ESN;
+  for (var k = 0; k < ESN; k++) { var T = TL('esign' + k); standQ(o.glow, p.x - SW / 2 + (k + 0.5) * sw, p.z + 0.56, 0, sw + 0.002, y + 9.25, y + 11.75, T, 1.6, 1); standQ(o.glow, p.x + SW / 2 - (k + 0.5) * sw, p.z - 0.56, Math.PI, sw + 0.002, y + 9.25, y + 11.75, T, 1.6, 1); }
+  ring(o.glow, p.x, 0, p.z, 0, 1, function () {}); o.r = 50; o.lights = [{ x: p.x, y: y + 8, z: p.z + 3, c: [1, 0.2, 0.3], r: 16 }]; };
+
+/* update 165, part two: boxes that turn with the thing they belong to (the clinics, the first aid tent and the dock containers were
+   squared off to the map, so their corners stuck out as invisible walls), and the clinics rebuilt */
+function addOBB(cx, cz, a, hw, hd, y0, y1, o) {
+  var c = Math.cos(a), s = Math.sin(a), ex = Math.abs(c) * hw + Math.abs(s) * hd, ez = Math.abs(s) * hw + Math.abs(c) * hd;
+  var b = { obb: 1, cx: cx, cz: cz, c: c, s: s, hw: hw, hd: hd, x0: cx - ex, z0: cz - ez, x1: cx + ex, z1: cz + ez, y0: y0, y1: y1, o: o };
+  gridAdd(SOLID, b.x0, b.z0, b.x1, b.z1, b); return b;
+}
+function obbLocal(b, x, z) { var dx = x - b.cx, dz = z - b.cz; return [dx * b.c - dz * b.s, dx * b.s + dz * b.c]; }
+function obbWorld(b, u, v) { return [b.cx + u * b.c + v * b.s, b.cz - u * b.s + v * b.c]; }
+function obbIn(b, x, z, pad) { var l = obbLocal(b, x, z); pad = pad || 0; return Math.abs(l[0]) <= b.hw + pad && Math.abs(l[1]) <= b.hd + pad; }
+
+collide = function (x, z, r, y, hh) {
+  if (G.interior) return interiorCollide(x, z, r);
+  var px = 0, pz = 0, hit = null, L = near(BGRID, x, z, r + 1);
+  for (var n = 0; n < 2; n++) {
+    var ls = n ? near(SOLID, x, z, r + 1) : L;
+    for (var k = 0; k < ls.length; k++) { var b = ls[k]; if (b.o && b.o.deck) continue; var top = n ? b.y1 : b.y0 + b.h, bot = n ? b.y0 : b.y0 - 2; if (y + (hh || 1.6) < bot || y > top - 0.05) continue;
+      if (b.o && b.o.kp) { if (KNOCKED[b.o.kp]) continue; if (COLLV && Math.abs(COLLV.sp) > 2.5 && Math.hypot(x - b.x, z - b.z) < r + b.r) { knockProp(b.o, COLLV); continue; } }
+      if (b.post) { var dx = x + px - b.x, dz = z + pz - b.z, d = Math.hypot(dx, dz), m = r + b.r; if (d < m && d > 0.0001) { px += dx / d * (m - d); pz += dz / d * (m - d); hit = b; } continue; }
+      if (b.obb) { var l = obbLocal(b, x + px, z + pz), cu = clamp(l[0], -b.hw, b.hw), cv = clamp(l[1], -b.hd, b.hd), eu = l[0] - cu, ev = l[1] - cv, de = Math.hypot(eu, ev);
+        if (de < r) { var nu, nv, pen;
+          if (de < 0.0001) { var pu = b.hw - Math.abs(l[0]), pv = b.hd - Math.abs(l[1]); if (pu < pv) { nu = l[0] < 0 ? -1 : 1; nv = 0; pen = pu + r; } else { nu = 0; nv = l[1] < 0 ? -1 : 1; pen = pv + r; } }
+          else { nu = eu / de; nv = ev / de; pen = r - de; }
+          px += (nu * b.c + nv * b.s) * pen; pz += (-nu * b.s + nv * b.c) * pen; hit = b; }
+        continue; }
+      var cx = clamp(x + px, b.x0, b.x1), cz = clamp(z + pz, b.z0, b.z1), ex = x + px - cx, ez = z + pz - cz, dd = Math.hypot(ex, ez);
+      if (dd < r) { if (dd < 0.0001) { var l0 = x + px - b.x0, rr = b.x1 - x - px, t = z + pz - b.z0, bb = b.z1 - z - pz, mn = Math.min(l0, rr, t, bb); if (mn === l0) px -= l0 + r; else if (mn === rr) px += rr + r; else if (mn === t) pz -= t + r; else pz += bb + r; }
+        else { px += ex / dd * (r - dd); pz += ez / dd * (r - dd); } hit = b; }
+    }
+  }
+  return { x: px, z: pz, hit: hit };
+};
+/* standing on a turned box (the containers) */
+var _standY165 = standY;
+standY = function (x, z, y) {
+  var g = _standY165(x, z, y); if (G.interior) return g;
+  var ls = near(SOLID, x, z, 0.6);
+  for (var k = 0; k < ls.length; k++) { var b = ls[k]; if (!b.obb || !b.top) continue; if (!obbIn(b, x, z)) continue; if (b.y1 <= y + 0.7 && b.y1 > g) g = b.y1; }
+  return g;
+};
+/* the ray (camera, bullets) against turned boxes too; the plain boxes and buildings stay as they were */
+var _rayBlock165 = rayBlock;
+rayBlock = function (ax, ay, az, bx, by, bz) {
+  if (G.interior) return _rayBlock165(ax, ay, az, bx, by, bz);
+  var ob = [], keep = {}, dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz), steps = Math.max(1, Math.ceil(L / 8));
+  for (var s = 0; s <= steps; s++) near(SOLID, ax + dx * s / steps, az + dz * s / steps, 4).forEach(function (b) { if (b.obb && ob.indexOf(b) < 0) { ob.push(b); } });
+  /* hide them from the old ray while it runs, then test them properly */
+  ob.forEach(function (b) { b.__x0 = b.x0; b.x0 = 1e9; b.x1v = b.x1; b.x1 = 1e9 + 1; });
+  var best = _rayBlock165(ax, ay, az, bx, by, bz);
+  ob.forEach(function (b) { b.x0 = b.__x0; b.x1 = b.x1v;
+    var A = obbLocal(b, ax, az), B = obbLocal(b, bx, bz), o = [A[0], ay, A[1]], d = [B[0] - A[0], by - ay, B[1] - A[1]], lo = [-b.hw, b.y0, -b.hd], hi = [b.hw, b.y1, b.hd], t0 = 0, t1 = 1;
+    for (var a = 0; a < 3; a++) { if (Math.abs(d[a]) < 1e-6) { if (o[a] < lo[a] || o[a] > hi[a]) return; continue; } var q1 = (lo[a] - o[a]) / d[a], q2 = (hi[a] - o[a]) / d[a]; if (q1 > q2) { var q = q1; q1 = q2; q2 = q; } t0 = Math.max(t0, q1); t1 = Math.min(t1, q2); if (t0 > t1) return; }
+    if (t0 < best) best = t0; });
+  return best;
+};
+
+/* the dock containers stand turned: their box turns with them now */
+LMBUILD.containers = function (o, p) { var y = p.h, a = p.a, cols = ['#8a2a20', '#2a4a6a', '#3a6a3a', '#c4121c', '#6a6a6a', '#a87a20'];
+  for (var k = 0; k < p.n; k++) { var col = cols[Math.floor(hash2(Math.round(p.x), k, 2) * cols.length)]; boxR(o.m, p.x, p.z, a, 6, 1.25, y + k * 2.6, y + (k + 1) * 2.6, col, 'container'); }
+  addOBB(p.x, p.z, a, 6, 1.25, y - 1, y + p.n * 2.6).top = 1; o.r = 20; };
+
+/* ---------- the clinics, rebuilt ---------- */
+HIPAINT.sg_clinic2 = function (g) { g.fillStyle = '#12040a'; g.fillRect(0, 19, 64, 26); g.fillStyle = '#f6f1e6'; g.fillRect(1, 20, 62, 24);
+  g.fillStyle = '#c4121c'; g.fillRect(3, 22, 18, 20); g.fillStyle = '#f6f1e6'; g.fillRect(10, 24, 4, 16); g.fillRect(4, 30, 16, 4);
+  g.fillStyle = '#1a0a0c'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = 'bold 7px "Archivo Narrow", Arial'; g.fillText('CUM CITY', 24, 27);
+  g.fillStyle = '#c4121c'; g.font = 'bold 10px "Archivo Narrow", Arial'; g.fillText('CLINIC', 24, 37); };
+HIPAINT.sg_clinic2.big = true;
+HIPAINT.clinicpanel = function (g) { g.fillStyle = '#e9e4da'; g.fillRect(0, 0, 64, 64); for (var r = 0; r < 4; r++) { g.fillStyle = 'rgba(0,0,0,0.07)'; g.fillRect(0, r * 16 + 15, 64, 1); }
+  g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(31, 0, 1, 64); for (var k = 0; k < 40; k++) { g.fillStyle = 'rgba(80,60,50,' + (0.02 + (k % 5) * 0.01) + ')'; g.fillRect((k * 37) % 64, (k * 23) % 64, 2, 1); }
+  g.fillStyle = 'rgba(60,40,30,0.10)'; g.fillRect(0, 60, 64, 4); };
+HIPAINT.clinicglass = function (g) { var gr = g.createLinearGradient(0, 0, 64, 64); gr.addColorStop(0, '#2a3a44'); gr.addColorStop(0.5, '#5a7480'); gr.addColorStop(1, '#22303a'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(255,240,220,0.35)'; g.fillRect(4, 40, 56, 20); g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.moveTo(8, 0); g.lineTo(22, 0); g.lineTo(4, 30); g.lineTo(0, 30); g.closePath(); g.fill();
+  g.fillStyle = '#2a2a2e'; g.fillRect(0, 0, 64, 2); g.fillRect(0, 62, 64, 2); g.fillRect(0, 0, 2, 64); g.fillRect(62, 0, 2, 64); g.fillRect(31, 0, 2, 64); };
+HIPAINT.clinicdoor = function (g) { HIPAINT.clinicglass(g); g.fillStyle = '#c4121c'; g.fillRect(20, 30, 8, 2); g.fillRect(36, 30, 8, 2); g.fillStyle = '#f6f1e6'; g.font = 'bold 5px Arial'; g.textAlign = 'center'; g.fillText('PUSH', 24, 27); g.fillText('PUSH', 40, 27); };
+
+LMBUILD.clinic = function (o, p) { o.r = 26; var R = p.R || 6, big = R >= 9.5, FR = Math.min(9.0, R + 0.7); /* FR: how far out the front things may go before the pavement */ var m = o.m, gl = o.glow, a = p.a, y = p.y, c = Math.cos(a), s = Math.sin(a), fx = s, fz = c;
+  function at(u, v) { return [p.x + c * u + fx * v, p.z - s * u + fz * v]; }
+  function bx(u, v, hw, hd, y0, y1, hex, T) { var q = at(u, v); boxR(m, q[0], q[1], a, hw, hd, y0, y1, hex, T); }
+  function face(u, v, w, y0, y1, T, k, mm, uv) { var q = at(u, v); standQ(mm || m, q[0], q[1], a, w, y0, y1, TL(T), k || 1.1, 0, uv); }
+  function side(u, v, sd, w, y0, y1, T, k, mm) { var q = at(u, v); standQ(mm || m, q[0], q[1], a + sd * Math.PI / 2, w, y0, y1, TL(T), k || 1.1); }
+  function post(u, v, r, y0, y1, col) { var q = at(u, v); tub(m, [q[0], y0, q[1]], [q[0], y1, q[1]], r, r, col, 6); }
+  // the forecourt slab, flush with the ground so you walk straight on
+  bx(big ? 1 : 0, (FR - 4.2) / 2, big ? 10 : 6.6, (FR + 5.2) / 2, y - 1.6, y + 0.06, '#8a8680', 'paver'); var CP = Math.min(7.5, FR - 1.2);
+  // the main block: plinth course, rendered walls, a red fascia, a parapet with a cap
+  bx(0, 0, 6.1, 4.6, y - 1.5, y + 0.45, '#5a5458', 'concrete');
+  bx(0, 0, 6, 4.5, y + 0.45, y + 4.1, '#ece7dd', 'clinicpanel');
+  bx(0, 0, 6.06, 4.56, y + 3.15, y + 3.75, '#b8101a');
+  bx(0, 0, 6.15, 4.65, y + 4.1, y + 4.4, '#3a3438'); bx(0, 0, 5.8, 4.3, y + 4.1, y + 4.32, '#2a2226');
+  // the glass front between grey columns
+  face(-3.3, 4.53, 4.0, y + 0.45, y + 3.1, 'clinicglass', 1.3); face(3.3, 4.53, 4.0, y + 0.45, y + 3.1, 'clinicglass', 1.3);
+  face(0, 4.54, 2.4, y + 0.06, y + 2.7, 'clinicdoor', 1.3);
+  [-5.5, -1.35, 1.35, 5.5].forEach(function (u) { bx(u, 4.55, 0.22, 0.12, y + 0.45, y + 3.15, '#4a4448'); });
+  // side windows in a strip, the back has a service door
+  [-1, 1].forEach(function (sd) { [-2.2, 0, 2.2].forEach(function (v) { var q = at(sd * 6.02, v); standQ(m, q[0], q[1], a + sd * Math.PI / 2, 1.7, y + 1.2, y + 2.7, TL('litwin'), 1.1); bx(sd * 6.05, v, 0.06, 0.95, y + 1.1, y + 1.2, '#4a4448'); }); });
+  var bk = at(2.5, -4.53); standQ(m, bk[0], bk[1], a + Math.PI, 1.4, y + 0.45, y + 2.6, TL('door'), 1);
+  // the upper floor, set back, a ribbon of lit windows and a red cross lightbox on the front
+  bx(-0.6, -0.7, 4.8, 3.4, y + 4.1, y + 7.2, '#e2ddd2', 'clinicpanel'); bx(-0.6, -0.7, 4.95, 3.55, y + 7.2, y + 7.45, '#3a3438');
+  [-2.8, -0.6, 1.6].forEach(function (u) { face(u, 2.72, 1.8, y + 5.2, y + 6.6, 'litwin2', 1.1); });
+  var X = at(3.1, 2.72); standQ(gl, X[0], X[1], a, 1.6, y + 5.1, y + 6.7, TL('redcross'), 1.5);
+  // plant on the roof: units, a vent stack, a rail
+  bx(3.6, -2.8, 1.2, 0.9, y + 4.4, y + 5.3, '#9a9a96', 'metal'); bx(3.6, -0.6, 1.2, 0.9, y + 4.4, y + 5.3, '#9a9a96', 'metal');
+  [[3.6, -2.8], [3.6, -0.6]].forEach(function (q) { var r = at(q[0], q[1]); ell(m, r[0], y + 5.32, r[1], 0.6, 0.06, 0.6, '#2a2a2e', 8, 2); });
+  post(-4.4, -3.4, 0.2, y + 4.4, y + 8.2, '#6a6a6e');
+  // the sign on the fascia, crisp
+  face(0, 4.72, 4.2, y + 3.4, y + 5.0, 'sg_clinic2', 1.5, gl, SGUV); bx(0, 4.66, 2.15, 0.05, y + 3.36, y + 5.04, '#12040a');
+  // the canopy over the door on two posts, with downlights
+  bx(0, (4.5 + CP + 0.2) / 2, 2.9, (CP + 0.2 - 4.5) / 2, y + 3.0, y + 3.22, '#c4121c'); bx(0, (4.5 + CP + 0.2) / 2, 2.95, (CP + 0.2 - 4.5) / 2 + 0.05, y + 3.22, y + 3.3, '#2a2226');
+  [-2.6, 2.6].forEach(function (u) { post(u, CP, 0.09, y, y + 3.0, '#3a3438'); var q = at(u, CP); addPost(q[0], q[1], 0.12, y - 0.5, y + 3.2); });
+  [-1.6, 0, 1.6].forEach(function (u) { var q = at(u, 6.6); ell(gl, q[0], y + 2.97, q[1], 0.2, 0.03, 0.2, '#fff2d0', 6, 2); });
+  // a ramp along the front with rails, two planters by the door
+  [-1, 1].forEach(function (sd) { var q = at(sd * 2.2, 5.0); boxR(m, q[0], q[1], a, 0.6, 0.35, y, y + 0.5, '#5a5458', 'concrete'); ell(m, q[0], y + 0.75, q[1], 0.5, 0.35, 0.3, '#2a5a2a', 7, 3); ell(gl, q[0] + 0.1, y + 0.9, q[1], 0.08, 0.08, 0.08, '#ff2630', 4, 2); addOBB(q[0], q[1], a, 0.6, 0.35, y - 0.5, y + 0.6); });
+  [-5.8, -4.2].forEach(function (u) { var q1 = at(u, 4.9), q2 = at(u, 6.4); tub(m, [q1[0], y + 0.9, q1[1]], [q2[0], y + 0.9, q2[1]], 0.035, 0.035, '#b8b8bc', 5); post(u, 6.4, 0.035, y, y + 0.9, '#b8b8bc'); });
+  // the bollards across the front so nobody drives in
+  [-4.8, -3.2, 3.2, 4.8].forEach(function (u) { post(u, FR, 0.11, y, y + 0.85, '#2a2226'); var q = at(u, FR); ell(gl, q[0], y + 0.88, q[1], 0.11, 0.03, 0.11, '#ff2630', 6, 2); addPost(q[0], q[1], 0.14, y - 0.5, y + 0.9); });
+  // the pylon sign by the road: tall, lit both sides
+  if (big) { var Py = at(-8.2, 8.4); bx(-8.2, 8.4, 0.25, 0.25, y, y + 3.4, '#2a2226'); bx(-8.2, 8.4, 0.75, 0.18, y + 3.4, y + 5.2, '#2a2226');
+  [0, 1].forEach(function (b) { var q = at(-8.2, 8.4 + (b ? -0.19 : 0.19)); standQ(gl, q[0], q[1], a + (b ? Math.PI : 0), 1.4, y + 3.5, y + 5.1, TL('redcross'), 1.5); });
+  addPost(Py[0], Py[1], 0.3, y - 0.5, y + 5.2); }
+  // the ambulance bay on the right: a lower wing with a roller door and the ambulance backed up to it
+  if (big) { bx(8.3, -1.0, 2.3, 3.5, y - 1.5, y + 3.3, '#ddd8ce', 'clinicpanel'); bx(8.3, -1.0, 2.4, 3.6, y + 3.3, y + 3.55, '#3a3438'); bx(8.33, -1.0, 2.33, 3.53, y + 2.4, y + 2.75, '#b8101a');
+  var Rd = at(8.3, 2.53); standQ(m, Rd[0], Rd[1], a, 3.4, y, y + 2.35, TL('shutter'), 1.0);
+  [[7.0], [9.6]].forEach(function (q) { var r = at(q[0], 2.7); ell(gl, r[0], y + 2.6, r[1], 0.14, 0.07, 0.07, '#ffb040', 6, 2); });
+  var Am = at(8.3, 6.0); car3(m, Am[0], Am[1], a, y, '#f1e7d0'); boxR(m, Am[0], Am[1], a, 0.92, 0.6, y + 1.52, y + 1.62, '#c4121c');
+  ell(gl, Am[0], y + 1.72, Am[1], 0.25, 0.08, 0.12, '#ff2630', 6, 2); addOBB(Am[0], Am[1], a, 1.0, 2.2, y, y + 1.7);
+  // yellow hatching in the bay
+  for (var h = 0; h < 4; h++) bx(8.3, 4.0 + h * 1.0, 1.6, 0.08, y + 0.06, y + 0.075, '#e0a020'); var Cw = at(8.3, -1.0); addOBB(Cw[0], Cw[1], a, 2.35, 3.55, y - 2, y + 3.6); }
+  // a bench by the door and a bin
+  var Bn = at(-4.6, Math.min(7.4, FR - 1.3)); boxR(m, Bn[0], Bn[1], a, 0.9, 0.25, y + 0.42, y + 0.5, '#6a4a2a'); boxR(m, Bn[0], Bn[1], a, 0.85, 0.2, y, y + 0.42, '#2a2226');
+  if (typeof addSeat === 'function') try { addSeat(Bn[0], Bn[1], a, 'bench'); } catch (e) { }
+  post(-6.0, Math.min(7.6, FR - 1.1), 0.25, y, y + 0.9, '#2a3a2a');
+  // collision: the real shapes, turned with the building
+  var Cm = at(0, 0); addOBB(Cm[0], Cm[1], a, 6.1, 4.6, y - 2, y + 7.2);
+  o.lights = [{ x: at(0, 6.6)[0], y: y + 2.8, z: at(0, 6.6)[1], c: [1, 0.92, 0.8], r: 9 }, { x: X[0], y: y + 5.5, z: X[1], c: [1, 0.2, 0.25], r: 8 }];
+  o.flick = [];
+};
+
+/* the first aid tent by Ejaculand's gate: a proper marquee with a turned box */
+LMBUILD.firstaid = function (o, p) { o.r = 14; var m = o.m, gl = o.glow, a = p.a, y = p.y, c = Math.cos(a), s = Math.sin(a), fx = s, fz = c;
+  function at(u, v) { return [p.x + c * u + fx * v, p.z - s * u + fz * v]; }
+  boxR(m, p.x, p.z, a, 3.4, 3.4, y - 0.6, y + 0.05, '#6a6460', 'plank');
+  // white walls with red stripes, a peaked roof in red and white panels
+  boxR(m, p.x, p.z, a, 3.2, 3.2, y + 0.05, y + 2.3, '#f1e7d0');
+  for (var k = -1; k <= 1; k += 2) boxR(m, p.x, p.z, a, 3.22, 3.22, y + 1.9 + k * 0.0, y + 2.1, '#c4121c');
+  var corners = [[-3.3, -3.3], [3.3, -3.3], [3.3, 3.3], [-3.3, 3.3]].map(function (q) { return at(q[0], q[1]); }), top = [p.x, y + 4.6, p.z];
+  for (var i = 0; i < 4; i++) { var A = corners[i], B = corners[(i + 1) % 4], n = [((A[0] + B[0]) / 2 - p.x), 1.6, ((A[1] + B[1]) / 2 - p.z)], L = Math.hypot(n[0], n[1], n[2]); n = [n[0] / L, n[1] / L, n[2] / L];
+    for (var j = 0; j < 4; j++) { var t0 = j / 4, t1 = (j + 1) / 4, P0 = [A[0] + (B[0] - A[0]) * t0, y + 2.3, A[1] + (B[1] - A[1]) * t0], P1 = [A[0] + (B[0] - A[0]) * t1, y + 2.3, A[1] + (B[1] - A[1]) * t1];
+      m.tri(P0, P1, top, [0, 1, 1, 1, 0.5, 0], TL('white'), litc(j % 2 ? '#f1e7d0' : '#c4121c', n, 1.05), n); } }
+  tub(m, top, [p.x, y + 5.6, p.z], 0.04, 0.04, '#3a3a3e', 4); var Fl = [p.x + c * 0.5, y + 5.4, p.z - s * 0.5]; tub(m, [p.x, y + 5.45, p.z], Fl, 0.2, 0.0, '#c4121c', 3);
+  // an open flap at the front, the inside dark, a cot and a cross
+  var D = at(0, 3.24); standQ(m, D[0], D[1], a, 1.8, y + 0.05, y + 2.0, TL('white'), 0.35);
+  [-1, 1].forEach(function (sd) { var q = at(sd * 1.3, 3.6); standQ(m, q[0], q[1], a + sd * 0.6, 0.8, y + 0.05, y + 2.0, TL('white'), 1.0); });
+  var S = at(0, 3.27); standQ(gl, S[0], S[1], a, 3.0, y + 2.32, y + 3.15, TL('sg_firstaid'), 1.4, 0, SGUV);
+  [-1, 1].forEach(function (sd) { var q = at(sd * 3.24, 0); standQ(gl, q[0], q[1], a + sd * Math.PI / 2, 1.6, y + 0.6, y + 1.8, TL('redcross'), 1.4); });
+  var Bk = at(0, -3.24); standQ(gl, Bk[0], Bk[1], a + Math.PI, 1.6, y + 0.6, y + 1.8, TL('redcross'), 1.4);
+  // guy ropes and pegs
+  corners.forEach(function (q) { var o2 = [p.x + (q[0] - p.x) * 1.35, p.z + (q[1] - p.z) * 1.35]; tub(m, [q[0], y + 2.3, q[1]], [o2[0], y + 0.05, o2[1]], 0.015, 0.015, '#d8d0c0', 3); });
+  var Lp = at(2.4, 4.4); tub(m, [Lp[0], y, Lp[1]], [Lp[0], y + 2.6, Lp[1]], 0.05, 0.05, '#3a3a3e', 5); ell(gl, Lp[0], y + 2.65, Lp[1], 0.16, 0.12, 0.16, '#fff2d0', 6, 3); addPost(Lp[0], Lp[1], 0.1, y - 0.5, y + 2.6);
+  addOBB(p.x, p.z, a, 3.25, 3.25, y - 1, y + 4);
+  o.lights = [{ x: at(0, 4.2)[0], y: y + 2.5, z: at(0, 4.2)[1], c: [1, 0.9, 0.75], r: 7 }];
+};
+
+/* the camera never sits behind a wall: four rays (the middle, both sides and the top of the picture) from what it looks at, and it
+   stops a little short of the nearest hit; pulling in is instant, easing back out is gentle (update 165, he said it kept going behind walls) */
+var _stepCamera165 = stepCamera; stepCamera = function (dt) {
+  _stepCamera165(dt);
+  if ((G.cut && G.mode === 'play') || G.ride || G.interior) return;
+  var tg = P.state === 'car' && P.veh ? [P.veh.x, P.veh.y + P.veh.t.hgt * 0.7, P.veh.z] : [P.x, P.y + 1.45, P.z];
+  var dx = CAM.x - tg[0], dy = CAM.y - tg[1], dz = CAM.z - tg[2], L = Math.hypot(dx, dy, dz); if (L < 0.5) return;
+  var hx = -dz / Math.hypot(dx, dz || 1e-6), hz = dx / Math.hypot(dx, dz || 1e-6), w = 0.42, best = 1;
+  [[0, 0], [w, 0], [-w, 0], [0, w]].forEach(function (o) { var ex = CAM.x + hx * o[0], ey = CAM.y + o[1], ez = CAM.z + hz * o[0]; var t = rayBlock(tg[0], tg[1], tg[2], ex, ey, ez); if (t < best) best = t; });
+  if (best < 1) { var D = Math.max(0.6, best * L - 0.45), k = D / L; if (k < 1) { CAM.x = tg[0] + dx * k; CAM.y = tg[1] + dy * k; CAM.z = tg[2] + dz * k; var gy = groundY(CAM.x, CAM.z) + 0.35; if (CAM.y < gy) CAM.y = gy; } }
+};
+
+/* smoking, the way people really do it (his ask: they tapped their shoulder): the hand comes up to the mouth, stays there a second or
+   two, goes back down, the smoke is breathed out, and about five seconds later the next drag. One cycle is 8.5 s. */
+window.SMOKE165 = 1;
+var SMK = { rest: [0.75, 0.0, 0.3, 1.1], mouth: [1.3, -0.45, 0.45, 1.6] }; /* mouth: found by fitting the hand onto the lips (_armfit.js) */
+window.smokeCyc = function (t) { var c = ((t % 8.5) + 8.5) % 8.5, ss = function (k) { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
+  var up = c < 0.9 ? ss(c / 0.9) : c < 2.7 ? 1 : c < 3.6 ? 1 - ss((c - 2.7) / 0.9) : 0;
+  return { up: up, drag: c > 0.9 && c < 2.7, ex: c > 3.5 && c < 5.0 ? 1 - Math.abs(c - 4.0) / 1.0 : 0, c: c }; };
+function smokeArm165(Q, t, passA, sd) { var S = smokeCyc(t), u = S.up, R = SMK.rest, M = SMK.mouth;
+  Q.sh[1] = [R[0] + (M[0] - R[0]) * u, R[1] + (M[1] - R[1]) * u, R[2] + (M[2] - R[2]) * u]; Q.el[1] = R[3] + (M[3] - R[3]) * u;
+  Q.hp = (Q.hp || 0) - 0.04 * u + (S.ex > 0 ? 0.12 * Math.min(1, S.ex * 2) : 0); /* chin up a touch while breathing out */
+  if (passA > 0) { var k = Math.sin(passA / 0.7 * Math.PI); Q.sh[1] = [1.2, -0.15 + k * 0.9 * (sd > 0 ? -1 : 1), 0.2]; Q.el[1] = 0.6; } return u; }
+window.sitPose = function (seatKind, hold, t, passA, sd) { var Q = pose0(); poseSit(Q); Q.y = seatKind === 'tub' ? -0.75 : -0.45;
+  if (hold) smokeArm165(Q, t, passA, sd); else if (passA > 0) smokeArm165(Q, 1e-3 + 6, passA, sd); else { Q.sh[0][0] = 0.6; Q.sh[1][0] = 0.6; } return Q; };
+/* the smoke: a thin wisp off the lit end all the time, a proper cloud breathed out of the mouth after each drag */
+(function () { var dj = drawJoint; window.drawJoint = drawJoint = function (x, y, z, a, t) { dj(x, y, z, a, t); var S = smokeCyc(t), Hd = window.LASTHEAD; if (!Hd || !(S.ex > 0)) return;
+  if (dist2(x, z, CAM.x, CAM.z) > 45 * 45) return; if (Math.random() > 0.55) return;
+  var m = mPt(Hd, 0, 0.1, 0.24), fx = Math.sin(a), fz = Math.cos(a);
+  addFx({ k: 'puff', x: m[0], y: m[1], z: m[2], vx: fx * (0.5 + S.ex * 0.5) + rnd(-0.1, 0.1), vy: 0.12 + rnd(0, 0.15), vz: fz * (0.5 + S.ex * 0.5) + rnd(-0.1, 0.1), life: 2.2 + Math.random(), s0: 0.06, grow: 0.5, col: [0.86, 0.86, 0.84], a0: 0.32 }); }; })();
+
+/* waking up after WASTED never leaves you in a black screen (he died in Blumhead's keep and got one): everything you were doing is
+   dropped first, a failed wake-up falls back to the hospital, the camera snaps to you, and you never wake in the dead of night */
+(function () { var rs = respawn; respawn = function () {
+  G.seat = null; G.ride = null; G.lift = null; G.darts = null; G.sitting = 0; G.cine = null; G.seatCam = null; G.fish = null; G.lookout = null; if (typeof HOOK !== 'undefined' && HOOK) HOOK.mode = null; P.roofV = null; G.ejectV = null; G.cut = null;
+  try { rs(); } catch (e) { console.warn('respawn', e); try { if (G.interior) { G.interior = null; PEDS = PEDS.filter(function (p) { return !p.inside; }); } var s = SHOPS.hosp, d = doorOf(s.b); newPlayer(d.x + Math.sin(d.a) * 2, d.z + Math.cos(d.a) * 2, d.a); P.hp = SV.maxHp; } catch (e2) { console.warn('respawn2', e2); } }
+  if (P.state === 'dead') { P.state = 'foot'; P.hp = SV.maxHp; }
+  if (G.time > 22.5 || G.time < 6.5) { if (G.time > 22.5) G.day++; G.time = 7.5; }
+  G.fade = 1; CAM.snap = 1; CAM.x = P.x - Math.sin(P.a) * 4; CAM.z = P.z - Math.cos(P.a) * 4; CAM.y = P.y + 2; CAM.yaw = P.a; CAM.pit = -0.15;
+}; })();
+
+/* gunmen give you a chance (he said Blumhead's keep killed him before he could react): someone who has just seen you takes a moment
+   to aim (a red glint shows it), only two of them fire at you at once, they miss more when you are moving, and their shots hurt less.
+   The police keep their old aim (the wanted level is their difficulty). */
+var SHOTTOK = [];
+function gbill(x, y, z, s, tile, o) { var yaw = Math.atan2(CAM.x - x, CAM.z - z), m = BILLQ[tile]; if (!m) { m = new R3.Mesh(); m.quad([-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0], [0, 1, 1, 1, 1, 0, 0, 0], TL(tile), [0.5, 0.5, 0.5], [0, 0, 1]); m.upload(); BILLQ[tile] = m; } R3.draw(m, ATT, Object.assign({ m: MD(x, y, z, yaw, 0, 0, s), lit: false, soft: 1 }, o || {})); }
+(function () { var sh = shoot; shoot = function (who, W0) {
+  if (who === P || !who || who.cop || W0.rocket || W0.thrown) return sh.apply(this, arguments);
+  if (!who.lastTry || G.t - who.lastTry > 4) who.aimAt = G.t + rnd(1.0, 1.8); who.lastTry = G.t;
+  if (G.t < who.aimAt) { who.cool = Math.min(who.cool || 0, 0.15); who.glint = 1; return; }
+  SHOTTOK = SHOTTOK.filter(function (s) { return G.t - s.t < 1.4 && s.p !== who && !s.p.dead; });
+  if (SHOTTOK.length >= 2) { who.cool = 0.4 + Math.random() * 0.6; return; }
+  SHOTTOK.push({ p: who, t: G.t });
+  var mv = P.state === 'foot' ? clamp((P.sp || 0) / 5, 0, 1) : 0.5, W2 = Object.create(W0); W2.spread = (W0.spread || 0.02) + 0.06 + mv * 0.1; W2.dmg = W0.dmg * (who.kind === 'goon' || who.inside ? 0.55 : 0.75);
+  who.cool = (who.cool || 0) + 0.7; who.glint = 0; return sh.call(this, who, W2); }; })();
+/* the glint: a little red flash at the gun while they aim */
+(function () { var dp = drawPed; drawPed = function (p) { dp(p); if (p.glint && !p.dead && G.t < (p.aimAt || 0) && p.state === 'fight') { var k = 0.5 + 0.5 * Math.sin(G.t * 18); if (k > 0.2) { var m = typeof muzzle === 'function' ? muzzle(p) : [p.x, p.y + 1.3, p.z]; gbill(m[0], m[1], m[2], 0.16 * k, 'halo', { tint: [1, 0.08, 0.08], add: 1 }); } } }; })();
+
+/* the map pans quickly (he said it scrolled way too slowly): the stick moves about a screen and a half a second and speeds up the longer
+   you hold it, a drag keeps gliding after you let go, and the d-pad steps a third of a screen */
+(function () { function perPx() { return CT / (Math.min(KIT.W / MW, KIT.H / MH) * G.mapOpen.zoom); }
+  var sm = stepMap; stepMap = function (dt) { var M0 = G.mapOpen; if (!M0) return sm(dt);
+    var s = KIT.stick(0), on = Math.hypot(s.x, s.y) > 0.15; M0.hold = on ? (M0.hold || 0) + dt : 0;
+    var v = KIT.W * perPx() * (1.5 + Math.min(2.5, M0.hold * 1.5)) * dt; if (on) { M0.x = clamp(M0.x + s.x * v, 0, WX); M0.z = clamp(M0.z + s.y * v, 0, WZ); }
+    if (M0.fx || M0.fz) { M0.x = clamp(M0.x + M0.fx * dt, 0, WX); M0.z = clamp(M0.z + M0.fz * dt, 0, WZ); var f = Math.pow(0.04, dt); M0.fx *= f; M0.fz *= f; if (Math.hypot(M0.fx, M0.fz) < 5) M0.fx = M0.fz = 0; }
+    var ox = M0.x, oz = M0.z; sm(0); M0.x = ox; M0.z = oz; /* the old step does buttons and zoom; its own stick pan is skipped (dt 0) */
+    var r = KIT.stick(1); if (G.mapOpen) G.mapOpen.zoom = clamp(G.mapOpen.zoom * (1 - r.y * dt * 1.8) * (KIT.held('rb') ? 1 + dt * 1.8 : 1) / (KIT.held('lb') ? 1 + dt * 1.8 : 1), 0.5, 6); };
+  /* fling: track how fast a drag moved and keep it going */
+  var mp = mapPointer; mapPointer = function (on) { mp(on); if (!on || !MAPH) return; var m0 = MAPH.m, u0 = MAPH.u, cv = KIT.ctx.canvas; var last = null;
+    window.removeEventListener('pointermove', m0); window.removeEventListener('pointerup', u0); window.removeEventListener('pointercancel', u0);
+    MAPH.m = function (e) { var M0 = G.mapOpen; if (M0) { var bx = M0.x, bz = M0.z, t = performance.now(); m0(e); if (M0.drag === 1) { var dtt = Math.max(8, t - (last ? last.t : t - 16)) / 1000; M0.vx = (M0.x - bx) / dtt; M0.vz = (M0.z - bz) / dtt; } last = { t: t }; M0.fx = M0.fz = 0; } else m0(e); };
+    MAPH.u = function (e) { var M0 = G.mapOpen, dr = M0 && M0.drag === 1; u0(e); if (dr && M0 && last && performance.now() - last.t < 80) { M0.fx = clamp(M0.vx || 0, -6000, 6000); M0.fz = clamp(M0.vz || 0, -6000, 6000); } last = null; };
+    window.addEventListener('pointermove', MAPH.m); window.addEventListener('pointerup', MAPH.u); window.addEventListener('pointercancel', MAPH.u); }; })();
+
+/* stunt missions show where the ramps are (he asked why Steve's mission never said where to go): the GPS leads to the run-up of the
+   nearest ramp you have not jumped in this mission, every ramp is on the radar, and close up the marker moves onto the ramp itself */
+(function () { var sl = stuntLanded; stuntLanded = function (v) { var near = STUNTS.filter(function (s) { return dist2(s.x, s.z, G.lastRampX || -999, G.lastRampZ || -999) < 400; })[0]; var before = MS ? MS.stuntCount : 0; var r = sl.apply(this, arguments); if (MS && near && MS.stuntCount > before) { MS.stuntUsed = MS.stuntUsed || {}; MS.stuntUsed[near.id] = 1; } return r; };
+  var smi = stepMission; stepMission = function (dt) { smi(dt); if (!MS || !G.mission) return; var s = MS.m.steps[MS.i]; if (!s || s.t !== 'stunts') return; var used = MS.stuntUsed || {}, px = P.x, pz = P.z;
+    var L = STUNTS.filter(function (q) { return !used[q.id]; }); if (!L.length) L = STUNTS; var best = null, bd = 1e18; L.forEach(function (q) { var d = dist2(q.x, q.z, px, pz); if (d < bd) { bd = d; best = q; } }); if (!best) return;
+    var run = { x: best.x - Math.sin(best.a) * 34, z: best.z - Math.cos(best.a) * 34 }, close = dist2(px, pz, run.x, run.z) < 30 * 30 || bd < 40 * 40;
+    G.mission.mark = close ? { x: best.x, z: best.z } : run;
+    G.blips = STUNTS.filter(function (q) { return !used[q.id]; }).map(function (q) { return { x: q.x, z: q.z, c: '#ffe36a' }; });
+    G.objective = (s.msg ? s.msg.replace(/ ?\(look for the ramps\)\.?/, '.') : 'Do the stunt jumps.') + ' ' + (close ? 'Hit the ramp fast.' : 'Ramp marked: ' + best.name + '.'); }; })();
+
+/* the car noises (he said the "duh" was far too often): one crash sound at a time across the whole town, and horns spaced out */
+(function () { var last = {}, gap = { crash: 0.7, horn: 3.5 }; var pl = sfx.play; sfx.play = function (k) { if (gap[k]) { var t = performance.now() / 1000; if (t - (last[k] || -99) < gap[k]) return; last[k] = t; } return pl.apply(this, arguments); }; })();
+
+/* update 165, part three: references to his music (his ask). The Legion of Semen Demons fly the sky at night and now and then
+   one dives at you; the Knights of Cum-a-lot ride round Cumhead's Castle on horseback and call the horse Neigh-Neigh; and
+   Uncle Spooge, who keeps to his 10ft rule and whose tissues are crispy. */
+
+/* ---------- the cast ---------- */
+CAST.knight = { rig: 'knight', name: 'Knight of Cum-a-lot' };
+CAST.spooge = { rig: 'spooge', name: 'Uncle Spooge' };
+CASTLINES.knight = ['Easy, Neigh-Neigh. He is a friend of the Mayor.', 'Neigh-Neigh does not like cars. Neither do I.', 'We are the Knights of Cum-a-lot. Neigh-Neigh is the brains of the outfit.',
+  'Whoa, Neigh-Neigh! Whoa!', 'Neigh-Neigh has carried me through forty battles. And one car park.', 'Hail, Mayor Cumhead! Neigh-Neigh, bow.', 'Mind where you step. Neigh-Neigh has been at the oats again.',
+  'Onwards, Neigh-Neigh. Gently. My back.', 'Nobody touches the castle while Neigh-Neigh draws breath.', 'Neigh-Neigh says hello. That was a hello, trust me.'];
+CASTLINES.spooge = ['There is a 10ft rule. I keep to it.', 'My tissues are crispy. Do not ask.', 'Uncle Spooge, at your service. Mind the tissues.', 'Got a tissue? Not that one. That one is crispy.',
+  'Ten feet. That is the rule. I measure it every morning.', 'Crispy tissues, son. Every single one.', 'Do not sit there. That is my bench. Ten feet, please.'];
+['cafe', 'redlight', 'park'].forEach(function (st) { if (DISTCAST[st]) DISTCAST[st].push('spooge'); });
+RADIO2.news.push('News. The Legion of Semen Demons were seen flying over Cum City again last night. The Council says keep your windows shut and your mouth closed.',
+  'News. A man was knocked off his bike by a diving Semen Demon on the ring road. He says it grinned at him. They always grin.',
+  'News. The Knights of Cum-a-lot rode round Cumhead\'s Castle all night again. A spokesman for the horse, Neigh-Neigh, declined to comment.');
+RADIO2.gossip.push('Gossip. Uncle Spooge was seen in the cafe streets with a box of tissues. Crispy, sources say. He kept ten feet from everyone. That is the rule.',
+  'Gossip. Is Neigh-Neigh the real brains behind the Knights of Cum-a-lot? The knights say yes. Neigh-Neigh said neigh.');
+
+/* ---------- Uncle Spooge's face and body, the knights' armour ---------- */
+HIPAINT.f_spooge = personFace2('#e8c0a8', { beard: '#b8b4ac', brow: '#d8d4cc', eye: '#5a6a4a' });
+(function () { var bc = buildCityRigs; buildCityRigs = function () { var had = !!RIGS.copM; bc.apply(this, arguments); if (RIGS.spooge && RIGS.knight) return;
+  RIGS.spooge = person({ skin: '#e8c0a8', shirt: '#b39a6c', legs: '#4a4038', boot: '#3a2a1e', hand: '#e8c0a8', belly: 1, face: 'f_spooge', headFn: function (hd) {
+    ell(hd, 0, 0.22, 0, 0.2, 0.22, 0.19, '#e8c0a8', 12, 8, { face: 'f_spooge', fz: 0.25, fw: 0.82, fh: 0.8 });
+    tub(hd, [-0.19, 0.2, -0.02], [-0.17, 0.3, -0.12], 0.06, 0.05, '#c8c4bc', 6); tub(hd, [0.19, 0.2, -0.02], [0.17, 0.3, -0.12], 0.06, 0.05, '#c8c4bc', 6); ell(hd, 0, 0.27, -0.13, 0.17, 0.11, 0.08, '#c8c4bc', 10, 5); /* a ring of grey hair round a bald top */
+    [-0.06, 0, 0.06].forEach(function (x) { tub(hd, [-0.17, 0.36, x - 0.02], [0.15, 0.42, x], 0.012, 0.012, '#9a968e', 3); }); /* three strands combed over */
+    ell(hd, 0, -0.02, 0.02, 0.14, 0.05, 0.12, '#8a7656', 10, 3); } }); /* the mac's collar */
+  var helm = function (hd) { ell(hd, 0, 0.22, 0, 0.22, 0.25, 0.22, '#aab0b8', 14, 9); tub(hd, [0, 0.0, 0], [0, 0.42, 0], 0.235, 0.215, '#9aa0a8', 14);
+    boxC(hd, -0.17, 0.2, 0.2, 0.17, 0.25, 0.24, '#12040a'); tub(hd, [0, 0.14, 0.23], [0, 0.04, 0.23], 0.015, 0.015, '#12040a', 4);
+    ell(hd, 0, 0.43, 0, 0.1, 0.05, 0.1, '#c8a040', 8, 3); tub(hd, [0, 0.45, 0], [0, 0.66, -0.08], 0.05, 0.08, '#c4121c', 6); tub(hd, [0, 0.66, -0.08], [0, 0.62, -0.32], 0.08, 0.02, '#c4121c', 6); };
+  RIGS.knight = person({ skin: '#e8c0a0', shirt: '#a8acb4', legs: '#8a8e96', boot: '#5a5e66', hand: '#6a6e76', apron: '#c4121c', face: 'f_cop', headFn: helm });
+  RIGS.knight2 = person({ skin: '#e8c0a0', shirt: '#9aa0aa', legs: '#7a7e88', boot: '#4a4e56', hand: '#5a5e66', apron: '#12040a', face: 'f_cop', headFn: helm }); }; })();
+
+/* ---------- Neigh-Neigh and the other horses ---------- */
+var HORSEM = {};
+function horseMesh(col, cloth) { var key = col + cloth; if (HORSEM[key]) return HORSEM[key]; var b = new R3.Mesh(), dk = shadeHex(col, -0.35), tr = '#f1e7d0';
+  ell(b, 0, 1.42, 0.05, 0.38, 0.44, 1.02, col, 14, 9); ell(b, 0, 1.45, 0.72, 0.34, 0.4, 0.38, col, 12, 8); ell(b, 0, 1.48, -0.72, 0.36, 0.38, 0.4, col, 12, 8);
+  tub(b, [0, 1.55, 0.8], [0, 2.2, 1.2], 0.27, 0.17, col, 12); tub(b, [0, 2.32, 1.22], [0, 2.05, 1.66], 0.15, 0.1, col, 12, { cap: 1 }); ell(b, 0, 2.3, 1.24, 0.15, 0.16, 0.17, col, 10, 6);
+  ell(b, 0, 2.02, 1.66, 0.1, 0.08, 0.08, dk, 8, 4); [-1, 1].forEach(function (s) { ell(b, s * 0.12, 2.3, 1.36, 0.03, 0.035, 0.035, '#0a0506', 6, 3); tub(b, [s * 0.07, 2.42, 1.2], [s * 0.1, 2.6, 1.16], 0.04, 0.0, col, 5); });
+  for (var k = 0; k < 6; k++) { var t = k / 5; ell(b, 0, 1.78 + t * 0.62, 0.86 + t * 0.32 - 0.12, 0.05, 0.1, 0.09, dk, 6, 3); }
+  tub(b, [0, 1.62, -1.02], [0, 1.0, -1.36], 0.09, 0.03, dk, 6); tub(b, [0, 1.5, -1.12], [0, 0.8, -1.28], 0.07, 0.02, dk, 5);
+  /* the knight's cloth: a red caparison hanging either side with a cream hem, the saddle on top */
+  [-1, 1].forEach(function (s) { var x = s * 0.4; for (var i = 0; i < 6; i++) { var z0 = -0.9 + i * 0.32, z1 = z0 + 0.32, n = [s, 0, 0];
+      b.quad([x, 1.0, s > 0 ? z0 : z1], [x, 1.0, s > 0 ? z1 : z0], [x * 0.92, 1.7, s > 0 ? z1 : z0], [x * 0.92, 1.7, s > 0 ? z0 : z1], UV1, TL('white'), litc(cloth, n, 1), n);
+      b.quad([x * 1.01, 0.94, s > 0 ? z0 : z1], [x * 1.01, 0.94, s > 0 ? z1 : z0], [x * 1.01, 1.02, s > 0 ? z1 : z0], [x * 1.01, 1.02, s > 0 ? z0 : z1], UV1, TL('white'), litc(tr, n, 1), n); } });
+  ell(b, 0, 1.86, -0.05, 0.3, 0.09, 0.4, '#4a2a18', 10, 4); ell(b, 0, 1.93, -0.36, 0.22, 0.1, 0.06, '#3a2014', 8, 3);
+  tub(b, [-0.12, 1.98, 1.4], [0, 2.1, 1.62], 0.012, 0.012, '#2a1a10', 3); tub(b, [0.12, 1.98, 1.4], [0, 2.1, 1.62], 0.012, 0.012, '#2a1a10', 3);
+  var leg = new R3.Mesh(); tub(leg, [0, 0, 0], [0, -0.52, 0.02], 0.11, 0.075, col, 8); tub(leg, [0, -0.52, 0.02], [0, -1.08, 0], 0.055, 0.05, col, 7); ell(leg, 0, -0.98, 0, 0.065, 0.06, 0.065, '#f1e7d0', 7, 3); tub(leg, [0, -1.05, 0], [0, -1.16, 0.02], 0.07, 0.075, '#1a1214', 8, { cap: 1 });
+  HORSEM[key] = { body: b.upload(), leg: leg.upload() }; return HORSEM[key]; }
+function drawHorse(H, x, y, z, a, ph, move) { var M = MD(x, y, z, a, 0, 0, 1); R3.draw(H.body, ATT, { m: M });
+  [[0.22, 0.72, 0], [-0.22, 0.72, Math.PI], [0.22, -0.72, Math.PI * 0.5], [-0.22, -0.72, Math.PI * 1.5]].forEach(function (L) { var sw = Math.sin(ph + L[2]) * 0.42 * move; R3.draw(H.leg, ATT, { m: MM(M, MD(L[0], 1.18, L[1], 0, sw, 0, 1)) }); }); }
+
+/* ---------- the knights: a patrol round the bailey of Cumhead's Castle and two guards at the gate ---------- */
+var KNIGHTS = null;
+function knightsInit() { if (KNIGHTS) return KNIGHTS; KNIGHTS = []; var C = POIS.filter(function (p) { return p.k === 'castle' && !p.dark; })[0]; if (!C) return KNIGHTS;
+  var cols = [['#e8e2d6', '#c4121c'], ['#2a2224', '#c4121c'], ['#6a4228', '#12040a'], ['#9a9590', '#c4121c'], ['#e8e2d6', '#12040a']], R = typeof CASTLE_R !== 'undefined' ? CASTLE_R : 46;
+  for (var k = 0; k < 3; k++) KNIGHTS.push({ id: 0.13 + k * 0.29, who: 'knight', c: C, k: k, patrol: 1, u: k / 3 * 6.283, ph: k, col: cols[k], rig: k === 1 ? 'knight2' : 'knight', cool: 0, sayT: 0, x: C.x, z: C.z, y: 0, a: 0, sp: 0 });
+  [-1, 1].forEach(function (s, i) { var x = C.x + s * 7, z = C.z + R + 9; KNIGHTS.push({ id: 0.7 + i * 0.1, who: 'knight', c: C, k: 3 + i, guard: 1, x: x, z: z, y: 0, a: 0, ph: i, col: cols[3 + i], rig: i ? 'knight2' : 'knight', cool: 0, sayT: 0, sp: 0 }); });
+  return KNIGHTS; }
+function knightPos(K, u) { var C = K.c; return { x: C.x + Math.sin(u) * 22, z: C.z + 15 + Math.cos(u) * 13.5 }; }
+var KSAYT = 0;
+function stepKnights(dt) { var C = POIS.filter(function (p) { return p.k === 'castle' && !p.dark; })[0]; if (!C || G.interior || dist2(P.x, P.z, C.x, C.z) > 260 * 260) return; knightsInit();
+  KNIGHTS.forEach(function (K) { var near = Math.hypot(P.x - K.x, P.z - K.z);
+    if (K.patrol) { var stop = near < 3.5 && P.state === 'foot', want = stop ? 0 : 2.6; K.sp += (want - K.sp) * Math.min(1, dt * 2); K.u += K.sp * dt / 18; var q = knightPos(K, K.u), q2 = knightPos(K, K.u + 0.05); K.x = q.x; K.z = q.z; var ta = Math.atan2(q2.x - q.x, q2.z - q.z); K.a += angDiff(K.a, stop ? Math.atan2(P.x - K.x, P.z - K.z) : ta) * Math.min(1, dt * 4); }
+    else { var ta2 = near < 12 ? Math.atan2(P.x - K.x, P.z - K.z) : 0; K.a += angDiff(K.a, ta2) * Math.min(1, dt * 2); K.sp *= 0.9; }
+    K.ph += dt * (1.4 + K.sp * 2.2); K.y = groundY(K.x, K.z); K.sayT -= dt; K.cool -= dt;
+    /* you cannot walk through a horse */
+    if (P.state === 'foot' && near < 1.6 && near > 0.01) { var pu = (1.6 - near) / near; P.x += (P.x - K.x) * pu; P.z += (P.z - K.z) * pu; }
+    if (P.state === 'car' && P.veh && Math.hypot(P.veh.x - K.x, P.veh.z - K.z) < 3 && Math.abs(P.veh.sp) > 4) { P.veh.sp *= 0.3; P.veh.vx = (P.veh.vx || 0) * 0.3; P.veh.vz = (P.veh.vz || 0) * 0.3; sfx.play('neigh'); if (K.cool < 0) { say(K, 'Whoa, Neigh-Neigh! Whoa!'); K.cool = 6; } }
+    if (near < 9 && K.cool <= 0 && G.t > KSAYT && P.state === 'foot' && !G.cut) { K.cool = 9 + Math.random() * 6; KSAYT = G.t + 4; say(K, pick(CASTLINES.knight)); if (Math.random() < 0.6) sfx.play('neigh'); } }); }
+function drawKnights() { if (!KNIGHTS || G.interior) return; KNIGHTS.forEach(function (K) { if (dist2(K.x, K.z, CAM.x, CAM.z) > 180 * 180) return; var H = horseMesh(K.col[0], K.col[1]), mv = Math.min(1, K.sp / 2), bob = Math.abs(Math.sin(K.ph)) * 0.05 * mv;
+    drawHorse(H, K.x, K.y + bob, K.z, K.a, K.ph, mv);
+    var Q = pose0(); Q.y = -0.45; Q.hip[0] = Q.hip[1] = 1.2; Q.kn[0] = Q.kn[1] = 1.35; Q.hab = 0.42; Q.lean = 0.05 + mv * 0.04; Q.sh[0] = [0.7, 0.15, 0.25]; Q.el[0] = 1.1; Q.sh[1] = [0.35, 0.12, 0]; Q.el[1] = 0.5; Q.hy = 0;
+    var sx = K.x + Math.sin(K.a) * -0.12, sz = K.z + Math.cos(K.a) * -0.12; drawPerson(RIGS[K.rig] || RIGS.knight, sx, K.y + bob + 1.98, sz, K.a, Q, {});
+    var Hd = window.LASTHAND; if (Hd) { if (!RIGS.lanceM) { var m = new R3.Mesh(); tub(m, [0, -0.6, 0], [0, 3.4, 0], 0.045, 0.02, '#c8a040', 6); for (var i = 0; i < 4; i++) tub(m, [0, 0.4 + i * 0.7, 0], [0, 0.75 + i * 0.7, 0], 0.05, 0.05, '#c4121c', 6); tub(m, [0, 0.1, 0], [0, 0.35, 0], 0.13, 0.05, '#9aa0a8', 8);
+        m.quad([0, 3.0, 0], [0, 3.0, 0.6], [0, 2.6, 0.6], [0, 2.6, 0], UV1, TL('white'), litc('#c4121c', [1, 0, 0], 1), [1, 0, 0]); m.quad([0, 3.0, 0.6], [0, 3.0, 0], [0, 2.6, 0], [0, 2.6, 0.6], UV1, TL('white'), litc('#c4121c', [-1, 0, 0], 1), [-1, 0, 0]); RIGS.lanceM = m.upload(); }
+      R3.draw(RIGS.lanceM, ATT, { m: MM(Hd, MD(0, 0, 0, 0, Math.PI, 0, 1)) }); } }); }
+
+/* ---------- the Legion of Semen Demons ---------- */
+var DEMONM = null;
+function demonMesh() { if (DEMONM) return DEMONM; var b = new R3.Mesh(), cr = '#f1e7d0', dr = '#7a0a12';
+  ell(b, 0, 0, 0, 0.3, 0.36, 0.5, cr, 12, 8); ell(b, 0, 0.26, 0.42, 0.25, 0.26, 0.25, cr, 12, 8); tub(b, [0, 0.48, 0.38], [0, 0.82, 0.12], 0.13, 0.02, cr, 8); ell(b, 0, 0.96, 0.02, 0.04, 0.06, 0.04, cr, 6, 3);
+  [-1, 1].forEach(function (s) { tub(b, [s * 0.14, 0.44, 0.5], [s * 0.32, 0.74, 0.38], 0.05, 0.0, '#3a0408', 6); ell(b, s * 0.1, 0.3, 0.66, 0.05, 0.035, 0.03, '#ff2630', 6, 3); tub(b, [s * 0.18, -0.2, 0.15], [s * 0.2, -0.5, 0.3], 0.06, 0.04, cr, 5); });
+  b.quad([-0.12, 0.17, 0.66], [0.12, 0.17, 0.66], [0.1, 0.12, 0.64], [-0.1, 0.12, 0.64], UV1, TL('white'), litc('#12040a', [0, 0, 1], 1), [0, 0, 1]);
+  tub(b, [0, -0.05, -0.45], [0, -0.25, -1.1], 0.09, 0.02, cr, 6); b.tri([0, -0.25, -1.1], [0.14, -0.32, -1.32], [-0.14, -0.32, -1.32], [0, 0, 1, 0, 0.5, 1], TL('white'), litc(dr, [0, 1, 0], 1), [0, 1, 0]); b.tri([0, -0.25, -1.1], [-0.14, -0.32, -1.32], [0.14, -0.32, -1.32], [0, 0, 1, 0, 0.5, 1], TL('white'), litc(dr, [0, -1, 0], 1), [0, -1, 0]);
+  var w = new R3.Mesh(), P0 = [0, 0, 0], tips = [[1.7, 0.3, -0.1], [1.4, -0.05, -0.55], [0.95, -0.1, -0.75], [0.45, -0.05, -0.6]];
+  for (var i = 0; i < tips.length - 1; i++) { w.tri(P0, tips[i], tips[i + 1], [0, 0, 1, 0, 1, 1], TL('white'), litc(dr, [0, 1, 0], 1), [0, 1, 0]); w.tri(P0, tips[i + 1], tips[i], [0, 0, 1, 0, 1, 1], TL('white'), litc(dr, [0, -1, 0], 0.8), [0, -1, 0]); }
+  tub(w, P0, tips[0], 0.04, 0.015, '#3a0408', 5); tub(w, [0.6, 0.1, -0.04], tips[1], 0.025, 0.01, '#3a0408', 4); tub(w, [0.5, 0.06, -0.05], tips[2], 0.02, 0.01, '#3a0408', 4);
+  var wl = new R3.Mesh(); for (var j = 0; j < tips.length - 1; j++) { var a1 = [-tips[j][0], tips[j][1], tips[j][2]], a2 = [-tips[j + 1][0], tips[j + 1][1], tips[j + 1][2]]; wl.tri(P0, a2, a1, [0, 0, 1, 0, 1, 1], TL('white'), litc(dr, [0, 1, 0], 1), [0, 1, 0]); wl.tri(P0, a1, a2, [0, 0, 1, 0, 1, 1], TL('white'), litc(dr, [0, -1, 0], 0.8), [0, -1, 0]); }
+  tub(wl, P0, [-tips[0][0], tips[0][1], tips[0][2]], 0.04, 0.015, '#3a0408', 5);
+  DEMONM = { body: b.upload(), wr: w.upload(), wl: wl.upload() }; return DEMONM; }
+function nightK() { var dl = dayLight(G.time); return clamp((0.42 - dl) / 0.2, 0, 1); }
+/* the flocks: each one circles a point that drifts over the town; the same flocks every night (seeded from the hour and the cell) */
+function demonFlocks() { var out = [], cx = Math.floor(CAM.x / 420), cz = Math.floor(CAM.z / 420);
+  for (var gi = -1; gi <= 1; gi++) for (var gj = -1; gj <= 1; gj++) { var bi = cx + gi, bj = cz + gj, h = hash2(bi, bj, 165); if (h > 0.45) continue;
+    var ox = (bi + 0.5) * 420 + Math.sin(G.t * 0.02 + h * 9) * 90, oz = (bj + 0.5) * 420 + Math.cos(G.t * 0.017 + h * 7) * 90; out.push({ id: bi * 1000 + bj, x: ox, z: oz, y: Math.max(groundY(ox, oz), 0) + 48 + h * 40, n: 4 + Math.floor(h * 14), R: 22 + h * 30, sp: 0.22 + h * 0.2, h: h }); }
+  return out; }
+function demonAt(F, k) { var a = G.t * F.sp + k * 6.283 / F.n + Math.sin(k * 1.7) * 0.4, rr = F.R + Math.sin(k * 2.3 + G.t * 0.3) * 7; return { x: F.x + Math.cos(a) * rr, z: F.z + Math.sin(a) * rr, y: F.y + Math.sin(G.t * 0.8 + k) * 4 + (k % 3) * 3, a: a + Math.PI, bank: 0.4 }; }
+var DIVE = null, DIVET = 60 + Math.random() * 60;
+function stepDemons(dt) { var nk = nightK(); if (DIVE) { stepDive(dt); return; } if (nk < 0.8 || G.interior || G.cut || P.state === 'dead') return;
+  DIVET -= dt; if (DIVET > 0) return; DIVET = 110 + Math.random() * 150; if (P.state !== 'foot' || Math.random() < 0.35) return;
+  var F = demonFlocks().filter(function (f) { return dist2(f.x, f.z, P.x, P.z) < 300 * 300; }).sort(function (a, b) { return dist2(a.x, a.z, P.x, P.z) - dist2(b.x, b.z, P.x, P.z); })[0]; if (!F) return;
+  var s = demonAt(F, 0); DIVE = { x: s.x, y: s.y, z: s.z, a: s.a, st: 'tell', t: 0, hp: 45, flock: F.id, vx: 0, vy: 0, vz: 0 }; sfx.play('screech'); toast('A Semen Demon breaks from the Legion and comes for you!'); }
+function stepDive(dt) { var D = DIVE; D.t += dt;
+  if (D.st === 'tell') { D.y += Math.sin(D.t * 6) * 0.05; D.a += angDiff(D.a, Math.atan2(P.x - D.x, P.z - D.z)) * Math.min(1, dt * 3); if (D.t > 1.6) { D.st = 'dive'; D.t = 0; sfx.play('screech'); } return; }
+  if (D.st === 'dive') { var tx = P.x, ty = P.y + 1.2, tz = P.z, dx = tx - D.x, dy = ty - D.y, dz = tz - D.z, L = Math.hypot(dx, dy, dz) || 1, v = 26;
+    D.vx += (dx / L * v - D.vx) * Math.min(1, dt * 2.2); D.vy += (dy / L * v - D.vy) * Math.min(1, dt * 2.2); D.vz += (dz / L * v - D.vz) * Math.min(1, dt * 2.2);
+    D.x += D.vx * dt; D.y += D.vy * dt; D.z += D.vz * dt; D.a = Math.atan2(D.vx, D.vz); D.y = Math.max(D.y, groundY(D.x, D.z) + 0.8);
+    if (L < 1.7 && P.state === 'foot') { hurtPlayer(14, null); CAM.shake = 0.6; var kx = D.vx / (Math.hypot(D.vx, D.vz) || 1), kz = D.vz / (Math.hypot(D.vx, D.vz) || 1); var c = collide(P.x + kx * 2.2, P.z + kz * 2.2, 0.35, P.y, 1.6); P.x += kx * 2.2 + c.x; P.z += kz * 2.2 + c.z; sfx.play('hurt'); D.st = 'away'; D.t = 0; }
+    else if (D.t > 6 || P.state !== 'foot' || G.interior) { D.st = 'away'; D.t = 0; } return; }
+  if (D.st === 'away') { D.vy += (14 - D.vy) * Math.min(1, dt * 1.5); D.x += D.vx * dt * 0.6; D.z += D.vz * dt * 0.6; D.y += D.vy * dt; if (D.t > 5) DIVE = null; return; }
+  if (D.st === 'fall') { D.vy -= 20 * dt; D.y += D.vy * dt; D.x += D.vx * dt; D.z += D.vz * dt; D.spin = (D.spin || 0) + dt * 9; var g = groundY(D.x, D.z); if (D.y <= g + 0.3) { for (var i = 0; i < 10; i++) addFx({ k: 'puff', x: D.x, y: g + 0.4, z: D.z, vx: rnd(-1.5, 1.5), vy: rnd(0.5, 2), vz: rnd(-1.5, 1.5), life: 1.4, s0: 0.3, grow: 1.2, col: [0.95, 0.92, 0.85], a0: 0.6 }); PICKUPS.push({ k: 'cash', x: D.x, z: D.z, y: g, v: 80, life: 30 }); sfx.play('boom'); DIVE = null; } } }
+function hurtDemon(dmg) { var D = DIVE; if (!D || D.st === 'fall') return; D.hp -= dmg; D.hit = 0.15; if (D.hp <= 0) { D.st = 'fall'; D.vy = 2; D.vx *= 0.3; D.vz *= 0.3; sfx.play('screech'); SV.stats.demons = (SV.stats.demons || 0) + 1; bigText('SEMEN DEMON DOWN', '$80', '#ffe36a', 2); } else if (D.st === 'dive' && D.hp < 25) { D.st = 'away'; D.t = 0; } }
+function drawOneDemon(M, x, y, z, a, flap, sc, tint, roll) { var B = MD(x, y, z, a, 0, roll || 0, sc); var o = { m: B, lit: false, tint: tint };
+  R3.draw(M.body, ATT, o); R3.draw(M.wr, ATT, { m: MM(B, MD(-0.22, 0.12, 0, 0, 0, -flap, 1)), lit: false, tint: tint }); R3.draw(M.wl, ATT, { m: MM(B, MD(0.22, 0.12, 0, 0, 0, flap, 1)), lit: false, tint: tint }); }
+function drawDemons() { var nk = nightK(); if (G.interior) return; var M = demonMesh();
+  if (nk > 0.05) { var n = 0, tn = [0.55 * nk + 0.2, 0.5 * nk + 0.2, 0.5 * nk + 0.2]; demonFlocks().forEach(function (F) { for (var k = 0; k < F.n; k++) { if (DIVE && DIVE.flock === F.id && k === 0) continue; if (++n > 40) return; var s = demonAt(F, k); if (dist2(s.x, s.z, CAM.x, CAM.z) > 380 * 380) continue;
+      var flap = Math.sin(G.t * 5 + k * 1.3) * 0.55; drawOneDemon(M, s.x, s.y, s.z, s.a, flap, 1.6, tn, 0.35); } }); }
+  if (DIVE) { var D = DIVE, fl = D.st === 'dive' ? Math.sin(G.t * 3) * 0.2 - 0.5 : Math.sin(G.t * 12) * 0.7, tt = D.hit > 0 ? [3, 3, 3] : D.st === 'tell' ? [1.6, 0.5, 0.5] : [1, 1, 1]; D.hit = Math.max(0, (D.hit || 0) - 1 / 60);
+    drawOneDemon(M, D.x, D.y, D.z, D.a, fl, 1.4, tt, D.st === 'fall' ? D.spin : 0); if (D.st === 'tell') gbill(D.x, D.y + 0.3, D.z, 0.9 + 0.3 * Math.sin(G.t * 14), 'halo', { tint: [1, 0.1, 0.1], add: 1 }); } }
+/* bullets and the hook find a diving demon */
+(function () { var rh = rayHit; rayHit = function (o, d, maxT, who) { var best = rh.apply(this, arguments); var D = DIVE; if (!D || D.st === 'fall' || who !== P) return best;
+    var ox = o[0] - D.x, oy = o[1] - D.y, oz = o[2] - D.z, b = ox * d[0] + oy * d[1] + oz * d[2], c = ox * ox + oy * oy + oz * oz - 1.1 * 1.1, disc = b * b - c; if (disc < 0) return best; var t = -b - Math.sqrt(disc); if (t < 0 || t > (best ? best.t : maxT)) return best;
+    if (window.__shootW) hurtDemon(window.__shootW.dmg || 10); return best; };
+  var sh = shoot; shoot = function (who, W0) { if (who === P) window.__shootW = W0; try { return sh.apply(this, arguments); } finally { window.__shootW = null; } }; })();
+/* melee: a swing in front of you hits a demon that is close */
+(function () { var sf = stepFoot; stepFoot = function (dt) { var r = sf.apply(this, arguments); var D = DIVE; if (D && D.st === 'dive' && P.atkT > 0 && !P.demonHit && Math.hypot(D.x - P.x, D.z - P.z) < 2.6 && Math.abs(D.y - P.y - 1) < 1.8) { var W0 = WPN[P.wpn] || WPN.fists; if (W0.melee) { hurtDemon(W0.dmg * 1.5); P.demonHit = 1; } } if (!(P.atkT > 0)) P.demonHit = 0; return r; }; })();
+
+/* ---------- sounds: the horse and the demon ---------- */
+(function () { var t = sfx.tone, n = sfx.noise;
+  sfx.add('neigh', function () { for (var i = 0; i < 7; i++) t('sawtooth', 820 - i * 55 + (i % 2) * 70, 760 - i * 55, 0.09, 0.05, i * 0.08); t('sawtooth', 420, 300, 0.25, 0.05, 0.56); n(0.15, 0.04, 2500); });
+  sfx.add('screech', function () { t('sawtooth', 1400, 500, 0.5, 0.07); t('square', 1100, 380, 0.5, 0.04, 0.03); n(0.4, 0.06, 3000); }); })();
+
+/* ---------- Uncle Spooge: his tissue in his hand, and he sits on a bench in the cafe streets when you are about ---------- */
+(function () { var dp = drawPed; drawPed = function (p) { dp(p); if (p.who !== 'spooge' || p.dead || !window.LASTHAND) return; if (!RIGS.tissueM) { var m = new R3.Mesh(); ell(m, 0, 0, 0.05, 0.07, 0.06, 0.07, '#f4f0e6', 7, 4); ell(m, 0.03, 0.03, 0.08, 0.04, 0.035, 0.04, '#e8e0cc', 6, 3); ell(m, -0.03, -0.02, 0.03, 0.035, 0.03, 0.035, '#ece6d4', 6, 3); RIGS.tissueM = m.upload(); }
+  R3.draw(RIGS.tissueM, ATT, { m: MM(LASTHAND, MD(0, 0.02, 0.04, 0, 0, 0, 1)) }); }; })();
+var SPOOGE = null;
+function stepSpooge() { if (G.interior) return; if (SPOOGE && (SPOOGE.dead || PEDS.indexOf(SPOOGE) < 0)) SPOOGE = null; if (SPOOGE) return; if ((G.spoogeT || 0) > G.t) return; G.spoogeT = G.t + 4;
+  var s = SEATS.filter(function (q) { var d = dist2(q.x, q.z, P.x, P.z); return q.kind === 'bench' && !q.taken && d > 30 * 30 && d < 110 * 110 && dAt(q.x, q.z).style === 'cafe'; }).sort(function (a, b) { return hash2(Math.round(a.x), Math.round(a.z), 9) - hash2(Math.round(b.x), Math.round(b.z), 9); })[0];
+  if (!s) return;
+  var p = makePed({ x: s.x - Math.sin(s.a) * 0.08, z: s.z - Math.cos(s.a) * 0.08, kind: 'cit', who: 'spooge', rig: RIGS.spooge, state: 'idle', keep: 1 }); p.a = s.a; p.fixY = s.y; p.seat = s; s.taken = 1;
+  p.ctl = function () { p.y = p.fixY; p.a = s.a; p.vx = p.vz = 0; if (P.state === 'foot' && Math.hypot(P.x - p.x, P.z - p.z) < 5 && (p.sayT || 0) <= 0 && Math.random() < 0.02) say(p, pick(CASTLINES.spooge)); };
+  p.pose = function (Q) { var S = sitPose('bench', 0, 0, 0, 0); for (var k in S) Q[k] = S[k]; Q.sh[1] = [0.9, 0.1, 0.3]; Q.el[1] = 1.4; }; SPOOGE = p; }
+/* the knights' and the demons' turn each frame */
+(function () { var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepKnights(dt); stepDemons(dt); stepSpooge(); } catch (e) { if (!window.__u165err) { window.__u165err = 1; console.warn(e); } } };
+  var df = drawFun; drawFun = function () { df(); drawKnights(); drawDemons(); };
+  var dh = drawHud; drawHud = function () { dh.apply(this, arguments); if (!KNIGHTS || G.interior) return; var ctx = KIT.ctx; KNIGHTS.forEach(function (p) { if (!p.said || p.sayT <= 0) return;
+      var s = R3.project(p.x, p.y + 4.0, p.z); if (!s || dist2(p.x, p.z, P.x, P.z) > 30 * 30) return; var w = Math.min(190, tw2(p.said, 8) + 10), L = KIT.wrap ? KIT.wrap(p.said, 180, 8, 'body') : [p.said];
+      ctx.fillStyle = 'rgba(241,231,208,0.94)'; ctx.fillRect(s.x - w / 2, s.y - L.length * 10 - 5, w, L.length * 10 + 5); L.forEach(function (l, i) { tx(l, s.x - tw2(l, 8) / 2, s.y - L.length * 10 - 1 + i * 10, { col: '#12040a', size: 8 }); }); }); }; })();
 
 </script>
 </body></html>

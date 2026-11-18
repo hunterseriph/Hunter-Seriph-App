@@ -182,7 +182,7 @@ function drawRig(rig, x, y, z, yaw, P, o) {
     var up = MM(tor, MD(sx, D.tor * 0.86, 0, a[2] || 0, -a[0], k ? -a[1] : a[1])); dr(S['au' + sd], up);
     var lo = MM(up, MD(0, -D.au, 0, 0, -P.el[k], 0)); dr(S['al' + sd], lo);
     if (k === 1) out.hand = MM(lo, MD(0, -D.al - D.hand * 0.7, 0.02, 0, Math.PI, 0)); else out.handL = MM(lo, MD(0, -D.al - D.hand * 0.7, 0.02, 0, Math.PI, 0));
-    var hx = k ? -D.hipW : D.hipW, th = MM(hips, MD(hx, -0.02, 0, 0, -P.hip[k], 0)); dr(S['lu' + sd], th);
+    var hx = k ? -D.hipW : D.hipW, th = MM(hips, MD(hx, -0.02, 0, 0, -P.hip[k], P.hab ? (k ? -P.hab : P.hab) : 0)); /* update 165: P.hab spreads the legs (riding a horse) */ dr(S['lu' + sd], th);
     dr(S['ll' + sd], MM(th, MD(0, -D.lu, 0, 0, P.kn[k], 0)));
   });
   if (o.held && out.hand) dr(o.held, MM(out.hand, MD(0, 0, 0, 0, o.heldP || 0, 0)));

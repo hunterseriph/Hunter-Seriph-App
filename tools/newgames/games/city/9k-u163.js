@@ -46,7 +46,7 @@ function stepStreetLife(dt) { if (G.interior || !P || G.mode !== 'play') return;
   if (roll < 0.86 && night && st === 'redlight') { for (var d2 = 0; d2 < 3; d2++) { var pd = mk(rnd(-1.5, 1.5), rnd(-1.5, 1.5), Math.random() * 6.283, null); pd.danceT = 1e9; } return; }
   if (roll < 0.95 && (st === 'downtown' || st === 'cafe') && !mine.some(function (p) { return p.busk; })) { mk(0, 0, Math.random() * 6.283, poseBusk, { busk: 1, holding: 'guitar' in RIGS ? 'guitar' : null }); return; }
 }
-(function () { var sl = stepFun; stepFun = function (dt) { sl(dt); stepStreetLife(dt); if (Math.random() < dt * 0.6) PEDS.forEach(function (p) { if (p.life2 && p.smoke && dist2(p.x, p.z, CAM.x, CAM.z) < 40 * 40) addFx({ k: 'puff', x: p.x + Math.sin(p.a) * 0.3, y: p.y + 0.75, z: p.z + Math.cos(p.a) * 0.3, vx: 0, vy: 0.4, vz: 0, life: 2, s0: 0.12, grow: 0.4, col: [0.85, 0.85, 0.82], a0: 0.4 }); }); };
+(function () { var sl = stepFun; stepFun = function (dt) { sl(dt); stepStreetLife(dt); if (!window.SMOKE165 && Math.random() < dt * 0.6) PEDS.forEach(function (p) { if (p.life2 && p.smoke && dist2(p.x, p.z, CAM.x, CAM.z) < 40 * 40) addFx({ k: 'puff', x: p.x + Math.sin(p.a) * 0.3, y: p.y + 0.75, z: p.z + Math.cos(p.a) * 0.3, vx: 0, vy: 0.4, vz: 0, life: 2, s0: 0.12, grow: 0.4, col: [0.85, 0.85, 0.82], a0: 0.4 }); }); };
   var dp = drawPed; drawPed = function (p) { dp(p); if (p.life2 && p.smoke && typeof drawJoint === 'function') drawJoint(p.x, p.y, p.z, p.a, G.t + p.id * 3); };
   var df = despawnFar; despawnFar = function () { df(); if (typeof SEATS !== 'undefined') SEATS.forEach(function (s) { if (s.taken && !PEDS.some(function (p) { return p.seat === s; })) s.taken = 0; }); };
   // shoved or scared: they stop what they were doing

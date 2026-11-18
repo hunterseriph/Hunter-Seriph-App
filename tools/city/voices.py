@@ -35,6 +35,8 @@ V = { # update 157 (he said people sounded robotic and weird): no pitch shifting
  # people in the street (three of each), callers and the police
  'pedM0': (LT, 111, 1.0, 1.0, ''), 'pedM1': (LT, 57, 1.0, 1.0, ''), 'pedM2': (LT, 6, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'), 'pedF0': (LT, 30, 1.0, 1.0, ''), 'pedF1': (LT, 75, 1.0, 1.0, ''), 'pedF2': (LT, 84, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'),
  'cop': (LT, 3, 1.0, 1.0, ''),
+ # update 165: the Knights of Cum-a-lot speak through their helmets, Uncle Spooge is slow and wheezy
+ 'knight': (LT, 72, 1.02, 1.0, 'lowpass=f=3800,aecho=0.8:0.35:18:0.3'), 'spooge': (LT, 111, 1.14, 1.0, 'lowpass=f=6000'),
 }
 def key(who, text):
     h = 0x811c9dc5; s = (who + '|' + text).encode('utf-16-le')

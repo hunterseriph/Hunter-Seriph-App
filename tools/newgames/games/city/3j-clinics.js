@@ -18,12 +18,12 @@ function placeClinics() { if (CLINICS.length) return;
     return r; }
   function place(cx, cz, kind, name, R, maxR) { for (var rad = 8; rad < (maxR || 300); rad += 6) for (var k = 0; k < 28; k++) { var a = k / 28 * 6.283 + rad * 0.37, x = cx + Math.sin(a) * rad, z = cz + Math.cos(a) * rad, r = free(x, z, R); if (!r) continue;
       var q = edgeAt(r.E, r.s, false, 0), ang = Math.atan2(q.x - x, q.z - z), y = groundY(x, z);
-      var C = { k: kind, x: x, z: z, a: ang, y: y, name: name, h: y, door: { x: x + Math.sin(ang) * (R + 1.2), z: z + Math.cos(ang) * (R + 1.2), a: ang } }; CLINICS.push(C); POIS.push(C);
+      var C = { k: kind, x: x, z: z, a: ang, y: y, name: name, h: y, R: R, door: { x: x + Math.sin(ang) * (R + 1.2), z: z + Math.cos(ang) * (R + 1.2), a: ang } }; CLINICS.push(C); POIS.push(C);
       for (var j = Math.floor((z - R - 2) / CT); j <= Math.floor((z + R + 2) / CT); j++) for (var i = Math.floor((x - R - 2) / CT); i <= Math.floor((x + R + 2) / CT); i++) if (i >= 0 && j >= 0 && i < MW && j < MH) CLR[j * MW + i] = 1;
       return C; } return null; }
   var H = SHOPS.hosp && doorOf(SHOPS.hosp.b); if (H) CLINICS.push({ k: 'hosp', x: H.x, z: H.z, door: H, name: 'Cum City Hospital' });
-  DIST.forEach(function (d) { if (!(d.cx > 0) || d.id === 'sea' || d.id === 'ejac' || d.id === 'cafe') return; if (!place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 6, d.id === 'isles' ? 160 : 420)) place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 4.5, 420); });
-  poisOf('village').concat(poisOf('motel')).forEach(function (p) { place(p.x, p.z, 'clinic', 'Country Clinic', 6, 120); });
+  DIST.forEach(function (d) { if (!(d.cx > 0) || d.id === 'sea' || d.id === 'ejac' || d.id === 'cafe') return; if (!place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 10, d.id === 'isles' ? 160 : 420) && !place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 6, d.id === 'isles' ? 160 : 420)) place(d.cx, d.cz, 'clinic', d.name + ' Clinic', 4.5, 420); });
+  poisOf('village').concat(poisOf('motel')).forEach(function (p) { place(p.x, p.z, 'clinic', 'Country Clinic', 10, 120) || place(p.x, p.z, 'clinic', 'Country Clinic', 6, 120); });
   var gate = poisOf('gate')[0], ej = DIST.filter(function (d) { return d.id === 'ejac'; })[0]; if (gate || ej) place((gate || ej).x || ej.cx, (gate || ej).z || ej.cz, 'firstaid', 'First Aid Tent', 3.5, 200);
 }
 (function () { var bl = buildLandmarks; buildLandmarks = function () { placeClinics(); return bl.apply(this, arguments); }; })();

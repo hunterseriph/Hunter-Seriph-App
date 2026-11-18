@@ -65,7 +65,7 @@ function stepHeli(v, inp, dt) {
   var fwd = v.ground ? 0 : -(inp.pitch || 0) * t.top, side = 0, ty = v.ground ? 0 : (inp.yaw || 0) * 1.4;
   v.a += ty * dt; v.vx += ((f[0] * fwd) - v.vx) * Math.min(1, dt * 1.2); v.vz += ((f[1] * fwd) - v.vz) * Math.min(1, dt * 1.2);
   var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, ny = Math.min(320, v.y + v.vy * dt), c = collide(nx, nz, 2.2, ny, 3);
-  if (c.hit) { var sp = Math.hypot(v.vx, v.vz); if (sp > 6) { hurtVeh(v, sp * 2, null); sfx.play('crash'); } nx = v.x + c.x * 0.5; nz = v.z + c.z * 0.5; v.vx *= -0.3; v.vz *= -0.3; }
+  if (c.hit) { var sp = Math.hypot(v.vx, v.vz); if (sp > 6) { hurtVeh(v, sp * 2, null); if (sp > 8 && G.t > (v.crashT || 0) && dist2(v.x, v.z, P.x, P.z) < 35 * 35) { v.crashT = G.t + 1.5; sfx.play('crash'); } } nx = v.x + c.x * 0.5; nz = v.z + c.z * 0.5; v.vx *= -0.3; v.vz *= -0.3; }
   if (ny < g && !v.ground) { if (v.vy < -6) hurtVeh(v, -v.vy * 4, null); ny = g; }
   v.x = clamp(nx, 4, WX - 4); v.z = clamp(nz, 4, WZ - 4); v.y = Math.max(ny, g);
   v.pitch += (((inp.pitch || 0) * 0.25 * (v.ground ? 0 : 1)) - v.pitch) * Math.min(1, dt * 3); v.roll += (((inp.yaw || 0) * -0.18 * (v.ground ? 0 : 1)) - v.roll) * Math.min(1, dt * 3);
@@ -115,7 +115,7 @@ function carHits(dt) { // the player's car against people and other cars
     if (sp > 4) { hurtPed(p, sp * 4, P, [v.vx / sp, 0.5, v.vz / sp], 1); p.vx = v.vx * 0.9; p.vz = v.vz * 0.9; p.vy = 3 + sp * 0.15; if (sp > 15) stuntBonus('splat'); } else { p.x += lx > 0 ? 0.1 : -0.1; } } });
   VEH.forEach(function (o) { if (o === v || o.t.cls === 'heli' || o.t.cls === 'plane') return; if (Math.abs(o.x - v.x) > 9 || Math.abs(o.z - v.z) > 9) return; var hb = obbHit(v, o); if (hb) { var nx = hb.nx, nz = hb.nz, rel = (v.vx - (o.vx || 0)) * nx + (v.vz - (o.vz || 0)) * nz;
     var push = hb.d * 0.5; o.rest = 0; if (o.ai) o.ai.phys = 1; o.x += nx * push; o.z += nz * push; v.x -= nx * push; v.z -= nz * push;
-    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (o.ai) o.ai.phys = 1; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); if (G.t > (v.crashT || 0)) { v.crashT = G.t + 0.8; sfx.play('crash'); } CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
+    if (rel > 0) { var ma = v.t.heavy ? 2 : 1, mb = o.t.heavy ? 2 : 1, j = rel * 1.2 / (ma + mb); v.vx -= nx * j * mb; v.vz -= nz * j * mb; o.vx = (o.vx || 0) + nx * j * ma; o.vz = (o.vz || 0) + nz * j * ma; if (o.ai) o.ai.bump = 1.2; if (o.ai) o.ai.phys = 1; if (rel > 5) { hurtVeh(o, rel * 2.2, P); hurtVeh(v, rel * 1.2, null); if (G.t > (v.crashT || 0) && rel > 3 && dist2(v.x, v.z, P.x, P.z) < 35 * 35) { v.crashT = G.t + 1.2; sfx.play('crash'); } CAM.shake = 0.25; if (o.t.cop) crime('hitcop', v.x, v.z); else crime('ram', v.x, v.z, 0.3); } } } });
 }
 function hurtVeh(v, dmg, by, isBoom) { if (v.dead || G.cut) return; if (v.ai) v.ai.phys = 1; if (v === (P && P.veh) && G.god) return; if (dmg < 300) dmg *= (isBoom ? 0.75 : 0.22) * (v.t.heavy ? 0.6 : 1); v.hp -= dmg; /* update 155: cars take about four times the knocks before they burn */ v.flash = 0.1; if (by === P && v.driver && v.driver !== P) { var d = v.driver; d.angry = 1; if (v.t.cop) crime('shootcop', v.x, v.z); else crime('carattack', v.x, v.z, 0.5); } }
 function explodeVeh(v) {

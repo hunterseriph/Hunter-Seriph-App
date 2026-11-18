@@ -81,7 +81,7 @@ function buildChunk(ci, cj) {
       continue;
     }
     if (typeof SHOREWL !== 'undefined' && SHOREWL[t] > -50 && Math.min(h00, h10, h01, h11) < SHOREWL[t]) { var swl = SHOREWL[t], sc = Math.abs(swl - CREAMY) < 0.01; WAT.quad([ax, swl, az], [ax, swl, bz], [bx, swl, bz], [bx, swl, az], UV1, TL(sc ? 'cream' : 'water'), sc ? [0.55, 0.55, 0.55] : [0.5, 0.5, 0.5], [0, 1, 0], sc ? 0.15 : 0); } // update 161: the water runs up the smoothed shore
-    var raise = k === K_PAVE ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
+    var raise = k === K_PAVE && !window.RIBBON ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
     if (k === K_BRIDGE && typeof BCOV !== 'undefined' && BCOV[t]) { underBridge(WAT, M0, i, j); continue; } // update 160: a smooth deck along the road is drawn instead (bridgeDress)
     if (k === K_BRIDGE) { // the deck, a girder down each open side, railings, a pier every few tiles
       M0.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, T, lit([0, 1, 0]), [0, 1, 0]);
@@ -93,9 +93,11 @@ function buildChunk(ci, cj) {
       if ((i + j) % 6 === 0) boxC(M0, ax + 1.4, -6, az + 1.4, ax + 2.6, Math.min(h00, h11) - 1.3, az + 2.6, '#5a4a44');
       continue;
     }
+    if (window.RIBBON && (k === K_ROAD || k === K_PAVE)) { ribbonTile(M0, NAT, i, j, k, d, h00, h10, h01, h11); continue; }
+    if (window.RIBBON && grassPave(M0, NAT, i, j, k, d)) continue; /* update 165: roads are drawn as smooth surfaces along the road graph (roadRibbons) */
     var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK || nk === K_ROCK || nk === K_FOREST || nk === K_GRAVE)) outK = nk; }); if (outK < 0) for (var rr = 1; rr <= 2 && outK < 0; rr++) for (var qj = -rr; qj <= rr && outK < 0; qj++) for (var qi = -rr; qi <= rr; qi++) { var ni3 = i + qi, nj3 = j + qj; if (ni3 < 0 || nj3 < 0 || ni3 >= MW || nj3 >= MH) continue; var nk3 = KM[nj3 * MW + ni3]; if (nk3 === K_PAVE) break; if (nk3 === K_GRASS || nk3 === K_FIELD || nk3 === K_DIRT || nk3 === K_SAND || nk3 === K_PARK || nk3 === K_ROCK || nk3 === K_FOREST || nk3 === K_GRAVE) { outK = nk3; break; } } /* update 161: a road square past the road's real edge with road all round it still gets cut (they stuck out as teeth) */ }
     else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK || k === K_ROCK || k === K_FOREST || k === K_GRAVE) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); /* update 161: corner neighbours too, so the road's edge has no teeth */ if (!nr) outK = -1; }
-    if ((k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && typeof cutSkirts === 'function') cutSkirts(M0, i, j); if (cutT && k === K_ROAD) continue;
+    if (!window.RIBBON && (k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && typeof cutSkirts === 'function') cutSkirts(M0, i, j); if (cutT && k === K_ROAD) continue;
     if (!cutT && k === K_PAVE && paveOuter(M0, NAT, i, j, d, [h00, h10, h01, h11])) { if (typeof cutSkirts === 'function') cutSkirts(M0, i, j); continue; } // update 160: the back of the pavement follows the road's curve
     if (!cutT && typeof softPiece === 'function' && softPiece(M0, NAT, i, j, k, d, [h00, h10, h01, h11])) cutT = 1; // update 161: soft edges between ground kinds
     if (!cutT && (natural(k) || k === K_SAND || k === K_ROCK || k === K_DIRT)) col = [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)]; /* update 161: smooth shading across the hills, not a flat shade per square */
@@ -125,15 +127,17 @@ function buildChunk(ci, cj) {
     if (k === K_SAND && d.style === 'beach' && r1 < 0.03) { var ux = ax + 2, uz = az + 2, uy = groundY(ux, uz); boxC(M0, ux - 0.04, uy, uz - 0.04, ux + 0.04, uy + 2.2, uz + 0.04, '#d8d0c0'); tub(M0, [ux, uy + 2.2, uz], [ux, uy + 2.7, uz], 1.3, 0.05, r2 < 0.5 ? '#c4121c' : '#f1e7d0', 8); }
     if (k === K_SAND && d.style === 'isles' && r1 < 0.05) { var px2 = ax + 2, pz2 = az + 2; palm(VEG, px2, groundY(px2, pz2), pz2, r2); if (first) addPost(px2, pz2, 0.3, 0, 99); }
   }
+  if (window.RIBBON) roadRibbons(M0, x0, z0, CS, first);
   // roads: centre lines, edge lines and crossings
   near(EGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (E) {
+    if (window.RIBBON && (E.off || E.track)) return; /* update 165: switched-off edges are not drawn, so no lines or crossings on them */
     var step = 6, double = E.w >= 11;
     for (var s = 2; s < E.len - 2; s += step) { var p = edgeAt(E, s, false, 0); if (p.x < x0 || p.x >= x0 + CS || p.z < z0 || p.z >= z0 + CS) continue;
       var a0 = RN[E.a], a1 = RN[E.b]; if (Math.hypot(p.x - a0.x, p.z - a0.z) < E.w * 0.8 || Math.hypot(p.x - a1.x, p.z - a1.z) < E.w * 0.8) continue;
-      var y = groundY(p.x, p.z) + 0.04, ca = p.dz, sa = -p.dx, l = 1.6, wd = double ? 0.5 : 0.18, T = TL(double ? 'yline' : 'dash');
+      var y = groundY(p.x, p.z) + 0.085, ca = p.dz, sa = -p.dx, l = 1.6, wd = double ? 0.5 : 0.18, T = TL(double ? 'yline' : 'dash');
       M0.quad([p.x - ca * wd - p.dx * l, y, p.z - sa * wd - p.dz * l], [p.x + ca * wd - p.dx * l, y, p.z + sa * wd - p.dz * l], [p.x + ca * wd + p.dx * l, y, p.z + sa * wd + p.dz * l], [p.x - ca * wd + p.dx * l, y, p.z - sa * wd + p.dz * l], [0, 1, 1, 1, 1, 0, 0, 0], T, [0.55, 0.55, 0.55], [0, 1, 0]); }
     [[E.a, false], [E.b, true]].forEach(function (q) { var nd = RN[q[0]]; if (nd.e.length < 3) return; var p = edgeAt(E, E.w * 0.75 + 1.5, q[1], 0); if (p.x < x0 || p.x >= x0 + CS || p.z < z0 || p.z >= z0 + CS) return; if (kAt(p.x, p.z) !== K_ROAD) return;
-      var y = groundY(p.x, p.z) + 0.05, ca = p.dz, sa = -p.dx, hw = E.w / 2 - 0.3, l = 1.4;
+      var y = groundY(p.x, p.z) + 0.09, ca = p.dz, sa = -p.dx, hw = E.w / 2 - 0.3, l = 1.4;
       M0.quad([p.x - ca * hw - p.dx * l, y, p.z - sa * hw - p.dz * l], [p.x + ca * hw - p.dx * l, y, p.z + sa * hw - p.dz * l], [p.x + ca * hw + p.dx * l, y, p.z + sa * hw + p.dz * l], [p.x - ca * hw + p.dx * l, y, p.z - sa * hw + p.dz * l], [0, 0, hw / 2, 0, hw / 2, 1, 0, 1], TL('zebra'), [0.55, 0.55, 0.55], [0, 1, 0]); });
   });
   // buildings whose middle is in this chunk

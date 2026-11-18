@@ -83,7 +83,7 @@ function drawPerson(rig, x, y, z, yaw, Q, o) {
   o = o || {}; if (rig === 'steve' || (rig && rig === RIGS.steve)) { R3.draw(RIGS.steveM, ATT, { m: MD(x, y + Math.abs(Math.sin(G.t * 6 + x)) * 0.1, z, yaw, 0, 0, o.sc || 1.3), rim: 1 }); R3.draw(RIGS.shadowC, ATT, { m: MD(x, groundY(x, z) + 0.02, z, 0, 0, 0, 1.2), soft: 1, lit: false, alpha: 0.7 }); return {}; }
   if (typeof rig === 'string') rig = rigOf(rig);
   var out = drawRig(rig, x, y, z, yaw, Q, { noShadow: 1, held: o.held, heldP: o.heldP, heldL: o.heldL, flash: o.flash, tint: o.tint || G.ptint, sc: o.sc, alpha: o.alpha, still: o.still, noDrip: o.noDrip });
-  window.LASTHAND = out && out.hand; /* update 164: the joint is drawn in this hand */
+  window.LASTHAND = out && out.hand; window.LASTHEAD = out && out.head; /* update 164: the joint is drawn in this hand */
   if (!o.noShadow) R3.draw(RIGS.shadowC, ATT, { m: MD(x, standY(x, z, y) + 0.03, z, 0, 0, 0, 1.1 * (o.sc || 1)), soft: 1, lit: false, alpha: 0.75 });
   return out;
 }
