@@ -20,6 +20,9 @@
 })();
 var RADIO2 = {
   news: [
+    'News. A reminder from the Council: sports are still outlawed in Cum City. Anyone caught kicking a ball will have the ball taken off them. And the leg.',
+    'News. The old stadium has been turned into a car park. The goal posts have been left up as a warning.',
+    'News. Cream levels on the Jizz River are high again tonight. Boats are told to keep to the middle and keep their mouths shut.',
     'Good evening, this is Cum City News. Mayor Cumhead has promised to fix every road in the city. He was then seen driving on the pavement.',
     'Cum City News. Sheriff Shithead Laboozie says crime is down this week. Crime says it is just resting.',
     'Breaking news. A giant cream pie has been spotted rolling down Clubhouse Row. Greebo denies everything. His apron says otherwise.',
@@ -41,7 +44,7 @@ var RADIO2 = {
     'Harold\'s Mad Tea Party has introduced a new tea. It is just potion. They have always been just potion.',
     'Cum City News. A fight broke out at Joff\'s over pineapple on pizza. Joff won. Joff always wins.',
     'Breaking news. Steve has stopped waving at the Ejaculand gate for the first time in twenty years. He was just scratching his head. He is waving again.',
-    'The Cum City Council has voted to rename the river. The new name is the Cream River. The old name was also the Cream River.',
+    'The Cum City Council has voted to rename the river. The new name is the Jizz River. The old name was also the Jizz River.',
     'Cum City News. Master Bates has been asked to leave the library. He says he was only clearing his head before proceeding.',
     'A homunculus has hatched in the post office. It has been given a job. It is already the best worker there.',
     'Cum City News. Nattyboro says a blade without a bite is merely a stick. He then enchanted a stick. It bit him.',
@@ -56,7 +59,7 @@ var RADIO2 = {
     'Traffic. A herd of homunculi is crossing at Clubhouse Row. They have right of way. They always have right of way.',
     'Traffic from the chopper. Somebody in a gothic outfit is driving on the pavement in the cafe streets. Just let him through. Trust me.',
     'Traffic. Roadworks on every road in Cum City. The council says it is all part of the plan. Nobody has seen the plan.',
-    'Traffic. The bridge over the cream river is open again after a tanker of Silly Pills overturned. The fish are very happy.',
+    'Traffic. The bridge over the Jizz River is open again after a tanker of Silly Pills overturned. The fish are very happy.',
     'Traffic from the chopper. Clear skies over Ejaculand, queues at the Load Flume back to the car park, and a police chase heading your way. Have a nice day.',
     'Traffic. A taxi has been parked across the airport road for three hours. The driver says he is on his break. He is asleep.',
     'Traffic. Avoid the red light district tonight, there is a parade. Or a riot. From up here they look the same.',
@@ -82,20 +85,7 @@ var RADIO2 = {
     'Weather. Thunder and lightning over the Blood Factory. If the lights flicker, it is the storm. If the lights laugh, it is Blumhead.',
     'Weather. A lovely sunrise tomorrow at six. If you are still awake for it, you have been on TB\'s pills. Go to bed.'
   ],
-  sports: [
-    'Sports. The Clubhouse Row Loads beat the Cum Hills Droplets four nil. The Droplets are blaming the cream on the pitch.',
-    'Sports. Saba has broken the record for the longest hitless run. He was not hit for six hours. He was also asleep for five of them.',
-    'Sports. The Cumhead Kart grand prix was won by Greebo again. The other drivers have asked for his pie launcher to be tested.',
-    'Sports. Skeet Fighter championships tonight. Expect fireballs, uppercuts and at least one homunculus thrown into the crowd.',
-    'Sports. The Cum City Marathon has been cancelled after every runner took a taxi.',
-    'Sports. Uncle Beeb has won the darts again. He hit the board twice. He hit the barman eleven times.',
-    'Sports. The street racing season is open. The police would like everyone to know it is illegal. They would also like to know where it is.',
-    'Sports. A new record at the Bone Pit drag strip. Two hundred miles an hour, backwards, on fire. The driver is fine. The car is not.',
-    'Sports. The homunculus races at the garden this weekend. Our tip is the Bloodmoon. It is always the Bloodmoon.',
-    'Sports. Brothers Load are back in the rodeo. Piggy rode the bull for eight seconds. The bull says it was four.',
-    'Sports. Football. Cum City United lost again. The manager says the team is rebuilding. The stadium is also rebuilding. It fell down.',
-    'Sports. Boxing. TB fought himself in the mirror at his bar last night. It went twelve rounds. The mirror won.'
-  ],
+  sports: [], /* update 162: sports are outlawed in Cum City (his rule), so there is no sports desk */
   crime: [
     'Crime Watch. Police are looking for a cream droplet in a Hunter Seriph shirt and trip pants. If you see him, he is probably the mayor. Carry on.',
     'Crime Watch. A string of car thefts across Cum City. Victims say the thief apologised every time, then drove off on the pavement.',
@@ -173,7 +163,7 @@ var RADIO2 = {
     'Knock knock. Who is there? Bonjo. Bonjo who? Let me get the door.',
     'Why is Potbelly so round? Five dollars a go, kid. Five dollars a go.',
     'How do you know if someone has been to Amy\'s? They tell you. And then they cry.',
-    'What did the Blood Factory say to the Cream River? Nothing. They are not speaking since the leak.',
+    'What did the Blood Factory say to the Jizz River? Nothing. They are not speaking since the leak.',
     'Why did Harold\'s tea party end early? Somebody asked what was in the tea.',
     'What do you call a homunculus with a degree? Still a homunculus. But smug.',
     'Why did the taxi driver quit? Cumhead tipped him with a car.',
@@ -196,7 +186,7 @@ var RADIO2 = {
     [['pedF', 'What time does Ejaculand close?'], [null, 'It never closes, love. People just stop coming out.']]
   ],
   dj: {
-    hs: ['Hunter Seriph FM. Riffs to die to. You will die. A lot.', 'This one goes out to everybody stuck on the same boss. Forty tries is nothing. Keep going.', 'Bonfire lit. Song on. Do not look at your phone while you drive. Look at the boss.', 'You are listening to Hunter Seriph FM, the only station with no hits allowed.', 'Live on Twitch most nights. Come say hi. Bring your estus.', 'If you are stuck in traffic, roll. Roll through it. I-frames work on cars, probably.', 'Next up, something heavy. Like my sword. Like my heart after that last boss.', 'Red moon over Cum City tonight. Perfect weather for a hitless run.', 'Somebody asked if I would ever play an easy game. No.', 'That was a banger. This is also a banger. Every song here is a banger.', 'Shout out to the chat. You lot are the reason I keep dying on stream.', 'Remember, git gud. And wear your seatbelt.'],
+    hs: ['Hunter Seriph FM. Riffs to die to. You will die. A lot.', 'This one goes out to everybody stuck on the same boss. Forty tries is nothing. Keep going.', 'Bonfire lit. Song on. Do not look at your phone while you drive. Look at the boss.', 'You are listening to Hunter Seriph FM, the only station with no hits allowed.', 'Live on Twitch most nights. Come say hi. Bring your estus.', 'If you are stuck in traffic, roll. Roll through it. I-frames work on cars, probably.', 'Next up, something heavy. Like my sword. Like my heart after that last boss.', 'Red moon over Cum City tonight. Perfect weather for a hitless run.', 'Somebody asked if I would ever play an easy game. No.', 'That was a banger. This is also a banger. Every song here is a banger.', 'Shout out to the chat. You lot are the reason I keep dying on stream.', 'Remember, git gud. And wear your seatbelt.', 'This one goes out to everyone parked down by the Jizz River tonight. You know what you are doing. So does the river.', 'Hunter Seriph wrote a song about that river, you know. Rivers of Cum. Go and find it. Play it loud on the bridge.', 'If you are crossing the Jizz River tonight, roll your windows up. Trust me.'],
     bl: ['Brothers Load Radio. Yeehaw, Cum City.', 'Piggy wants to say hi to his mum. Hi, Piggy\'s mum.', 'That was a country song about a pickup truck and a pig. They are all about a pickup truck and a pig.', 'The Cowboy says this next one is his favourite. He says that about every song. He is a liar.', 'Pull over, crack a cold one, and listen to the Brothers Load. Not while driving. Pull over first.', 'Shot Rope is still number one, five years running. Nobody else is allowed to be number one.', 'If you see a big pink pig in a cowboy hat at the bar, buy him a drink. That is Piggy. He is broke.', 'Two brothers, one load, and a radio licence we definitely paid for.', 'Brothers Load Radio. Mugs up. Mind the mugs, the Cowboy throws them.', 'Next song is about a man who lost his boots. Piggy wrote it. It is about Piggy.', 'Saddle up, Cum City. The night is young and the beer is warm.', 'This one is for the truckers on the Cum Ring. Keep on hauling. Mind the cream.'],
     po: ['PulsarOctopus Beats FM. Just vibes, friend.', 'Eight arms on the decks tonight. Do not ask how I do the decks with eight arms. I just vibe.', 'If you are driving, slow down and feel it. If you are being chased, speed up and feel it.', 'This one is free of charge. They all are. I really should charge.', 'Shout out to everyone at Ejaculand tonight. I can hear you screaming from here. Vibes.', 'Deep breath. In through the nose. Out through the beat.', 'This track was made underwater. That is why it sounds wet.', 'Spermaid says hi. She says sweetie. I say vibes. We are a good team.', 'Turn it up. Turn it all the way up. Your neighbours love it.', 'Pulsar here with the late night beats for the late night loads.', 'Ink in the water, bass in the speakers, cream on the roads.', 'Vibes are free. Petrol is not. Fill up, friend.'],
     talk: ['Cum Talk FM. Shithead Laboozie here, sheriff by day, radio by night.', 'If you are a criminal listening to this, please stop. If you are the mayor, carry on.', 'Lines are open, people. Call in. Tell me your problems. I will not fix them.', 'This is Cum Talk FM. Talk, adverts, and nothing you need to hear. You are welcome.', 'Sheriff\'s tip of the day. Do not jump out of a moving car. Unless it is on fire. Then definitely do.', 'I have been told I need to read the adverts. Fine. Here come the adverts.', 'Back after this. Do not go anywhere. Seriously, where would you go, it is Cum City.', 'The mayor called. He says do not believe anything on Crime Watch. That is exactly what a criminal would say.', 'Coming up, the news, the traffic, and a man who says his homunculus does his taxes.', 'Shithead Laboozie on Cum Talk. My head is a swirl but my heart is in the right place.', 'You are listening to Cum Talk FM. If you are not listening, how do you know?', 'Stay safe out there, Cum City. Or at least stay interesting.']
@@ -208,7 +198,7 @@ function radioDeal(key, pool) { RAD.decks = RAD.decks || {}; var d = RAD.decks[k
 var STING = { news: 'r_news', traffic: 'r_traffic', weather: 'r_weather', sports: 'r_sports', crime: 'r_crime', gossip: 'r_gossip', stars: 'r_stars', ads: 'r_jingle', calls: 'r_ring', jokes: 'r_sweep', dj: null };
 var ANCHOR = { news: 'news', traffic: 'traffic', weather: 'weather', sports: 'sports', crime: 'news', gossip: 'weather', stars: 'fate' };
 // which kinds each station plays, by weight
-var KINDS = { hs: { dj: 5, ads: 2, news: 1, jokes: 1, sports: 1 }, bl: { dj: 5, ads: 2, traffic: 1, weather: 1, jokes: 1 }, po: { dj: 5, ads: 2, gossip: 1, stars: 1, jokes: 1 }, talk: { news: 3, traffic: 2, weather: 2, sports: 2, crime: 2, gossip: 2, stars: 1, calls: 3, ads: 3, jokes: 2, dj: 2 } };
+var KINDS = { hs: { dj: 5, ads: 2, news: 1, jokes: 1, crime: 1 }, bl: { dj: 5, ads: 2, traffic: 1, weather: 1, jokes: 1 }, po: { dj: 5, ads: 2, gossip: 1, stars: 1, jokes: 1 }, talk: { news: 3, traffic: 2, weather: 2, sports: 2, crime: 2, gossip: 2, stars: 1, calls: 3, ads: 3, jokes: 2, dj: 2 } };
 function radioTalkSeg(st) { var W = KINDS[st.id] || KINDS.talk, tot = 0, k; for (k in W) tot += W[k]; var r = Math.random() * tot; for (k in W) { r -= W[k]; if (r <= 0) break; }
   var parts = []; if (STING[k]) parts.push({ sfx: STING[k], t: k === 'calls' ? 1.9 : 1.4 });
   if (k === 'calls') { var c = radioDeal('calls', RADIO2.calls); parts.push({ who: c[0][0] + '2', s: c[0][1] }); parts.push({ who: st.id === 'off' ? 'talk' : st.id, s: c[1][1] }); }

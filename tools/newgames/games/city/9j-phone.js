@@ -1,0 +1,72 @@
+/* ---------- update 162 (his ask: the phone layout needs to look better, and a game like Snake on it). The CumPhone is
+   a proper phone now: a status bar (time, signal, battery, money), a wallpaper of the red moon, app icons drawn as
+   little pictures in rounded tiles, a dock with HANG UP. Held upright on a phone or a PC it is tall; with the phone
+   sideways it turns sideways too (four apps across) so nothing is cut off. New app: SPERM SNAKE. ---------- */
+(function () { var st = document.createElement('style'); st.textContent = [
+  '#menu.phone .mbox{width:min(330px,94vw);height:min(620px,92vh);min-height:0;overflow:hidden;display:flex;flex-direction:column;border-radius:38px;padding:30px 16px 18px;background:radial-gradient(circle at 70% 18%,#5a0a10 0 14%,#2a060a 15%,transparent 46%),linear-gradient(175deg,#1c0b0e,#070405 70%);box-shadow:0 0 0 7px #0b0b0d,0 0 0 9px #4a4a52,0 0 0 10px #1a1a1e,0 30px 70px rgba(0,0,0,0.75)}',
+  '#menu.phone .mbox::after{top:10px;width:96px;height:20px;margin-left:-48px;border-radius:12px}',
+  '#menu.phone .mbox h1{font-size:22px;margin:6px 0 0}#menu.phone .mbox h1::after{display:none}#menu.phone .msub{font-size:12px;opacity:.8;margin:2px 0 6px}',
+  '#menu.phone .mbox{position:relative}#menu.phone .mhtml,#menu.phone .mhtml>*{position:static!important}#menu.phone .pbar{position:absolute!important;top:10px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;font:600 12px "Archivo Narrow",sans-serif;color:#f1e7d0;padding:0 10px 4px;letter-spacing:.04em}#menu.phone .pbar b{color:#ffe36a;font-weight:600}',
+  '#menu.phone .pbar i{display:inline-block;vertical-align:middle;margin-left:4px}#menu.phone .sig i{width:3px;background:#f1e7d0;margin-left:1px;border-radius:1px}#menu.phone .bat{width:20px;height:9px;border:1.5px solid #f1e7d0;border-radius:2px;position:relative}#menu.phone .bat::after{content:"";position:absolute;inset:1px;right:35%;background:#7aff6a}',
+  '#menu.phone .mlist.grid{grid-template-columns:repeat(3,1fr);gap:10px 8px;margin-top:6px;flex:1;align-content:start;overflow-y:auto}',
+  '#menu.phone .mbtn.app{min-height:0;padding:4px 2px 2px;background:transparent!important;font:600 11px "Archivo Narrow",sans-serif;letter-spacing:.03em;color:#f1e7d0;text-transform:none;border:0;box-shadow:none!important}',
+  '#menu.phone .mbtn.app::after{display:none}#menu.phone .mbtn.app span{display:flex;flex-direction:column;align-items:center;gap:5px}',
+  '#menu.phone .mbtn.app .ic{width:58px;height:58px;border-radius:16px;display:block;box-shadow:0 3px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18)}#menu.phone .mbtn.app .ic svg{width:100%;height:100%;display:block}',
+  '#menu.phone .mbtn.app.hs-focus .ic,#menu.phone .mbtn.app:focus-visible .ic{outline:3px solid #ffe36a;outline-offset:2px}#menu.phone .mbtn.app.hs-focus,#menu.phone .mbtn.app:focus-visible{background:transparent!important;box-shadow:none!important}',
+  '#menu.phone .mbtn.off{grid-column:1/-1;min-height:44px;border-radius:22px;margin-top:8px;background:#c4121c;font-size:13px}',
+  '#menu.phone .snk{display:flex;flex-direction:column;align-items:center;gap:8px}#menu.phone .snk canvas{width:min(260px,70vw);height:auto;border-radius:12px;border:2px solid #4a1a1c;image-rendering:pixelated;touch-action:none;background:#0e0708}',
+  '#menu.phone .snk .pad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,40px);gap:6px}#menu.phone .snk .pad button{background:#1a0d10;border:2px solid #4a1a1c;border-radius:10px;color:#f1e7d0;font-size:18px;touch-action:none}',
+  '@media (orientation:landscape) and (max-height:560px){#menu.phone .mbox{width:min(600px,94vw);height:min(330px,90vh);border-radius:32px;padding:14px 40px 12px}#menu.phone .mbox::after{top:50%;left:12px;width:18px;height:70px;margin:-35px 0 0}',
+  '#menu.phone .mlist.grid{grid-template-columns:repeat(4,1fr);gap:6px}#menu.phone .mbtn.app .ic{width:52px;height:52px}#menu.phone .mbtn.off{min-height:36px;margin-top:4px}#menu.phone .mbox h1{font-size:18px;margin:0}',
+  '#menu.phone .snk{flex-direction:row;justify-content:center;gap:18px}#menu.phone .snk canvas{width:auto;height:min(200px,52vh)}#menu.phone.snake .mbox h1{display:none}#menu.phone.snake .msub{margin:0}}'].join('\n'); document.head.appendChild(st); })();
+var PICON = {
+  cab: '<rect width="58" height="58" fill="#ffe36a"/><rect x="0" y="40" width="58" height="18" fill="#12040a"/><path d="M10 34 l6-14 h26 l6 14 v8 h-38z" fill="#12040a"/><rect x="19" y="23" width="20" height="8" rx="1" fill="#4adfff"/><circle cx="18" cy="42" r="5" fill="#f1e7d0"/><circle cx="40" cy="42" r="5" fill="#f1e7d0"/><rect x="23" y="12" width="12" height="6" fill="#c4121c"/>',
+  ins: '<rect width="58" height="58" fill="#1a3a6a"/><path d="M29 9 l16 6 v12 c0 11-7 18-16 22 c-9-4-16-11-16-22 v-12z" fill="#4adfff" stroke="#f1e7d0" stroke-width="2"/><path d="M22 29 l5 5 l10-11" stroke="#12040a" stroke-width="4" fill="none" stroke-linecap="round"/>',
+  stim: '<rect width="58" height="58" fill="#8a0c14"/><rect x="24" y="12" width="10" height="34" rx="2" fill="#f1e7d0"/><rect x="12" y="24" width="34" height="10" rx="2" fill="#f1e7d0"/><circle cx="46" cy="46" r="7" fill="#ffe36a"/>',
+  map: '<rect width="58" height="58" fill="#1e4a1e"/><path d="M0 40 C15 30 25 46 58 30 V58 H0z" fill="#e0cc9a"/><path d="M8 0 L20 58 M36 0 L46 58 M0 18 H58" stroke="#3a3a3e" stroke-width="5"/><path d="M29 10 c-7 0-11 5-11 10 c0 8 11 18 11 18 s11-10 11-18 c0-5-4-10-11-10z" fill="#c4121c" stroke="#f1e7d0" stroke-width="2"/><circle cx="29" cy="20" r="4" fill="#f1e7d0"/>',
+  jobs: '<rect width="58" height="58" fill="#12040a"/><rect x="11" y="20" width="36" height="26" rx="4" fill="#c8a040"/><path d="M22 20 v-5 h14 v5" stroke="#c8a040" stroke-width="4" fill="none"/><rect x="11" y="30" width="36" height="4" fill="#5a3a20"/><rect x="26" y="28" width="6" height="8" fill="#f1e7d0"/>',
+  cam: '<rect width="58" height="58" fill="#2a2a2e"/><rect x="8" y="17" width="42" height="28" rx="5" fill="#4a4a52"/><rect x="20" y="12" width="14" height="7" rx="2" fill="#4a4a52"/><circle cx="29" cy="31" r="10" fill="#12040a" stroke="#f1e7d0" stroke-width="3"/><circle cx="26" cy="28" r="3" fill="#4adfff"/><circle cx="43" cy="22" r="2" fill="#ff2630"/>',
+  snake: '<rect width="58" height="58" fill="#0e0708"/><path d="M8 46 H24 V30 H40 V14" stroke="#e8dcc0" stroke-width="7" fill="none" stroke-linejoin="round"/><circle cx="40" cy="12" r="6" fill="#f1e7d0"/><circle cx="38" cy="11" r="1.5" fill="#12040a"/><circle cx="16" cy="18" r="4" fill="#ffe36a"/>',
+  music: '<rect width="58" height="58" fill="#3a0a4a"/><path d="M22 40 V16 l20-5 v24" stroke="#f1e7d0" stroke-width="4" fill="none"/><circle cx="18" cy="41" r="6" fill="#f1e7d0"/><circle cx="38" cy="36" r="6" fill="#f1e7d0"/>' };
+function picon(k, label) { return '<i class="ic"><svg viewBox="0 0 58 58"><defs><clipPath id="pc' + k + '"><rect width="58" height="58" rx="16"/></clipPath></defs><g clip-path="url(#pc' + k + ')">' + PICON[k] + '</g></svg></i>' + label; }
+function phoneBar() { var t = (G.time | 0) + ':' + ('0' + Math.floor((G.time % 1) * 60)).slice(-2); return '<div class="pbar"><span>' + t + '</span><span class="sig"><b>$' + Math.floor(SV.money).toLocaleString('en-GB') + '</b> <i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i class="bat"></i></span></div>'; }
+phoneOpen = function () { if (!P || G.mode !== 'play' || G.cut || G.interior || P.state === 'dead' || G.spray) { if (G.interior) toast('No signal in here.'); return; } G.phone = 1; sfx.play('blip');
+  var busy = PHONE && PHONE.st !== 'done';
+  KIT.menu({ cls: 'phone', title: 'CumPhone', sub: busy ? PHONE.what + ' on the way' : '', html: phoneBar(), grid: true, items: [
+    { label: picon('cab', 'Cum Cabs'), cls: 'app', fn: function () { phoneAsk('taxi'); } },
+    { label: picon('ins', 'Insurance'), cls: 'app', fn: function () { phoneAsk('insure'); } },
+    { label: picon('stim', 'Stims'), cls: 'app', fn: function () { phoneAsk('stims'); } },
+    { label: picon('map', 'Map'), cls: 'app', fn: function () { phoneClose(); mapMenu(null); } },
+    { label: picon('jobs', 'Jobs'), cls: 'app', fn: function () { jobsMenu(); } },
+    { label: picon('cam', 'Camera'), cls: 'app', fn: function () { phoneClose(); G.flashT = 0.2; sfx.play('blip'); toast(pick(['Click. Nobody will ever look at that again.', 'Click. Blurry, but it has character.', 'Click. A masterpiece of Cum City.'])); } },
+    { label: picon('snake', 'Sperm Snake'), cls: 'app', fn: snakeOpen },
+    { label: picon('music', 'Radio'), cls: 'app', fn: function () { phoneClose(); if (RAD.on) { radioOff(); toast('Radio off.'); } else { radioOn({ t: { cls: 'car' } }); toast('Radio on. RB changes the station.'); } } },
+    { label: 'HANG UP', back: true, cls: 'off', fn: phoneClose }] }); };
+/* ---------- SPERM SNAKE: steer the little swimmer round the screen, eat the golden eggs, don't hit your own tail ---------- */
+var SNK = null;
+function snakeOpen() { KIT.menu({ cls: 'phone snake', title: 'Sperm Snake', sub: 'Best ' + (SV.snakeBest || 0), html: phoneBar() + '<div class="snk"><canvas id="snkC" width="192" height="192"></canvas><div class="pad"><span></span><button data-d="0">▲</button><span></span><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div></div>', items: [{ label: 'BACK', back: true, cls: 'off', fn: function () { SNK = null; phoneOpen(); } }] });
+  var N = 16; SNK = { n: N, body: [[8, 8], [7, 8], [6, 8]], dir: 1, want: 1, egg: null, t: 0, step: 0.17, score: 0, over: 0, last: 0, wait: 1 }; snakeEgg();
+  var c = document.getElementById('snkC'); if (!c) return; var sx = 0, sy = 0;
+  c.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; e.preventDefault(); }, { passive: false });
+  c.addEventListener('touchend', function (e) { var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) > 14) snakeDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0)); else snakeDir(-1); e.preventDefault(); }, { passive: false });
+  Array.prototype.forEach.call(document.querySelectorAll('#menu .snk .pad button'), function (b) { b.addEventListener('pointerdown', function (e) { snakeDir(+b.getAttribute('data-d')); e.preventDefault(); }); });
+  requestAnimationFrame(snakeLoop); }
+function snakeEgg() { var S = SNK; for (var k = 0; k < 200; k++) { var e = [Math.floor(Math.random() * S.n), Math.floor(Math.random() * S.n)]; if (!S.body.some(function (b) { return b[0] === e[0] && b[1] === e[1]; })) { S.egg = e; return; } } }
+function snakeDir(d) { var S = SNK; if (!S) return; if (S.over) { if (S.over > 0.6) snakeOpen(); return; } S.wait = 0; if (d < 0) return; if ((d + 2) % 4 !== S.dir) S.want = d; }
+window.addEventListener('keydown', function (e) { if (!SNK) return; var m = { ArrowUp: 0, KeyW: 0, ArrowRight: 1, KeyD: 1, ArrowDown: 2, KeyS: 2, ArrowLeft: 3, KeyA: 3 }[e.code]; if (m !== undefined) { snakeDir(m); e.preventDefault(); e.stopPropagation(); } }, true);
+function snakeLoop(ts) { var S = SNK, c = document.getElementById('snkC'); if (!S || !c) { SNK = null; return; } var dt = S.last ? Math.min(0.1, (ts - S.last) / 1000) : 0; S.last = ts;
+  // pads: the stick or the d-pad steer it
+  try { var gp = navigator.getGamepads ? navigator.getGamepads() : []; for (var i = 0; i < gp.length; i++) { var g = gp[i]; if (!g) continue; var ax = g.axes[0] || 0, ay = g.axes[1] || 0, d = -1;
+    if (g.buttons[12] && g.buttons[12].pressed || ay < -0.6) d = 0; else if (g.buttons[13] && g.buttons[13].pressed || ay > 0.6) d = 2; else if (g.buttons[14] && g.buttons[14].pressed || ax < -0.6) d = 3; else if (g.buttons[15] && g.buttons[15].pressed || ax > 0.6) d = 1;
+    if (d >= 0 && d !== S.padD) snakeDir(d); S.padD = d; } } catch (e) {}
+  if (S.over) S.over += dt; else if (!S.wait) { S.t += dt; while (S.t >= S.step) { S.t -= S.step; S.dir = S.want; var h = S.body[0], nh = [h[0] + [0, 1, 0, -1][S.dir], h[1] + [-1, 0, 1, 0][S.dir]];
+      if (nh[0] < 0 || nh[1] < 0 || nh[0] >= S.n || nh[1] >= S.n || S.body.some(function (b, i) { return i < S.body.length - 1 && b[0] === nh[0] && b[1] === nh[1]; })) { S.over = 0.01; sfx.play('hurt'); if (S.score > (SV.snakeBest || 0)) { SV.snakeBest = S.score; persist(); } break; }
+      S.body.unshift(nh); if (S.egg && nh[0] === S.egg[0] && nh[1] === S.egg[1]) { S.score++; sfx.play('coin'); S.step = Math.max(0.07, S.step * 0.96); snakeEgg(); } else S.body.pop(); } }
+  // draw: dark cells, the egg glowing gold, the body of cream with a head that has an eye and a curl of a tail behind it
+  var x = c.getContext('2d'), Z = c.width / S.n; x.fillStyle = '#0e0708'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#1a0d10'; for (var yy = 0; yy < S.n; yy++) for (var xx = 0; xx < S.n; xx++) if ((xx + yy) % 2) x.fillRect(xx * Z, yy * Z, Z, Z);
+  if (S.egg) { var pul = 0.5 + 0.5 * Math.sin(ts / 160); x.fillStyle = 'rgba(255,227,106,' + (0.25 + pul * 0.25) + ')'; x.beginPath(); x.arc((S.egg[0] + 0.5) * Z, (S.egg[1] + 0.5) * Z, Z * 0.7, 0, 6.3); x.fill(); x.fillStyle = '#ffe36a'; x.beginPath(); x.arc((S.egg[0] + 0.5) * Z, (S.egg[1] + 0.5) * Z, Z * 0.38, 0, 6.3); x.fill(); }
+  for (var k = S.body.length - 1; k >= 0; k--) { var b = S.body[k], r = k === 0 ? 0.48 : Math.max(0.18, 0.4 - k * 0.012); x.fillStyle = k === 0 ? '#f1e7d0' : k % 2 ? '#e0cc9a' : '#d2bc88'; x.beginPath(); x.arc((b[0] + 0.5) * Z, (b[1] + 0.5) * Z, Z * r, 0, 6.3); x.fill(); }
+  var hd = S.body[0], fx = [0, 1, 0, -1][S.dir], fy = [-1, 0, 1, 0][S.dir]; x.fillStyle = '#12040a'; x.beginPath(); x.arc((hd[0] + 0.5 + fx * 0.15 - fy * 0.18) * Z, (hd[1] + 0.5 + fy * 0.15 + fx * 0.18) * Z, Z * 0.1, 0, 6.3); x.fill(); x.fillStyle = '#c4121c'; x.fillRect((hd[0] + 0.5 + fx * 0.32) * Z - 1, (hd[1] + 0.5 + fy * 0.32) * Z - 1, 2, 2);
+  x.fillStyle = '#f1e7d0'; x.font = '10px "Press Start 2P", monospace'; x.textAlign = 'left'; x.fillText(String(S.score), 4, 12);
+  if (S.wait || S.over) { x.fillStyle = 'rgba(7,4,5,0.72)'; x.fillRect(0, c.height / 2 - 26, c.width, 52); x.fillStyle = S.over ? '#ff2630' : '#ffe36a'; x.textAlign = 'center'; x.fillText(S.over ? 'GAME OVER  ' + S.score : 'SWIPE OR PRESS', c.width / 2, c.height / 2 - 4); x.fillStyle = '#f1e7d0'; x.font = '7px "Press Start 2P", monospace'; x.fillText(S.over ? (S.over > 0.6 ? 'ANY DIRECTION: AGAIN' : '') : 'A DIRECTION TO START', c.width / 2, c.height / 2 + 14); }
+  requestAnimationFrame(snakeLoop); }

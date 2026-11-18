@@ -21,7 +21,8 @@ function stepVehicle(v, inp, dt) {
   if (inp.brk > 0.05) { if (fs > 0.5) fs -= 26 * inp.brk * dt; else fs = Math.max(-top * 0.3, fs - t.acc * 0.6 * inp.brk * dt); }
   if (inp.hand && !boat) fs -= Math.sign(fs) * Math.min(Math.abs(fs), 8 * dt);
   if (inp.park) fs -= Math.sign(fs) * Math.min(Math.abs(fs), 14 * dt); // nobody driving: it just stops (update 156: 'brake' meant reverse, so empty cars backed off by themselves)
-  fs -= fs * (boat ? 0.35 : 0.12) * dt; if (Math.abs(fs) < 0.05 && inp.thr < 0.05) fs = 0;
+  if (!boat && v.slopeA && !inp.park && !(inp.brk > 0.05 && Math.abs(fs) < 1)) fs += v.slopeA * dt; /* update 162: hills slow you going up and pull you down */
+  fs -= fs * (boat ? 0.35 : 0.12) * dt; if (Math.abs(fs) < 0.05 && inp.thr < 0.05 && Math.abs(v.slopeA || 0) < 1.2) fs = 0;
   ls *= Math.exp(-grip * (boat ? 0.7 : 1) * dt);
   // steering: tighter when slow
   var tr = (cl === 'board' ? 2.6 : cl === 'bike' ? 2.2 : 1.9) - Math.min(1.1, Math.abs(fs) / 45), turn = inp.steer * tr * clamp(fs / 5, -1, 1);
@@ -38,12 +39,15 @@ function stepVehicle(v, inp, dt) {
   // up and down: follow the ground, fly off crests and ramps, fall in the water
   if (boat) { var wy = waterY(v.x, v.z); v.y = (wy > -50 ? wy : v.y) + Math.sin(G.t * 2 + v.x) * 0.05 + 0.1; v.pitch = -clamp(fs / top, 0, 1) * 0.12 + Math.sin(G.t * 1.7) * 0.03; v.roll = -v.steer * clamp(fs / top, 0, 1) * 0.15; }
   else {
-    var g = standY(v.x, v.z, v.y + 0.5), was = v.air;
-    if (!v.air) { var vyG = (g - v.y) / dt; if (vyG < v.vy - 30 * dt && Math.abs(fs) > 8) { v.air = 1; } else { v.vy = clamp(vyG, -20, 20); v.y = g; } }
+    /* update 162: four wheels on whatever is under them (ground, bridge decks, ramps); the body rides on the plane
+       they make, so it never digs into a dip or teeters on a ridge, and slopes pull on the car */
+    var fl = Math.max(1.2, t.len * 0.36), wl = Math.max(0.6, t.wid * 0.42), wh = function (a2, b2) { var x2 = v.x + f[0] * a2 + r[0] * b2, z2 = v.z + f[1] * a2 + r[1] * b2; return standY(x2, z2, v.y + 0.6 + Math.abs(a2) * 0.45); };
+    var hFL = wh(fl, -wl), hFR = wh(fl, wl), hBL = wh(-fl, -wl), hBR = wh(-fl, wl), gf = (hFL + hFR) / 2, gb = (hBL + hBR) / 2, gr = (hFR + hBR) / 2, glf = (hFL + hBL) / 2;
+    var g = Math.max(standY(v.x, v.z, v.y + 0.6), (hFL + hFR + hBL + hBR) / 4 - 0.02), was = v.air;
+    if (!v.air) { var vyG = (g - v.y) / dt; if (vyG < v.vy - Math.max(1.6, Math.abs(fs) * 0.09) && Math.abs(fs) > 8) { v.air = 1; } /* update 162: only a real lip throws the car up (every small crest did, so cars floated over hills) */ else { v.vy = clamp(vyG, -20, Math.min(20, Math.abs(fs) * 0.55)); v.y = g; } } /* a small step up (a kerb, a deck edge) never throws the car into the air */
     if (v.air) { v.vy -= 16 * dt; v.y += v.vy * dt; v.airT = (v.airT || 0) + dt; if (v.y <= g) { if (v.vy < -12) hurtVeh(v, (-v.vy - 12) * 2, null); if (v === (P && P.veh) && v.airT > 0.6) stuntLanded(v); v.y = g; v.vy = 0; v.air = 0; v.airT = 0; } }
-    // tilt to the ground
-    var fl = Math.max(1.6, t.len * 0.5), wl = Math.max(1.0, t.wid * 0.6), gs = function (a2, b2) { var x2 = v.x + f[0] * a2 + r[0] * b2, z2 = v.z + f[1] * a2 + r[1] * b2; return (groundY(x2, z2) * 2 + groundY(x2 + 0.9, z2) + groundY(x2 - 0.9, z2) + groundY(x2, z2 + 0.9) + groundY(x2, z2 - 0.9)) / 6; }, gf = gs(fl, 0), gb = gs(-fl, 0), gr = gs(0, wl), glf = gs(0, -wl); /* update 161: tilt from a wider, softened sample (the tile facets threw the car about on hills) */
-    var tp = v.air ? v.pitch - 0.25 * dt : -Math.atan2(gf - gb, fl * 2), trl = v.air ? v.roll : Math.atan2(gr - glf, wl * 2) * -1;
+    var tp = v.air ? v.pitch - 0.25 * dt : clamp(-Math.atan2(gf - gb, fl * 2), -0.6, 0.6), trl = v.air ? v.roll : clamp(-Math.atan2(gr - glf, wl * 2), -0.4, 0.4);
+    if (!v.air) { v.slopeA = Math.sin(tp) * 9.8 * 0.6; var side = Math.sin(trl); if (Math.abs(side) > 0.28) { v.vx += r[0] * side * 6 * dt; v.vz += r[1] * side * 6 * dt; } } else v.slopeA = 0;
     if (cl === 'bike' || cl === 'board') trl = -v.steer * clamp(fs / 18, 0, 1) * 0.5;
     v.pitch += (tp - v.pitch) * Math.min(1, dt * 6); v.roll += (trl - v.roll) * Math.min(1, dt * 5);
     var wy2 = waterY(v.x, v.z); if (wy2 > -50 && v.y < wy2 - 0.6 && !v.sunk) { v.sunk = 1; v.hp = 0; if (v === (P && P.veh)) { exitVehicle(true); P.swim = 1; } }

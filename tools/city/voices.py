@@ -45,7 +45,9 @@ def key(who, text):
         out = abc[n % 36] + out; n //= 36
         if not n: break
     return 'v' + out
+SAYAS = [('Kaya', 'Kai-ya'), ('KAYA', 'Kai-ya')]  # update 162: how names are said (he said Kaya is pronounced kai-ya)
 def speak(text, v, out):
+    for a, b in SAYAS: text = text.replace(a, b)
     model, sp, slow, pitch, fx = v; raw = out + '.raw.wav'
     cmd = [os.path.join(PIPER, 'piper', 'piper'), '--model', os.path.join(PIPER, 'v', model + '.onnx'), '--length_scale', str(slow), '--noise_scale', '0.75', '--noise_w', '0.9', '--sentence_silence', '0.28', '--output_file', raw]
     if sp is not None: cmd += ['--speaker', str(sp)]
@@ -66,7 +68,8 @@ def main():
         if who == 'steve' or who not in V: continue
         k = key(who, text); out = os.path.join(OUT, k + '.mp3'); done[k] = 1
         real = [os.path.join(REC, k + e) for e in ('.wav', '.mp3', '.m4a', '.ogg') if os.path.exists(os.path.join(REC, k + e))]
-        if os.path.exists(out) and not real and '--all' not in sys.argv: continue
+        redo = os.environ.get('REDO'); import re as _re
+        if os.path.exists(out) and not real and '--all' not in sys.argv and not (redo and _re.search(redo, text)): continue
         todo.append((who, text, out, real[0] if real else None))
     with multiprocessing.Pool(int(os.environ.get('JOBS', '3'))) as pool:
         errs = [e for e in pool.map(job, todo) if e]

@@ -24,7 +24,7 @@ var SHOREWL = new Float32Array(MW * MH).fill(-99);
 
 /* ---- soft edges between kinds of ground: sand, rock, dirt and fields meet grass along a smooth line through the
    tiles (a tent-weighted share of the tiles round each corner), not along the 4 m squares ---- */
-var SOFTS = {}; SOFTS[K_SAND] = 1; SOFTS[K_ROCK] = 1; SOFTS[K_DIRT] = 1; SOFTS[K_FIELD] = 1;
+var SOFTS = {}; SOFTS[K_SAND] = 1; SOFTS[K_ROCK] = 1; SOFTS[K_DIRT] = 1; SOFTS[K_FIELD] = 1; SOFTS[K_PARK] = 1; /* update 162: park lawns blend into grass too */
 var SOFTB = {}; SOFTB[K_GRASS] = 1; SOFTB[K_PARK] = 1; SOFTB[K_FOREST] = 1; SOFTB[K_SAND] = 1; SOFTB[K_ROCK] = 1; SOFTB[K_DIRT] = 1; SOFTB[K_FIELD] = 1;
 function softShare(S, ci, cj) { var t = 0, w = 0; for (var dj = -2; dj < 2; dj++) for (var di = -2; di < 2; di++) { var a = ci + di, b = cj + dj; if (a < 0 || b < 0 || a >= MW || b >= MH) continue; var ww = (2 - Math.abs(di + 0.5)) * (2 - Math.abs(dj + 0.5)); w += ww; if (KM[b * MW + a] === S) t += ww; } return w ? t / w : 0; }
 function softPiece(M0, NAT, i, j, k, d, h) {

@@ -83,7 +83,7 @@ var JOKES = [
   'News: Steve was seen waving at the Ejaculand gate. That is not news. That is every day.',
   'Breaking: a man in a gothic outfit with a cream droplet for a head has been seen doing crimes. Police say he looks familiar.',
   'Uncle Beeb says the first one is always warm. We have been asked to stop asking him why.',
-  'Sports: Saba completed another hitless run. Of the supermarket. He did not get hit by a single trolley.',
+  'News: Saba completed another hitless run. Of the supermarket. He did not get hit by a single trolley.',
   'Lost and found: a Crimson Moon Trophy, missing twenty years. If found, please do not give it to Blumhead.',
   'Health tip: TB\'s Silly Pills are not vitamins. They are not for children. They are barely for adults.',
   'Our listener of the day is Cumhead. He has stolen four cars this morning. We love the hustle.',

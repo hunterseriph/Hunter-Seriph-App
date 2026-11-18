@@ -92,7 +92,7 @@ SIDE('spermaid', 'shop:sanct', 'sperm1', [
   { title: 'Shell Collector', pay: 1500, steps: [TALK(['spermaid', 'I am making a new shell bra. A very important shell bra. The best shells wash up on Seamen Beach.']),
     { t: 'collect', n: 7, around: 'dist:beach', spread: 120, time: 300, tile: 'star5', msg: 'Pick up the best shells on Seamen Beach.' }, GO('shop:sanct', 'Bring the shells to Spermaid.'),
     TALK(['spermaid', 'Perfect. Do not look. You are looking. Sweetie!'])] },
-  { title: 'Cream Tide', pay: 2200, steps: [TALK(['spermaid', 'Something is pumping goo into the cream river at the outfall. Blumhead\'s boys, I think. Make them stop.']),
+  { title: 'Cream Tide', pay: 2200, steps: [TALK(['spermaid', 'Something is pumping goo into the Jizz River at the outfall. Blumhead\'s boys, I think. Make them stop.']),
     GO('poi:outfall', 'Go to the outfall.', { r: 30 }), { t: 'kill', spawn: [{ kind: 'goon', n: 8, at: 'poi:outfall', spread: 22, wpn: 'pistol' }], msg: 'Stop Blumhead\'s boys at the outfall.' },
     TALK(['spermaid', 'The cream is clean again. Taste it. No, do not taste it.'])] }
 ]);

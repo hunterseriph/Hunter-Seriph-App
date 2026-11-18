@@ -37,7 +37,8 @@ function cornerH(i, j) { if (i < 0) i = 0; if (j < 0) j = 0; if (i > MW) i = MW;
 function groundY(x, z) {
   var fx = x / CT, fz = z / CT, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
   var a = cornerH(i, j), b = cornerH(i + 1, j), c = cornerH(i, j + 1), d = cornerH(i + 1, j + 1);
-  return tx + tz < 1 ? a + (b - a) * tx + (c - a) * tz : d + (c - d) * (1 - tx) + (b - d) * (1 - tz);
+  if (Math.abs(a - d) > Math.abs(b - c) + 0.01) return tx + tz < 1 ? a + (b - a) * tx + (c - a) * tz : d + (c - d) * (1 - tx) + (b - d) * (1 - tz); /* update 162: split the same way the ground is drawn (along the flatter diagonal) so feet and wheels sit on what you see */
+  return tx > tz ? a + (b - a) * tx + (d - b) * tz : a + (d - c) * tx + (c - a) * tz;
 }
 function groundN(x, z) { var e = 0.6, hx = groundY(x + e, z) - groundY(x - e, z), hz = groundY(x, z + e) - groundY(x, z - e), l = Math.hypot(hx, 2 * e, hz); return [-hx / l, 2 * e / l, -hz / l]; }
 var WATERY = 0.0, CREAMY = 0.35;

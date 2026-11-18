@@ -48,7 +48,7 @@ function bridgeDress(M0, x0, z0, CS, first) {
         tub(M0, L(a, na, r0, ya + 0.1), L(a, na, r0, ya + 1.08), 0.06, 0.06, '#5a0a10', 5);
         if (first) for (var u = 0; u <= 1.001; u += 0.5) { var px = a.x + (b.x - a.x) * u + na[0] * r0, pz = a.z + (b.z - a.z) * u + na[1] * r0, py = ya + (yb - ya) * u; addPost(px, pz, 0.28, py - 0.2, py + 1.1, { rail: 1 }); } });
       // a pier every 14 m, down into the water
-      if (Math.floor(a.s / 14) !== Math.floor(b.s / 14) && (isWaterK(kAt(mx, mz)) || kAt(mx, mz) === K_BRIDGE)) { var py2 = Math.min(ya, yb) - 1.3; boxR(M0, mx, mz, Math.atan2(a.dx, a.dz), hw * 0.75, 0.7, -6, py2, '#5a4a44'); boxR(M0, mx, mz, Math.atan2(a.dx, a.dz), hw + 0.4, 0.9, py2 - 0.4, py2, '#4a3a34'); }
+      if (Math.floor(a.s / 14) !== Math.floor(b.s / 14) && (a.elev > 0.3 || isWaterK(kAt(mx, mz)))) bridgePier(M0, S, a, b, first); /* update 162: columns and beams, not a wall */
     } });
 }
 

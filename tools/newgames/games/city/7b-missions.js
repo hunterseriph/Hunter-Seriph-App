@@ -171,7 +171,7 @@ MI({ id: 'r3', who: 'lab', title: 'Unplugged', at: 'shop:club', chap: 'robot', r
   { t: 'talk', lines: [['lab', 'Lights out for the robots. Lights out for half the city too. Worth it.']] }] });
 /* ---------- Chapter Four: Blumhead's Plan ---------- */
 MI({ id: 'b1', who: 'greebo', title: 'Goo Tube', at: 'shop:greebo', chap: 'blum', req: ['r3'], pay: 4000, startChap: 'blum', steps: [
-  { t: 'talk', lines: [['greebo', 'Blumhead! His goo is in the water. In the cream. In my PIES.'], ['greebo', 'A goo tanker is heading for the Cream River. Stop it.']] },
+  { t: 'talk', lines: [['greebo', 'Blumhead! His goo is in the water. In the cream. In my PIES.'], ['greebo', 'A goo tanker is heading for the Jizz River. Stop it.']] },
   { t: 'chase', type: 'truck', at: 'road:dist:factory', crew: 'goon', hp: 140, msg: 'Destroy Blumhead\'s goo tanker.' },
   { t: 'talk', lines: [['greebo', 'That is one tanker. He has a castle full of them.']] }] });
 MI({ id: 'b2', who: 'spermaid', title: 'The Black Keep', at: 'shop:sanct', chap: 'blum', req: ['b1'], pay: 5000, steps: [
