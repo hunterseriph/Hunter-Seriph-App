@@ -26,7 +26,7 @@ lightJoint = function () { var S = G.seat; if (!S || S.lit) return; var m = same
       if (S.puffT <= 0) { S.puffT = 2.4; var hx = P.x + Math.sin(P.a) * 0.35, hz = P.z + Math.cos(P.a) * 0.35; for (var k = 0; k < 4; k++) addFx({ k: 'puff', x: hx, y: P.y + 1.15, z: hz, vx: Math.sin(P.a) * 0.4 + rnd(-0.2, 0.2), vy: rnd(0.3, 0.6), vz: Math.cos(P.a) * 0.4 + rnd(-0.2, 0.2), life: 2.6 + k * 0.3, s0: 0.25, grow: 0.6, col: [0.85, 0.85, 0.82], a0: 0.45 }); } }
     if (s.fire && P.hp < SV.maxHp) P.hp = Math.min(SV.maxHp, P.hp + dt * 4); };
   // the pose: sat down; the smoking arm comes up to the mouth every couple of seconds; reaching across when it is passed
-  function smokeArm(Q, t, passA, sd) { var c = (t % 2.4) / 2.4, up = c < 0.35 ? Math.sin(c / 0.35 * Math.PI) : 0; Q.sh[1] = [1.1 + up * 0.5, -0.15, 0.2]; Q.el[1] = 1.6 + up * 0.75; Q.hp = -0.1 * up;
+  function smokeArm(Q, t, passA, sd) { var c = (t % 2.4) / 2.4, up = c < 0.35 ? Math.sin(c / 0.35 * Math.PI) : 0; Q.sh[1] = [0.55 + up * 1.05, -0.15, 0.2 - up * 0.05]; Q.el[1] = 1.3 + up * 1.05; /* update 164: resting by the chest, raised to the mouth for a drag */ Q.hp = -0.1 * up;
     if (passA > 0) { var k = Math.sin(passA / 0.7 * Math.PI); Q.sh[1] = [1.2, -0.15 + k * 0.9 * (sd > 0 ? -1 : 1), 0.2]; Q.el[1] = 0.6; } return up; }
   window.sitPose = function (seatKind, hold, t, passA, sd) { var Q = pose0(); poseSit(Q); Q.y = seatKind === 'tub' ? -0.75 : -0.45; if (hold) smokeArm(Q, t, passA, sd); else if (passA > 0) smokeArm(Q, 0, passA, sd); else { Q.sh[0][0] = 0.6; Q.sh[1][0] = 0.6; } return Q; };
   var po = poseOfPlayer; poseOfPlayer = function () { if (!G.seat) return po(); var S = G.seat; if (S.s.fire && !holding(S)) return po(); return sitPose(S.s.kind, holding(S), S.t, S.passA, S.sd); };

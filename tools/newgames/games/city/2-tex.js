@@ -73,7 +73,7 @@
   /* lit windows for the night, the road paint, signs */
   function sign(txt, bg, fg, font, sz, sub) { return function (g) { g.fillStyle = bg; g.fillRect(0, 8, 64, 48); g.fillStyle = '#12040a'; g.fillRect(0, 8, 64, 2); g.fillRect(0, 54, 64, 2); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
     var L = txt.split('\n'); L.forEach(function (l, i) { var s = sz; g.font = (font === 'p' ? s + 'px "Pirata One", serif' : 'bold ' + s + 'px "Archivo Narrow", sans-serif'); while (g.measureText(l).width > 60 && s > 6) { s--; g.font = (font === 'p' ? s + 'px "Pirata One", serif' : 'bold ' + s + 'px "Archivo Narrow", sans-serif'); } g.fillText(l, 32, 32 + (i - (L.length - 1) / 2) * (s + 1) + (sub ? -5 : 0)); });
-    if (sub) { g.font = 'bold 7px "Archivo Narrow", sans-serif'; g.fillStyle = shade(fg.length === 7 ? fg : '#f1e7d0', 0.8); g.fillText(sub, 32, 50); } }; }
+    if (sub) { var ss = 7; g.font = 'bold 7px "Archivo Narrow", sans-serif'; while (g.measureText(sub).width > 60 && ss > 4) { ss -= 0.5; g.font = 'bold ' + ss + 'px "Archivo Narrow", sans-serif'; } /* update 164: the small line shrinks to fit (it ran off both edges) */ g.fillStyle = shade(fg.length === 7 ? fg : '#f1e7d0', 0.8); g.fillText(sub, 32, 50); } }; }
   var HI = {
     litwin: function (g) { g.fillStyle = '#ffd890'; g.fillRect(0, 0, 64, 64); g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(6, 6, 20, 52); },
     litwin2: function (g) { g.fillStyle = '#ff8aa8'; g.fillRect(0, 0, 64, 64); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(8, 6, 14, 52); },

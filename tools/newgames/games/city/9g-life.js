@@ -42,8 +42,9 @@ function drawLife() { if (G.interior) return;
   PIGS.forEach(function (b) { if (dist2(b.x, b.z, CAM.x, CAM.z) > 60 * 60 || !inView(b.x, b.z, 1)) return;
     if (b.fly) { var M2 = birdMeshes(), fl = Math.floor(b.ph) % 2; R3.draw(M2[fl], ATT, { m: MD(b.x, b.y + 0.15, b.z, b.a + Math.PI, -0.2, 0, 0.42), lit: false, tint: [2.0, 2.0, 2.2] }); return; }
     var down = b.st === 'peck' && Math.sin(b.ph * 1.6) > 0.2 ? 1 : 0, bob = b.st === 'walk' ? Math.abs(Math.sin(b.ph * 2)) * 0.02 : 0; R3.draw(pigeonMesh(down), ATT, { m: MD(b.x, b.y + bob, b.z, b.a, 0, 0) }); });
-  LITTER.forEach(function (L) { if (dist2(L.x, L.z, CAM.x, CAM.z) > 45 * 45 || !inView(L.x, L.z, 1)) return; var lift = L.h > 0.02 ? Math.sin(L.rot) * 1.2 : Math.sin(L.rot) * 0.15;
-    R3.draw(litterMesh(L.k), ATT, { m: MD(L.x, L.y + 0.03 + L.h, L.z, L.a, lift, L.h > 0.02 ? Math.cos(L.rot * 0.7) * 0.8 : 0) }); });
+  LITTER.forEach(function (L) { if (dist2(L.x, L.z, CAM.x, CAM.z) > 45 * 45 || !inView(L.x, L.z, 1)) return; var air = L.h > 0.02, lift = air ? Math.sin(L.rot) * 1.2 : 0; /* update 164: lying flat a little above the highest ground under it (they tilted into the ground and flickered at kerbs) */
+    var gy = Math.max(L.y, standY(L.x + 0.3, L.z, L.y + 0.5), standY(L.x - 0.3, L.z, L.y + 0.5), standY(L.x, L.z + 0.3, L.y + 0.5), standY(L.x, L.z - 0.3, L.y + 0.5));
+    R3.draw(litterMesh(L.k), ATT, { m: MD(L.x, gy + 0.06 + L.h, L.z, L.a, lift, air ? Math.cos(L.rot * 0.7) * 0.8 : 0) }); });
   drawFlags(); }
 /* flags: a pole with a cloth that ripples in the wind (the cloth is rebuilt each frame, a few dozen triangles) */
 var FLAGS = null, FLAGPOLE = null, FLAGCOL = [['#12040a', '#c4121c'], ['#12040a', '#c4121c'], ['#12040a', '#c4121c'], ['#12040a', '#c4121c']]; /* update 163: the Cum City flag is black, red, black (his rule) */

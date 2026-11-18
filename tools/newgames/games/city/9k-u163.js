@@ -81,14 +81,21 @@ function cabinOf(type) { if (CABIN[type] !== undefined) return CABIN[type]; var 
   [-1, 1].forEach(function (sd) { var x = sd * Wd * 0.42; boxC(m, x - 0.26, low + 0.05, fz - 0.28, x + 0.26, sy, fz + 0.22, seat); boxC(m, x - 0.25, sy, fz - 0.36, x + 0.25, sy + 0.62, fz - 0.24, seat); boxC(m, x - 0.12, sy + 0.62, fz - 0.36, x + 0.12, sy + 0.8, fz - 0.28, seat); });
   if (rear) { var rz = zb + 0.35; boxC(m, -Wd + 0.2, low + 0.05, rz - 0.25, Wd - 0.2, sy, rz + 0.25, seat); boxC(m, -Wd + 0.2, sy, rz - 0.35, Wd - 0.2, sy + 0.55, rz - 0.25, seat); }
   boxC(m, -Wd + 0.12, belt - 0.25, zf + 0.2, Wd - 0.12, belt + 0.05, zf + 0.55, dash); boxC(m, -Wd * 0.7, belt + 0.02, zf + 0.22, -Wd * 0.15, belt + 0.06, zf + 0.3, '#3a1418');
+  /* update 164: a proper inside, so nothing under the bonnet, the boot or the wheels shows through the glass: door cards
+     down both sides, a firewall and bonnet top under the windscreen, a parcel shelf under the back window */
+  var gz = [], st = lo.st; st.forEach(function (q, i) { if (q[3] === 'g' && st[i + 1]) { gz.push(q[0] * L, st[i + 1][0] * L); } }); var gMax = Math.max.apply(null, gz.concat([zf])) + 0.15, gMin = Math.min.apply(null, gz.concat([zb])) - 0.15, iw = Wd - 0.08, trim = '#1c1014';
+  [-1, 1].forEach(function (sd) { boxC(m, sd > 0 ? iw - 0.06 : -iw, low, gMin, sd > 0 ? iw : -iw + 0.06, belt + 0.02, gMax, trim); boxC(m, sd > 0 ? iw - 0.1 : -iw, belt - 0.32, zb, sd > 0 ? iw : -iw + 0.1, belt - 0.26, zf, '#3a1418'); });
+  boxC(m, -iw, low, zf + 0.5, iw, belt + 0.02, zf + 0.56, trim); boxC(m, -iw, belt - 0.04, zf + 0.5, iw, belt + 0.02, gMax, '#14080a');
+  boxC(m, -iw, low, zb - 0.26, iw, belt + 0.02, zb - 0.2, trim); boxC(m, -iw, belt - 0.04, gMin, iw, belt + 0.02, zb - 0.2, '#14080a');
   var wx = -Wd * 0.42, wz = zf + 0.08, wy = belt - 0.02; tub(m, [wx, wy - 0.02, wz + 0.04], [wx, wy + 0.02, wz - 0.03], 0.19, 0.19, '#1a1a1e', 12); tub(m, [wx, wy - 0.05, wz + 0.25], [wx, wy, wz], 0.03, 0.03, '#1a1a1e', 5);
-  return (CABIN[type] = { m: m.upload(), drv: [-Wd * 0.42, low - 0.08, fz - 0.05], pas: [Wd * 0.42, low - 0.08, fz - 0.05], back: rear ? [Wd * 0.3, low - 0.08, zb + 0.3] : null }); }
+  return (CABIN[type] = { m: m.upload(), drv: [-Wd * 0.42, sy + 0.04, fz - 0.05], pas: [Wd * 0.42, sy + 0.04, fz - 0.05], back: rear ? [Wd * 0.3, sy + 0.04, zb + 0.3] : null, roof: H }); }
 (function () {
   var vm = vmesh; vmesh = function (type, colI) { var key = type + ':' + colI, t = VT[type], lo = t && LOFT[t.body], fresh = !(VMESH[key] && VMESH[key].lofted); if (fresh && lo && t.cls === 'car') lo._gm = new R3.Mesh(); var o = vm(type, colI);
     if (lo && lo._gm) { if (lo._gm.n) o.glassM = lo._gm.upload(); lo._gm = null; } return o; };
-  function seatPerson(rig, v, local, hands) { var c = Math.cos(v.a), s = Math.sin(v.a), x = v.x + local[0] * c + local[2] * s, z = v.z - local[0] * s + local[2] * c, y = v.y + local[1] - Math.sin(v.pitch || 0) * local[2];
-    var Q = pose0(); poseSit(Q); if (hands) { Q.sh[0] = [1.25, 0.12, 0]; Q.sh[1] = [1.25, 0.12, 0]; Q.el[0] = Q.el[1] = 0.7 + 0.08 * Math.sin(G.t * 2 + v.id * 9); } else { Q.sh[0][0] = 0.4; Q.sh[1][0] = 0.4; Q.hy = 0.2 * Math.sin(G.t * 0.5 + v.id * 7); }
-    drawPerson(rig, x, y, z, v.a, Q, { noShadow: 1, sc: 0.86 }); }
+  function seatPerson(rig, v, local, hands) { var c = Math.cos(v.a), s = Math.sin(v.a), x = v.x + local[0] * c + local[2] * s, z = v.z - local[0] * s + local[2] * c, y = v.y + local[1] + 0.02 - Math.sin(v.pitch || 0) * local[2];
+    if (typeof rig === 'string') rig = rigOf(rig); if (!rig || !rig.D) return; var Q = pose0(); poseSit(Q); var CBx = cabinOf(v.type), roofIn = (CBx ? CBx.roof : 1.4) - 0.1, hipAt = local[1] + 0.02, hh = rig.drip ? 0.95 : 0.34, upper = (rig.D.tor + rig.D.neck + hh) * 0.93, sc = clamp((roofIn - hipAt) / upper, 0.45, 0.86);
+    Q.y = -(rig.D.lu + rig.D.ll); Q.kn[0] = Q.kn[1] = 0.25; Q.hip[0] = Q.hip[1] = 1.4; Q.lean = -0.38; /* update 164: hips on the seat, legs out in the footwell, leaning back, sized so the head never comes through the roof */ if (hands) { Q.sh[0] = [1.25, 0.12, 0]; Q.sh[1] = [1.25, 0.12, 0]; Q.el[0] = Q.el[1] = 0.7 + 0.08 * Math.sin(G.t * 2 + v.id * 9); } else { Q.sh[0][0] = 0.4; Q.sh[1][0] = 0.4; Q.hy = 0.2 * Math.sin(G.t * 0.5 + v.id * 7); }
+    drawPerson(rig, x, y, z, v.a, Q, { noShadow: 1, sc: sc, noDrip: 1, still: 1 }); }
   var dv = drawVeh; drawVeh = function (v) { dv(v); var VM = vmesh(v.type, v.col); if (!VM.glassM) return; var cd2 = (v.x - CAM.x) * (v.x - CAM.x) + (v.z - CAM.z) * (v.z - CAM.z); if (cd2 > 190 * 190 && v !== (P && P.veh)) return;
     var m = MD(v.x, v.y, v.z, v.a, v.pitch, v.roll), near = cd2 < 40 * 40 && !v.dead, CB = near ? cabinOf(v.type) : null;
     if (CB) { R3.draw(CB.m, ATT, { m: m });

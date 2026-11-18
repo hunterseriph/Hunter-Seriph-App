@@ -40,17 +40,20 @@ var R3 = (function () {
     '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
     'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uSoft; uniform float uMip; uniform vec2 uTexSize;',
     'uniform vec3 uAmb; uniform vec4 uLP[' + NL + ']; uniform vec3 uLC[' + NL + ']; uniform vec3 uTP; uniform vec3 uTD; uniform vec3 uTC; uniform float uLit;',
-    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd; uniform float uRim; uniform float uWater;',
+    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd; uniform float uRim; uniform float uWater; uniform float uSmooth;',
     'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF; varying vec3 vV;',
     'float b2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }',
     'float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }',
+    'float h12(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+    'float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h12(i), h12(i + vec2(1.0, 0.0)), f.x), mix(h12(i + vec2(0.0, 1.0)), h12(i + vec2(1.0, 1.0)), f.x), f.y); }',
     'vec3 hue(vec3 c, float a) { const vec3 k = vec3(0.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca); }',
     'void main() {',
     '  vec2 uv = vU; if (uWater > 0.5) uv = vW.xz * 0.22 + vec2(uTime * 0.11, uTime * 0.05) + 0.09 * vec2(sin(vW.z * 0.6 + uTime * 1.3), sin(vW.x * 0.5 + uTime * 1.1));',
-    MIP ? '  vec2 px = uv * vT.zw * uTexSize; float l = uMip > 0.5 ? clamp(0.5 * log2(max(dot(dFdx(px), dFdx(px)), dot(dFdy(px), dFdy(px)))), 0.0, 4.0) : 0.0; vec4 t = texture2DLodEXT(uTex, vT.xy + fract(uv) * vT.zw, l);'
-        : '  vec4 t = texture2D(uTex, vT.xy + fract(uv) * vT.zw);',
+    MIP ? '  vec2 px = uv * vT.zw * uTexSize; float l = uMip > 0.5 ? clamp(0.5 * log2(max(dot(dFdx(px), dFdx(px)), dot(dFdy(px), dFdy(px)))), 0.0, 4.0) : 0.0; vec2 ins = uSmooth * 0.5 * exp2(floor(l)) / uTexSize; vec4 t = texture2DLodEXT(uTex, vT.xy + ins + fract(uv) * (vT.zw - 2.0 * ins), l);'
+        : '  vec2 ins = uSmooth * 0.5 / uTexSize; vec4 t = texture2D(uTex, vT.xy + ins + fract(uv) * (vT.zw - 2.0 * ins));', /* update 164: smooth sampling (GLSMOOTH) keeps half a texel inside the tile so nothing bleeds in from the next one */
     '  if (t.a < (uSoft > 0.5 ? 0.02 : 0.5)) discard;',
     '  vec3 base = t.rgb * vC * 2.0 * uTint;',
+    '  if (uSmooth > 0.5 && uSoft < 0.5 && uRim < 0.001 && uWater < 0.5) { float nf = clamp(1.0 - vF / 28.0, 0.0, 1.0); vec2 q = vU * 96.0; float d = vn(q) * 0.6 + vn(q * 2.7) * 0.4; base *= 1.0 + nf * 0.16 * (d - 0.5); }', /* update 164: fine grain up close, finer than the texture's own pixels, so surfaces read as detailed instead of blurry */
     '  vec3 L = uAmb + vec3(vG);',
     '  if (uLit > 0.5) {',
     '    for (int i = 0; i < ' + NL + '; i++) { vec3 d = uLP[i].xyz - vW; float ln = length(d) + 0.001; float a = max(0.0, 1.0 - ln / max(uLP[i].w, 0.01)); a *= a; L += uLC[i] * a * (0.3 + 0.7 * max(0.0, dot(vN, d / ln))); }',
@@ -65,7 +68,7 @@ var R3 = (function () {
     '  float f = clamp((vF - uFogR.x) / (uFogR.y - uFogR.x), 0.0, 1.0);',
     '  c = mix(c, uFog, f * f * (3.0 - 2.0 * f));',
     '  if (uNeg > 0.001) c = mix(c, vec3(1.0) - c, uNeg);',
-    '  c = floor(clamp(c, 0.0, 1.0) * 31.0 + b4(gl_FragCoord.xy)) / 31.0;',
+    '  c = uSmooth > 0.5 ? clamp(c, 0.0, 1.0) + (b4(gl_FragCoord.xy) - 0.5) / 255.0 : floor(clamp(c, 0.0, 1.0) * 31.0 + b4(gl_FragCoord.xy)) / 31.0;',
     '  gl_FragColor = vec4(c, uAlpha * (uSoft > 0.5 ? t.a : 1.0));',
     '}'].join('\n');
   var built = (function () { try { return setup(); } catch (e) { if (window.console) console.error(e); return null; } })();
@@ -77,7 +80,7 @@ var R3 = (function () {
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     gl.useProgram(pr);
     var A = { p: gl.getAttribLocation(pr, 'aP'), u: gl.getAttribLocation(pr, 'aU'), t: gl.getAttribLocation(pr, 'aT'), c: gl.getAttribLocation(pr, 'aC'), n: gl.getAttribLocation(pr, 'aN'), g: gl.getAttribLocation(pr, 'aG') };
-    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd', 'uRim', 'uWater'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd', 'uRim', 'uWater', 'uSmooth'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
     var ID = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     gl.uniform1i(U.uTex, 0); gl.uniform1f(U.uAlpha, 1); gl.uniformMatrix4fv(U.uW, false, ID); gl.uniform3f(U.uTint, 1, 1, 1); gl.uniform3f(U.uAdd, 0, 0, 0); gl.uniform1f(U.uLit, 1);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
@@ -93,13 +96,13 @@ var R3 = (function () {
     function pot(n) { return n > 0 && (n & (n - 1)) === 0; }
     function texture(src, mip) {
       var t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      var sm = !!window.GLSMOOTH; t.smooth = sm; gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, sm ? gl.LINEAR : gl.NEAREST); /* update 164: the city samples smoothly (it looked pixelated) */
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); t.w = src.width; t.h = src.height;
       t.mip = !!(mip && MIP && pot(src.width) && pot(src.height));
-      if (t.mip) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR); }
-      else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      if (t.mip) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, sm ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST_MIPMAP_LINEAR); }
+      else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, sm ? gl.LINEAR : gl.NEAREST);
       return t;
     }
     /* a mesh: vertices of position, uv (tile units), tile rect, colour (0.5 = normal), normal, glow (lights itself) */
@@ -127,13 +130,13 @@ var R3 = (function () {
       attribs(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniformMatrix4fv(U.uW, false, o.m || ID);
       gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0); gl.uniform1f(U.uMip, tex.mip ? 1 : 0); gl.uniform2f(U.uTexSize, tex.w, tex.h);
-      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uRim, o.rim || 0); gl.uniform1f(U.uWater, o.water || 0); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
+      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uRim, o.rim || 0); gl.uniform1f(U.uWater, o.water || 0); gl.uniform1f(U.uSmooth, window.GLSMOOTH && tex.smooth ? 1 : 0); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
       var tn = o.tint; gl.uniform3f(U.uTint, tn ? tn[0] : 1, tn ? tn[1] : 1, tn ? tn[2] : 1); var fl = o.flash; gl.uniform3f(U.uAdd, fl ? fl[0] : 0, fl ? fl[1] : 0, fl ? fl[2] : 0);
       if ((o.alpha !== undefined && o.alpha < 1) || (o.soft && !o.add)) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
       if (o.add) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false); }
       if (o.noDepth) gl.disable(gl.DEPTH_TEST);
       if (o.offset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -o.offset); } if (o.decal) gl.depthMask(false);
-      gl.drawArrays(gl.TRIANGLES, 0, n);
+      if (o.cull) { gl.enable(gl.CULL_FACE); gl.cullFace(o.cull === 2 ? gl.BACK : gl.FRONT); } gl.drawArrays(gl.TRIANGLES, 0, n); if (o.cull) gl.disable(gl.CULL_FACE); /* update 164: o.cull 1 draws only back faces (an outline hull), 2 only front faces */
       gl.disable(gl.POLYGON_OFFSET_FILL); gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
     }
     /* matrices (column major) */

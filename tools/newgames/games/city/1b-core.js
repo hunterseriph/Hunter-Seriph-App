@@ -3,7 +3,7 @@
    CITY (tools/city/mapgen.py), ground heights, what stands where, and the little helpers everything else uses.
    Units are metres. x runs east, z runs south, y is up. A map tile is 4 m.
    ===================================================================================================== */
-var W = 480, H = 270, TSZ = 2.4; window.GLNEAR = 0.3; window.GLFAR = 1200; // TSZ is Psycho's tile size, its rigs read it
+var W = 480, H = 270, TSZ = 2.4; window.GLNEAR = 0.3; window.GLFAR = 1200; window.GLSMOOTH = 1; /* update 164: smooth texture sampling and full colour (it looked pixelated) */ // TSZ is Psycho's tile size, its rigs read it
 var G = { interior: null }; // the game state (filled in by 9-main.js)
 var CT = CITY.T, MW = CITY.W, MH = CITY.H, WX = MW * CT, WZ = MH * CT;
 var K_SEA = 0, K_WATER = 1, K_SAND = 2, K_GRASS = 3, K_FOREST = 4, K_ROAD = 5, K_PAVE = 6, K_LOT = 7, K_PARK = 8, K_ROCK = 9, K_DIRT = 10, K_RUNWAY = 11, K_GRAVE = 12, K_BRIDGE = 13, K_CREAM = 14, K_PIER = 15, K_YARD = 16, K_FIELD = 17;
