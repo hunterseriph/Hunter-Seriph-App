@@ -25,7 +25,7 @@ function loftBody(m, t, c, o) {
   var gz = o.glass ? [o.glass[0] * L, o.glass[1] * L] : [-L, L];
   function Q(a, b, cc, d, col, gl) { var u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], l = Math.hypot(n[0], n[1], n[2]) || 1; n = [n[0] / l, n[1] / l, n[2] / l];
     var mx = (a[0] + b[0] + cc[0] + d[0]) / 4, my = (a[1] + b[1] + cc[1] + d[1]) / 4; if (n[0] * mx + n[1] * (my - (low + belt) / 2) < 0) n = [-n[0], -n[1], -n[2]];
-    m.quad(a, b, cc, d, UV1, TL(gl ? 'w_glass' : 'white'), litc(col, n, gl ? 1.2 : 1), n); }
+    (gl && o._gm ? o._gm : m).quad(a, b, cc, d, UV1, TL(gl ? 'w_glass' : 'white'), litc(col, n, gl ? 1.2 : 1), n); }
   for (var i = 0; i < S.length - 1; i++) {
     var A = S[i], B = S[i + 1], pa = sec(A), pb = sec(B), cabSeg = Math.max(A.top, B.top) > belt + 0.3, zin = (A.z + B.z) / 2 > gz[0] && (A.z + B.z) / 2 < gz[1];
     [-1, 1].forEach(function (sd) { for (var j = 0; j < 5; j++) { var g = j === 3 && cabSeg && zin && A.top > belt + 0.1 && B.top > belt + 0.1; Q([sd * pa[j][0], pa[j][1], A.z], [sd * pb[j][0], pb[j][1], B.z], [sd * pb[j + 1][0], pb[j + 1][1], B.z], [sd * pa[j + 1][0], pa[j + 1][1], A.z], j === 0 ? trim : g ? glassC : c, g); } });
@@ -73,7 +73,7 @@ vmesh = function (type, colI) {
   // the bits each kind adds
   if (t.cop) { boxC(m, -0.62, H, -0.12, 0.62, H + 0.07, 0.12, '#1a1a1e'); boxC(m, -0.58, H + 0.07, -0.1, -0.04, H + 0.2, 0.1, '#ff2630', 0.85); boxC(m, 0.04, H + 0.07, -0.1, 0.58, H + 0.2, 0.1, '#2a6aff', 0.85); [-1, 1].forEach(function (s) { boxC(m, s * (Wd + 0.008) - 0.003, lo.low + 0.32, -L * 0.6, s * (Wd + 0.008) + 0.003, lo.low + 0.48, L * 0.6, '#f1e7d0'); }); }
   if (t.taxi) { boxC(m, -0.42, H, -0.15, 0.42, H + 0.3, 0.15, '#12040a'); boxC(m, -0.4, H + 0.02, 0.151, 0.4, H + 0.28, 0.16, '#ffe36a', 0.6); boxC(m, -0.4, H + 0.02, -0.16, 0.4, H + 0.28, -0.151, '#ffe36a', 0.6); [-1, 1].forEach(function (s) { for (var q = 0; q < 8; q++) boxC(m, s * (Wd + 0.008) - 0.003, lo.low + 0.3, -L * 0.6 + q * L * 0.15, s * (Wd + 0.008) + 0.003, lo.low + 0.4, -L * 0.6 + q * L * 0.15 + L * 0.075, D); }); }
-  if (t.body === 'muscle') { boxC(m, -0.35, lo.belt + 0.02, L * 0.25, 0.35, lo.belt + 0.18, L * 0.68, D); [-1, 1].forEach(function (s) { boxC(m, s * 0.18 - 0.07, 0, -L, s * 0.18 + 0.07, H + 0.012, L, '#f1e7d0'); }); m.n = m.n; }
+  if (t.body === 'muscle') { boxC(m, -0.35, lo.belt + 0.02, L * 0.25, 0.35, lo.belt + 0.18, L * 0.68, D); }
   if (t.body === 'sports') { boxC(m, -Wd + 0.12, lo.belt + 0.28, -L + 0.05, Wd - 0.12, lo.belt + 0.33, -L + 0.4, D); [-1, 1].forEach(function (s) { boxC(m, s * (Wd - 0.35) - 0.04, lo.belt + 0.08, -L + 0.2, s * (Wd - 0.35) + 0.04, lo.belt + 0.28, -L + 0.3, D); }); }
   if (t.body === 'hearse') [-1, 1].forEach(function (s) { var x = s * (Wd + 0.008), n = [s, 0, 0]; m.quad([x, lo.belt + 0.05, -L * 0.85], [x, lo.belt + 0.05, L * 0.1], [x, H - 0.12, L * 0.1], [x, H - 0.12, -L * 0.85], UV1, TL('white'), litc('#2a1a1e', n), n); tub(m, [x, lo.belt + 0.25, -L * 0.55], [x + s * 0.02, lo.belt + 0.25, -L * 0.55], 0.18, 0.18, '#c8a040', 10, { cap: 1 }); });
   if (t.body === 'limo') [-1, 1].forEach(function (s) { boxC(m, s * (Wd + 0.006) - 0.003, lo.belt - 0.05, -L * 0.6, s * (Wd + 0.006) + 0.003, lo.belt - 0.02, L * 0.5, '#c8ccd0'); });

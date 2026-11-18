@@ -105,7 +105,7 @@ function houseDress(m, glow, b) {
   var pl = at(0.8, 0.12); boxC(m, pl[0] - 0.08, b.y0 + 2.1, pl[1] - 0.08, pl[0] + 0.08, b.y0 + 2.4, pl[1] + 0.08, '#12040a'); ell(glow, pl[0], b.y0 + 2.25, pl[1], 0.07, 0.1, 0.07, '#ffd890', 6, 3);
   [-1, 1].forEach(function (sd) { var t0 = sd * 1.4, t1 = sd * (wF / 2 - 0.5); flat(Math.min(t0, t1), Math.max(t0, t1), 0.05, 0.8, TL('dirt'), 0.03); for (var f = 0; f < 6; f++) { var fp = at(t0 + (t1 - t0) * (f + 0.5) / 6, 0.42), fy = groundY(fp[0], fp[1]); ell(m, fp[0], fy + 0.2, fp[1], 0.18, 0.2, 0.18, f % 2 ? '#2e5222' : '#3a6a2a', 6, 3); ell(m, fp[0], fy + 0.38, fp[1], 0.08, 0.06, 0.08, ['#ffe36a', '#f1e7d0', '#c4121c', '#ff9ab4', '#c48aff'][Math.floor(hash2(b.i, f, 7) * 5)], 5, 2); } });
   // a tree in the front garden now and then
-  if (r3 < 0.35 && D > 3.2) { var tp = at(-side * (wF / 2 - 1.2) || -3, D * 0.55), ty = groundY(tp[0], tp[1]); tree(m, tp[0], ty, tp[1], false, 0.55 + r2 * 0.25); if (first) addPost(tp[0], tp[1], 0.3, ty, ty + 4); }
+  if (r3 < 0.35 && D > 3.2 && !(b.shop && b.shop.indexOf('home') === 0)) { var tp = at(-side * (wF / 2 - 1.2) || -3, D * 0.55), ty = groundY(tp[0], tp[1]); tree(m, tp[0], ty, tp[1], false, 0.55 + r2 * 0.25); if (first) addPost(tp[0], tp[1], 0.3, ty, ty + 4); }
   // round the back: a shed or a washing line
   var dep = Math.abs(nx) ? b.x1 - b.x0 : b.z1 - b.z0, back = -dep - 2.6, bp2 = at(-wF / 2 + 1.4, back);
   if (!bldAt(bp2[0], bp2[1]) && !bldAt(at(-wF / 2 + 1.4, back - 1.5)[0], at(-wF / 2 + 1.4, back - 1.5)[1])) { var sy2 = groundY(bp2[0], bp2[1]);

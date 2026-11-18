@@ -32,7 +32,7 @@ function railPlace(v, ds) { var A = v.ai, q;
   if (A.turn) { A.tt += A.turn === A.lastTurn ? ds : 0; A.lastTurn = A.turn; if (A.tt >= A.turn.len) { var T = A.turn; A.E = T.NE; A.back = T.nback; A.lane = T.lane; A.s = T.cutS + (A.tt - T.len); A.turn = null; A.lastTurn = null; if (NLOCK[T.node] && NLOCK[T.node].v === v) delete NLOCK[T.node]; A.want = (A.E.w > 11 ? 19 : 13) + rnd(-2, 2); } }
   if (A.turn) q = bez(A.turn, clamp(A.tt / A.turn.len, 0, 1)); else q = edgeAt(A.E, A.s, A.back, A.lane);
   var na = Math.atan2(q.dx, q.dz), da = angDiff(v.a, na); v.steer = clamp(da * 8, -1, 1); v.a = na; v.x = q.x; v.z = q.z;
-  var gy = groundY(q.x, q.z), gf = groundY(q.x + q.dx * 1.6, q.z + q.dz * 1.6), gb = groundY(q.x - q.dx * 1.6, q.z - q.dz * 1.6); v.y = gy; v.pitch = Math.atan2(gf - gb, 3.2) * -1; v.roll = 0; v.air = 0;
+  var hy = (v.y || groundY(q.x, q.z)) + 0.9, gy = standY(q.x, q.z, hy), gf = standY(q.x + q.dx * 1.6, q.z + q.dz * 1.6, hy + 0.3), gb = standY(q.x - q.dx * 1.6, q.z - q.dz * 1.6, hy); /* update 163: traffic rides bridge decks too (it ran under them and you hit cars you could not see) */ v.y = gy; v.pitch = Math.atan2(gf - gb, 3.2) * -1; v.roll = 0; v.air = 0;
   v.sp = A.sp || 0; v.vx = q.dx * v.sp; v.vz = q.dz * v.sp; v.wheelA = (v.wheelA || 0) + ds / 0.35; }
 function railStep(v, dt) { var A = v.ai, dr = v.driver;
   if (A.sp === undefined) A.sp = Math.max(0, v.sp || 0);

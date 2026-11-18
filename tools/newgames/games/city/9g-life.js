@@ -46,7 +46,7 @@ function drawLife() { if (G.interior) return;
     R3.draw(litterMesh(L.k), ATT, { m: MD(L.x, L.y + 0.03 + L.h, L.z, L.a, lift, L.h > 0.02 ? Math.cos(L.rot * 0.7) * 0.8 : 0) }); });
   drawFlags(); }
 /* flags: a pole with a cloth that ripples in the wind (the cloth is rebuilt each frame, a few dozen triangles) */
-var FLAGS = null, FLAGPOLE = null, FLAGCOL = [['#c4121c', '#12040a'], ['#12040a', '#c4121c'], ['#f1e7d0', '#c4121c'], ['#c4121c', '#ffe36a']];
+var FLAGS = null, FLAGPOLE = null, FLAGCOL = [['#12040a', '#c4121c'], ['#12040a', '#c4121c'], ['#12040a', '#c4121c'], ['#12040a', '#c4121c']]; /* update 163: the Cum City flag is black, red, black (his rule) */
 function flagSpots() { if (FLAGS) return FLAGS; FLAGS = []; function add(x, z, h, c) { if (!(x > 0 && z > 0)) return; var k = kAt(x, z); if (isWaterK(k) || k === K_ROAD || k === K_BRIDGE) return; for (var i = 0; i < FLAGS.length; i++) if (dist2(FLAGS[i].x, FLAGS[i].z, x, z) < 9) return; if (near(BGRID, x, z, 3).some(function (b) { return x > b.x0 - 1.5 && x < b.x1 + 1.5 && z > b.z0 - 1.5 && z < b.z1 + 1.5; }) || near(SOLID, x, z, 2).some(function (b) { return x > b.x0 - 0.8 && x < b.x1 + 0.8 && z > b.z0 - 0.8 && z < b.z1 + 0.8; })) return; FLAGS.push({ x: x, z: z, y: groundY(x, z), h: h || 9, c: c || 0, ph: Math.random() * 6 }); }
   poisOf('statue').forEach(function (p) { add(p.x + 6.5, p.z + 6.5, 10, 0); add(p.x - 6.5, p.z + 6.5, 10, 1); add(p.x + 6.5, p.z - 6.5, 10, 1); add(p.x - 6.5, p.z - 6.5, 10, 0); });
   poisOf('gate').forEach(function (p) { add(p.x + 12, p.z, 11, 3); add(p.x - 12, p.z, 11, 3); });

@@ -32,7 +32,7 @@ SIDE('lab', 'shop:club', 'lab2', [
     TALK(['lab', 'Coaster\'s open. Everyone calm. Steve is giving out free grins.'])] },
   { title: 'Hot Pursuit', pay: 2000, steps: [TALK(['lab', 'Bonjo\'s rival boutique is back. They nicked a whole van of leather. Stop that van.']),
     { t: 'chase', type: 'van', at: 'road:dist:red', crew: 'butcher', hp: 120, msg: 'Wreck the van full of stolen leather.' },
-    TALK(['lab', 'Leather everywhere. Bonjo is going to have the best week of his life.'])] },
+    TALK(['lab', 'Leather everywhere. Bonjo is going to have the best week of her life.'])] },
   { title: 'Graveyard Shift', pay: 2200, give: ['smg', 60], steps: [TALK(['lab', 'Grave robbers at the cemetery. Big lads. They are digging up Uncle Beeb\'s old drinking mates.'], ['lab', 'Here, a Cream Chopper. Night shift.']),
     { t: 'night' }, GO('poi:chapel', 'Go to the cemetery.', { r: 24 }),
     { t: 'kill', spawn: [{ kind: 'goon', n: 8, at: 'poi:chapel', spread: 26, wpn: 'pistol' }], msg: 'Stop the grave robbers.' },

@@ -25,7 +25,7 @@ V = { # update 157 (he said people sounded robotic and weird): no pitch shifting
  'lab': (LT, 51, 1.0, 1.0, ''), 'cumhead': (LT, 66, 1.0, 1.0, ''), 'greebo': (LT, 54, 0.98, 1.0, ''), 'spermaid': (LT, 9, 1.0, 1.0, ''),
  'amy': (LT, 21, 0.98, 1.0, ''), 'saba': (LT, 27, 1.06, 1.0, ''), 'joff': (LT, 57, 0.98, 1.0, ''), 'beeb': (LT, 90, 1.04, 1.0, ''),
  'harold': (LT, 105, 0.95, 1.0, ''), 'kaya': (LT, 15, 0.98, 1.0, ''), 'elden': (LT, 72, 1.0, 1.0, ''), 'ali': (LT, 78, 0.98, 1.0, ''),
- 'potbelly': (LT, 102, 1.02, 1.0, ''), 'pulsar': (LT, 117, 1.08, 1.0, ''), 'bonjo': (LT, 69, 1.0, 1.0, ''), 't': (LT, 0, 1.08, 1.0, ''),
+ 'potbelly': (LT, 102, 1.02, 1.0, ''), 'pulsar': (LT, 117, 1.08, 1.0, ''), 'bonjo': (LT, 18, 1.0, 1.0, ''), 't': (LT, 0, 1.08, 1.0, ''),
  'jessiah': (LT, 6, 1.04, 1.0, ''), 'natty': (LT, 114, 1.04, 1.0, ''), 'judge': (LT, 48, 1.08, 1.0, 'aecho=0.8:0.4:40:0.1'), 'fate': (LT, 60, 1.12, 1.0, 'aecho=0.8:0.4:60:0.12'),
  'bates': (LT, 24, 1.1, 1.0, ''), 'blumhead': (LT, 42, 1.08, 1.0, 'aecho=0.8:0.5:50:0.18'), 'clown': (LT, 81, 0.95, 1.0, ''),
  'tb': ('en-us-ryan-medium', None, 1.42, 0.86, 'acompressor=threshold=-20dB:ratio=3,aecho=0.8:0.5:38:0.18,bass=g=5'),
@@ -69,7 +69,7 @@ def main():
         k = key(who, text); out = os.path.join(OUT, k + '.mp3'); done[k] = 1
         real = [os.path.join(REC, k + e) for e in ('.wav', '.mp3', '.m4a', '.ogg') if os.path.exists(os.path.join(REC, k + e))]
         redo = os.environ.get('REDO'); import re as _re
-        if os.path.exists(out) and not real and '--all' not in sys.argv and not (redo and _re.search(redo, text)): continue
+        if os.path.exists(out) and not real and '--all' not in sys.argv and not (redo and _re.search(redo, text)) and who not in os.environ.get('REDOWHO', '').split(','): continue
         todo.append((who, text, out, real[0] if real else None))
     with multiprocessing.Pool(int(os.environ.get('JOBS', '3'))) as pool:
         errs = [e for e in pool.map(job, todo) if e]

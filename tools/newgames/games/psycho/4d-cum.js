@@ -37,11 +37,11 @@ function cumBuild(sep) { // sep: separate feet (Dark Loads' own walk); without, 
   var D = { lu: 0.33, ll: 0.33, tor: 0.4, shW: 0.21, hipW: 0.105, au: 0.24, al: 0.21, arm: 0.052, hand: 0.078, leg: 0.075, neck: 0.03 }, P = {}, la = 0.25;
   var BLK = '#141016', SLV = '#cfd0d8', RED = '#b0141e', SLEEVE = '#29242c', GLV = '#f4efe6';
   // hips: the top of the trip pants, a belt with a silver buckle
-  var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, BLK, 10, 5); tub(hp, [0, 0.07, 0], [0, 0.12, 0], 0.205, 0.205, '#0c0a0c', 12, { cap: 1 }); bxp(hp, -0.035, 0.065, 0.19, 0.035, 0.125, 0.215, SLV);
+  var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, BLK, 10, 5); ell(hp, 0, 0.095, 0, 0.205, 0.035, 0.158, '#0c0a0c', 14, 5); bxp(hp, -0.035, 0.07, 0.145, 0.035, 0.12, 0.165, SLV); /* update 163: the belt follows the body (a round belt stuck out at the waist) */
   P.hips = hp.upload();
   // the T-shirt with the print, the collar, the hem standing off the body
   var to = M(); ell(to, 0, D.tor * 0.52, 0, 0.235, D.tor * 0.58, 0.165, BLK, 12, 7, { face: 'cumshirt', fz: 0.35, fw: 0.86, fh: 0.9, fdv: 0.06 });
-  tub(to, [0, 0.0, 0], [0, 0.07, 0], 0.245, 0.235, BLK, 12); tub(to, [0, D.tor * 0.97, 0], [0, D.tor * 1.05, 0], 0.1, 0.09, '#0a080a', 10, { cap: 1 });
+  ell(to, 0, 0.05, 0, 0.232, 0.06, 0.162, BLK, 14, 5); /* update 163: the hem hugs the body */ tub(to, [0, D.tor * 0.97, 0], [0, D.tor * 1.05, 0], 0.1, 0.09, '#0a080a', 10, { cap: 1 });
   P.torso = to.upload();
   // the head: a pale cream droplet, the tip curling over to his left
   var hd = M(); ell(hd, 0, 0.3, 0, 0.34, 0.32, 0.31, '#f3dfa8', 16, 10, { face: 'f_cum2', fz: 0.22, fw: 0.82, fh: 0.82, fdv: 0.02, tip: 0.34 });

@@ -19,10 +19,10 @@
       var gL = g0(p.x + nx * side, p.z + nz * side), gR = g0(p.x - nx * side, p.z - nz * side), low = Math.min(gL, gR);
       var e = clamp((p.y - low - 1.5) / 2.5, 0, 1); e = e * e * (3 - 2 * e); e *= clamp(Math.min(p.s - S.s0, S.s1 - p.s) / 8, 0, 1); p.base = low; p.elev = e;
       for (var o = -(hw + 10); o <= hw + 10; o += 0.75) { var x = p.x + nx * o, z = p.z + nz * o, ci = Math.round(x / CT), cj = Math.round(z / CT);
-        if (ci < 0 || cj < 0 || ci > MW || cj > MH) continue; var u = cj * W1 + ci, cx = ci * CT, cz = cj * CT;
+        if (ci < 1 || cj < 1 || ci >= MW || cj >= MH) continue; var u = cj * W1 + ci, cx = ci * CT, cz = cj * CT; if ([KM[cj * MW + ci], KM[cj * MW + ci - 1], KM[(cj - 1) * MW + ci], KM[(cj - 1) * MW + ci - 1]].some(function (k) { return k === K_ROAD || k === K_PAVE; })) continue; /* update 163: the road up to the bridge is never dug into a dip */
         var lat = Math.abs((cx - p.x) * nx + (cz - p.z) * nz), along = Math.abs((cx - p.x) * p.dx + (cz - p.z) * p.dz); if (along > 1.2) continue;
         var base = gR + (gL - gR) * clamp((((cx - p.x) * nx + (cz - p.z) * nz) + side) / (2 * side), 0, 1), w = lat <= hw + 2 ? 1 : Math.max(0, 1 - (lat - hw - 2) / 8);
-        var h = CH0[u], dug = h - Math.max(0, h - base) * w * e; if (lat <= hw + 1.2) dug = Math.min(dug, p.y - 0.25 * e - 0.02); /* never above the deck */
+        var h = CH0[u], dug = h - Math.max(0, h - base) * w * e; if (lat <= hw + 1.2 && e > 0.5) dug = Math.min(dug, p.y - 0.25 * e - 0.02); /* never above the deck */
         if (dug < tgt[u]) tgt[u] = dug; } }); });
   for (var u = 0; u < CH.length; u++) if (tgt[u] < 1e8 && tgt[u] < CH[u]) CH[u] = tgt[u];
 })();

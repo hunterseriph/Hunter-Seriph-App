@@ -57,7 +57,8 @@ function nearestUse() { var best = null, bd = 9; ((G.interior ? G.indoorUses : G
 function stepWeapon(dt, mi) {
   P.cool -= dt; P.atkT = Math.max(0, P.atkT - dt); P.kick = Math.max(0, P.kick - dt * 6);
   var W0 = WPN[P.wpn]; P.aim = (KIT.held('lb') || gpHeld(6)) && !W0.melee ? 1 : 0;
-  if (P.aim) { if (!P.target || P.target.dead || dist2(P.x, P.z, P.target.x, P.target.z) > W0.range * W0.range) P.target = findTarget(W0.range); } else P.target = null;
+  if (P.aim) { var lsk = KIT.stick(1); if ((lsk.on && Math.hypot(lsk.x, lsk.y) > 0.3) || (KIT.ptr && KIT.ptr.dragLook)) { P.target = null; P.noLock = 0.9; } P.noLock = Math.max(0, (P.noLock || 0) - dt); /* update 163: moving the look stick while aiming lets go of the target; it locks again once you stop */
+    if (!(P.noLock > 0) && (!P.target || P.target.dead || dist2(P.x, P.z, P.target.x, P.target.z) > W0.range * W0.range)) P.target = findTarget(W0.range); } else { P.target = null; P.noLock = 0; }
   var fire = W0.auto ? KIT.held('x') || gpHeld(7) : KIT.pressed('x') || gpPressed(7);
   if (fire && P.cool <= 0 && !G.cut && !G.talk && !P.swim) {
     if (W0.melee) { P.cool = W0.rate; P.atkT = 0.35; meleeHit(W0); }

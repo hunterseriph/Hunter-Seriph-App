@@ -790,12 +790,13 @@ var R3 = (function () {
   if (!gl) return { ok: false, canvas: cv };
   var VS = [
     'attribute vec3 aP; attribute vec2 aU; attribute vec4 aT; attribute vec3 aC; attribute vec3 aN; attribute float aG;',
-    'uniform mat4 uVP; uniform mat4 uW; uniform float uTime; uniform float uWarp; uniform vec3 uEye;',
+    'uniform mat4 uVP; uniform mat4 uW; uniform float uTime; uniform float uWarp; uniform vec3 uEye; uniform float uWater;',
     'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF; varying vec3 vV;',
     'void main() {',
     '  vec4 w = uW * vec4(aP, 1.0);',
     '  if (uWarp > 0.001) { float d = length(w.xz - uEye.xz), k = uWarp * smoothstep(1.2, 5.0, d);', // the walls breathe and swim (never right in your face)
     '    w.x += k * sin(w.z * 0.55 + uTime * 1.7) * 0.35; w.z += k * sin(w.x * 0.5 + uTime * 1.3) * 0.35; w.y += k * sin(w.x * 0.4 + w.z * 0.45 + uTime * 2.3) * 0.22 * (w.y + 0.3); }',
+    '  if (uWater > 0.5) w.y += sin(w.x * 0.7 + uTime * 1.6) * 0.05 + sin(w.z * 0.9 + uTime * 1.2) * 0.04;',
     '  gl_Position = uVP * w; vW = w.xyz; vN = normalize((uW * vec4(aN, 0.0)).xyz + vec3(0.0, 0.0001, 0.0));',
     '  vU = aU; vT = aT; vC = aC; vG = aG; vF = gl_Position.w; vV = uEye - w.xyz;',
     '}'].join('\n');
@@ -805,13 +806,13 @@ var R3 = (function () {
     '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
     'uniform sampler2D uTex; uniform vec3 uFog; uniform vec2 uFogR; uniform float uAlpha; uniform float uSoft; uniform float uMip; uniform vec2 uTexSize;',
     'uniform vec3 uAmb; uniform vec4 uLP[' + NL + ']; uniform vec3 uLC[' + NL + ']; uniform vec3 uTP; uniform vec3 uTD; uniform vec3 uTC; uniform float uLit;',
-    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd; uniform float uRim;',
+    'uniform float uTime; uniform float uHue; uniform float uMeat; uniform float uNeg; uniform vec3 uTint; uniform vec3 uAdd; uniform float uRim; uniform float uWater;',
     'varying vec2 vU; varying vec4 vT; varying vec3 vC; varying vec3 vN; varying vec3 vW; varying float vG; varying float vF; varying vec3 vV;',
     'float b2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }',
     'float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }',
     'vec3 hue(vec3 c, float a) { const vec3 k = vec3(0.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca); }',
     'void main() {',
-    '  vec2 uv = vU;',
+    '  vec2 uv = vU; if (uWater > 0.5) uv = vW.xz * 0.22 + vec2(uTime * 0.11, uTime * 0.05) + 0.09 * vec2(sin(vW.z * 0.6 + uTime * 1.3), sin(vW.x * 0.5 + uTime * 1.1));',
     MIP ? '  vec2 px = uv * vT.zw * uTexSize; float l = uMip > 0.5 ? clamp(0.5 * log2(max(dot(dFdx(px), dFdx(px)), dot(dFdy(px), dFdy(px)))), 0.0, 4.0) : 0.0; vec4 t = texture2DLodEXT(uTex, vT.xy + fract(uv) * vT.zw, l);'
         : '  vec4 t = texture2D(uTex, vT.xy + fract(uv) * vT.zw);',
     '  if (t.a < (uSoft > 0.5 ? 0.02 : 0.5)) discard;',
@@ -823,7 +824,7 @@ var R3 = (function () {
     '    L += uTC * sp / (1.0 + 0.05 * tl * tl) * (0.35 + 0.65 * max(0.0, dot(vN, -tn)));',
     '    if (uRim > 0.001) { float fr = 1.0 - max(0.0, dot(normalize(vN), normalize(vV))); L *= 0.6 + 0.4 * smoothstep(-0.7, 0.6, vN.y); L += uRim * fr * fr * (uAmb * 3.5 + L * 0.35 + vec3(0.05, 0.02, 0.02)); }', // people: shaded from above, a rim of light round the edge so they stand out from the dark
     '  } else L = vec3(1.0);',
-    '  vec3 c = base * L + uAdd;',
+    '  vec3 c = base * L + uAdd; if (uWater > 0.5) { float sh = sin(vW.x * 1.3 + vW.z * 0.9 + uTime * 2.0) * sin(vW.x * 0.7 - vW.z * 1.4 + uTime * 1.5); c *= 1.0 + 0.1 * sh; c += vec3(0.06) * smoothstep(0.82, 0.98, sh); }',
     '  if (uHue > 0.001) { float a = uHue * (uTime * 0.9 + vW.x * 0.35 + vW.z * 0.25 + vW.y * 0.8); vec3 h = hue(c, a) * (1.0 + 0.6 * uHue); c = mix(c, h, min(1.0, uHue * 1.4)); }',
     '  if (uMeat > 0.001) { float v = 0.5 + 0.5 * sin(vW.x * 3.1 + sin(vW.z * 2.3 + uTime) * 2.0 + vW.y * 4.0 + uTime * 2.5); float lum = dot(c, vec3(0.33));',
     '    vec3 m = mix(vec3(0.35, 0.02, 0.05), vec3(0.95, 0.35, 0.4), v * v) * (0.4 + lum * 1.6); c = mix(c, m, uMeat); }',
@@ -842,7 +843,7 @@ var R3 = (function () {
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     gl.useProgram(pr);
     var A = { p: gl.getAttribLocation(pr, 'aP'), u: gl.getAttribLocation(pr, 'aU'), t: gl.getAttribLocation(pr, 'aT'), c: gl.getAttribLocation(pr, 'aC'), n: gl.getAttribLocation(pr, 'aN'), g: gl.getAttribLocation(pr, 'aG') };
-    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd', 'uRim'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+    var U = {}; ['uVP', 'uW', 'uTime', 'uWarp', 'uEye', 'uTex', 'uFog', 'uFogR', 'uAlpha', 'uSoft', 'uMip', 'uTexSize', 'uAmb', 'uLP', 'uLC', 'uTP', 'uTD', 'uTC', 'uLit', 'uHue', 'uMeat', 'uNeg', 'uTint', 'uAdd', 'uRim', 'uWater'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
     var ID = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     gl.uniform1i(U.uTex, 0); gl.uniform1f(U.uAlpha, 1); gl.uniformMatrix4fv(U.uW, false, ID); gl.uniform3f(U.uTint, 1, 1, 1); gl.uniform3f(U.uAdd, 0, 0, 0); gl.uniform1f(U.uLit, 1);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE);
@@ -892,7 +893,7 @@ var R3 = (function () {
       attribs(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniformMatrix4fv(U.uW, false, o.m || ID);
       gl.uniform1f(U.uAlpha, o.alpha === undefined ? 1 : o.alpha); gl.uniform1f(U.uSoft, o.soft ? 1 : 0); gl.uniform1f(U.uMip, tex.mip ? 1 : 0); gl.uniform2f(U.uTexSize, tex.w, tex.h);
-      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uRim, o.rim || 0); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
+      gl.uniform1f(U.uLit, o.lit === false ? 0 : 1); gl.uniform1f(U.uRim, o.rim || 0); gl.uniform1f(U.uWater, o.water || 0); gl.uniform1f(U.uWarp, o.warp === undefined ? warpNow : o.warp);
       var tn = o.tint; gl.uniform3f(U.uTint, tn ? tn[0] : 1, tn ? tn[1] : 1, tn ? tn[2] : 1); var fl = o.flash; gl.uniform3f(U.uAdd, fl ? fl[0] : 0, fl ? fl[1] : 0, fl ? fl[2] : 0);
       if ((o.alpha !== undefined && o.alpha < 1) || (o.soft && !o.add)) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
       if (o.add) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false); }
@@ -1648,11 +1649,11 @@ function cumBuild(sep) { // sep: separate feet (Dark Loads' own walk); without, 
   var D = { lu: 0.33, ll: 0.33, tor: 0.4, shW: 0.21, hipW: 0.105, au: 0.24, al: 0.21, arm: 0.052, hand: 0.078, leg: 0.075, neck: 0.03 }, P = {}, la = 0.25;
   var BLK = '#141016', SLV = '#cfd0d8', RED = '#b0141e', SLEEVE = '#29242c', GLV = '#f4efe6';
   // hips: the top of the trip pants, a belt with a silver buckle
-  var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, BLK, 10, 5); tub(hp, [0, 0.07, 0], [0, 0.12, 0], 0.205, 0.205, '#0c0a0c', 12, { cap: 1 }); bxp(hp, -0.035, 0.065, 0.19, 0.035, 0.125, 0.215, SLV);
+  var hp = M(); ell(hp, 0, 0, 0, 0.2, 0.13, 0.15, BLK, 10, 5); ell(hp, 0, 0.095, 0, 0.205, 0.035, 0.158, '#0c0a0c', 14, 5); bxp(hp, -0.035, 0.07, 0.145, 0.035, 0.12, 0.165, SLV); /* update 163: the belt follows the body (a round belt stuck out at the waist) */
   P.hips = hp.upload();
   // the T-shirt with the print, the collar, the hem standing off the body
   var to = M(); ell(to, 0, D.tor * 0.52, 0, 0.235, D.tor * 0.58, 0.165, BLK, 12, 7, { face: 'cumshirt', fz: 0.35, fw: 0.86, fh: 0.9, fdv: 0.06 });
-  tub(to, [0, 0.0, 0], [0, 0.07, 0], 0.245, 0.235, BLK, 12); tub(to, [0, D.tor * 0.97, 0], [0, D.tor * 1.05, 0], 0.1, 0.09, '#0a080a', 10, { cap: 1 });
+  ell(to, 0, 0.05, 0, 0.232, 0.06, 0.162, BLK, 14, 5); /* update 163: the hem hugs the body */ tub(to, [0, D.tor * 0.97, 0], [0, D.tor * 1.05, 0], 0.1, 0.09, '#0a080a', 10, { cap: 1 });
   P.torso = to.upload();
   // the head: a pale cream droplet, the tip curling over to his left
   var hd = M(); ell(hd, 0, 0.3, 0, 0.34, 0.32, 0.31, '#f3dfa8', 16, 10, { face: 'f_cum2', fz: 0.22, fw: 0.82, fh: 0.82, fdv: 0.02, tip: 0.34 });

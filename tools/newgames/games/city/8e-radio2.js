@@ -106,7 +106,7 @@ var RADIO2 = {
     'Gossip. T from T\'s Hussy House has been spotted at Harold\'s tea party. Two hours. Four pots. The waiter is still recovering.',
     'Gossip. Greebo has a new hat. It is taller than the old hat. Sources say it is to look down on Joff.',
     'Gossip. Mayor Cumhead was seen in his pants at three in the morning outside the Clubhouse. His office says he was walking the cat. He does not have a cat.',
-    'Gossip. Bonjo has opened his doors to everyone. He says let me get the door. He will always get the door.',
+    'Gossip. Bonjo has opened her doors to everyone. She says let me get the door. She will always get the door.',
     'Gossip. Amy and Ali are feuding over who makes the hottest food in Cum City. Amy says dynamite. Ali says garlic. The fire brigade says both.',
     'Gossip. Shithead Laboozie has had a haircut. We are not sure how. He does not have hair. He has a swirl.',
     'Gossip. Kaya and Elden renewed their vows at the Cum Café. The cake was a Cumpuccino. Everyone was awake for three days.',
