@@ -320,15 +320,15 @@ def closes_off(L, every, side_seed, inward_c=None):
                 for L2 in LINES:
                     if L2 is L and qi < 8: continue
                     for p2 in L2['pts'][::2]:
-                        if (p2[0] - q[0]) ** 2 + (p2[1] - q[1]) ** 2 < 10 ** 2: clear = False; break
+                        if (p2[0] - q[0]) ** 2 + (p2[1] - q[1]) ** 2 < 9 ** 2: clear = False; break
                     if not clear: break
                 if not clear: break
                 for (cx, cz) in CLOSES:
-                    if (cx - q[0]) ** 2 + (cz - q[1]) ** 2 < 14 ** 2: clear = False; break
+                    if (cx - q[0]) ** 2 + (cz - q[1]) ** 2 < 12 ** 2: clear = False; break
                 if not clear: break
             if not clear: continue
             p = attach(L, a[0], a[1]); ctr[0] = p; line(ctr, 2.0); CLOSES.append(e)
-closes_off(hillL, 16, 5); closes_off(hcL, 12, 6)
+closes_off(hillL, 9, 5); closes_off(hcL, 8, 6)
 # ---- arterials: smooth roads out of town to the ring road
 def gnode(x, z):
     best, bd = None, 1e9
@@ -345,7 +345,7 @@ def art(a, b, w=2.5, amp=6, n=2, seed=0, toL=None, fromL=None):
     pts = cr(bend(a, b, amp, n, seed), 1.5); pts[0] = a; pts[-1] = b; return line(pts, w)
 RP = ringL['pts']
 def ringat(x, z): return RP[nearest_on(ringL, x, z)[0]]
-art(gnode(456, 226), ringat(300, 80), 2.5, 10, 2, 3, toL=ringL)          # north-west out of the labs
+art(gnode(456, 226), ringat(440, 68), 2.5, 10, 2, 3, toL=ringL)          # north out of the labs (update 160: it used to cut through Cumhead's Castle)
 art(gnode(546, 204), ringat(520, 68), 2.5, 6, 2, 4, toL=ringL)           # north to the peak road
 art(gnode(678, 248), ringat(690, 240), 2.5, 2, 1, 5, toL=ringL)
 art(gnode(700, 380), ringat(696, 390), 2.5, 2, 1, 6, toL=ringL)
@@ -360,8 +360,11 @@ art(gnode(700, 556), ringat(660, 650), 2.5, 6, 1, 15, toL=ringL)
 art((522, 584), (420, 610), 2.5, 6, 1, 16, fromL=bvL)                       # west from the boulevard before the car parks
 art((420, 610), ringat(420, 704), 2.5, 6, 1, 17, toL=ringL)
 # up to the castles and the peak
-cast = (331, 152); art(ringat(260, 92), cast, 2.5, 6, 2, 21, fromL=ringL); art(ringat(400, 70), cast, 2.5, 6, 2, 22, fromL=ringL)
-blum = (611, 156); art(ringat(640, 120), blum, 2.5, 6, 2, 23, fromL=ringL)
+def via(a, mids, b, w=2.5, fromL=None):  # update 160: a road that bends round something (the castle walls) instead of through it
+    if fromL is not None: a = attach(fromL, *a)
+    pts = cr([a] + mids + [b], 1.5); pts[0] = a; pts[-1] = b; return line(pts, w)
+cast = (331, 152); via(ringat(260, 92), [(284, 118), (296, 150)], cast, fromL=ringL); via(ringat(400, 70), [(378, 112), (366, 150)], cast, fromL=ringL)
+blum = (611, 156); via(ringat(640, 120), [(650, 146), (636, 160)], blum, fromL=ringL)
 grot = (196, 168); art(ringat(150, 120), grot, 2.5, 6, 2, 24, fromL=ringL)
 peak = (472, 98); art(ringat(520, 68), peak, 2.0, 10, 3, 25, fromL=ringL)
 asy = (210, 322); art(ringat(104, 300), asy, 2.0, 10, 3, 26, fromL=ringL); art(asy, (304, 314), 2.0, 8, 2, 27)
@@ -581,8 +584,8 @@ for a, b in zip(XSW, XSW[1:]):
         if r < 0.55: put(x0 + 2, z0 + 2, x1 - 2, z1 - 2, R.uniform(10, 34), 'frame', 2, kind=DIRT)
         elif r < 0.8: put(x0 + 1, z0 + 1, x0 + 5, z0 + 3, 3, 'shed', 2, kind=DIRT); put(x0 + 1, z0 + 5, x0 + 5, z0 + 7, 3, 'shed', 2, kind=DIRT)
 # Cum Hills: houses along every road, set back with gardens, facing the road
-def houses_along(L, step=6.0, off=None):
-    pts = L['pts']; w = L['w']; off = off or (w / 2 + 1.6 + 3.2); acc = step / 2
+def houses_along(L, step=4.0, off=None):  # update 160: closer together and nearer the road (he said they were spread out)
+    pts = L['pts']; w = L['w']; off = off or (w / 2 + 1.6 + 2.6); acc = step / 2
     for i in range(1, len(pts) - 1):
         a, b = pts[i - 1], pts[i]; seg = math.hypot(b[0] - a[0], b[1] - a[1]); acc += seg
         if acc < step: continue
@@ -591,24 +594,24 @@ def houses_along(L, step=6.0, off=None):
             nx, nz = -tz * s, tx * s; cx, cz = b[0] + nx * off, b[1] + nz * off; hw = 1.6
             x0, z0 = int(round(cx - hw)), int(round(cz - hw)); x1, z1 = x0 + 3, z0 + 3
             if not dmask('hills')[int(cz), int(cx)]: continue
-            if not free(x0 - 1, z0 - 1, x1 + 1, z1 + 1, (GRASS, FOREST, FIELD, PARK, LOT, DIRT)): continue
+            if not free(x0, z0, x1, z1, (GRASS, FOREST, FIELD, PARK, LOT, DIRT)) or occ[z0 - 1:z1 + 1, x0 - 1:x1 + 1].sum() > 3: continue
             # facing the road
             ang = math.atan2(-nx, -nz)
             fr = 0 if abs(nz) > abs(nx) and nz > 0 else 2 if abs(nz) > abs(nx) else 3 if nx > 0 else 1
             fr = {(0): 0, 1: 1, 2: 2, 3: 3}[fr]
             # grass garden round it, a drive to the road
             K[z0 - 1:z1 + 1, x0 - 1:x1 + 1] = np.where(np.isin(K[z0 - 1:z1 + 1, x0 - 1:x1 + 1], [ROAD, PAVE]), K[z0 - 1:z1 + 1, x0 - 1:x1 + 1], GRASS)
-            put(x0, z0, x1, z1, R.choice([5, 5.5, 7.5]), 'house', fr, kind=GRASS, gap=1)
+            put(x0, z0, x1, z1, R.choice([5, 5.5, 7.5]), 'house', fr, kind=GRASS, gap=0)
 for L in LINES:
     p = L['pts'][len(L['pts']) // 2]
     if dmask('hills')[int(p[1]), int(p[0])]: houses_along(L)
 for i in BULB:  # houses round each turning circle
     x, z = NODES[i]
-    for k in range(7):
-        a = k / 7 * 6.283; cx, cz = x + math.cos(a) * 8.6, z + math.sin(a) * 8.6; x0, z0 = int(round(cx - 1.5)), int(round(cz - 1.5))
-        if not free(x0 - 1, z0 - 1, x0 + 4, z0 + 4, (GRASS, FOREST, FIELD, PARK, LOT, DIRT)): continue
+    for k in range(9):
+        a = k / 9 * 6.283; cx, cz = x + math.cos(a) * 8.0, z + math.sin(a) * 8.0; x0, z0 = int(round(cx - 1.5)), int(round(cz - 1.5))
+        if not free(x0, z0, x0 + 3, z0 + 3, (GRASS, FOREST, FIELD, PARK, LOT, DIRT)) or occ[z0 - 1:z0 + 4, x0 - 1:x0 + 4].sum() > 3: continue
         fr = 0 if math.sin(a) > 0.7 else 2 if math.sin(a) < -0.7 else 3 if math.cos(a) > 0 else 1
-        K[z0 - 1:z0 + 4, x0 - 1:x0 + 4] = GRASS; put(x0, z0, x0 + 3, z0 + 3, R.choice([5, 5.5, 7.5]), 'house', fr, kind=GRASS, gap=1)
+        K[z0 - 1:z0 + 4, x0 - 1:x0 + 4] = np.where(np.isin(K[z0 - 1:z0 + 4, x0 - 1:x0 + 4], [ROAD, PAVE]), K[z0 - 1:z0 + 4, x0 - 1:x0 + 4], GRASS); put(x0, z0, x0 + 3, z0 + 3, R.choice([5, 5.5, 7.5]), 'house', fr, kind=GRASS, gap=0)
 
 # ---------------------------------------------------------------- shops: every shop front gets a building facing a road
 SHOPS = [
@@ -617,7 +620,7 @@ SHOPS = [
     ('cafe', "Kaya & Elden's Cum Café", 'cafe'), ('greebo', "Greebo's Gourmet Goonery", 'cafe'), ('amy', "Amy's Willy Chilli", 'cafe'), ('joff', "Joff's Pineapple Pizzaria", 'cafe'),
     ('beebs', "Uncle Beeb's Tavern", 'cafe'), ('ali', "Ali's Garlic Grub", 'cafe'), ('harold', "Harold's Mad Tea Party", 'cafe'), ('jessiah', "Jessiah's", 'club'),
     ('natty', 'Nattyboro Enchanting', 'red'), ('judge', 'Judgement Spells', 'red'), ('fate', "Stacked Fate's Table", 'red'), ('bates', 'Master Bates Emporium', 'club'),
-    ('motors', 'Cum Motors', 'docks'), ('estate', 'Load Estates', 'club'), ('wash', 'The Cream Wash', 'factory'), ('wash2', 'The Cream Wash', 'hills'), ('cops', 'Cum City Police', 'club'),
+    ('motors', 'Cum Motors', 'docks'), ('estate', 'Load Estates', 'club'), ('wash', 'The Cream Wash', 'factory'), ('wash2', 'The Cream Wash', 'hills'), ('custom', 'Cream Customs', 'factory'), ('cops', 'Cum City Police', 'club'),
     ('hosp', 'Cum City Hospital', 'cafe'), ('gym', 'Iron Loads Gym', 'red'), ('bank', 'Bank of Cum City', 'club'), ('tattoo', 'Inked Loads Tattoos', 'red'),
 ]
 shopB = {}; cand = {}
@@ -796,14 +799,17 @@ for (x, z) in NEWROADS:
 # heights and tiles for the new tracks and the edges split by them
 for e in EDGES:
     if e.get('hs') is not None: continue
-    pts = epoints(e); hs = [max(hat(x, z), 0.8) for (x, z) in pts]
+    pts = epoints(e); hs = [max(hat(x, z), 0.8) if K[int(z), int(x)] not in (SEA, WATER, CREAM) else None for (x, z) in pts]
+    kn = [h for h in hs if h is not None] or [3]; hs = [h if h is not None else max(4.0, kn[0], kn[-1]) for h in hs]  # update 160: a track over the river gets a bridge, not a gap
     hs = np.convolve(np.pad(hs, 30, mode='edge'), np.ones(61) / 61, mode='same')[30:-30]
     e['hs'] = [round(float(h), 2) for h in hs[::8]] + [round(float(hs[-1]), 2)]
     if e.get('track'):
         for (x, z), h in zip(pts, hs):
             for zz in range(int(z - 2), int(z + 3)):
                 for xx in range(int(x - 2), int(x + 3)):
-                    if math.hypot(xx + 0.5 - x, zz + 0.5 - z) <= 1.5 and K[zz, xx] not in (SEA, WATER, CREAM, ROAD, BRIDGE): K[zz, xx] = ROAD; hgt[zz, xx] = h; roadm[zz, xx] = True
+                    if math.hypot(xx + 0.5 - x, zz + 0.5 - z) > 1.5: continue
+                    if K[zz, xx] in (WATER, CREAM): K[zz, xx] = BRIDGE; hgt[zz, xx] = h; bridgem[zz, xx] = True; roadm[zz, xx] = True
+                    elif K[zz, xx] not in (SEA, ROAD, BRIDGE): K[zz, xx] = ROAD; hgt[zz, xx] = h; roadm[zz, xx] = True
 # the farms' fields round them: crop rows (field tiles)
 for p in POI:
     if p['k'] == 'farm':

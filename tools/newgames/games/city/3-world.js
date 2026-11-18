@@ -79,6 +79,7 @@ function buildChunk(ci, cj) {
       continue;
     }
     var raise = k === K_PAVE ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
+    if (k === K_BRIDGE && typeof BCOV !== 'undefined' && BCOV[t]) { underBridge(WAT, M0, i, j); continue; } // update 160: a smooth deck along the road is drawn instead (bridgeDress)
     if (k === K_BRIDGE) { // the deck, a girder down each open side, railings, a pier every few tiles
       M0.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, T, lit([0, 1, 0]), [0, 1, 0]);
       [[0, -1, ax, az, bx, az], [1, 0, bx, az, bx, bz], [0, 1, bx, bz, ax, bz], [-1, 0, ax, bz, ax, az]].forEach(function (s) { var ni = i + s[0], nj = j + s[1], nk = ni >= 0 && nj >= 0 && ni < MW && nj < MH ? KM[nj * MW + ni] : K_SEA; if (nk === K_BRIDGE || nk === K_ROAD) return;
@@ -92,10 +93,13 @@ function buildChunk(ci, cj) {
     var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK)) outK = nk; }); }
     else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); if (!nr) outK = -1; }
     if ((k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && k === K_ROAD) continue;
+    if (!cutT && k === K_PAVE && paveOuter(M0, NAT, i, j, d, [h00, h10, h01, h11])) continue; // update 160: the back of the pavement follows the road's curve
     if (!cutT) (natural(k) ? NAT : M0).quad([ax, h00 + raise, az], [ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], UV1, T, col, n);
+    if (k === K_PAVE && !cutT) [[0, -1, ax, az, bx, az, h00, h10], [1, 0, bx, az, bx, bz, h10, h11], [0, 1, bx, bz, ax, bz, h11, h01], [-1, 0, ax, bz, ax, az, h01, h00]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE || nk === K_ROAD || nk === K_BRIDGE) return; var nn = [s[0], 0, s[1]]; // update 160: the pavement's edge against grass, lots and yards gets a face too (there was a slit under it)
+      M0.quad([s[2], s[6] - 0.25, s[3]], [s[4], s[7] - 0.25, s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // the kerb: a little step where pavement meets road
     if (k === K_PAVE && !cutT) [[0, -1, ax, az, bx, az, h00, h10], [1, 0, bx, az, bx, bz, h10, h11], [0, 1, bx, bz, ax, bz, h11, h01], [-1, 0, ax, bz, ax, az, h01, h00]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk !== K_ROAD && nk !== K_BRIDGE) return; if (nk === K_ROAD && roadF((s[2] + s[4]) / 2 + s[0] * 0.3, (s[3] + s[5]) / 2 + s[1] * 0.3) > 0.1) return; var nn = [s[0], 0, s[1]];
-      M0.quad([s[2], s[6], s[3]], [s[4], s[7], s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
+      M0.quad([s[2], s[6] - 0.25, s[3]], [s[4], s[7] - 0.25, s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // trees in the forest and parks (season-tinted), graves, rocks, hedges
     var r1 = CLR[t] ? 1 : hash2(i, j, 1), r2 = hash2(i, j, 2), r3 = hash2(i, j, 3);
     if (k === K_FOREST || (k === K_PARK && d.id !== 'ejac' && r1 < 0.18) || (k === K_GRASS && r1 < 0.065 && d.style !== 'suburb') || (k === K_FIELD && r1 < 0.01)) {
@@ -130,11 +134,12 @@ function buildChunk(ci, cj) {
   // buildings whose middle is in this chunk
   near(BGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (b) { var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; building(M0, NIGHT, FR, GLOW, b, lamps); });
   BLD.forEach(function (b) { if (b.solid || b.style !== 'carpark') return; var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2; if (cx < x0 || cx >= x0 + CS || cz < z0 || cz >= z0 + CS) return; carpark(M0, b); });
+  if (typeof bridgeDress === 'function') bridgeDress(M0, x0, z0, CS, first);
   buildStreet(M0, GLOW, x0, z0, CS, lamps, first);
   if (typeof parkDress === 'function') { parkDress(M0, GLOW, x0, z0, CS, lamps, first); alleyDress(M0, GLOW, x0, z0, CS, first); }
   SOLIDDONE[ci + ',' + cj] = 1; var kpl = CUR_KP; CUR_FURN = null; CUR_KP = null;
   function up(m) { return m.n ? m.upload() : null; }
-  return { ci: ci, cj: cj, x: x0 + CS / 2, z: z0 + CS / 2, m: up(M0), nat: up(NAT), veg: up(VEG), wat: up(WAT), night: up(NIGHT), fr: up(FR), glow: up(GLOW), furn: up(FURN), kp: kpl, lamps: lamps };
+  return { ci: ci, cj: cj, x: x0 + CS / 2, z: z0 + CS / 2, r: typeof chunkR === 'function' ? chunkR(x0, z0, CS) : 50, m: up(M0), nat: up(NAT), veg: up(VEG), wat: up(WAT), night: up(NIGHT), fr: up(FR), glow: up(GLOW), furn: up(FURN), kp: kpl, lamps: lamps };
 }
 function tree(m, x, y, z, pine, s, dead, palmy) {
   if (dead) { tub(m, [x, y, z], [x, y + 4 * s, z], 0.22 * s, 0.1 * s, '#2a2220', 5); [0, 2.1, 4.2].forEach(function (a) { tub(m, [x, y + 3 * s, z], [x + Math.cos(a) * 1.4 * s, y + 4.4 * s, z + Math.sin(a) * 1.4 * s], 0.08 * s, 0.02, '#2a2220', 4); }); return; }

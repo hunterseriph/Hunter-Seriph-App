@@ -45,7 +45,7 @@ function drawWorld(look) {
   // the sea round everything
   if (!G.interior) { if (!SEAM) { SEAM = new R3.Mesh(); var S = 1600; SEAM.quad([-S, 0, -S], [-S, 0, S], [S, 0, S], [S, 0, -S], uvR(S / 2, S / 2), TL('water'), [0.5, 0.5, 0.5], [0, 1, 0]); SEAM.upload(); }
     R3.draw(SEAM, ATT, { m: MD(Math.round(cam[0] / 8) * 8, -0.06, Math.round(cam[2] / 8) * 8, 0, 0, 0) }); }
-  for (var k2 in CHUNKS) { var C2 = CHUNKS[k2]; if (!inView(C2.x, C2.z, 50)) continue;
+  for (var k2 in CHUNKS) { var C2 = CHUNKS[k2]; if (!inView(C2.x, C2.z, C2.r || 50)) continue;
     if (C2.m) R3.draw(C2.m, ATT); if (C2.furn) R3.draw(C2.furn, ATT); if (C2.nat) R3.draw(C2.nat, ATT, { tint: sl.nat, flash: sl.natAdd }); if (C2.veg) R3.draw(C2.veg, ATT, { tint: sl.veg, flash: sl.vegAdd });
     if (C2.fr && sheetTex()) R3.draw(C2.fr, sheetTex()); if (C2.wat) R3.draw(C2.wat, ATT, { tint: [1, 1, 1] });
     if (C2.glow) R3.draw(C2.glow, ATT, { lit: false, tint: night ? [1.1, 1.1, 1.1] : [0.85, 0.85, 0.85] });
