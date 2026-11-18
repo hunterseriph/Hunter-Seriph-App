@@ -8,13 +8,13 @@ var BSPAN = [], BCOV = new Uint8Array(MW * MH);
 (function () {
   RE.forEach(function (E) { if (E.off || E.len < 6) return; var on = [], L = E.len;
     for (var s = 0; s <= L; s += 1) { var p = edgeAt(E, s, false, 0), k = kAt(p.x, p.z); on.push(k === K_BRIDGE || isWaterK(k)); }
-    var i = 0; while (i < on.length) { if (!on[i]) { i++; continue; } var j = i; while (j < on.length && on[j]) j++; if (j - i >= 3) BSPAN.push({ E: E, s0: Math.max(0, i - 3), s1: Math.min(L, j + 2) }); i = j; } });
+    var i = 0; while (i < on.length) { if (!on[i]) { i++; continue; } var j = i; while (j < on.length && on[j]) j++; if (j - i >= 3) BSPAN.push({ E: E, s0: Math.max(0, i - 7), s1: Math.min(L, j + 6) }); i = j; } });
   BSPAN.forEach(function (S) { var E = S.E, P2 = [], n = Math.max(2, Math.ceil((S.s1 - S.s0) / 1.5));
     for (var q = 0; q <= n; q++) { var s = S.s0 + (S.s1 - S.s0) * q / n, p = edgeAt(E, s, false, 0), k = kAt(p.x, p.z); P2.push({ x: p.x, z: p.z, dx: p.dx, dz: p.dz, s: s, y: isWaterK(k) ? NaN : groundY(p.x, p.z) }); }
     // fill the heights over open water from the ends, then smooth
     var known = P2.filter(function (p) { return !isNaN(p.y); }); if (!known.length) known = [{ s: 0, y: 6.5 }];
     P2.forEach(function (p) { if (!isNaN(p.y)) return; var a = null, b = null; known.forEach(function (k) { if (k.s <= p.s) a = k; if (k.s >= p.s && !b) b = k; }); p.y = a && b ? (a.s === b.s ? a.y : a.y + (b.y - a.y) * (p.s - a.s) / (b.s - a.s)) : (a || b).y; });
-    for (var r = 0; r < 3; r++) for (var q2 = 1; q2 < P2.length - 1; q2++) P2[q2].y = (P2[q2 - 1].y + P2[q2].y * 2 + P2[q2 + 1].y) / 4;
+    for (var r = 0; r < 12; r++) for (var q2 = 1; q2 < P2.length - 1; q2++) P2[q2].y = (P2[q2 - 1].y + P2[q2].y * 2 + P2[q2 + 1].y) / 4;
     S.pts = P2; S.hw = E.w / 2;
     // cover the bridge tiles under it (and a little round it)
     P2.forEach(function (p) { for (var o = -S.hw - 3; o <= S.hw + 3; o += 1) { var x = p.x - p.dz * o, z = p.z + p.dx * o, i2 = Math.floor(x / CT), j2 = Math.floor(z / CT); if (i2 < 0 || j2 < 0 || i2 >= MW || j2 >= MH) continue; var t = j2 * MW + i2; if (KM[t] === K_BRIDGE) BCOV[t] = 1; } });
@@ -60,7 +60,7 @@ function paveKind(i, j) { var t = j * MW + i; if (PAVEC[t]) return PAVEC[t]; var
     if (k === K_PAVE) v = allOut ? 1 : allIn ? 1 : 2; else v = !paveN || allIn ? 3 : 2; if (k === K_PAVE && allIn) v = 1;
     if (k === K_PAVE) { var g2 = f.map(function (q) { return q - PAVEW; }); if (!g2.every(function (q) { return q <= 0; }) && !g2.every(function (q) { return q > 0; })) v = 4; } }
   PAVEC[t] = v; return v; }
-(function () { var sy = standY; standY = function (x, z, y) { var g = sy(x, z, y); if (G.interior) return g; var i = Math.floor(x / CT), j = Math.floor(z / CT); if (i < 0 || j < 0 || i >= MW || j >= MH) return g;
+(function () { var sy = standY; standY = function (x, z, y) { var g = sy(x, z, y); if (G.interior || window.NOPAVE) return g; var i = Math.floor(x / CT), j = Math.floor(z / CT); if (i < 0 || j < 0 || i >= MW || j >= MH) return g;
   var pk = paveKind(i, j); if (pk === 3) return g; var gy = groundY(x, z); if (g > gy + 0.1) return g; if (pk === 1) return gy + 0.15; var rf = roadF(x, z); if (rf >= 0 && (pk !== 4 || rf <= PAVEW)) return gy + 0.15; return g; }; })();
 
 /* ---- chunks: how far their buildings reach (a tall block centred in one chunk could stick out of view and vanish) ---- */
@@ -70,7 +70,7 @@ function chunkR(x0, z0, CS) { var cx = x0 + CS / 2, cz = z0 + CS / 2, r = CS * 0
 
 /* ---- signs: a real board with the words a little off each face (the two faces sat 3 cm apart and flickered) ---- */
 function sign(m, glow, x, z, a, y, txt, w, post) { var c = Math.cos(a), s = Math.sin(a);
-  if (post !== false) [-w * 0.42, w * 0.42].forEach(function (u) { boxC(m, x + c * u - 0.07, y, z - s * u - 0.07, x + c * u + 0.07, y + 1.6 + w * 0.42 + 0.1, z - s * u + 0.07, '#3a2a1a'); });
+  if (post !== false) { var g0 = groundY(x + c * w * 0.42, z - s * w * 0.42), g1 = groundY(x - c * w * 0.42, z + s * w * 0.42); y = Math.max(g0, g1); /* update 161: stands on the ground (some were sunk into it) */ [[-w * 0.42, g1], [w * 0.42, g0]].forEach(function (q) { var u = q[0]; boxC(m, x + c * u - 0.07, Math.min(q[1], y) - 0.3, z - s * u - 0.07, x + c * u + 0.07, y + 1.6 + w * 0.42 + 0.1, z - s * u + 0.07, '#3a2a1a'); }); }
   boxR(m, x, z, a, w / 2 + 0.05, 0.06, y + 1.55, y + 1.65 + w * 0.42, '#2a1a12');
   standQ(glow || m, x + s * 0.075, z + c * 0.075, a, w, y + 1.6, y + 1.6 + w * 0.42, TL(txt), 1.3, 0.3, SGUV); standQ(glow || m, x - s * 0.075, z - c * 0.075, a + Math.PI, w, y + 1.6, y + 1.6 + w * 0.42, TL(txt), 1.3, 0.3, SGUV); }
 
@@ -91,7 +91,7 @@ function houseDress(m, glow, b) {
   // the drive, on whichever side is free
   var side = 0; [r1 < 0.5 ? -1 : 1, r1 < 0.5 ? 1 : -1].some(function (sd) { var c = wF / 2 + 1.7, p = at(sd * c, -2.5); if (!bldAt(p[0], p[1]) && !bldAt(at(sd * c, -0.5)[0], at(sd * c, -0.5)[1])) { side = sd; return true; } return false; });
   if (side) { var tc = side * (wF / 2 + 1.7); flat(tc - 1.35, tc + 1.35, -4.5, D, TL(groundTile(K_ROAD, d)), 0.035, uvR(0.7, (D + 4.5) / 4));
-    if (r2 < 0.62) { var cp = at(tc, -1.6), cy = groundY(cp[0], cp[1]); car3(m, cp[0], cp[1], a, cy, ['#c4121c', '#f1e7d0', '#2a4a6a', '#12040a', '#3a6a3a', '#5a5a62', '#ffe36a'][Math.floor(r3 * 7)]); if (first) addPost(cp[0], cp[1], 1.1, cy, cy + 1.5); }
+    if (r2 < 0.62 && !(b.shop && b.shop.indexOf('home') === 0)) { var cp = at(tc, -1.6), cy = groundY(cp[0], cp[1]); car3(m, cp[0], cp[1], a, cy, ['#c4121c', '#f1e7d0', '#2a4a6a', '#12040a', '#3a6a3a', '#5a5a62', '#ffe36a'][Math.floor(r3 * 7)]); if (first) addPost(cp[0], cp[1], 1.1, cy, cy + 1.5); }
     // two wheelie bins by the drive
     for (var q = 0; q < 2; q++) { var bp = at(tc + side * 1.75, 0.3 + q * 0.75), by = groundY(bp[0], bp[1]), bc = ['#2a3a2a', '#3a3a5a', '#5a2a1a'][Math.floor((r4 + q * 0.4) * 3) % 3]; boxR(m, bp[0], bp[1], a, 0.3, 0.33, by, by + 1.0, bc); boxR(m, bp[0], bp[1], a, 0.32, 0.37, by + 1.0, by + 1.08, bc); } }
   // the fence or hedge along the front, with a gap for the path and the drive

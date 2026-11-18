@@ -2,9 +2,10 @@
 var CS = 64, CTN = CS / CT, CXN = Math.ceil(WX / CS), CZN = Math.ceil(WZ / CS);
 var CHUNKS = {}, SOLIDDONE = {}, VIEWR = 300, LMK = [];
 var SUN = (function () { var v = [0.45, 0.8, 0.35], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
+function cLit(i, j) { var hx = cornerH(i + 1, j) - cornerH(i - 1, j), hz = cornerH(i, j + 1) - cornerH(i, j - 1), l = Math.hypot(hx, 2 * CT, hz); return lit([-hx / l, 2 * CT / l, -hz / l]); }
 function lit(n, k) { var d = Math.max(0, n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2]); k = (k || 1) * (0.62 + 0.42 * d) * 0.5; return [k, k, k]; }
 function litc(hex, n, k) { var c = rgb01(hex), s = lit(n, k); return [c[0] * s[0] * 2, c[1] * s[1] * 2, c[2] * s[2] * 2]; }
-var UV1 = [0, 1, 1, 1, 1, 0, 0, 0];
+var UV1 = [0, 1, 1, 1, 1, 0, 0, 0], UVR1 = [1, 1, 1, 0, 0, 0, 0, 1];
 function uvR(u, v) { return [0, v, u, v, u, 0, 0, 0]; }
 /* a box with its own texture per face group: o.wall, o.top, o.u (metres per tile across), o.v (metres per tile up) */
 function boxT(m, x0, y0, z0, x1, y1, z1, o) {
@@ -75,9 +76,11 @@ function buildChunk(ci, cj) {
     if (isWaterK(k)) {
       var wy = k === K_CREAM ? CREAMY : WATERY;
       if (k !== K_SEA) WAT.quad([ax, wy, az], [ax, wy, bz], [bx, wy, bz], [bx, wy, az], UV1, TL(k === K_CREAM ? 'cream' : 'water'), k === K_CREAM ? [0.55, 0.55, 0.55] : [0.5, 0.5, 0.5], [0, 1, 0], k === K_CREAM ? 0.15 : 0);
-      if (k !== K_SEA) M0.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, TL(k === K_CREAM ? 'dirt' : 'sand'), [0.3, 0.3, 0.3], [0, 1, 0]);
+      if (k !== K_SEA) { var bedT = TL(k === K_CREAM ? 'dirt' : 'sand'), bedC = [0.3, 0.3, 0.3]; if (Math.max(h00, h10, h01, h11) > wy - 0.02) { /* update 161: where the bank rises out of the water inside this square, it is the bank's own ground, not a brown step */ for (var nb = 0; nb < 8; nb++) { var ni2 = i + [1, -1, 0, 0, 1, 1, -1, -1][nb], nj2 = j + [0, 0, 1, -1, 1, -1, 1, -1][nb]; if (ni2 < 0 || nj2 < 0 || ni2 >= MW || nj2 >= MH) continue; var nk2 = KM[nj2 * MW + ni2]; if (!isWaterK(nk2) && nk2 !== K_ROAD && nk2 !== K_PAVE && nk2 !== K_BRIDGE && nk2 !== K_PIER) { bedT = TL(groundTile(nk2, DIST[DM[nj2 * MW + ni2]])); bedC = [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)]; break; } } }
+        if (Math.abs(h00 - h11) > Math.abs(h10 - h01) + 0.01) M0.quad([ax, h01, bz], [bx, h11, bz], [bx, h10, az], [ax, h00, az], UVR1, bedT, bedC.length === 4 ? [bedC[1], bedC[2], bedC[3], bedC[0]] : bedC, [0, 1, 0]); else M0.quad([ax, h00, az], [ax, h01, bz], [bx, h11, bz], [bx, h10, az], UV1, bedT, bedC, [0, 1, 0]); }
       continue;
     }
+    if (typeof SHOREWL !== 'undefined' && SHOREWL[t] > -50 && Math.min(h00, h10, h01, h11) < SHOREWL[t]) { var swl = SHOREWL[t], sc = Math.abs(swl - CREAMY) < 0.01; WAT.quad([ax, swl, az], [ax, swl, bz], [bx, swl, bz], [bx, swl, az], UV1, TL(sc ? 'cream' : 'water'), sc ? [0.55, 0.55, 0.55] : [0.5, 0.5, 0.5], [0, 1, 0], sc ? 0.15 : 0); } // update 161: the water runs up the smoothed shore
     var raise = k === K_PAVE ? 0.15 : 0, n = groundN(ax + 2, az + 2), T = TL(groundTile(k, d)), col = lit(n);
     if (k === K_BRIDGE && typeof BCOV !== 'undefined' && BCOV[t]) { underBridge(WAT, M0, i, j); continue; } // update 160: a smooth deck along the road is drawn instead (bridgeDress)
     if (k === K_BRIDGE) { // the deck, a girder down each open side, railings, a pier every few tiles
@@ -86,15 +89,17 @@ function buildChunk(ci, cj) {
         var ya = groundY(s[2] + (s[2] === bx ? -0.01 : 0.01), s[3] + (s[3] === bz ? -0.01 : 0.01)), yb = groundY(s[4] + (s[4] === bx ? -0.01 : 0.01), s[5] + (s[5] === bz ? -0.01 : 0.01)), nn = [s[0], 0, s[1]];
         M0.quad([s[2], ya - 1.4, s[3]], [s[4], yb - 1.4, s[5]], [s[4], yb, s[5]], [s[2], ya, s[3]], uvR(1, 0.4), TL('metal'), litc('#7a2a24', nn), nn);
         M0.quad([s[2], ya, s[3]], [s[4], yb, s[5]], [s[4], yb + 1.0, s[5]], [s[2], ya + 1.0, s[3]], uvR(1, 0.3), TL('bars'), litc('#c4121c', nn), nn);
-        if (first) addBox(Math.min(s[2], s[4]) - (s[0] ? 0 : 0) - (s[0] < 0 ? 0.3 : 0), Math.min(s[3], s[5]) - (s[1] < 0 ? 0.3 : 0), Math.max(s[2], s[4]) + (s[0] > 0 ? 0.3 : 0), Math.max(s[3], s[5]) + (s[1] > 0 ? 0.3 : 0), Math.min(ya, yb) - 1.4, Math.max(ya, yb) + 1.0, { rail: 1 }); });
+        if (first && false) addBox(Math.min(s[2], s[4]) - (s[0] ? 0 : 0) - (s[0] < 0 ? 0.3 : 0), Math.min(s[3], s[5]) - (s[1] < 0 ? 0.3 : 0), Math.max(s[2], s[4]) + (s[0] > 0 ? 0.3 : 0), Math.max(s[3], s[5]) + (s[1] > 0 ? 0.3 : 0), Math.min(ya, yb) - 1.4, Math.max(ya, yb) + 1.0, { rail: 1 }); });
       if ((i + j) % 6 === 0) boxC(M0, ax + 1.4, -6, az + 1.4, ax + 2.6, Math.min(h00, h11) - 1.3, az + 2.6, '#5a4a44');
       continue;
     }
-    var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK)) outK = nk; }); }
-    else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); if (!nr) outK = -1; }
+    var outK = k, cutT = false; if (k === K_ROAD) { outK = -1; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) outK = K_PAVE; else if (outK < 0 && (nk === K_GRASS || nk === K_FIELD || nk === K_DIRT || nk === K_SAND || nk === K_LOT || nk === K_PARK || nk === K_ROCK || nk === K_FOREST || nk === K_GRAVE)) outK = nk; }); if (outK < 0) for (var rr = 1; rr <= 2 && outK < 0; rr++) for (var qj = -rr; qj <= rr && outK < 0; qj++) for (var qi = -rr; qi <= rr; qi++) { var ni3 = i + qi, nj3 = j + qj; if (ni3 < 0 || nj3 < 0 || ni3 >= MW || nj3 >= MH) continue; var nk3 = KM[nj3 * MW + ni3]; if (nk3 === K_PAVE) break; if (nk3 === K_GRASS || nk3 === K_FIELD || nk3 === K_DIRT || nk3 === K_SAND || nk3 === K_PARK || nk3 === K_ROCK || nk3 === K_FOREST || nk3 === K_GRAVE) { outK = nk3; break; } } /* update 161: a road square past the road's real edge with road all round it still gets cut (they stuck out as teeth) */ }
+    else if (k === K_GRASS || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_LOT || k === K_PARK || k === K_ROCK || k === K_FOREST || k === K_GRAVE) { var nr = false; [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_ROAD) nr = true; }); /* update 161: corner neighbours too, so the road's edge has no teeth */ if (!nr) outK = -1; }
     if ((k === K_PAVE || outK >= 0) && (k === K_ROAD || k === K_PAVE || outK >= 0)) cutT = pavePiece(M0, i, j, k, d, [h00, h10, h01, h11], first, k === K_ROAD ? outK : k, NAT); if (cutT && k === K_ROAD) continue;
     if (!cutT && k === K_PAVE && paveOuter(M0, NAT, i, j, d, [h00, h10, h01, h11])) continue; // update 160: the back of the pavement follows the road's curve
-    if (!cutT) (natural(k) ? NAT : M0).quad([ax, h00 + raise, az], [ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], UV1, T, col, n);
+    if (!cutT && typeof softPiece === 'function' && softPiece(M0, NAT, i, j, k, d, [h00, h10, h01, h11])) cutT = 1; // update 161: soft edges between ground kinds
+    if (!cutT && (natural(k) || k === K_SAND || k === K_ROCK || k === K_DIRT)) col = [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)]; /* update 161: smooth shading across the hills, not a flat shade per square */
+    if (!cutT) { if (Math.abs(h00 - h11) > Math.abs(h10 - h01) + 0.01) (natural(k) ? NAT : M0).quad([ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], [ax, h00 + raise, az], UVR1, T, col.length === 4 ? [col[1], col[2], col[3], col[0]] : col, n); /* update 161: split each square along its flatter diagonal, so slopes and shores have no zigzags */ else (natural(k) ? NAT : M0).quad([ax, h00 + raise, az], [ax, h01 + raise, bz], [bx, h11 + raise, bz], [bx, h10 + raise, az], UV1, T, col, n); }
     if (k === K_PAVE && !cutT) [[0, -1, ax, az, bx, az, h00, h10], [1, 0, bx, az, bx, bz, h10, h11], [0, 1, bx, bz, ax, bz, h11, h01], [-1, 0, ax, bz, ax, az, h01, h00]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE || nk === K_ROAD || nk === K_BRIDGE) return; var nn = [s[0], 0, s[1]]; // update 160: the pavement's edge against grass, lots and yards gets a face too (there was a slit under it)
       M0.quad([s[2], s[6] - 0.25, s[3]], [s[4], s[7] - 0.25, s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // the kerb: a little step where pavement meets road
@@ -102,7 +107,7 @@ function buildChunk(ci, cj) {
       M0.quad([s[2], s[6] - 0.25, s[3]], [s[4], s[7] - 0.25, s[5]], [s[4], s[7] + 0.15, s[5]], [s[2], s[6] + 0.15, s[3]], uvR(1, 0.1), TL('kerb'), lit(nn), nn); });
     // trees in the forest and parks (season-tinted), graves, rocks, hedges
     var r1 = CLR[t] ? 1 : hash2(i, j, 1), r2 = hash2(i, j, 2), r3 = hash2(i, j, 3);
-    if (k === K_FOREST || (k === K_PARK && d.id !== 'ejac' && r1 < 0.18) || (k === K_GRASS && r1 < 0.065 && d.style !== 'suburb') || (k === K_FIELD && r1 < 0.01)) {
+    if ((outK < 0 || roadF(ax + 0.6 + r2 * 2.8, az + 0.6 + r3 * 2.8) > 2.5) && (typeof SHOREWL === 'undefined' || SHOREWL[t] < -50 || Math.min(h00, h10, h01, h11) > SHOREWL[t] + 0.2)) if (k === K_FOREST || (k === K_PARK && d.id !== 'ejac' && r1 < 0.18) || (k === K_GRASS && r1 < 0.065 && d.style !== 'suburb') || (k === K_FIELD && r1 < 0.01)) {
       var tx = ax + 0.6 + r2 * 2.8, tz = az + 0.6 + r3 * 2.8, ty = groundY(tx, tz), pine = d.style === 'forest' || d.style === 'haunted' ? r1 < 0.75 : d.style === 'castle' || d.style === 'peak' || d.style === 'darkcastle' ? r1 < 0.6 : r1 < 0.2;
       tree(VEG, tx, ty, tz, pine, 0.75 + hash2(i, j, 4) * 0.6, d.style === 'haunted' || d.style === 'darkcastle' || d.style === 'cemetery', d.style === 'isles' && !pine);
       if (first) addPost(tx, tz, 0.35, ty, ty + 6);
@@ -154,13 +159,13 @@ function carpark(m, b) { // painted bays and a few dead cars
 }
 /* a building: walls by style (shops get a shop front at the ground), roof clutter, signs, neon, lit windows at night */
 function building(m, night, fr, glow, b, lamps) {
-  var sty = BSTY[b.style] || BSTY.downtown, h = b.h, y0 = b.y0 - 1, yt = b.y0 + h, r = hash2(b.i, 7, 1), wall = sty.wall[Math.floor(r * sty.wall.length)];
+  var sty = BSTY[b.style] || BSTY.downtown, h = b.h, y0 = b.y0 - 1, yt = b.y0 + h, r = hash2(b.i, 7, 1), wall = b.wallX || sty.wall[Math.floor(r * sty.wall.length)];
   if (b.style === 'frame') { // the half-built towers of the site: storeys of concrete slab on posts, the frame texture between
     for (var f = 0; f * 3.5 < h; f++) { var fy = b.y0 + f * 3.5; boxC(m, b.x0, fy - 0.3, b.z0, b.x1, fy, b.z1, '#8a8a86'); [[b.x0, b.z0], [b.x1 - 0.5, b.z0], [b.x0, b.z1 - 0.5], [b.x1 - 0.5, b.z1 - 0.5]].forEach(function (c) { boxC(m, c[0], fy, c[1], c[0] + 0.5, fy + 3.5, c[1] + 0.5, '#8a8a86'); }); }
     boxT(m, b.x0 + 0.05, b.y0, b.z0 + 0.05, b.x1 - 0.05, yt, b.z1 - 0.05, { wall: 'w_frame', noTop: 1 }); return;
   }
   if (b.style === 'house' || b.style === 'suburb') { // walls, a pitched roof along the long side, chimney, door, garden hedge
-    boxT(m, b.x0, y0, b.z0, b.x1, yt, b.z1, { wall: wall, noTop: 1, v: h > 6 ? 3.5 : 5 }); var along = b.x1 - b.x0 >= b.z1 - b.z0, rh = 2.6, rT = TL('roofr');
+    boxT(m, b.x0, y0, b.z0, b.x1, yt, b.z1, { wall: wall, noTop: 1, v: h > 6 ? 3.5 : 5 }); var along = b.x1 - b.x0 >= b.z1 - b.z0, rh = 2.6, rT = TL(b.roofX || 'roofr');
     if (along) { var zm = (b.z0 + b.z1) / 2; m.quad([b.x0 - 0.4, yt, b.z0 - 0.4], [b.x0 - 0.4, yt + rh, zm], [b.x1 + 0.4, yt + rh, zm], [b.x1 + 0.4, yt, b.z0 - 0.4], uvR((b.x1 - b.x0) / 3, 1.5), rT, lit([0, 0.7, -0.7]), [0, 0.7, -0.7]); m.quad([b.x0 - 0.4, yt, b.z1 + 0.4], [b.x0 - 0.4, yt + rh, zm], [b.x1 + 0.4, yt + rh, zm], [b.x1 + 0.4, yt, b.z1 + 0.4], uvR((b.x1 - b.x0) / 3, 1.5), rT, lit([0, 0.7, 0.7]), [0, 0.7, 0.7]); m.tri([b.x0, yt, b.z0], [b.x0, yt + rh, zm], [b.x0, yt, b.z1], [0, 1, 0.5, 0, 1, 1], TL(wall), lit([-1, 0, 0]), [-1, 0, 0]); m.tri([b.x1, yt, b.z0], [b.x1, yt + rh, zm], [b.x1, yt, b.z1], [0, 1, 0.5, 0, 1, 1], TL(wall), lit([1, 0, 0]), [1, 0, 0]); }
     else { var xm = (b.x0 + b.x1) / 2; m.quad([b.x0 - 0.4, yt, b.z0 - 0.4], [xm, yt + rh, b.z0 - 0.4], [xm, yt + rh, b.z1 + 0.4], [b.x0 - 0.4, yt, b.z1 + 0.4], uvR(1.5, (b.z1 - b.z0) / 3), rT, lit([-0.7, 0.7, 0]), [-0.7, 0.7, 0]); m.quad([b.x1 + 0.4, yt, b.z0 - 0.4], [xm, yt + rh, b.z0 - 0.4], [xm, yt + rh, b.z1 + 0.4], [b.x1 + 0.4, yt, b.z1 + 0.4], uvR(1.5, (b.z1 - b.z0) / 3), rT, lit([0.7, 0.7, 0]), [0.7, 0.7, 0]); m.tri([b.x0, yt, b.z0], [xm, yt + rh, b.z0], [b.x1, yt, b.z0], [0, 1, 0.5, 0, 1, 1], TL(wall), lit([0, 0, -1]), [0, 0, -1]); m.tri([b.x0, yt, b.z1], [xm, yt + rh, b.z1], [b.x1, yt, b.z1], [0, 1, 0.5, 0, 1, 1], TL(wall), lit([0, 0, 1]), [0, 0, 1]); }
     boxC(m, b.x1 - 1.6, yt + 0.5, b.z0 + 1, b.x1 - 1, yt + 3.2, b.z0 + 1.6, '#6a3a30');
@@ -199,7 +204,7 @@ function frontQuad(m, s, cx, cz, a, w, y0, y1) { var W2 = KIT.sheet.width, H2 = 
    see-through copy laid over it with the same texture mapping as the wall, painted with that wall texture's own windows
    lit (n_<wall>: a 4 x 4 block of tiles, two patterns), so a lit window is always exactly a window. */
 var WINR = { w_down: [[3, 4, 12, 20], [17, 4, 12, 20]], w_down2: [[4, 6, 10, 18], [18, 6, 10, 18]], w_glass: [[1, 2, 7, 26], [9, 2, 7, 26], [17, 2, 7, 26], [25, 2, 7, 26]], w_brick: [[6, 7, 8, 14], [18, 7, 8, 14]],
-  w_redbrick: [[5, 6, 9, 16], [18, 6, 9, 16]], w_cafe: [[5, 6, 9, 15], [18, 6, 9, 15]], w_house: [[9, 8, 14, 13]], w_house2: [[9, 8, 14, 13]], w_lab: [[2, 8, 28, 10]] };
+  w_redbrick: [[5, 6, 9, 16], [18, 6, 9, 16]], w_cafe: [[5, 6, 9, 15], [18, 6, 9, 15]], w_house: [[9, 8, 14, 13]], w_house2: [[9, 8, 14, 13]], w_home0: [[9, 8, 14, 13]], w_home1: [[9, 8, 14, 13]], w_home2: [[9, 8, 14, 13]], w_home3: [[9, 8, 14, 13]], w_home4: [[9, 8, 14, 13]], w_lab: [[2, 8, 28, 10]] };
 (function () { Object.keys(WINR).forEach(function (w) { [0, 1].forEach(function (v) { var fn = function (g) { g.clearRect(0, 0, 64, 64); var warm = w === 'w_redbrick' ? ['#ff8aa8', '#ff5a7a', '#ffc0d0'] : w === 'w_lab' ? ['#a8d8ff', '#e0f0ff', '#80c0ff'] : ['#ffd890', '#ffe8b0', '#ffb860', '#f0d0a0'];
       for (var cy = 0; cy < 4; cy++) for (var cx = 0; cx < 4; cx++) WINR[w].forEach(function (r, ri) { var h = hash2(cx * 7 + ri * 3 + v * 41, cy * 5 + v * 13, w.length); if (h > (w === 'w_glass' ? 0.3 : 0.4)) return; var x = cx * 16 + (r[0] + 1) / 2, y = cy * 16 + (r[1] + 1) / 2, ww = (r[2] - 2) / 2, hh = (r[3] - 2) / 2;
         g.fillStyle = warm[Math.floor(hash2(cx, cy + ri, 9 + v) * warm.length)]; g.fillRect(x, y, ww, hh); if (h < 0.12) { g.fillStyle = 'rgba(40,20,20,0.55)'; g.fillRect(x + ww * 0.55, y + hh * 0.35, ww * 0.3, hh * 0.65); g.fillRect(x + ww * 0.6, y + hh * 0.2, ww * 0.2, hh * 0.18); } else if (h < 0.25) { g.fillStyle = 'rgba(120,40,30,0.45)'; g.fillRect(x, y, ww * 0.28, hh); g.fillRect(x + ww * 0.72, y, ww * 0.28, hh); } }); }; fn.big = 1; HIPAINT['n_' + w + v] = fn; }); }); })();

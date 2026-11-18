@@ -832,7 +832,11 @@ for p in POI:
 # rock on the steep hills (after the roads so the cuttings are rock)
 gy, gx = np.gradient(hgt)
 steep = np.hypot(gx, gy) > 1.1
-K[steep & land & np.isin(K, [GRASS, FOREST, FIELD])] = ROCK
+nearwet = ndi.binary_dilation(np.isin(K, [SEA, WATER, CREAM]), iterations=4)  # update 161: river and sea banks stay grass (rock there stepped round the water)
+nearroad = ndi.binary_dilation(np.isin(K, [ROAD, BRIDGE]), iterations=2)  # update 161: no rock in a ragged strip along the roads
+rockm = steep & land & ~nearwet & ~nearroad & np.isin(K, [GRASS, FOREST, FIELD])
+rockm = ndi.binary_closing(ndi.binary_opening(rockm, iterations=1), iterations=1) & land & ~nearwet & ~nearroad & np.isin(K, [GRASS, FOREST, FIELD])  # rounded patches, no lone tiles
+K[rockm] = ROCK
 K[(hgt > 50) & land & np.isin(K, [GRASS, FOREST, FIELD])] = ROCK
 # lamps along roads in the city
 lamps = []

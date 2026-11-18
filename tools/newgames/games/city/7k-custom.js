@@ -38,7 +38,7 @@ function neonMesh(type, hex) { var key = 'n:' + type + ':' + hex; if (CUSTM[key]
   if (c.spoiler) R3.draw(spoilerMesh(v.type, c.spoiler, hex), ATT, { m: M2, tint: [0.82, 0.82, 0.82] });
   if (c.neon && CUSTS.neon[c.neon][2]) R3.draw(neonMesh(v.type, CUSTS.neon[c.neon][2]), ATT, { m: M2, lit: false, alpha: 0.55 + 0.1 * Math.sin(G.t * 4) }); }; })();
 /* the garage keeps each car's work, and knows which slot a car came from */
-function garageMenu(h) { var d = doorOf(h.b), x = d.x + Math.sin(d.a) * 7, z = d.z + Math.cos(d.a) * 7;
+function garageMenu(h) { var d = doorOf(h.b), x = d.x + Math.sin(d.a) * 7, z = d.z + Math.cos(d.a) * 7; if (typeof homeGarage === 'function') { var gg = homeGarage(h.b); x = gg.x; z = gg.z; d = { x: x, z: z, a: gg.a }; }
   KIT.menu({ title: 'Garage', sub: h.name, items: SV.cars.map(function (c, i) { var ex = VEH.filter(function (v) { return v.owned && v.slot === i && !v.dead; })[0]; return { label: VT[c.type].n + (c.cust ? ' (customised)' : '') + (ex ? '  · out' : ''), fn: function () { if (ex) { var j = VEH.indexOf(ex); if (j >= 0 && ex !== P.veh) VEH.splice(j, 1); }
       var v = makeVeh(c.type, x, z, d.a, { owned: 1, col: c.col }); v.slot = i; v.keep = 1; if (c.cust) { v.cust = JSON.parse(JSON.stringify(c.cust)); applyCust(v); } KIT.closeMenu(); toast('Your ' + VT[c.type].n + ' is out front.'); } }; })
     .concat(SV.kart ? [{ label: 'Cumhead Kart (Lost Loads prize)', fn: function () { var v = makeVeh('kart', x, z, d.a, { owned: 1 }); v.keep = 1; KIT.closeMenu(); } }] : [])

@@ -77,7 +77,7 @@ function collide(x, z, r, y, hh) {
   var px = 0, pz = 0, hit = null, L = near(BGRID, x, z, r + 1);
   for (var n = 0; n < 2; n++) {
     var ls = n ? near(SOLID, x, z, r + 1) : L;
-    for (var k = 0; k < ls.length; k++) { var b = ls[k], top = n ? b.y1 : b.y0 + b.h, bot = n ? b.y0 : b.y0 - 2; if (y + (hh || 1.6) < bot || y > top - 0.05) continue;
+    for (var k = 0; k < ls.length; k++) { var b = ls[k]; if (b.o && b.o.deck) continue; var top = n ? b.y1 : b.y0 + b.h, bot = n ? b.y0 : b.y0 - 2; /* update 161: bridge decks are only floors (they were invisible walls) */ if (y + (hh || 1.6) < bot || y > top - 0.05) continue;
       if (b.o && b.o.kp) { if (KNOCKED[b.o.kp]) continue; if (COLLV && Math.abs(COLLV.sp) > 2.5 && Math.hypot(x - b.x, z - b.z) < r + b.r) { knockProp(b.o, COLLV); continue; } }
       if (b.post) { var dx = x + px - b.x, dz = z + pz - b.z, d = Math.hypot(dx, dz), m = r + b.r; if (d < m && d > 0.0001) { px += dx / d * (m - d); pz += dz / d * (m - d); hit = b; } continue; }
       var cx = clamp(x + px, b.x0, b.x1), cz = clamp(z + pz, b.z0, b.z1), ex = x + px - cx, ez = z + pz - cz, dd = Math.hypot(ex, ez);

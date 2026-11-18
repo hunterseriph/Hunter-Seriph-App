@@ -1,6 +1,6 @@
 /* ---------- driving: one stepper for every vehicle (the player's and the traffic), by class: car, bike, board, boat, helicopter, plane ---------- */
 function vehInput() { // the player's hands on the controls
-  var gp = KIT.gamepad, s = gp && gp.axes ? (function () { var x = gp.axes[0] || 0, y = gp.axes[1] || 0, m = Math.hypot(x, y); return m < 0.18 ? { x: 0, y: 0 } : { x: x, y: y }; })() : KIT.stick(0), // update 158: on a pad only the stick steers (the d-pad is the radio)
+  var gp = KIT.gamepad, s = (function () { var x = gp && gp.axes ? gp.axes[0] || 0 : 0, y = gp && gp.axes ? gp.axes[1] || 0 : 0; if (Math.hypot(x, y) >= 0.18) return { x: x, y: y }; var dp = gp && gp.buttons && [12, 13, 14, 15].some(function (i) { return gp.buttons[i] && gp.buttons[i].pressed; }); return dp ? { x: 0, y: 0 } : KIT.stick(0); })(), /* update 161: the touch stick and keys steer even when a pad is (or was) connected; only the pad's d-pad is kept for the radio */ // update 158: on a pad only the stick steers (the d-pad is the radio)
   rt = gp && gp.buttons && gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp && gp.buttons && gp.buttons[6] ? gp.buttons[6].value : 0, drunk = G.drunk || 0;
   var kb = !gp && !TOUCHUI(); // the stick's up and down only drive on a keyboard (W / S); pads and touch use the GAS and BRAKE buttons
   var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && s.y > 0.3 ? s.y : 0);
@@ -42,10 +42,10 @@ function stepVehicle(v, inp, dt) {
     if (!v.air) { var vyG = (g - v.y) / dt; if (vyG < v.vy - 30 * dt && Math.abs(fs) > 8) { v.air = 1; } else { v.vy = clamp(vyG, -20, 20); v.y = g; } }
     if (v.air) { v.vy -= 16 * dt; v.y += v.vy * dt; v.airT = (v.airT || 0) + dt; if (v.y <= g) { if (v.vy < -12) hurtVeh(v, (-v.vy - 12) * 2, null); if (v === (P && P.veh) && v.airT > 0.6) stuntLanded(v); v.y = g; v.vy = 0; v.air = 0; v.airT = 0; } }
     // tilt to the ground
-    var fl = t.len * 0.4, gf = groundY(v.x + f[0] * fl, v.z + f[1] * fl), gb = groundY(v.x - f[0] * fl, v.z - f[1] * fl), wl = t.wid * 0.45, gr = groundY(v.x + r[0] * wl, v.z + r[1] * wl), glf = groundY(v.x - r[0] * wl, v.z - r[1] * wl);
+    var fl = Math.max(1.6, t.len * 0.5), wl = Math.max(1.0, t.wid * 0.6), gs = function (a2, b2) { var x2 = v.x + f[0] * a2 + r[0] * b2, z2 = v.z + f[1] * a2 + r[1] * b2; return (groundY(x2, z2) * 2 + groundY(x2 + 0.9, z2) + groundY(x2 - 0.9, z2) + groundY(x2, z2 + 0.9) + groundY(x2, z2 - 0.9)) / 6; }, gf = gs(fl, 0), gb = gs(-fl, 0), gr = gs(0, wl), glf = gs(0, -wl); /* update 161: tilt from a wider, softened sample (the tile facets threw the car about on hills) */
     var tp = v.air ? v.pitch - 0.25 * dt : -Math.atan2(gf - gb, fl * 2), trl = v.air ? v.roll : Math.atan2(gr - glf, wl * 2) * -1;
     if (cl === 'bike' || cl === 'board') trl = -v.steer * clamp(fs / 18, 0, 1) * 0.5;
-    v.pitch += (tp - v.pitch) * Math.min(1, dt * 10); v.roll += (trl - v.roll) * Math.min(1, dt * 8);
+    v.pitch += (tp - v.pitch) * Math.min(1, dt * 6); v.roll += (trl - v.roll) * Math.min(1, dt * 5);
     var wy2 = waterY(v.x, v.z); if (wy2 > -50 && v.y < wy2 - 0.6 && !v.sunk) { v.sunk = 1; v.hp = 0; if (v === (P && P.veh)) { exitVehicle(true); P.swim = 1; } }
   }
   v.wheelA += fs * dt / Math.max(0.1, vmesh(v.type, v.col).wr);
