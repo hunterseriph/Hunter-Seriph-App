@@ -66,7 +66,7 @@ goods = function (id) { if (!ARCADES[id]) return _goods(id); SV.carts = SV.carts
 var _enterShop2 = enterShop;
 enterShop = function (id, homeId, special) { var r = _enterShop2.apply(this, arguments); var I = G.interior; if (!I || !I.RM) return r;
   if (ARCADES[id] && typeof arcadeUses === 'function') arcadeUses(id, I);
-  if (id === 'club' && I.RM.club) { var C = I.RM.club; G.indoorUses.push({ x: C.sofa.x, z: C.sofa.z, r: 1.4, label: 'PLAY THE SPRAYSTATION', fn: sprayMenu }); G.indoorUses.push({ x: C.stims.x, z: C.stims.z, r: 1.2, label: 'COMBAT STIMS ($40)', fn: stimMenu }); }
+  if (id === 'club' && I.RM.club) { var C = I.RM.club; G.indoorUses.push({ x: C.sofa.x, z: C.sofa.z, r: 1.4, label: 'PLAY THE SPRAYSTATION', fn: sprayMenu }); G.indoorUses.push({ x: C.stims.x, z: C.stims.z, r: 1.2, label: 'A JOINT FROM THE STASH ($40)', fn: stimMenu }); }
   return r; };
 /* ---------- the SprayStation ---------- */
 function sprayMenu() { SV.carts = SV.carts || {}; var own = Object.keys(SPRAYGAMES).filter(function (g) { return SV.carts[g]; });

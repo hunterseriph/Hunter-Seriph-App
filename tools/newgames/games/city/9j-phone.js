@@ -37,7 +37,7 @@ function phoneBar() { var t = (G.time | 0) + ':' + ('0' + Math.floor((G.time % 1
 phoneOpen = function () { if (!P || G.mode !== 'play' || G.cut || G.interior || P.state === 'dead' || G.spray) { if (G.interior) toast('No signal in here.'); return; } G.phone = 1; sfx.play('blip');
   var busy = PHONE && PHONE.st !== 'done';
   KIT.menu({ cls: 'phone', title: 'CumPhone', sub: busy ? PHONE.what + ' on the way' : '', html: phoneBar(), grid: true, items: [
-    { label: picon('cab', 'Cum Cabs'), cls: 'app', fn: function () { phoneAsk('taxi'); } },
+    { label: picon('cab', 'Spooger'), cls: 'app', fn: function () { phoneAsk('taxi'); } },
     { label: picon('ins', 'Insurance'), cls: 'app', fn: function () { phoneAsk('insure'); } },
     { label: picon('stim', 'Stims'), cls: 'app', fn: function () { phoneAsk('stims'); } },
     { label: picon('map', 'Map'), cls: 'app', fn: function () { phoneClose(); mapMenu(null); } },
@@ -48,7 +48,7 @@ phoneOpen = function () { if (!P || G.mode !== 'play' || G.cut || G.interior || 
     { label: 'HANG UP', back: true, cls: 'off', fn: phoneClose }] }); };
 /* ---------- SPERM SNAKE: steer the little swimmer round the screen, eat the golden eggs, don't hit your own tail ---------- */
 var SNK = null;
-function snakeOpen() { KIT.menu({ cls: 'phone snake', title: 'Sperm Snake', sub: 'Best ' + (SV.snakeBest || 0), html: phoneBar() + '<div class="snk"><canvas id="snkC" width="192" height="192"></canvas><div class="pad"><span></span><button data-d="0">▲</button><span></span><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div></div>', items: [{ label: 'BACK', back: true, cls: 'off', fn: function () { SNK = null; phoneOpen(); } }] });
+function snakeOpen() { KIT.menu({ cls: 'phone snake', title: 'Sperm Snake', sub: 'Best ' + (SV.snakeBest || 0), html: (typeof pbar2 === 'function' ? pbar2() : phoneBar()) + '<div class="snk"><canvas id="snkC" width="192" height="192"></canvas><div class="pad"><span></span><button data-d="0">▲</button><span></span><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div></div>', items: [{ label: '‹ Apps', back: true, cls: 'pback', fn: function () { SNK = null; phoneOpen(); } }] });
   var N = 16; SNK = { n: N, body: [[8, 8], [7, 8], [6, 8]], dir: 1, want: 1, egg: null, t: 0, step: 0.17, score: 0, over: 0, last: 0, wait: 1 }; snakeEgg();
   var c = document.getElementById('snkC'); if (!c) return; var sx = 0, sy = 0;
   c.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; e.preventDefault(); }, { passive: false });
@@ -64,7 +64,7 @@ function snakeLoop(ts) { var S = SNK, c = document.getElementById('snkC'); if (!
     if (g.buttons[12] && g.buttons[12].pressed || ay < -0.6) d = 0; else if (g.buttons[13] && g.buttons[13].pressed || ay > 0.6) d = 2; else if (g.buttons[14] && g.buttons[14].pressed || ax < -0.6) d = 3; else if (g.buttons[15] && g.buttons[15].pressed || ax > 0.6) d = 1;
     if (d >= 0 && d !== S.padD) snakeDir(d); S.padD = d; } } catch (e) {}
   if (S.over) S.over += dt; else if (!S.wait) { S.t += dt; while (S.t >= S.step) { S.t -= S.step; S.dir = S.want; var h = S.body[0], nh = [h[0] + [0, 1, 0, -1][S.dir], h[1] + [-1, 0, 1, 0][S.dir]];
-      if (nh[0] < 0 || nh[1] < 0 || nh[0] >= S.n || nh[1] >= S.n || S.body.some(function (b, i) { return i < S.body.length - 1 && b[0] === nh[0] && b[1] === nh[1]; })) { S.over = 0.01; sfx.play('hurt'); if (S.score > (SV.snakeBest || 0)) { SV.snakeBest = S.score; persist(); } break; }
+      nh[0] = (nh[0] + S.n) % S.n; nh[1] = (nh[1] + S.n) % S.n; /* update 166: through a wall and out of the other side */ if (S.body.some(function (b, i) { return i < S.body.length - 1 && b[0] === nh[0] && b[1] === nh[1]; })) { S.over = 0.01; sfx.play('hurt'); if (S.score > (SV.snakeBest || 0)) { SV.snakeBest = S.score; persist(); } break; }
       S.body.unshift(nh); if (S.egg && nh[0] === S.egg[0] && nh[1] === S.egg[1]) { S.score++; sfx.play('coin'); S.step = Math.max(0.07, S.step * 0.96); snakeEgg(); } else S.body.pop(); } }
   // draw: dark cells, the egg glowing gold, the body of cream with a head that has an eye and a curl of a tail behind it
   var x = c.getContext('2d'), Z = c.width / S.n; x.fillStyle = '#0e0708'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#1a0d10'; for (var yy = 0; yy < S.n; yy++) for (var xx = 0; xx < S.n; xx++) if ((xx + yy) % 2) x.fillRect(xx * Z, yy * Z, Z, Z);

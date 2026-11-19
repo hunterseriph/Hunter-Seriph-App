@@ -61,7 +61,7 @@ function drawHud() {
   // the big words
   if (G.big && G.big.t > 0) { G.big.t -= 1 / 60; var bs = G.big.sz || 26, bw = tw2(G.big.s, bs, 'title'); tx(G.big.s, Wd / 2 - bw / 2, Hd * 0.38, { col: G.big.col || '#c4121c', size: bs, font: 'title', sh: 1 }); if (G.big.sub) tx(G.big.sub, Wd / 2 - tw2(G.big.sub, 8) / 2, Hd * 0.38 + bs + 4, { col: '#f1e7d0', size: 8 }); }
   // the prompt for whatever is near
-  var u = P.state === 'foot' ? nearestUse() : null, pr = u ? (u.label || 'USE') : null; if (!pr && P.state === 'foot' && !G.cut) { var nv = null; VEH.forEach(function (v) { if (!v.dead && dist2(P.x, P.z, v.x, v.z) < Math.pow(v.t.len * 0.6 + 2, 2)) nv = v; }); if (nv) pr = (nv.driver ? 'STEAL ' : 'GET IN ') + nv.t.n.toUpperCase(); }
+  var u = P.state === 'foot' ? nearestUse() : null, pr = u ? (u.label || 'USE') : null; if (!pr && P.state === 'foot' && !G.cut) { var nv = null; VEH.forEach(function (v) { if (!v.dead && Math.abs(P.y - v.y) < 2.5 && dist2(P.x, P.z, v.x, v.z) < Math.pow(v.t.len * 0.6 + 2, 2)) nv = v; }); if (nv) pr = (nv.driver ? 'STEAL ' : 'GET IN ') + nv.t.n.toUpperCase(); }
   if (P.state === 'car') pr = G.carUse ? G.carUse.label : null;
   if (G.seat) pr = (G.seat.lit || (typeof holding === 'function' && holding(G.seat)) ? (holding(G.seat) ? 'PUFF PUFF   ' : 'PASSED ROUND   ') : (typeof sameSeat === 'function' && sameSeat(G.seat) && sameSeat(G.seat).lit) ? 'WAIT FOR IT   ' : (TOUCHUI() || KIT.gamepad ? 'X' : 'C') + '  LIGHT A JOINT (' + (SV.joints || 0) + ')   ') + (TOUCHUI() ? 'Y' : KEYY()) + '  STAND UP';
   if (G.fish) pr = G.fish.st === 'bite' ? '!!  PRESS A NOW  !!' : 'WAITING FOR A BITE...   ' + (TOUCHUI() ? 'Y' : KEYY()) + '  STOP';
@@ -161,10 +161,10 @@ function drawStatus(ctx) { // update 157 (his ask: a sleeker look): no boxed pla
   var mx = x + R * 2 + 8, mon = '$' + Math.floor(SV.money).toLocaleString('en-GB'), ms = G.moneyPop > 0 ? 15 : 14; G.moneyPop = Math.max(0, (G.moneyPop || 0) - 1 / 60 * 2);
   tx(mon, mx + 1, y + 1, { col: 'rgba(0,0,0,0.6)', size: ms, font: 'title' }); tx(mon, mx, y, { col: '#f1e7d0', size: ms, font: 'title' });
   var by = y + 21, bw = 110, flash = P.hp < 25 && Math.floor(G.t * 4) % 2;
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by, bw, 3); ctx.fillStyle = flash ? '#ff2630' : '#e0202a'; ctx.fillRect(mx, by, bw * clamp(P.hp / SV.maxHp, 0, 1), 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by, bw, 3); ctx.fillStyle = flash ? '#ff2630' : '#e0202a'; ctx.fillRect(mx, by, bw * clamp(P.hp / SV.maxHp, 0, 1), 3); if (P.hp > SV.maxHp) { ctx.fillStyle = '#ffe36a'; ctx.fillRect(mx, by, bw * clamp((P.hp - SV.maxHp) / 50, 0, 1), 3); } /* update 166: health over the top shows gold */
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(mx, by + 6, bw, 2); ctx.fillStyle = '#f1e7d0'; ctx.fillRect(mx, by + 6, bw * clamp((P.armour || 0) / 100, 0, 1), 2);
   for (var s = 0; s < 5; s++) { var on = s < SV.wanted, sx = mx + 4 + s * 12; ctx.globalAlpha = on ? (G.lostT > 6 && Math.floor(G.t * 3) % 2 ? 0.45 : 1) : 0.22; star(ctx, sx + 2, by + 18, 4.6, on ? '#ffe36a' : '#6a5a5c'); ctx.globalAlpha = 1; }
-  if (G.stim > 0) { var st = 'STIMS ' + Math.ceil(G.stim); tx(st, mx + 70, by + 14, { col: '#ff2630', size: 6 }); }
+  if (G.stim > 0) { var st = 'HIGH ' + Math.ceil(G.stim); tx(st, mx + 70, by + 14, { col: '#ff2630', size: 6 }); }
 }
 function star(ctx, cx, cy, r, col) { ctx.beginPath(); for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = '#12040a'; ctx.lineWidth = 2; ctx.strokeStyle = '#12040a'; ctx.stroke(); ctx.fillStyle = col; ctx.fill(); }
 

@@ -9,7 +9,7 @@ var PHONE = null;
 function phoneOpen() { if (!P || G.mode !== 'play' || G.cut || G.interior || P.state === 'dead' || G.spray) { if (G.interior) toast('No signal in here.'); return; } G.phone = 1; sfx.play('blip');
   var busy = PHONE && PHONE.st !== 'done';
   KIT.menu({ cls: 'phone', title: 'CUMPHONE', sub: (G.time | 0) + ':' + ('0' + Math.floor((G.time % 1) * 60)).slice(-2) + '  ·  $' + Math.floor(SV.money).toLocaleString('en-GB') + (busy ? '  ·  ' + PHONE.what + ' on the way' : ''), grid: true, items: [
-    { label: 'CUM CABS', cls: 'app cab', fn: function () { phoneAsk('taxi'); } },
+    { label: 'SPOOGER', cls: 'app cab', fn: function () { phoneAsk('taxi'); } },
     { label: 'INSURANCE', cls: 'app ins', fn: function () { phoneAsk('insure'); } },
     { label: 'COMBAT STIMS', cls: 'app stim', fn: function () { phoneAsk('stims'); } },
     { label: 'MAP', cls: 'app map', fn: function () { phoneClose(); mapMenu(null); } },
@@ -21,7 +21,7 @@ function jobsMenu() { // update 158: side jobs (taxi, paramedic, vigilante, pizz
     .concat(G.job ? [{ label: 'END THE SHIFT', fn: function () { phoneClose(); jobStop(); } }] : []).concat([{ label: 'BACK', back: true, fn: phoneOpen }]) }); }
 function phoneClose() { G.phone = 0; KIT.closeMenu(); }
 function phoneAsk(what) { if (PHONE && PHONE.st !== 'done') { toast('Something is already on its way.'); return; }
-  if (what === 'taxi') KIT.confirm({ title: 'Cum Cabs', sub: 'A cab comes to you. You pay the fare when you pick where to go.', price: 20, have: Math.floor(SV.money), unit: '$', yesLabel: 'Call a cab', yes: function () { phoneCall('taxi'); }, no: phoneOpen });
+  if (what === 'taxi') KIT.confirm({ title: 'Spooger', sub: 'A Spooger comes to you. You pay the fare when you pick where to go.', price: 20, have: Math.floor(SV.money), unit: '$', yesLabel: 'Call a cab', yes: function () { phoneCall('taxi'); }, no: phoneOpen });
   else if (what === 'insure') { var last = SV.lastCar && VT[SV.lastCar] ? SV.lastCar : null, ins = SV.insured && last && SV.insured[last];
     if (!last) { KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Cum City Insurance has no car on file for you. Drive something first.', items: [{ label: 'BACK', back: true, fn: phoneOpen }] }); return; }
     KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Your car on file: ' + VT[last].n + (ins ? ' (insured)' : ''), items: [
@@ -29,10 +29,10 @@ function phoneAsk(what) { if (PHONE && PHONE.st !== 'done') { toast('Something i
       ins ? null : { label: 'INSURE IT FOR GOOD ($900)', fn: function () { KIT.confirm({ title: 'Insure the ' + VT[last].n, sub: 'From now on a fresh one is sent free whenever you call.', price: 900, have: Math.floor(SV.money), unit: '$', yes: function () { money(-900); SV.insured = SV.insured || {}; SV.insured[last] = 1; persist(); toast('Insured. Call any time.'); phoneOpen(); }, no: phoneOpen }); } },
       { label: 'BACK', back: true, fn: phoneOpen }] }); }
   else if (what === 'stims') KIT.confirm({ title: 'Combat Stims, delivered', sub: 'A courier brings them to you. Hit harder, take less, for 90 seconds.', price: 60, have: Math.floor(SV.money), unit: '$', yes: function () { money(-60); phoneCall('stims'); }, no: phoneOpen }); }
-var CALLS = { taxi: [['cumhead', 'Yeah, hi. I need a cab. Where am I? Look for the droplet in the nice shirt.'], ['pedM1', 'Cum Cabs. Two minutes, Mister Mayor. Do not go anywhere.']],
+var CALLS = { taxi: [['cumhead', 'Yeah, hi. I need a Spooger. Where am I? Look for the droplet in the nice shirt.'], ['pedM1', 'Spooger. Two minutes, Mister Mayor. Do not go anywhere.']],
   insure: [['cumhead', 'Hello, insurance? Yeah, my car is a bit... gone. Can you send another one?'], ['pedF1', 'Cum City Insurance. Of course, Mister Mayor. A fresh one is on its way. Please try not to blow this one up.']],
   stims: [['cumhead', 'Yeah, can I get some combat stims delivered? The usual.'], ['pedM1', 'Stims for the mayor, coming right up. Five minutes or the next one is free.']] };
-var ARRIVE = { taxi: 'Cab for Mister Mayor! Hop in, where to?', insure: 'Here are your keys, Mister Mayor. Sign here. Do not crash it.', stims: 'Combat stims for the mayor. Enjoy the ride.' };
+var ARRIVE = { taxi: 'Spooger for Mister Mayor! Hop in, where to?', insure: 'Here are your keys, Mister Mayor. Sign here. Do not crash it.', stims: 'Combat stims for the mayor. Enjoy the ride.' };
 function phoneCall(what) { phoneClose(); if (what === 'taxi' && SV.money < 20) { toast('$20 call out.'); return; } if (what === 'taxi') money(-20);
   PHONE = { what: { taxi: 'Your cab', insure: 'Your car', stims: 'Your stims' }[what], k: what, st: 'call', t: 0, line: 0 };
   sfx.play('blip'); }
@@ -40,7 +40,7 @@ function phoneVehType(k) { return k === 'taxi' ? 'taxi' : k === 'stims' ? (VT.sc
 function stepPhone(dt) { var S = PHONE; if (!S || S.st === 'done' || !P) return; S.t += dt;
   if (S.st === 'call') { // the call itself: the phone at his ear, both sides spoken
     var L = CALLS[S.k]; if (S.t > 0.3 && S.line === 0) { S.line = 1; subtitle(CAST.cumhead.name, L[0][1], 3.5); voiceLine('cumhead', L[0][1]); }
-    if (S.t > 3.9 && S.line === 1) { S.line = 2; subtitle(S.k === 'insure' ? 'Cum City Insurance' : S.k === 'taxi' ? 'Cum Cabs' : 'Stims Courier', L[1][1], 3.5); voiceLine(L[1][0], L[1][1]); }
+    if (S.t > 3.9 && S.line === 1) { S.line = 2; subtitle(S.k === 'insure' ? 'Cum City Insurance' : S.k === 'taxi' ? 'Spooger' : 'Stims Courier', L[1][1], 3.5); voiceLine(L[1][0], L[1][1]); }
     if (S.t > 7.6) { var r = roadNear('xz:' + P.x + ':' + P.z, 90); if (!r || !r.E) { toast('Nobody can find you here.'); S.st = 'done'; return; } var v = makeVeh(phoneVehType(S.k), r.x, r.z, r.a || 0, { col: S.k === 'taxi' ? 3 : 0 }); v.keep = 1; v.phone = 1; v.y = groundY(v.x, v.z);
       var dr = makePed({ x: v.x, z: v.z, kind: 'cit', rig: rigFor('cit'), keep: 1 }); dr.inVeh = v; v.driver = dr; v.god = 1; v.ai = { manual: 1 }; S.v = v; S.st = 'drive'; S.t = 0; G.sub = null; } return; }
   var v = S.v; if (!v || v.dead) { S.st = 'done'; toast('Your delivery got wrecked on the way.'); return; }
@@ -60,7 +60,7 @@ function taxiMenu() { var S = PHONE, v = S && S.v; if (!v) return; var dests = [
   if (SV.way) dests.push(['YOUR WAYPOINT', SV.way[0], SV.way[1]]);
   if (G.mission && G.mission.mark && G.mission.mark.x !== undefined) dests.push(['THE JOB', G.mission.mark.x, G.mission.mark.z]);
   [['THE CLUBHOUSE', 'shop:club'], ["POTBELLY'S ARCADE", 'shop:arcade'], ['CUM CITY HOSPITAL', 'shop:hosp'], ['CUM MOTORS', 'shop:motors'], ['EJACULAND', 'dist:ejac'], ['THE AIRPORT', 'dist:airport'], ['SEAMEN BEACH', 'dist:beach']].forEach(function (q) { var p = placeOf(q[1]); if (p) dests.push([q[0], p.x, p.z]); });
-  KIT.menu({ cls: 'phone', title: 'CUM CABS', sub: '"Where to, Mister Mayor?"', items: dests.map(function (d) { var fare = Math.max(25, Math.round(Math.hypot(d[1] - P.x, d[2] - P.z) / 18)); return { label: d[0] + '  ·  $' + fare, fn: function () { KIT.confirm({ title: d[0], sub: 'The fare.', price: fare, have: Math.floor(SV.money), unit: '$', yes: function () { money(-fare); KIT.closeMenu(); taxiRide(d[1], d[2]); }, no: taxiMenu }); } }; }).concat([{ label: 'NEVER MIND', back: true, fn: function () { KIT.closeMenu(); } }]) }); }
+  KIT.menu({ cls: 'phone', title: 'Spooger', sub: '"Where to, Mister Mayor?"', items: dests.map(function (d) { var fare = Math.max(25, Math.round(Math.hypot(d[1] - P.x, d[2] - P.z) / 18)); return { label: d[0] + '  ·  $' + fare, fn: function () { KIT.confirm({ title: d[0], sub: 'The fare.', price: fare, have: Math.floor(SV.money), unit: '$', yes: function () { money(-fare); KIT.closeMenu(); taxiRide(d[1], d[2]); }, no: taxiMenu }); } }; }).concat([{ label: 'NEVER MIND', back: true, fn: function () { KIT.closeMenu(); } }]) }); }
 function taxiRide(x, z) { var S = PHONE, v = S.v; G.phoneUse = null; G.fade = 2.2; sfx.play('door');
   setTimeout(function () { var r = nearestRoad(x, z, 300) || { x: x, z: z, dx: 0, dz: 1, E: null }; var lane = r.E ? laneOf(r.E) : 0, px = r.x + r.dz * lane, pz = r.z - r.dx * lane;
     v.x = px; v.z = pz; v.y = groundY(px, pz); v.a = Math.atan2(r.dx, r.dz); v.vx = v.vz = v.sp = 0; var D = doorPt(v, 1.2); P.x = D.x + (D.x - v.x) * 0.3; P.z = D.z + (D.z - v.z) * 0.3; P.y = standY(P.x, P.z, v.y + 2); P.a = v.a; CAM.yaw = v.a; CAM.snap = 1;

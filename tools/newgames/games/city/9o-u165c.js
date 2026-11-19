@@ -71,7 +71,7 @@ function stepKnights(dt) { var C = POIS.filter(function (p) { return p.k === 'ca
 function drawKnights() { if (!KNIGHTS || G.interior) return; KNIGHTS.forEach(function (K) { if (dist2(K.x, K.z, CAM.x, CAM.z) > 180 * 180) return; var H = horseMesh(K.col[0], K.col[1]), mv = Math.min(1, K.sp / 2), bob = Math.abs(Math.sin(K.ph)) * 0.05 * mv;
     drawHorse(H, K.x, K.y + bob, K.z, K.a, K.ph, mv);
     var Q = pose0(); Q.y = -0.45; Q.hip[0] = Q.hip[1] = 1.2; Q.kn[0] = Q.kn[1] = 1.35; Q.hab = 0.42; Q.lean = 0.05 + mv * 0.04; Q.sh[0] = [0.7, 0.15, 0.25]; Q.el[0] = 1.1; Q.sh[1] = [0.35, 0.12, 0]; Q.el[1] = 0.5; Q.hy = 0;
-    var sx = K.x + Math.sin(K.a) * -0.12, sz = K.z + Math.cos(K.a) * -0.12; drawPerson(RIGS[K.rig] || RIGS.knight, sx, K.y + bob + 1.98, sz, K.a, Q, {});
+    var sx = K.x + Math.sin(K.a) * -0.12, sz = K.z + Math.cos(K.a) * -0.12; drawPerson(RIGS[K.rig] || RIGS.knight, sx, K.y + bob + 1.93, sz, K.a, Q, { sc: 1.28 }); /* update 166: the new bodies are smaller */
     var Hd = window.LASTHAND; if (Hd) { if (!RIGS.lanceM) { var m = new R3.Mesh(); tub(m, [0, -0.6, 0], [0, 3.4, 0], 0.045, 0.02, '#c8a040', 6); for (var i = 0; i < 4; i++) tub(m, [0, 0.4 + i * 0.7, 0], [0, 0.75 + i * 0.7, 0], 0.05, 0.05, '#c4121c', 6); tub(m, [0, 0.1, 0], [0, 0.35, 0], 0.13, 0.05, '#9aa0a8', 8);
         m.quad([0, 3.0, 0], [0, 3.0, 0.6], [0, 2.6, 0.6], [0, 2.6, 0], UV1, TL('white'), litc('#c4121c', [1, 0, 0], 1), [1, 0, 0]); m.quad([0, 3.0, 0.6], [0, 3.0, 0], [0, 2.6, 0], [0, 2.6, 0.6], UV1, TL('white'), litc('#c4121c', [-1, 0, 0], 1), [-1, 0, 0]); RIGS.lanceM = m.upload(); }
       R3.draw(RIGS.lanceM, ATT, { m: MM(Hd, MD(0, 0, 0, 0, Math.PI, 0, 1)) }); } }); }
@@ -138,7 +138,7 @@ var SPOOGE = null;
 function stepSpooge() { if (G.interior) return; if (SPOOGE && (SPOOGE.dead || PEDS.indexOf(SPOOGE) < 0)) SPOOGE = null; if (SPOOGE) return; if ((G.spoogeT || 0) > G.t) return; G.spoogeT = G.t + 4;
   var s = SEATS.filter(function (q) { var d = dist2(q.x, q.z, P.x, P.z); return q.kind === 'bench' && !q.taken && d > 30 * 30 && d < 110 * 110 && dAt(q.x, q.z).style === 'cafe'; }).sort(function (a, b) { return hash2(Math.round(a.x), Math.round(a.z), 9) - hash2(Math.round(b.x), Math.round(b.z), 9); })[0];
   if (!s) return;
-  var p = makePed({ x: s.x - Math.sin(s.a) * 0.08, z: s.z - Math.cos(s.a) * 0.08, kind: 'cit', who: 'spooge', rig: RIGS.spooge, state: 'idle', keep: 1 }); p.a = s.a; p.fixY = s.y; p.seat = s; s.taken = 1;
+  var p = makePed({ x: s.x - Math.sin(s.a) * 0.08 + Math.cos(s.a) * 0.42, z: s.z - Math.cos(s.a) * 0.08 - Math.sin(s.a) * 0.42, kind: 'cit', who: 'spooge', rig: RIGS.spooge, state: 'idle', keep: 1 }); p.a = s.a; p.fixY = s.y; p.seat = s; s.taken = 1;
   p.ctl = function () { p.y = p.fixY; p.a = s.a; p.vx = p.vz = 0; if (P.state === 'foot' && Math.hypot(P.x - p.x, P.z - p.z) < 5 && (p.sayT || 0) <= 0 && Math.random() < 0.02) say(p, pick(CASTLINES.spooge)); };
   p.pose = function (Q) { var S = sitPose('bench', 0, 0, 0, 0); for (var k in S) Q[k] = S[k]; Q.sh[1] = [0.9, 0.1, 0.3]; Q.el[1] = 1.4; }; SPOOGE = p; }
 /* the knights' and the demons' turn each frame */

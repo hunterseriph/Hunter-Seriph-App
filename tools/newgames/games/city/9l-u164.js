@@ -119,9 +119,9 @@ window.drawJoint = function (x, y, z, a, t) { var H = window.LASTHAND; if (!H) r
      a person -> they are yanked off their feet to you.
    Everyone has it (no ammo). Roofs of buildings can now be stood on (standY counts the building under you once you are
    up there). ---- */
-WPN.hook = { n: 'Fapling Hook', hook: 1, dmg: 6, rate: 0.55, range: 70, mesh: 'hookM', cost: 0 }; WORDER.splice(WORDER.indexOf('sausage') + 1, 0, 'hook');
+WPN.hook = { n: 'Fapling Hook', hook: 1, dmg: 6, rate: 0.55, range: 70, mesh: 'hookM', cost: 0, ammo: 'hook' }; WORDER.splice(WORDER.indexOf('sausage') + 1, 0, 'hook');
 (function () {
-  var hw = hasW; hasW = function (w) { return w === 'hook' || hw(w); };
+  /* update 166: the hook is earned now (Shithead Laboozie's job) and takes claws (ammo) */
   var bcr = buildCityRigs; buildCityRigs = function () { var r = bcr.apply(this, arguments); var m = new R3.Mesh(); boxC(m, -0.035, -0.03, -0.06, 0.035, 0.06, 0.2, '#e8e2d6'); boxC(m, -0.026, -0.13, -0.03, 0.026, 0.0, 0.03, '#1a1a1c'); boxC(m, -0.045, -0.04, 0.2, 0.045, 0.07, 0.25, '#c4121c');
     [-1, 1].forEach(function (s) { tub(m, [s * 0.02, 0.02, 0.25], [s * 0.06, 0.05, 0.32], 0.012, 0.008, '#d8d8dc', 5, { cap: 1 }); }); tub(m, [0, 0.06, 0.25], [0, 0.1, 0.32], 0.012, 0.008, '#d8d8dc', 5, { cap: 1 }); RIGS.hookM = m.upload();
     var r2 = new R3.Mesh(); tub(r2, [0, 0, 0], [0, 0, 1], 1, 1, '#ffffff', 6); RIGS.ropeM = r2.upload();
@@ -133,7 +133,7 @@ WPN.hook = { n: 'Fapling Hook', hook: 1, dmg: 6, rate: 0.55, range: 70, mesh: 'h
   function boxOf(x, y, z) { var L = near(SOLID, x, z, 1.2); for (var k = 0; k < L.length; k++) { var b = L[k]; if (b.o && b.o.deck) continue; if (x > b.x0 - 0.6 && x < b.x1 + 0.6 && z > b.z0 - 0.6 && z < b.z1 + 0.6 && y > b.y0 - 0.5 && y < b.y1 + 0.5) return b; } return null; }
   function hand() { var H = window.PHAND; return H && P.state === 'foot' ? mPt(MM(H, MD(0, 0, 0, 0, -Math.PI / 2, 0)), 0, 0.02, 0.32) : muzzle(P); }
   window.HOOK = null;
-  window.__fireHook = function () { fireHook(); }; window.__hookVeh = function (v) { HOOK = { mode: "pull", v: v, l: [0, v.t.hgt * 0.9, 0], hit: { veh: v }, at: [v.x, v.y, v.z], from: hand(), s: 0, len: 1 }; }; /* for tests */ function fireHook() { var R = WPN.hook.range, c = [CAM.x, CAM.y, CAM.z], f = R3.cam.fwd, d, t, hit = null, pt;
+  window.__fireHook = function () { fireHook(); }; window.__hookVeh = function (v) { HOOK = { mode: "pull", v: v, l: [0, v.t.hgt * 0.9, 0], hit: { veh: v }, at: [v.x, v.y, v.z], from: hand(), s: 0, len: 1 }; }; /* for tests */ function fireHook() { if (!SV.ammo || (SV.ammo.hook || 0) <= 0) { toast('Out of hook claws. Saba sells them.'); sfx.play('back'); return; } SV.ammo.hook--; var R = WPN.hook.range, c = [CAM.x, CAM.y, CAM.z], f = R3.cam.fwd, d, t, hit = null, pt;
     if (P.target && !P.target.dead) { var T0 = P.target; pt = [T0.x, (T0.y || 0) + 1.1, T0.z]; hit = { ped: T0 }; }
     else { d = [f[0], f[1], f[2]]; var wt = rayBlock(c[0], c[1], c[2], c[0] + d[0] * R, c[1] + d[1] * R, c[2] + d[2] * R); hit = rayHit(c, d, R * wt, P); t = hit ? hit.t : R * wt; pt = [c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t]; if (!hit || !hit.veh) { /* help with vehicles: anything close to the line of aim is caught */ var bv = null, bs = 0.975; VEH.forEach(function (v) { if (v === P.veh || v.dead) return; var vx = v.x - c[0], vy = v.y + v.t.hgt * 0.7 - c[1], vz = v.z - c[2], L = Math.hypot(vx, vy, vz); if (L > R || L < 3) return; var dot = (vx * d[0] + vy * d[1] + vz * d[2]) / L; if (dot > bs && (!hit || L < t + 2)) { bs = dot; bv = v; } }); if (bv) { hit = { veh: bv }; pt = [bv.x, bv.y + bv.t.hgt * 0.9, bv.z]; } }
       if (!hit && wt >= 0.999) hit = { miss: 1 }; else if (!hit) hit = { wall: 1 }; }

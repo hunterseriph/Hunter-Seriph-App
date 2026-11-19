@@ -56,7 +56,9 @@ function neonDress(m, glow, b, F, fw, yt, r) { var st = b.style, busy = st === '
   // a blade sign by one corner of the front
   if (hash2(b.i, 8, 8) < busy) { var u = hash2(b.i, 9, 9) < 0.5 ? 0.2 : 0.8, bx = F.L[0] + (F.R[0] - F.L[0]) * u + ex * 0.9, bz = F.L[1] + (F.R[1] - F.L[1]) * u + ez * 0.9, h0 = b.y0 + 4.6, h1 = Math.min(yt - 0.4, h0 + 6.5), bl = 'bl_' + Math.floor(hash2(b.i, 10, 10) * BLADES.length);
     if (h1 - h0 > 2.5) { boxC(m, bx - ex * 0.8 - 0.05, h0 + 0.3, bz - ez * 0.8 - 0.05, bx + 0.05, h0 + 0.42, bz + 0.05, '#1a1a1e'); boxC(m, bx - ex * 0.8 - 0.05, h1 - 0.42, bz - ez * 0.8 - 0.05, bx + 0.05, h1 - 0.3, bz + 0.05, '#1a1a1e');
-      standQ(glow, bx, bz, F.a + Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); standQ(glow, bx, bz, F.a - Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); } }
+      var px = Math.cos(F.a), pz = -Math.sin(F.a); /* update 166: the two faces stand 9 cm apart either side of a dark blade (they were in the same place: flicker, and the back read through backwards) */
+      boxR(m, bx, bz, F.a, 0.07, 0.78, h0 - 0.05, h1 + 0.05, '#12040a');
+      standQ(glow, bx + px * 0.09, bz + pz * 0.09, F.a + Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); standQ(glow, bx - px * 0.09, bz - pz * 0.09, F.a - Math.PI / 2, 1.5, h0, h1, TL(bl), 1.4, 1.2); } }
   // a neon tube along the roof line of the front
   if (hash2(b.i, 11, 11) < busy && fw < 26 && /redlight|cafe|downtown/.test(st)) { var tx = ex * 0.08, tz = ez * 0.08; boxC(glow, Math.min(F.L[0], F.R[0]) + tx - (ex ? 0.04 : 0), yt - 0.18, Math.min(F.L[1], F.R[1]) + tz - (ez ? 0.04 : 0), Math.max(F.L[0], F.R[0]) + tx + (ex ? 0.04 : 0), yt - 0.06, Math.max(F.L[1], F.R[1]) + tz + (ez ? 0.04 : 0), col); }
   // and one over the ground floor
@@ -190,8 +192,10 @@ function building(m, night, fr, glow, b, lamps) {
   if ((b.style === 'industrial' || b.style === 'shed') && r < 0.4) tub(m, [b.x1 - 2, yt, b.z0 + 2], [b.x1 - 2, yt + 8, b.z0 + 2], 0.6, 0.5, '#4a4446', 6);
   var F = frontFace(b), fw = Math.hypot(F.R[0] - F.L[0], F.R[1] - F.L[1]), mx = (F.L[0] + F.R[0]) / 2, mz = (F.L[1] + F.R[1]) / 2;
   // red light neon and billboards on the roofs downtown
-  if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)]; standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), b.y0 + 5, b.y0 + 8, TL(nt), 2.0, 1.2); }
-  if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); }
+  if (b.style === 'redlight') { var nt = NEONS[Math.floor(hash2(b.i, 5, 5) * NEONS.length)], ny0 = b.y0 + 5; /* update 166: over a shop front the neon sits above the front so its name shows (he liked HOT LOADS but it hid Bonjo's) */
+    if (b.shop && FACOF[b.shop] && KIT.SPR[FACOF[b.shop]]) { var s0 = KIT.SPR[FACOF[b.shop]], wd0 = Math.min(fw - 0.4, b.shop === 'club' ? 9 : 7.2); ny0 = Math.max(ny0, b.y0 + wd0 * s0[3] / s0[2] + 0.4); }
+    if (ny0 + 3 < yt + 2.5) { boxC(m, mx + F.n[0] * 0.1 - 0.06, ny0 - 0.1, mz + F.n[2] * 0.1 - 0.06, mx + F.n[0] * 0.1 + 0.06, ny0 + 3.1, mz + F.n[2] * 0.1 + 0.06, '#1a1a1e'); standQ(glow, mx + F.n[0] * 0.3, mz + F.n[2] * 0.3, F.a, Math.min(4, fw - 1), ny0, ny0 + 3, TL(nt), 2.0, 1.2); } }
+  if (b.style === 'downtown' && !tall && r < 0.25) { var bb = BILLS[Math.floor(hash2(b.i, 6, 6) * BILLS.length)]; boxC(m, mx - 0.1, yt, mz - 0.1, mx + 0.1, yt + 3, mz + 0.1, '#2a2a2e'); standQ(m, mx + F.n[0] * 0.2, mz + F.n[2] * 0.2, F.a, 8, yt + 2, yt + 6, TL(bb), 1.2, 0.3); boxR(m, mx + F.n[0] * 0.08, mz + F.n[2] * 0.08, F.a, 4.15, 0.1, yt + 1.9, yt + 6.1, '#2a2a2e'); /* update 166: a back to the board so it never reads backwards from behind */ }
   if (!b.shop) genericFronts(m, glow, night, b, F, fw, gh);
   if (!tall) neonDress(m, glow, b, F, fw, yt, r);
   // shops: their front, or a painted name board

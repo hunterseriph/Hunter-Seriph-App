@@ -90,7 +90,7 @@ function stepPlane(v, inp, dt) {
 }
 /* getting in and out */
 function enterNearest() {
-  var best = null, bd = 16; VEH.forEach(function (v) { if (v.dead) return; var d = dist2(P.x, P.z, v.x, v.z), r = v.t.len * 0.6 + 2; if (d < r * r && d < bd * bd * 4) { if (!best || d < dist2(P.x, P.z, best.x, best.z)) best = v; } });
+  var best = null, bd = 16; VEH.forEach(function (v) { if (v.dead || Math.abs(P.y - v.y) > 2.5) return; /* update 166: not from a roof above the car */ var d = dist2(P.x, P.z, v.x, v.z), r = v.t.len * 0.6 + 2; if (d < r * r && d < bd * bd * 4) { if (!best || d < dist2(P.x, P.z, best.x, best.z)) best = v; } });
   if (!best) return false;
   if (best.driver && best.driver !== P) { var dr = best.driver; jackDriver(best, dr); }
   P.state = 'car'; P.veh = best; best.driver = P; CAM.yaw = best.a; CAM.snap = 1; best.ai = null; P.vx = P.vz = 0; sfx.play('door');

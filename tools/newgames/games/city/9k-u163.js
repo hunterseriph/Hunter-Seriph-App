@@ -40,7 +40,7 @@ function stepStreetLife(dt) { if (G.interior || !P || G.mode !== 'play') return;
   var roll = Math.random();
   // a bench nearby: sit on it (maybe with a joint)
   if (roll < 0.3 && typeof SEATS !== 'undefined') { var best = null; SEATS.forEach(function (s) { if (s.kind === 'bench' && !s.taken && Math.abs(s.x - x) < 30 && Math.abs(s.z - z) < 30) best = best || s; });
-    if (best) { best.taken = 1; var smoke = Math.random() < 0.35; mk(best.x - x - Math.sin(best.a) * 0.08, best.z - z - Math.cos(best.a) * 0.08, best.a, function (Q, p) { var S = sitPose('bench', p.smoke, G.t + p.id * 3, 0, 0); for (var k in S) Q[k] = S[k]; }, { fixY: best.y, smoke: smoke, seat: best }); return; } }
+    if (best) { best.taken = 1; var smoke = Math.random() < 0.35; mk(best.x - x - Math.sin(best.a) * 0.08 + Math.cos(best.a) * 0.42, best.z - z - Math.cos(best.a) * 0.08 - Math.sin(best.a) * 0.42, best.a, /* update 166: they sit at one end and leave room for you */ function (Q, p) { var S = sitPose('bench', p.smoke, G.t + p.id * 3, 0, 0); for (var k in S) Q[k] = S[k]; }, { fixY: best.y, smoke: smoke, seat: best }); return; } }
   if (roll < 0.55) { var n = 2 + (Math.random() < 0.4 ? 1 : 0); for (var i = 0; i < n; i++) { var ang = i / n * 6.283, ox = Math.sin(ang) * 0.75, oz = Math.cos(ang) * 0.75; mk(ox, oz, Math.atan2(-ox, -oz), poseChat); } return; }
   if (roll < 0.72) { mk(0, 0, Math.random() * 6.283, posePhoneP); return; }
   if (roll < 0.86 && night && st === 'redlight') { for (var d2 = 0; d2 < 3; d2++) { var pd = mk(rnd(-1.5, 1.5), rnd(-1.5, 1.5), Math.random() * 6.283, null); pd.danceT = 1e9; } return; }

@@ -125,7 +125,7 @@ var RADIO2 = {
   ads: [
     'Insurance! Wrecked your car? Wrecked somebody else\'s? Cum City Insurance. We pay out. Eventually. Call us on your phone today.',
     'Hungry? Order Combat Stims straight to your door! Delivered by scooter in under five minutes or your next one is free. Side effects include winning.',
-    'Need a ride? Cum Cabs! Wherever you are, whatever you have done, we will take you there. No questions. Some screaming.',
+    'Need a ride? Spooger! Wherever you are, whatever you have done, we will take you there. No questions. Some screaming.',
     'Cum Motors summer sale! Every car must go. Most of them already went. Somebody keeps stealing them.',
     'The SprayStation! Every game in Cum City, on your telly, on your sofa. Cartridges at Potbelly\'s Arcade. Four locations. Play responsibly. Or don\'t.',
     'Joff\'s Pineapple Pizzaria. Pineapple belongs on pizza. Fight me. Two for one on Tuesdays.',
