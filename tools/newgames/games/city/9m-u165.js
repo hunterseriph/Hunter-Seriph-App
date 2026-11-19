@@ -24,6 +24,7 @@ function ribbonTile(M0, NAT, i, j, k, d, h00, h10, h01, h11) {
 RE.forEach(function (E, i) { E.__ri = i; });
 /* the back of a pavement next to grass follows the road's curve (cut on a 1 m grid, so the edge is smooth, not 4 m steps) */
 function paveEdge(M0, NAT, i, j, d, own) {
+  if (own === undefined && d && /^(downtown|redlight|cafe|labs|industrial|docks|site|factory)$/.test(d.style)) return false; /* update 167: town pavement is never turned into grass */
   var ax = i * CT, az = j * CT, nk = own === undefined ? -1 : own;
   [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var k2 = KM[nj * MW + ni]; if (nk < 0 && (k2 === K_GRASS || k2 === K_FOREST || k2 === K_FIELD || k2 === K_PARK || k2 === K_DIRT)) nk = k2; }); if (nk < 0) return false;
   var N = 4, c = CT / N, F = []; for (var v = 0; v <= N; v++) for (var u = 0; u <= N; u++) F.push(roadF(ax + u * c, az + v * c) - PAVEW);

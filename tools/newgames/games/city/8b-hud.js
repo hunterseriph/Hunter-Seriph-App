@@ -47,7 +47,7 @@ function drawHud() {
   tx(clock, rx - rr, by0, { col: '#f1e7d0', size: 10 }); tx(sd, rx - rr + tw2(clock, 10) + 6, by0 + 3, { col: '#a6968f', size: 5 }); tx(dn, rx - rr, by0 + 12, { col: '#ffe36a', size: 6 });
   drawStatus(ctx);
   // drunk/high/pilled and the boost, the radio
-  var st = []; if (G.drunk > 0.1) st.push('DRUNK'); if (G.high > 0.1) st.push('HIGH'); if (G.pilled > 0.1) st.push('PILLED'); if (st.length) tx(st.join(' · '), 10, 76, { col: '#c48aff', size: 7 });
+  var st = []; if (G.drunk > 0.1) st.push('DRUNK'); if (G.high > 0.1 && !(G.stim > 0)) st.push('HIGH'); if (G.pilled > 0.1) st.push('PILLED'); if (st.length) tx(st.join(' · '), 10, 76, { col: '#c48aff', size: 7 });
   if (G.radioName && G.radioT > 0) { G.radioT -= 1 / 60; var rn = G.radioName; ctx.globalAlpha = Math.min(1, G.radioT); tx(rn, Wd / 2 - tw2(rn, 10) / 2, 26, { col: '#ffe36a', size: 10 }); if (G.radioSong) tx(G.radioSong, Wd / 2 - tw2(G.radioSong, 6) / 2, 36, { col: '#f1e7d0', size: 6 }); ctx.globalAlpha = 1; }
   if (G.radioLine && P.state === 'car' && !G.radioLine.spoken) { var rl = G.radioLine.who + ': ' + G.radioLine.s, L3 = KIT.wrap(rl, Wd * 0.62, 6, 'body'); L3.slice(0, 3).forEach(function (l, i) { tx(l, Wd / 2 - tw2(l, 6) / 2, 44 + i * 7, { col: '#ffe36a', size: 6 }); }); }
   // mission text and timers
