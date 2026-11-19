@@ -39,7 +39,7 @@ function stepPeds(dt) {
     p.sayT = Math.max(0, p.sayT - dt); p.cool -= dt;
     if (p.dead) { p.deadT = (p.deadT || 0) + dt; p.vy -= 18 * dt; p.y += p.vy * dt; p.x += p.vx * dt * 0.5; p.z += p.vz * dt * 0.5; p.vx *= 0.9; p.vz *= 0.9; var gd = standY(p.x, p.z, p.y); if (p.y < gd) { p.y = gd; p.vy = 0; } continue; }
     if (p.downT > 0) { p.downT -= dt; p.vy -= 18 * dt; p.y += p.vy * dt; p.x += p.vx * dt; p.z += p.vz * dt; p.vx *= 0.92; p.vz *= 0.92; var g2 = standY(p.x, p.z, p.y); if (p.y < g2) { p.y = g2; p.vy = 0; } continue; }
-    var far = dist2(p.x, p.z, P.x, P.z) > 120 * 120; if (far && !p.mission) continue;
+    var far = dist2(p.x, p.z, P.x, P.z) > 120 * 120 && !(window.NEAROTHER && NEAROTHER(p.x, p.z, 120)); /* update 168: people near player two keep walking on the host */ if (far && !p.mission) continue;
     var tx = 0, tz = 0, spd = 1.25, d2p = Math.hypot(P.x - p.x, P.z - p.z);
     if (p.ctl) { p.ctl(p, dt); continue; } // missions and events drive their own people
     if (p.hostile || p.angry || (p.cop && SV.wanted > 0)) { // attack the player
