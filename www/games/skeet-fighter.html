@@ -1204,8 +1204,8 @@ function strike(t, m, dir) {
   t.hurtK = (m.low || t.crouch) ? 1 : (m.kb || 0) >= 100 ? 0 : (t.hurtK ? 0 : 1);
   if (t.team === 'p' && t.shieldT > 0) dmg *= 0.3;
   t.hp -= dmg; t.flash = 0.1; t.lastHitBy = from;
-  if (t.team === 'p') { t.meter = Math.min(100, t.meter + dmg * 0.5); G.hurtThisStage = true; if (dmg > 0) { G.combo = 0; } }
-  if (from && from.team === 'p' && t.team !== 'p') { from.meter = Math.min(100, from.meter + (m.meter || dmg * 0.5)); G.combo++; G.comboT = 1.4; G.best = Math.max(G.best || 0, G.combo); G.score += Math.round(dmg * 10) + G.combo * 5; G.tag = t; G.tagT = 2.5; if (m.heal) from.hp = Math.min(from.mhp, from.hp + m.heal); }
+  if (t.team === 'p') { t.meter = Math.min(100, t.meter + dmg * 0.5); G.hurtThisStage = true; if (dmg > 0) { G.combo = 0; } if (!G.duel && dmg > 0) t.inv = Math.max(t.inv || 0, m.kd || dmg >= 14 ? 1.1 : 0.6); /* update 169: a moment of i-frames after a hit */ }
+  if (from && from.team === 'p' && t.team !== 'p') { from.meter = Math.min(100, from.meter + (m.meter !== undefined && m.meter !== null ? m.meter : dmg * 0.5)); /* update 169: supers and EX moves don't refill it */ G.combo++; G.comboT = 1.4; G.best = Math.max(G.best || 0, G.combo); G.score += Math.round(dmg * 10) + G.combo * 5; G.tag = t; G.tagT = 2.5; if (m.heal) from.hp = Math.min(from.mhp, from.hp + m.heal); }
   if (G.duel && from && from.cpu && from.hero) from.meter = Math.min(100, from.meter + dmg * 0.6);
   if (G.duel && t.cpu && t.hero) t.meter = Math.min(100, t.meter + dmg * 0.4);
   if (from && from.def && from.def.drain) from.hp = Math.min(from.mhp, from.hp + dmg * 0.5);
@@ -1328,7 +1328,7 @@ function makePlayer(id) {
   return e;
 }
 function specialMove(s, kind, ex) {
-  var k = ex ? 1.5 : 1, m = MV({ an: s.an, st: s.st || 0.08, rc: s.rc || 0.22, ac: 0.06, n: (ex ? 'EX ' : '') + s.n, kind: kind, ex: ex, meter: 6, dmg: (s.dmg || 0) * k, kd: s.kd, lift: s.lift, kb: s.kb || 120, hs: 0.08, sfx: 'heavy', inv: s.inv || ex });
+  var k = ex ? 1.5 : 1, m = MV({ an: s.an, st: s.st || 0.08, rc: s.rc || 0.22, ac: 0.06, n: (ex ? 'EX ' : '') + s.n, kind: kind, ex: ex, meter: ex ? 0 : 2.5, dmg: (s.dmg || 0) * k, kd: s.kd, lift: s.lift, kb: s.kb || 120, hs: 0.08, sfx: 'heavy', inv: s.inv || ex });
   if (kind === 'fire') { m.ac = 0.05; m.shot = ex && s.ex ? s.ex : s.shot; m.triple = ex && s.ex && s.ex.triple; }
   if (kind === 'rise') { m.ac = 0.7; m.rc = 0.16; m.box = s.box; m.vh = s.vh * (ex ? 1.12 : 1); m.fwd = s.fwd; m.hits = s.hits + (ex ? 2 : 0); m.spin = s.spin; m.heal = s.heal; m.rise = 1; }
   if (kind === 'dash') { m.ac = s.dur; m.rc = 0.2; m.lunge = s.lunge * (ex ? 1.15 : 1); m.box = s.box; m.ghost = s.ghost; m.fx = s.fx; m.lift = s.lift || 160; }
@@ -1692,7 +1692,12 @@ function stepPlayers(dt) {
   G.pl.forEach(function (pl) { if (pl.out) return; P = pl; IN = pl.IN || null; if (pl.IN) { G.bot = !!pl.IN.bot; if (G.bot) botThink(); } try { stepPlayer(dt); } finally { IN = null; G.bot = gb; } physics(pl, dt); });
   P = me;
 }
-function stepFoes(dt) { var me = P; G.ents.forEach(function (e) { if (G.pl) P = foeTarget(e); stepFoe(e, dt); P = me; physics(e, dt); }); }
+function stepFoes(dt) { var me = P; G.ents.forEach(function (e) { if (G.pl) P = foeTarget(e); stepFoe(e, dt); P = me; physics(e, dt); unstick(e, dt); }); }
+/* update 169: some foes went up and stayed up. Held by nobody: let go. In the air too long or too high: they fall */
+function unstick(e, dt) { if (e.team !== 'f' || e.st === 'gone' || e.st === 'dead') return;
+  if (e.st === 'grabbed' && (!e.heldBy || e.heldBy.held !== e || e.heldBy.hp <= 0)) { e.st = 'air'; e.heldBy = null; e.t = 0; if (e.h <= 0) e.h = 0.01; e.vh = Math.min(e.vh || 0, 0); }
+  if (e.h > 0.5 && e.st !== 'grabbed') { e.airT = (e.airT || 0) + dt; if (e.h > 260) e.vh = Math.min(e.vh, 0);
+    if (e.airT > 2.2) { if (e.st !== 'air' && e.st !== 'thrown') { e.st = 'air'; e.t = 0; e.mv = null; } e.vh = Math.min(e.vh, -160); } } else e.airT = 0; }
 function foeTarget(e) {
   var live = G.pl.filter(function (p) { return !p.out && p.st !== 'dead'; }); if (!live.length) return G.pl[0];
   for (var i = 0; i < live.length; i++) if (live[i].heldBy === e) return live[i];
@@ -2574,7 +2579,7 @@ function repOf(a) {
   if (e.bid) { var d = BOSSES[e.bid]; e.def = e.superOn && d.super ? Object.assign({}, d, { n: d.super.n }) : d; e.spr = e.superOn && d.super ? d.super.spr : d.spr; }
   if (aid && BOSSES[aid]) { e.def = BOSSES[aid]; e.spr = e.def.spr; }
   // smooth the moves between snaps
-  if (e._new) { e._new = 0; e.tx = e.x; e.tz = e.z; e.th = e.h; } else { e.tx = e.x; e.tz = e.z; e.th = e.h; e.x = e.px; e.z = e.pz; e.h = e.ph; }
+  if (e._new) { e._new = 0; e.tx = e.x; e.tz = e.z; e.th = e.h; } else { e.tx = e.x; e.tz = e.z; e.th = e.h; e.x = e.px; e.z = e.pz; e.h = e.ph; } e.sAge = 0;
   return e;
 }
 function guestSnap(s) {
@@ -2610,7 +2615,7 @@ function guestEv(e) { if (e.k === 'splat') G.splat = 1.4; }
 function guestStep(dt) {
   G.t += dt; guestSendInput();
   var k = Math.min(1, dt * 16);
-  for (var id in REP) { var e = REP[id]; if (e.tx === undefined) continue; if (Math.abs(e.tx - e.x) > 120) { e.x = e.tx; e.z = e.tz; e.h = e.th; } e.x += (e.tx - e.x) * k; e.z += (e.tz - e.z) * k; e.h += (e.th - e.h) * k; e.px = e.x; e.pz = e.z; e.ph = e.h; }
+  for (var id in REP) { var e = REP[id]; if (e.tx === undefined) continue; e.sAge = (e.sAge || 0) + dt; var ag = Math.min(e.sAge, 0.15), ex = e.tx + (e.vx || 0) * ag, eh = e.th > 0 || e.vh > 0 ? Math.max(0, e.th + (e.vh || 0) * ag - GRAV * 0.5 * ag * ag) : e.th; /* update 169: guess ahead a little */ if (Math.abs(e.tx - e.x) > 120) { e.x = e.tx; e.z = e.tz; e.h = e.th; } e.x += (ex - e.x) * k; e.z += (e.tz - e.z) * k; e.h += (eh - e.h) * k; e.px = e.x; e.pz = e.z; e.ph = e.h; }
   G.shots.forEach(function (b) { b.x += b.vx * dt; b.z += (b.vz || 0) * dt; if (b.grav) { b.vh -= GRAV * 0.9 * dt; b.h = Math.max(0, b.h + b.vh * dt); } });
   stepFx(dt); if (G.splat > 0) G.splat -= dt; if (G.cutin) G.cutin.t += dt; if (G.callout) { G.callout.t -= dt; if (G.callout.t <= 0) G.callout = null; }
   if (G.duel && G.duel.phase === 'fight') G.duel.clock = Math.max(0, G.duel.clock - dt);

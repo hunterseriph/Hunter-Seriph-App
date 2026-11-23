@@ -1450,7 +1450,7 @@ function startRace(o) {
   var boxes = [], drops = [], pads = [], ramps = [];
   (def.boxes || []).forEach(function (f) { var q = T.at(f); [-0.6, -0.2, 0.2, 0.6].forEach(function (k) { var p = T.pos(q.i, k * def.hw); boxes.push({ x: p.x, z: p.z, y: q.y, t: 0, ph: Math.random() * 6 }); }); });
   (def.drops || []).forEach(function (d) { var i0 = T.idx(d[0]); for (var k = 0; k < d[2]; k++) { var p = T.pos(i0 + k * 2, d[1] * def.hw * 0.7); drops.push({ x: p.x, z: p.z, y: p.y, t: 0 }); } });
-  (def.boosts || []).forEach(function (b) { var q = T.at(b[0]), lat = b[1] * def.hw * 0.6, i0 = q.i; pads.push({ i: i0, lat: lat, len: 3 }); for (var k = 0; k < 3; k++) { var a = T.S[(i0 + k) % T.N], c2 = T.S[(i0 + k + 1) % T.N]; var P = function (s, l) { return [s.x + s.nx * (lat + l), s.y + 0.04, s.z + s.nz * (lat + l)]; }; m.quad(P(a, 1.8), P(c2, 1.8), P(c2, -1.8), P(a, -1.8), [0, 1, 0, 0, 1, 0, 1, 1], A.tile('arrow'), mulc(def.light, 1.2), -1.5); } });
+  (def.boosts || []).forEach(function (b) { var q = T.at(b[0]), lat = b[1] * def.hw * 0.6, i0 = q.i; pads.push({ i: i0, lat: lat, len: 3 }); for (var k = 0; k < 3; k++) { var a = T.S[(i0 + k) % T.N], c2 = T.S[(i0 + k + 1) % T.N]; var P = function (s, l) { return [s.x + s.nx * (lat + l), s.y + 0.04, s.z + s.nz * (lat + l)]; }; m.quad(P(a, 1.8), P(c2, 1.8), P(c2, -1.8), P(a, -1.8), [0, 0, 0, 1, 1, 1, 1, 0], A.tile('arrow'), mulc(def.light, 1.2), -1.5); /* update 169: they pointed backwards */ } });
   (def.ramps || []).forEach(function (r) { var q = T.at(r[0]); ramps.push({ i: q.i, k: r[1] }); buildRamp(m, T, A, q.i, def); });
   (def.belts || []).forEach(function (b) { var i0 = T.idx(b[0]), n = Math.round(b[1] * T.N); for (var k = 0; k < n; k++) { var a = T.S[(i0 + k) % T.N], c3 = T.S[(i0 + k + 1) % T.N]; var P2 = function (s, l) { return [s.x + s.nx * l, s.y + 0.03, s.z + s.nz * l]; }; m.quad(P2(a, def.hw), P2(c3, def.hw), P2(c3, -def.hw), P2(a, -def.hw), [0, k, 0, k + 1, def.hw / 2, k + 1, def.hw / 2, k], A.tile('belt'), mulc(def.light, 1), -2); } });
   bakeLights(m, B.lights); m.upload();
@@ -1536,7 +1536,8 @@ function driveKart(k, inp, dt) {
   }
   // steering and drifting
   var st = inp.steer * (k.revT > 0 && !k.ai ? -1 : 1) + (k.wobT > 0 ? Math.sin(R.t * 23 + k.slot) * 0.5 : 0) + (k.splatT > 0 && k.ai ? Math.sin(R.t * 7 + k.slot) * 0.35 : 0), sv = Math.min(1, Math.abs(k.spd) / 9) * (k.spd < 0 ? -1 : 1), rate = k.turn * (1 - 0.22 * Math.max(0, k.spd) / Math.max(1, k.top));
-  if (control && !k.air && inp.drift && !k.driftHeld && Math.abs(st) > 0.3 && k.spd > 10) { k.drift = st > 0 ? 1 : -1; k.driftT = 0; k.driftLvl = 0; k.hopT = 0.18; }
+  if (inp.drift && !k.driftHeld) k.dPress = 0.5; k.dPress = Math.max(0, (k.dPress || 0) - dt); if (k.air && inp.drift) k.dPress = Math.max(k.dPress, 0.2); /* update 169: drift didn't always catch */
+  if (control && !k.air && !k.drift && inp.drift && k.dPress > 0 && Math.abs(st) > 0.25 && k.spd > 8) { k.drift = st > 0 ? 1 : -1; k.driftT = 0; k.driftLvl = 0; k.hopT = 0.18; }
   if (control && k.air && inp.drift && !k.driftHeld && k.trickable) { k.trick = 1; k.trickable = false; k.trickT = 0.45; sfx.play('jump'); }
   k.driftHeld = inp.drift;
   if (k.drift && (!inp.drift || k.spd < 6 || !control)) { // let go: the boost for how long you held it
@@ -1600,6 +1601,8 @@ function driveKart(k, inp, dt) {
   var dot = Math.cos(k.yaw) * loc.s.tx + Math.sin(k.yaw) * loc.s.tz;
   if (dot < -0.3 && k.spd > 3) k.wrongT += dt; else k.wrongT = Math.max(0, k.wrongT - dt * 2);
   // stuck (AI): turn back towards the road
+  if (R.chain && !k.ai && !k.remote && !k.puppet && R.phase === 'go' && !k.done && !k.air) { if (dot < -0.35 && !(k.spinT > 0)) k.turnT = (k.turnT || 0) + dt; else k.turnT = 0; /* update 169: turned round in the chain race: you're put back on the track */
+    if (k.turnT > 1.2) { var rp = T.pos(loc.i, Math.max(-def.hw * 0.5, Math.min(def.hw * 0.5, loc.lat))); k.x = rp.x; k.z = rp.z; k.y = rp.y; k.yaw = Math.atan2(loc.s.tz, loc.s.tx); k.spd = Math.max(6, Math.abs(k.spd) * 0.5); k.drift = 0; k.turnT = 0; k.wrongT = 0; k.invT = Math.max(k.invT || 0, 1); if (k === R.me) { R.chainMsg = { s: 'BACK ON TRACK', t: 1 }; sfx.play('select'); } } }
   if (k.ai && R.phase === 'go' && !k.done) { if (Math.abs(k.spd) < 2) k.stuckT += dt; else k.stuckT = 0; if (k.stuckT > 2.2) { var p = T.pos(loc.i, 0); k.x = p.x; k.z = p.z; k.y = p.y; k.yaw = Math.atan2(loc.s.tz, loc.s.tx); k.spd = 5; k.stuckT = 0; } }
 }
 function angDiff(a, b) { var d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; }
@@ -1737,16 +1740,17 @@ function say(k, why) {
 /* ---------- the world ticking along ---------- */
 function stepRace(dt) {
   var R = RACE; if (!R) return; R.t += dt; R.phaseT += dt;
-  if (R.phase === 'intro') { if (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start')) { R.phase = 'count'; R.phaseT = 0; R.count = 3; R.karts.forEach(function (q) { q.rpm = 0; }); sfx.play('tick'); } }
+  if (R.phase === 'intro') { if (R.net === 'client' ? (R.hostPh && R.hostPh !== 'intro') : (R.phaseT > 3.2 || KIT.pressed('a') || KIT.pressed('start'))) { R.phase = 'count'; R.phaseT = R.net === 'client' ? (R.hostPh === 'count' ? Math.min(2.99, R.hostPt || 0) : 2.99) : 0; R.count = 3; R.karts.forEach(function (q) { q.rpm = 0; }); sfx.play('tick'); } }
   else if (R.phase === 'count') {
     var c = 3 - Math.floor(R.phaseT); if (c !== R.count && c > 0) { R.count = c; sfx.play('tick'); }
+    if (R.net === 'client') { if (R.hostPh === 'count' && Math.abs((R.hostPt || 0) - R.phaseT) > 0.2) R.phaseT = Math.min(2.99, R.hostPt || 0); if (R.hostPh !== 'go' && R.hostPh !== 'done') R.phaseT = Math.min(R.phaseT, 2.99); else R.phaseT = 3; } /* update 169: the guest's GO is the host's GO */
     if (R.phaseT >= 3) { R.phase = 'go'; R.phaseT = 0; R.t = 0; sfx.play('bell'); R.karts.forEach(function (k) { k.lapStart = 0; if (k.ai) { if (Math.random() < 0.45 * R.cls.ai) k.boostT = 0.8; } else { var r = k.rpm || 0, z = revZone(r); if (z === 'green') { k.boostT = Math.abs(r - 0.72) < 0.04 ? 1.4 : 1.0; sfx.play('power'); if (k === R.me) R.startMsg = { s: k.boostT > 1.2 ? 'PERFECT START!' : 'GOOD START!', t: 1.4 }; } else if (z === 'red') { k.spinT = 0.8; sfx.play('back'); if (k === R.me) R.startMsg = { s: 'OVER-REVVED!', t: 1.4 }; } k.rpm = 0; } }); }
   }
   if (R.phase === 'go' || R.phase === 'done') R.karts.forEach(function (k) { if (!k.done) k.time = R.t; }); // a finished kart's time stays where it crossed the line
   var CL = R.net === 'client';
   R.karts.forEach(function (k, i) {
     if (k.puppet) { puppetStep(k, dt); return; } // another player's kart, or anything else the host runs: shown where the host says
-    if (k.remote) { if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } return; } // a player on another machine drives this one; their reports move it
+    if (k.remote) { remoteGlide(k, dt); if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } return; } // a player on another machine drives this one; their reports move it
     var inp = k.ai || (R.phase === 'done') ? aiInput(k, dt) : playerInput(); driveKart(k, inp, dt);
     if (inp.chain && R.phase === 'go') chainPress(k);
     if (inp.item && R.phase === 'go') { if (CL) netSend({ t: 'use', back: !!inp.back, fwd: !!inp.fwd }); else useItem(k, inp); }
@@ -4133,7 +4137,7 @@ function netEmit(k, ev) { var pl = NET.players.filter(function (p) { return p.id
 function netReport(pi, s) { // a guest says where their kart is
   var R = RACE; if (!R || !R.net) return; var id = NET.players[pi].id, k = R.all.filter(function (q) { return q.netId === id; })[0]; if (!k) return;
   var g = k.netGuard > 0;
-  KF.forEach(function (f, i) { if (g && GUARD.indexOf(f) >= 0) return; if (s.v[i] !== undefined && s.v[i] !== null) k[f] = s.v[i]; });
+  var G2 = k.rnet || (k.rnet = {}), first = !k.rnetInit; KF.forEach(function (f, i) { if (g && GUARD.indexOf(f) >= 0) return; if (s.v[i] === undefined || s.v[i] === null) return; if (!first && (f === 'x' || f === 'y' || f === 'z' || f === 'yaw')) G2[f] = s.v[i]; else k[f] = s.v[i]; }); G2.age = 0; k.rnetInit = 1; /* update 169: smoothed (see remoteGlide) */
   k.air = !!s.air; k.half = !!s.half; if (s.done && !k.done) { k.done = true; R.places.push(k); } if (s.laps) k.laps = s.laps;
 }
 function netUse(pi, m) { var R = RACE; if (!R || R.phase !== 'go') return; var id = NET.players[pi].id, k = R.karts.filter(function (q) { return q.netId === id; })[0]; if (k) useItem(k, { back: m.back, fwd: m.fwd }); }
@@ -4142,7 +4146,7 @@ function netTick(dt) {
   var R = RACE; R.all.forEach(function (k) { if (k.netGuard > 0) k.netGuard -= dt; });
   netAcc += dt; if (netAcc < 1 / NETHZ) return; netAcc = 0;
   var fx = R.fx.filter(function (f) { if (f.sent) return false; f.sent = 1; return true; }).map(function (f) { return [f.k, r3(f.x), r3(f.y), r3(f.z), r3(f.t), r3(f.vx), r3(f.vy), r3(f.vz), f.big ? 1 : 0]; });
-  var X = R.evs, m = { t: 'snap', T: r3(R.t), ph: R.phase, live: R.karts.map(function (k) { return k.idx; }),
+  var X = R.evs, m = { t: 'snap', T: r3(R.t), ph: R.phase, pt: r3(R.phaseT), rid: R.rid, live: R.karts.map(function (k) { return k.idx; }),
     k: R.all.map(function (k) { return SF.map(function (f) { return r3(k[f]); }).concat([ITEMKEYS.indexOf(k.item), k.done ? 1 : 0, k.air ? 1 : 0]); }),
     p: R.proj.map(function (p) { return [p.k, r3(p.x), r3(p.y), r3(p.z), r3(p.a || 0)]; }),
     tr: R.traps.map(function (t) { return [t.k, r3(t.x), r3(t.y), r3(t.z), t.r || 1.3, t.air ? 1 : 0]; }),
@@ -4163,7 +4167,7 @@ function netClientTick(dt) {
   netSend({ t: 'st', s: { v: KF.map(function (f) { return r3(k[f]); }), air: k.air ? 1 : 0, half: k.half ? 1 : 0, done: k.done ? 1 : 0, laps: k.done ? k.laps : null } }, true);
 }
 function netSnap(m) {
-  var R = RACE; if (!R || R.net !== 'client') return; R.snapT = 0; R.hostT = m.T;
+  var R = RACE; if (!R || R.net !== 'client') return; if (m.rid !== undefined && R.rid !== undefined && m.rid !== R.rid) return; /* update 169: a late picture of the last race (its drops) is ignored */ R.snapT = 0; R.hostT = m.T; R.hostPh = m.ph; R.hostPt = m.pt;
   if (m.live) R.karts = m.live.map(function (i) { return R.all[i]; }).filter(Boolean);
   m.k.forEach(function (v, i) {
     var k = R.all[i]; if (!k) return; var n = SF.length, it = v[n] >= 0 ? ITEMKEYS[v[n]] : null;
@@ -4185,6 +4189,8 @@ function netSnap(m) {
   if (m.cn && R.chain) m.cn.forEach(function (c) { var f = R.all[c[0]], to = R.all[c[1]]; if (f && to && f.team) { R.fx.push({ sent: 1, k: 'pulse', team: f.team.i, from: f === f.team.a ? 0 : 1, t: 0.45, item: 1 }); if (to === R.me) { R.chainMsg = { s: 'GOT AN ITEM FROM ' + f.c.n.toUpperCase(), t: 1.3 }; sfx.play('select'); } } });
   if (m.gates && R.gates) m.gates.forEach(function (got, i) { var g = R.gates[i]; if (!g) return; g.got = {}; got.forEach(function (l) { g.got[l] = 1; }); g.lap = g.got[R.me.lap] ? R.me.lap : -1; });
 }
+function remoteGlide(k, dt) { var T = k.rnet; if (!T || T.x === undefined) return; T.age = (T.age || 0) + dt; var lead = Math.min(T.age, 0.15), ax = T.x + Math.cos(T.yaw) * k.spd * lead, az = T.z + Math.sin(T.yaw) * k.spd * lead, f = Math.min(1, dt * 14);
+  if (Math.abs(ax - k.x) + Math.abs(az - k.z) > 25) { k.x = T.x; k.z = T.z; k.y = T.y; k.yaw = T.yaw; return; } k.x += (ax - k.x) * f; k.z += (az - k.z) * f; k.y += (T.y - k.y) * f; k.yaw += angDiff(T.yaw, k.yaw) * f; }
 function puppetStep(k, dt) { // glide towards where the host last saw it, guessing ahead by its speed
   var T = k.net; if (!T) return; T.age += dt;
   var ax = T.x + Math.cos(T.yaw) * T.spd * T.age, az = T.z + Math.sin(T.yaw) * T.spd * T.age, f = Math.min(1, dt * 12);
@@ -4204,7 +4210,7 @@ function netEvent(m) {
 function netClientStart(m) {
   var o = m.o; o.net = 'client'; o.meIdx = m.me;
   if (o.evId) { o.ev = expEvent(o.evId); o.defMod = evDefMod(o.ev); }
-  KIT.closeMenu(); MODE = 'race'; GP = null; EXPCUR = o.ev || null; startRace(o); RACE.mp = m.kind;
+  KIT.closeMenu(); MODE = 'race'; GP = null; EXPCUR = o.ev || null; startRace(o); RACE.mp = m.kind; RACE.rid = o.rid; RACE.me.drops = 0; RACE.got = 0;
 }
 
 /* =====================================================================================================
@@ -4232,10 +4238,10 @@ go = function (o) {
     o.player = rs.ch[0]; o.rivals = rs.ch.slice(1); o.humans = rs.humans; o.names = rs.names;
     if (o.ev && o.ev.t === 'nado') o.grid = null; // with a friend everyone starts in grid order
   }
-  o.meIdx = 0; o.net = 'host'; NET.locked = true;
+  o.meIdx = 0; o.net = 'host'; NET.locked = true; NET.rid = (NET.rid || 0) + 1; o.rid = NET.rid;
   var wire = {}; for (var q in o) if (q !== 'defMod' && q !== 'ev') wire[q] = o[q]; if (o.ev) wire.evId = o.ev.id; wire.net = 'client';
   NET.links.forEach(function (L) { var i = P.findIndex(function (p) { return p.id === L.remote; }); if (i > 0) L.send({ t: 'start', o: wire, me: i, kind: o.ev ? 'exp' : o.mode }); });
-  _goLocal(o);
+  _goLocal(o); RACE.rid = o.rid;
   RACE.all.forEach(function (k, i) { if (P[i] && i > 0) k.netId = P[i].id; });
 };
 /* ---------- the menus ---------- */
