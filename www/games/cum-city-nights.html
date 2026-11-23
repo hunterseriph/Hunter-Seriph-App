@@ -2038,6 +2038,19 @@ function districtName(x, z) { var d = dAt(x, z); return d.id === 'sea' ? 'Open S
   window.U167FIX = fixed;
 })();
 
+/* ---------- update 169 (his ask: a big beach with people sunbathing and beach parties): Seamen Beach is widened at load.
+   Along the south-east coast, every bit of open ground within about 70 m of the sea (not roads, pavements, buildings or
+   the park) becomes sand and part of Seamen Beach. The people, towels, parasols and parties are in 9z-u169e.js. ---- */
+(function () {
+  var bi = -1; DIST.forEach(function (d, i) { if (d.id === 'beach') bi = i; }); if (bi < 0) return;
+  var I0 = 540, I1 = 730, J0 = 520, J1 = 740, R = 18, dist = new Int16Array(MW * MH).fill(999), Q = [];
+  for (var j = J0 - R; j < J1 + R; j++) for (var i = I0 - R; i < I1 + R; i++) { if (i < 0 || j < 0 || i >= MW || j >= MH) continue; var t = j * MW + i; if (isWaterK(KM[t]) && DIST[DM[t]].id === 'sea') { dist[t] = 0; Q.push(t); } }
+  for (var h = 0; h < Q.length; h++) { var t0 = Q[h], d = dist[t0]; if (d >= R) continue; var i0 = t0 % MW, j0 = (t0 - i0) / MW;
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (q) { var ni = i0 + q[0], nj = j0 + q[1]; if (ni < I0 || nj < J0 || ni >= I1 || nj >= J1) return; var tn = nj * MW + ni; if (dist[tn] <= d + 1) return; var k = KM[tn];
+      if (!(k === K_GRASS || k === K_FOREST || k === K_FIELD || k === K_DIRT || k === K_SAND || k === K_ROCK)) return; var st = DIST[DM[tn]].style; if (st === 'park' || st === 'downtown' || st === 'docks') return; dist[tn] = d + 1; Q.push(tn); }); }
+  var n = 0; for (var t2 = 0; t2 < MW * MH; t2++) if (dist[t2] > 0 && dist[t2] <= R) { KM[t2] = K_SAND; DM[t2] = bi; n++; }
+  window.BEACHN = n; })();
+
 /* ---------- Cum City's own paint: ground, roads, every kind of wall and roof, signs, adverts (32 px painters, 64 px hi paints) ---------- */
 (function () {
   function win(p, x, y, w, h, glass, frame, lit) { p.rect(x - 1, y - 1, w + 2, h + 2, frame); p.rect(x, y, w, h, glass); p.rect(x, y, w, 1, shade(glass, 1.4)); p.rect(x + 1, y + 1, 1, Math.max(1, h - 3), shade(glass, 1.6)); if (lit) p.rect(x + 2, y + h - 3, w - 3, 2, lit); }
@@ -3003,7 +3016,7 @@ var LMC = {
     [-1.5, 1.5].forEach(function (u) { var q0 = Pt(u, 0), q1 = Pt(u, L); tub(o.m, [q0[0], y + 1.0, q0[1]], [q1[0], y + 1.0, q1[1]], 0.05, 0.05, '#5a3a20', 4); });
     for (var k = 0; k < L; k += 0.8) { var a1 = Pt(-1.5, k), a2 = Pt(1.5, k + 0.8); addBox(Math.min(a1[0], a2[0]), Math.min(a1[1], a2[1]), Math.max(a1[0], a2[0]), Math.max(a1[1], a2[1]), y - 0.6, y).top = 1; }
     var e = Pt(0, L - 1.5), lp = Pt(1.2, L - 0.5); tub(o.m, [lp[0], y, lp[1]], [lp[0], y + 3.2, lp[1]], 0.06, 0.05, '#1a1a1e', 5); ell(o.glow, lp[0], y + 3.3, lp[1], 0.22, 0.28, 0.22, '#fff2c8', 6, 4);
-    var bs = Pt(-0.8, L - 3); sfDraw(o.m, 'bench', bs[0], y, bs[1], a + Math.PI / 2, o.glow); var sg = Pt(0, -1); sign(o.m, null, sg[0], sg[1], a + Math.PI, groundY(sg[0], sg[1]), 'sg_fish', 2.6);
+    var bs = Pt(-0.8, L - 3); sfDraw(o.m, 'bench', bs[0], y, bs[1], a + Math.PI / 2, o.glow); var sg = Pt(-3.2, -10.5); /* update 169: the sign stands beside the way on, not in the middle of it */ sign(o.m, null, sg[0], sg[1], a + Math.PI, groundY(sg[0], sg[1]), 'sg_fish', 2.6);
     p.end = { x: e[0], z: e[1], y: y, a: a }; o.r = 50; o.lights = [{ x: lp[0], y: y + 3, z: lp[1], c: [1, 0.9, 0.7], r: 10 }]; },
   view: function (o, p) { var y = groundY(p.x, p.z), X = p.x, Z = p.z; tub(o.m, [X, y, Z], [X, y + 1.1, Z], 0.08, 0.08, '#2a3a2a', 5); boxC(o.m, X - 0.35, y + 1.1, Z - 0.2, X + 0.35, y + 1.45, Z + 0.25, '#2a4a2a'); [-0.15, 0.15].forEach(function (s) { tub(o.m, [X + s, y + 1.3, Z + 0.2], [X + s, y + 1.3, Z + 0.45], 0.1, 0.1, '#1a1a1e', 6, { cap: 1 }); }); boxC(o.m, X + 0.8, y, Z - 0.3, X + 1.6, y + 0.8, Z + 0.3, '#6a645e'); o.r = 20; }
 };
@@ -3092,6 +3105,7 @@ function sign(m, glow, x, z, a, y, txt, w, post) { var c = Math.cos(a), s = Math
 var HDONE = {};
 (function () { var bd = building; building = function (m, night, fr, glow, b, lamps) { bd(m, night, fr, glow, b, lamps); if (b.style === 'house' || b.style === 'suburb') houseDress(m, glow, b); }; })();
 function bldAt(x, z) { var ls = near(BGRID, x, z, 1); for (var k = 0; k < ls.length; k++) { var q = ls[k]; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3) return q; } return null; }
+var DRIVES = [];
 function houseDress(m, glow, b) {
   var F = frontFace(b), nx = F.n[0], nz = F.n[2], ux = F.R[0] - F.L[0], uz = F.R[1] - F.L[1], wF = Math.hypot(ux, uz) || 1, mx = (F.L[0] + F.R[0]) / 2, mz = (F.L[1] + F.R[1]) / 2, first = !HDONE[b.i], d = dAt(mx, mz);
   ux /= wF; uz /= wF; HDONE[b.i] = 1;
@@ -3104,7 +3118,7 @@ function houseDress(m, glow, b) {
   // the drive, on whichever side is free
   var side = 0; [r1 < 0.5 ? -1 : 1, r1 < 0.5 ? 1 : -1].some(function (sd) { var c = wF / 2 + 1.7, p = at(sd * c, -2.5); if (!bldAt(p[0], p[1]) && !bldAt(at(sd * c, -0.5)[0], at(sd * c, -0.5)[1])) { side = sd; return true; } return false; });
   if (side) { var tc = side * (wF / 2 + 1.7); flat(tc - 1.35, tc + 1.35, -4.5, D, TL(groundTile(K_ROAD, d)), 0.035, uvR(0.7, (D + 4.5) / 4));
-    if (r2 < 0.62 && !(b.shop && b.shop.indexOf('home') === 0)) { var cp = at(tc, -1.6), cy = groundY(cp[0], cp[1]); car3(m, cp[0], cp[1], a, cy, ['#c4121c', '#f1e7d0', '#2a4a6a', '#12040a', '#3a6a3a', '#5a5a62', '#ffe36a'][Math.floor(r3 * 7)]); if (first) addPost(cp[0], cp[1], 1.1, cy, cy + 1.5); }
+    if (r2 < 0.62 && !(b.shop && b.shop.indexOf('home') === 0) && first) { var cp = at(tc, -1.6); /* update 169: a real car you can get in, made when you come near (DRIVES, stepDrives) */ DRIVES.push({ x: cp[0], z: cp[1], a: a + (r4 < 0.5 ? Math.PI : 0), c: Math.floor(r3 * 7), b: b.i }); }
     // two wheelie bins by the drive
     for (var q = 0; q < 2; q++) { var bp = at(tc + side * 1.75, 0.3 + q * 0.75), by = groundY(bp[0], bp[1]), bc = ['#2a3a2a', '#3a3a5a', '#5a2a1a'][Math.floor((r4 + q * 0.4) * 3) % 3]; boxR(m, bp[0], bp[1], a, 0.3, 0.33, by, by + 1.0, bc); boxR(m, bp[0], bp[1], a, 0.32, 0.37, by + 1.0, by + 1.08, bc); } }
   // the fence or hedge along the front, with a gap for the path and the drive
@@ -4998,7 +5012,7 @@ var _hurtPlayer = hurtPlayer;
 hurtPlayer = function (dmg, by) { if (G.stim > 0) dmg *= 0.5; return _hurtPlayer(dmg, by); };
 var _hurtPed = hurtPed;
 hurtPed = function (p, dmg, by, dir, car) { if (G.stim > 0 && by === P) dmg *= 1.6; return _hurtPed(p, dmg, by, dir, car); };
-function stepStim(dt) { if (!(G.stim > 0)) return; G.stim -= dt; G.high = Math.max(G.high || 0, 0.35); if (G.stim <= 0) { G.stim = 0; toast('The stims wear off. You feel like a wet sock.'); G.drunk = Math.max(G.drunk || 0, 0.25); } }
+function stepStim(dt) { if (!(G.stim > 0)) return; G.stim -= dt; G.high = Math.max(G.high || 0, 0.35); if (G.stim <= 0) { G.stim = 0; toast('The high wears off.'); G.high = Math.max(G.high || 0, 0.25); /* update 169: a joint gets you high, not drunk */ } }
 
 /* ---------- update 156 (his rule): Sir Johnathan is Greebo's cat and goes wherever Greebo goes. Any Greebo in the
    city has the big black cat trotting at his heels (`p.cat`, drawn with HOM3D.cat()); when Greebo gets in a car the cat
@@ -5336,7 +5350,7 @@ var SEATS = [], SEATG = {};
 function addSeat(x, z, a, kind, o) { var k = Math.round(x * 2) + ',' + Math.round(z * 2); if (SEATG[k]) return; var s = { x: x, z: z, a: a, kind: kind, y: o && o.y !== undefined ? o.y : groundY(x, z) + (kind === 'bench' ? 0.6 : 0.45), fire: o && o.fire }; SEATG[k] = s; SEATS.push(s); }
 function seatNear() { var best = null, bd = 1.6 * 1.6; for (var i = 0; i < SEATS.length; i++) { var s = SEATS[i]; if (Math.abs(s.x - P.x) > 3 || Math.abs(s.z - P.z) > 3) continue; var d = dist2(s.x, s.z, P.x, P.z); if (d < bd) { bd = d; best = s; } } return best; }
 function sitDown(s) { G.seat = { s: s, t: 0, smoke: 0, puffT: 0 }; P.vx = P.vz = 0; sfx.play('select'); }
-function standUp() { var s = G.seat.s; G.seat = null; P.x = s.x + Math.sin(s.a) * 0.9; P.z = s.z + Math.cos(s.a) * 0.9; P.y = standY(P.x, P.z, P.y + 1); }
+function standUp() { var s = G.seat.s; G.seat = null; var off = s.kind === 'chair' ? -0.75 : 0.9; /* update 169: you get up from a chair backwards, not into the table */ P.x = s.x + Math.sin(s.a) * off; P.z = s.z + Math.cos(s.a) * off; P.y = standY(P.x, P.z, P.y + 1); }
 function lightJoint() { if (G.seat.smoke > 0) return; var have = SV.joints || 0; if (have <= 0) { toast('No joints left. Saba sells them.'); return; } SV.joints = have - 1; G.seat.smoke = 14; sfx.play('blip'); toast(pick(['You spark one up. Cum City slows right down.', 'A long drag. The streetlights go soft at the edges.', 'You light up. Somewhere a dog laughs.', 'Ahh. Everything is going to be fine.'])); }
 var _stepFoot158 = stepFoot; stepFoot = function (dt) {
   if (G.fish) { P.vx = P.vz = 0; P.sp = 0; return; } // fishing: the rod has your hands
@@ -7479,20 +7493,21 @@ function cabinOf(type) { if (CABIN[type] !== undefined) return CABIN[type]; var 
 
 /* ---- places to eat and drink get proper tables with chairs you can sit on (his ask: Uncle Beeb's had one table, too
    close to the bar) ---- */
-var DINE = { beebs: [16, 14], tb: [14, 12], amy: [14, 12], joff: [14, 12], greebo: [14, 12], ali: [14, 12], harold: [14, 12], jessiah: [14, 12] };
+var DINE = { beebs: [16, 14], tb: [14, 12], amy: [14, 12], joff: [14, 12], greebo: [14, 12], ali: [14, 12], harold: [14, 12], jessiah: [14, 12], cafe: [14, 12] };
 Object.keys(DINE).forEach(function (k) { var R0 = ROOMS[k]; if (!R0) return; R0.w = Math.max(R0.w || 10, DINE[k][0]); R0.d = Math.max(R0.d || 9, DINE[k][1]); });
 (function () {
   var rm = roomMesh; roomMesh = function (id) { var R0 = ROOMS[id]; if (!R0 || !DINE[id]) return rm(id); var keep = R0.props; R0.props = keep.filter(function (p) { return p !== 'table'; }); var RM = rm(id); R0.props = keep;
     var m = new R3.Mesh(), w = RM.w, d = RM.d, seats = [], wood = id === 'beebs' || id === 'jessiah' || id === 'tb' ? '#5a3a20' : '#3a2a2a', cloth = { amy: '#c4121c', joff: '#f1e7d0', greebo: '#f1e7d0', harold: '#3a1a4a', ali: '#e8c070' }[id];
-    var cols = [2.6, 5.6, w - 5.6, w - 2.6], rows = []; for (var z = 3.2; z <= d - 5.6; z += 2.9) rows.push(z);
-    rows.forEach(function (tz, ri) { cols.forEach(function (tx, ci) { if (rows.length * cols.length > 8 && ri === rows.length - 1 && (ci === 1 || ci === 2)) return;
-      tub(m, [tx, 0, tz], [tx, 0.74, tz], 0.06, 0.06, '#2a1a10', 6); tub(m, [tx, 0.0, tz], [tx, 0.04, tz], 0.3, 0.3, '#2a1a10', 8, { cap: 1 }); tub(m, [tx, 0.74, tz], [tx, 0.8, tz], 0.62, 0.62, cloth || wood, 12, { cap: 1 }); RM.boxes.push([tx - 0.55, tz - 0.55, tx + 0.55, tz + 0.55]);
+    // update 169 (his ask): four tables, two by two, with room to walk round them
+    var cols = [w * 0.3, w * 0.7], rows = [3.6, Math.min(d - 5.2, 6.8)];
+    rows.forEach(function (tz, ri) { cols.forEach(function (tx, ci) {
+      tub(m, [tx, 0, tz], [tx, 0.74, tz], 0.06, 0.06, '#2a1a10', 6); tub(m, [tx, 0.0, tz], [tx, 0.04, tz], 0.3, 0.3, '#2a1a10', 8, { cap: 1 }); tub(m, [tx, 0.74, tz], [tx, 0.8, tz], 0.62, 0.62, cloth || wood, 12, { cap: 1 }); RM.boxes.push([tx - 1.22, tz - 0.62, tx + 1.22, tz + 0.62]); /* the table and both chairs are solid */
       // what is on the table: pints in the tavern, plates elsewhere, a candle
       if (id === 'beebs' || id === 'tb') { tub(m, [tx - 0.2, 0.8, tz + 0.1], [tx - 0.2, 0.98, tz + 0.1], 0.06, 0.07, '#c88a20', 6, { cap: 1 }); ell(m, tx - 0.2, 1.0, tz + 0.1, 0.07, 0.03, 0.07, '#f1e7d0', 6, 3); tub(m, [tx + 0.18, 0.8, tz - 0.15], [tx + 0.18, 0.96, tz - 0.15], 0.06, 0.07, '#3a1a0a', 6, { cap: 1 }); }
       else { ell(m, tx - 0.22, 0.81, tz, 0.17, 0.02, 0.17, '#e8e4dc', 8, 2); ell(m, tx + 0.22, 0.81, tz, 0.17, 0.02, 0.17, '#e8e4dc', 8, 2); }
       tub(m, [tx, 0.8, tz], [tx, 0.92, tz], 0.03, 0.03, '#f1e7d0', 5, { cap: 1 });
       [[-1, Math.PI / 2], [1, -Math.PI / 2]].forEach(function (q, k) { var cx = tx + q[0] * 0.95, a = q[1]; boxC(m, cx - 0.22, 0.42, tz - 0.22, cx + 0.22, 0.48, tz + 0.22, wood); [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(function (l) { boxC(m, cx + l[0] - 0.03, 0, tz + l[1] - 0.03, cx + l[0] + 0.03, 0.42, tz + l[1] + 0.03, '#2a1a10'); });
-        var bx = cx - q[0] * 0.2; boxC(m, bx - 0.03 * 1, 0.48, tz - 0.22, bx + 0.03, 1.05, tz + 0.22, wood); seats.push({ id: 'ch' + ri + ci + k, x: cx + q[0] * 0.02, z: tz, a: a, kind: 'chair', y: 0.5 }); }); }); });
+        var bx = cx + q[0] * 0.2; boxC(m, bx - 0.03 * 1, 0.48, tz - 0.22, bx + 0.03, 1.05, tz + 0.22, wood); /* update 169: the chair back is on the far side, so you face the table */ seats.push({ id: 'ch' + ri + ci + k, x: cx + q[0] * 0.02, z: tz, a: a, kind: 'chair', y: 0.5 }); }); }); });
     if (id === 'beebs') { // a booth along the left wall and a fire for the cold nights
       boxC(m, 0.1, 0, d - 4.6, 0.9, 1.4, d - 2.2, '#4a1a14'); boxC(m, 0.1, 0, d - 4.6, 1.4, 0.45, d - 2.2, '#5a2018'); seats.push({ id: 'booth', x: 1.05, z: d - 3.4, a: Math.PI / 2, kind: 'sofa', y: 0.48 });
       boxC(m, w - 0.6, 0, 2.2, w, 1.6, 4.2, '#4a4440'); boxC(m, w - 0.5, 0, 2.6, w - 0.02, 1.0, 3.8, '#0a0606'); RM.fire = { x: w - 0.35, z: 3.2 }; }
@@ -7661,7 +7676,7 @@ WPN.hook = { n: 'Fapling Hook', hook: 1, dmg: 6, rate: 0.55, range: 70, mesh: 'h
     sw(dt, mi); /* aiming and lock-on as for a gun; the fire button is ours */ };
   /* fire is read here so it works with the aim, the trigger and the touch button */
   var sf = stepFoot; stepFoot = function (dt) {
-    if (!SV.hookTold && G.t > 6 && !G.cut && !G.mission) { SV.hookTold = 1; toast('New: the Fapling Hook. Swap to it, aim and fire at a wall, a car, a chopper or a person.', 6); }
+    if (!SV.hookTold && G.t > 6 && !G.cut && !G.mission && SV.weapons && SV.weapons.hook) { /* update 169: only once you have earned it */ SV.hookTold = 1; toast('New: the Fapling Hook. Swap to it, aim and fire at a wall, a car, a chopper or a person.', 6); }
     if (P.wpn === 'hook' && !HOOK && P.state === 'foot' && !G.cut && !G.talk && !P.swim && P.cool <= 0 && (KIT.pressed('x') || gpPressed(7))) fireHook();
     if (!HOOK) { if (P.roofV) return rideRoof(dt); return sf(dt); }
     var H = HOOK, A = anchor();
@@ -8993,6 +9008,611 @@ function guestCars() {
   var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepHorn(dt); deathWatch(dt); } catch (e) { if (!window.__u168err) { window.__u168err = 1; console.warn(e); } } };
   // the host's mission blips and marker follow him to player two (the guest's radar reads G.uses)
   var gs = guestStart; guestStart = function (m) { G.netSync = 0; PUPP = {}; PUPV = {}; NETPOP.last = -1; G.hostGivers = []; var r = gs(m); G.giverT = 0; return r; };
+})();
+
+/* ---------- update 169 (his playtest) ---------- */
+
+/* ---- RAISED PAVEMENTS ARE BACK (he asked why they went: update 165 flattened them when the roads became ribbons, and
+   the street furniture was left 15 cm in the air). Pavements stand 15 cm up again, cut cleanly along the road's real
+   edge: a 30 cm kerb stone runs along the road at the pavement's height, the pavement starts behind it, and wherever the
+   raised part meets lower ground there is a face down to it, so nothing is left floating or open underneath. People,
+   Cumhead and the furniture stand on top of it; cars still drive over the lip (NOPAVE). ---- */
+var PRAISE = 0.15, KERBW = 0.3;
+function raisedPt(x, z) { if (G.interior) return false; var i = Math.floor(x / CT), j = Math.floor(z / CT); if (i < 0 || j < 0 || i >= MW || j >= MH) return false;
+  var k = KM[j * MW + i]; if (k !== K_PAVE && k !== K_ROAD) return false; if (k === K_ROAD && !roadTileIsPave(i, j)) return false; return roadF(x, z) >= KERBW; }
+var RTP = {};
+function roadTileIsPave(i, j) { var key = j * MW + i; if (RTP[key] !== undefined) return RTP[key]; var r = false; [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni >= 0 && nj >= 0 && ni < MW && nj < MH && KM[nj * MW + ni] === K_PAVE) r = true; }); return (RTP[key] = r); }
+/* one 1 m cell split along f = 0: the part with f >= 0 is raised; returns the crossing segment (for the face) */
+function marchCell(C, f, up, low, skirt) { var hi = [], lo = [], X = [];
+  for (var q = 0; q < 4; q++) { var a = C[q], b = C[(q + 1) % 4], fa = f[q], fb = f[(q + 1) % 4]; if (fa >= 0) hi.push(a); else lo.push(a);
+    if ((fa >= 0) !== (fb >= 0)) { var t = fa / (fa - fb), p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; hi.push(p); lo.push(p); X.push(p); } }
+  if (hi.length >= 3) up(hi); if (lo.length >= 3 && low) low(lo); if (X.length === 2 && skirt) skirt(X[0], X[1]); }
+function raisedFace(M0, a, b, ff, T) { // a vertical face from the ground up to the pavement, facing the low side
+  var ya = groundY(a[0], a[1]), yb = groundY(b[0], b[1]), dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, n = [dz / l, 0, -dx / l];
+  var mx = (a[0] + b[0]) / 2 + n[0] * 0.15, mz = (a[1] + b[1]) / 2 + n[2] * 0.15; if (ff(mx, mz) >= 0) n = [-n[0], 0, -n[2]];
+  M0.quad([a[0], ya - 0.02, a[1]], [b[0], yb - 0.02, b[1]], [b[0], yb + PRAISE, b[1]], [a[0], ya + PRAISE, a[1]], uvR(l / 2, 0.15), T, lit(n, 0.85), n); }
+function raisedTile(M0, i, j, d, TP) { var ax = i * CT, az = j * CT, N = 4, c = CT / N, F = [], up = [0, 1, 0], TK = TL('kerb'), Lu = lit(up);
+  for (var v = 0; v <= N; v++) for (var u = 0; u <= N; u++) F.push(roadF(ax + u * c, az + v * c) - KERBW);
+  function poly(pts, h) { for (var q = 1; q < pts.length - 1; q++) { var A = pts[0], B = pts[q], C2 = pts[q + 1]; M0.tri([A[0], groundY(A[0], A[1]) + h, A[1]], [B[0], groundY(B[0], B[1]) + h, B[1]], [C2[0], groundY(C2[0], C2[1]) + h, C2[1]], [(A[0] - ax) / CT, (A[1] - az) / CT, (B[0] - ax) / CT, (B[1] - az) / CT, (C2[0] - ax) / CT, (C2[1] - az) / CT], TP, Lu, up); } }
+  function ff(x, z) { return roadF(x, z) - KERBW; }
+  for (var v2 = 0; v2 < N; v2++) for (var u2 = 0; u2 < N; u2++) { var C = [[ax + u2 * c, az + v2 * c], [ax + (u2 + 1) * c, az + v2 * c], [ax + (u2 + 1) * c, az + (v2 + 1) * c], [ax + u2 * c, az + (v2 + 1) * c]], f = [F[v2 * (N + 1) + u2], F[v2 * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2]];
+    marchCell(C, f, function (p) { poly(p, PRAISE); }, function (p) { poly(p, 0.005); }, function (a, b) { raisedFace(M0, a, b, ff, TK); }); }
+  // where the square meets ground that is not pavement (a yard, a lot, grass, a building's foot), the raised edge gets its face
+  function inT(x, z) { return x > ax && x < ax + CT && z > az && z < az + CT ? 1 : -1; }
+  [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(function (s) { var ni = i + s[0], nj = j + s[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var nk = KM[nj * MW + ni]; if (nk === K_PAVE || nk === K_ROAD && roadTileIsPave(ni, nj) || nk === K_ROAD || nk === K_BRIDGE) return;
+    for (var q = 0; q < N; q++) { var A, B, ia, ib;
+      if (s[1] === -1) { A = [ax + q * c, az]; B = [ax + (q + 1) * c, az]; ia = q; ib = q + 1; } else if (s[1] === 1) { A = [ax + q * c, az + CT]; B = [ax + (q + 1) * c, az + CT]; ia = N * (N + 1) + q; ib = ia + 1; }
+      else if (s[0] === -1) { A = [ax, az + q * c]; B = [ax, az + (q + 1) * c]; ia = q * (N + 1); ib = ia + N + 1; } else { A = [ax + CT, az + q * c]; B = [ax + CT, az + (q + 1) * c]; ia = q * (N + 1) + N; ib = ia + N + 1; }
+      if (F[ia] >= 0 && F[ib] >= 0) raisedFace(M0, A, B, inT, TK); } }); }
+/* pavement squares beside the road: raised and cut along the road (the other kinds of ground are drawn as before) */
+(function () { var rt = ribbonTile; ribbonTile = function (M0, NAT, i, j, k, d, h00, h10, h01, h11) {
+  var kk = k;
+  if (k === K_ROAD) { var f = roadF(i * CT + 2, j * CT + 2); if (!(f > -1.6)) return rt.apply(this, arguments); kk = -1;
+    var nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+    for (var q = 0; q < nb.length && kk !== K_PAVE; q++) { var ni = i + nb[q][0], nj = j + nb[q][1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) continue; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) kk = K_PAVE; else if (kk < 0 && nk !== K_ROAD && nk !== K_BRIDGE && !isWaterK(nk)) kk = nk; }
+    if (kk < 0) kk = K_PAVE; }
+  if (kk !== K_PAVE) return rt.apply(this, arguments);
+  var pe = paveEdge(M0, NAT, i, j, d); if (pe === true) return; if (pe) return rt.apply(this, arguments);
+  raisedTile(M0, i, j, d, TL(groundTile(K_PAVE, d))); }; })();
+/* the back of a pavement next to grass: the pavement part is raised too, with its face down to the grass */
+paveEdge = function (M0, NAT, i, j, d, own) {
+  if (own === undefined && d && /^(downtown|redlight|cafe|labs|industrial|docks|site|factory)$/.test(d.style)) return false;
+  var ax = i * CT, az = j * CT, nk = own === undefined ? -1 : own;
+  [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var ni = i + q[0], nj = j + q[1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) return; var k2 = KM[nj * MW + ni]; if (nk < 0 && (k2 === K_GRASS || k2 === K_FOREST || k2 === K_FIELD || k2 === K_PARK || k2 === K_DIRT)) nk = k2; }); if (nk < 0) return false;
+  var N = 4, c = CT / N, F = [], R = []; for (var v = 0; v <= N; v++) for (var u = 0; u <= N; u++) { var rf = roadF(ax + u * c, az + v * c); F.push(rf - PAVEW); R.push(rf - KERBW); }
+  if (F.every(function (x) { return x <= 0; })) { if (own === undefined) return false; } else if (F.every(function (x) { return x > 0; }) && own !== undefined) return false; if (own === undefined && F.every(function (x) { return x > 0; })) return nk;
+  var TP = TL(groundTile(K_PAVE, d)), TN = TL(groundTile(nk, d)), TK = TL('kerb'), up = [0, 1, 0];
+  function hOf(x, z) { return roadF(x, z) >= KERBW ? PRAISE : 0.005; }
+  function poly(pts, T, M, colf, raise) { if (pts.length < 3) return; for (var q = 1; q < pts.length - 1; q++) { var A = pts[0], B = pts[q], C2 = pts[q + 1]; M.tri([A[0], groundY(A[0], A[1]) + (raise ? hOf(A[0], A[1]) : 0), A[1]], [B[0], groundY(B[0], B[1]) + (raise ? hOf(B[0], B[1]) : 0), B[1]], [C2[0], groundY(C2[0], C2[1]) + (raise ? hOf(C2[0], C2[1]) : 0), C2[1]], [(A[0] - ax) / CT, (A[1] - az) / CT, (B[0] - ax) / CT, (B[1] - az) / CT, (C2[0] - ax) / CT, (C2[1] - az) / CT], T, colf, up); } }
+  function fPave(x, z) { return -(roadF(x, z) - PAVEW); }
+  for (var v2 = 0; v2 < N; v2++) for (var u2 = 0; u2 < N; u2++) { var C = [[ax + u2 * c, az + v2 * c], [ax + (u2 + 1) * c, az + v2 * c], [ax + (u2 + 1) * c, az + (v2 + 1) * c], [ax + u2 * c, az + (v2 + 1) * c]], ix = [v2 * (N + 1) + u2, v2 * (N + 1) + u2 + 1, (v2 + 1) * (N + 1) + u2 + 1, (v2 + 1) * (N + 1) + u2], f = ix.map(function (n) { return -F[n]; });
+    marchCell(C, f, function (p) { poly(p, TP, M0, lit(up), 1); }, function (p) { poly(p, TN, natural(nk) ? NAT : M0, cLit(i, j), 0); }, function (a, b) { raisedFace(M0, a, b, fPave, TK); }); }
+  return true; };
+/* the kerb stone is as high as the pavement now */
+kerbSeg = function (M0, ax, az, bx, bz, nx, nz) { var w = KERBW + 0.02, h = PRAISE + 0.004, ya = groundY(ax, az) + RIBY, yb = groundY(bx, bz) + RIBY, T = TL('kerb'), nn = [-nx, 0, -nz], top = [0, 1, 0];
+  var ax2 = ax + nx * w, az2 = az + nz * w, bx2 = bx + nx * w, bz2 = bz + nz * w, ya2 = groundY(ax2, az2), yb2 = groundY(bx2, bz2);
+  M0.quad([ax, ya - 0.03, az], [bx, yb - 0.03, bz], [bx, yb + h - RIBY, bz], [ax, ya + h - RIBY, az], uvR(1, 0.12), T, lit(nn, 0.9), nn);
+  M0.quad([ax, ya + h - RIBY, az], [bx, yb + h - RIBY, bz], [bx2, yb2 + h, bz2], [ax2, ya2 + h, az2], uvR(1, 0.12), T, lit(top, 1.15), top); };
+/* standing on it */
+(function () { var sy = standY; standY = function (x, z, y) { var g = sy(x, z, y); if (window.NOPAVE || G.interior) return g; var gy = groundY(x, z); if (g > gy + 0.3) return g; if (y !== undefined && y < gy - 0.5) return g; if (raisedPt(x, z)) return Math.max(g, gy + PRAISE); return g; };
+  raisedAt = function (x, z) { return raisedPt(x, z); }; })();
+
+/* ---------- update 169: bugs from his playtest ---------- */
+
+/* ---- you can't walk through cars, and you can jump onto them (bonnet and boot about 0.9 m, the roof on top of that;
+   standing on a moving car carries you along). Only while Cumhead is on foot (STANDCARS), so people and cars don't stand
+   on each other. ---- */
+function carList() { var L = VEH.slice(); var R = G.coop && G.coop.other; if (R && R.pv && L.indexOf(R.pv) < 0) L.push(R.pv); return L; }
+function carSolid(v) { return !!(v && v.t && v.t.cls === 'car' && v !== P.veh); }
+function carTopAt(v, lz) { var t = v.t, half = t.len / 2, cab = t.cab !== undefined ? t.cab : 0.22; // the roof over the cabin, the bonnet and boot lower
+  var hgt = t.hgt || 1.45; if (/truck|van|bus|icecream|hearse|ambulance|armytruck/.test(v.type)) return Math.abs(lz) < half - 0.1 ? hgt : hgt * 0.62; return Math.abs(lz) < t.len * cab ? hgt : hgt * 0.64; }
+var STANDCAR = null;
+(function () {
+  var sy = standY; standY = function (x, z, y) { var g = sy(x, z, y); if (!window.STANDCARS) return g; var best = g, bv = null; carList().forEach(function (v) { if (!carSolid(v) || Math.abs(v.x - x) > 7 || Math.abs(v.z - z) > 7) return;
+      var c = Math.cos(v.a), s = Math.sin(v.a), dx = x - v.x, dz = z - v.z, lx = dx * c - dz * s, lz = dx * s + dz * c; if (Math.abs(lx) > v.t.wid / 2 - 0.05 || Math.abs(lz) > v.t.len / 2 - 0.05) return;
+      var top = v.y + carTopAt(v, lz); if (y !== undefined && y < top - 0.45) return; if (top > best) { best = top; bv = v; } }); STANDCAR = bv; return best; };
+  var sf = stepFoot; stepFoot = function (dt) {
+    // riding along: the car under your feet moves you with it
+    if (STANDCAR && P.ground && !G.seat) { var v0 = STANDCAR; P.x += (v0.vx || Math.sin(v0.a) * (v0.sp || 0)) * dt; P.z += (v0.vz || Math.cos(v0.a) * (v0.sp || 0)) * dt; }
+    // getting in as the passenger comes first (he said player two just stood next to the car)
+    if (KIT.pressed('y') && !G.cut && !G.talk && !G.seat && typeof canBoard === 'function' && canBoard()) { boardPass(); return; }
+    window.STANDCARS = 1; STANDCAR = null; try { sf(dt); } finally { window.STANDCARS = 0; }
+    if (P.state !== 'foot' || G.interior || G.seat) return;
+    // pushed out of the side of any car you are not standing on
+    carList().forEach(function (v) { if (!carSolid(v) || v === STANDCAR || Math.abs(v.x - P.x) > 7 || Math.abs(v.z - P.z) > 7) return; var c = Math.cos(v.a), s = Math.sin(v.a), dx = P.x - v.x, dz = P.z - v.z, lx = dx * c - dz * s, lz = dx * s + dz * c;
+      var hx = v.t.wid / 2 + 0.3, hz = v.t.len / 2 + 0.3; if (Math.abs(lx) >= hx || Math.abs(lz) >= hz) return; if (P.y > v.y + carTopAt(v, lz) - 0.3) return; if (P.y < v.y - 1.2) return;
+      var px = hx - Math.abs(lx), pz = hz - Math.abs(lz); if (px < pz) lx = (lx < 0 ? -1 : 1) * hx; else lz = (lz < 0 ? -1 : 1) * hz;
+      P.x = v.x + lx * c + lz * s; P.z = v.z - lx * s + lz * c; }); };
+})();
+
+/* ---- mission givers can't be killed (they shrug it off and complain) ---- */
+var GIVERWHO = {}; MISSIONS.forEach(function (m) { if (m.who) GIVERWHO[m.who] = 1; });
+(function () { var hp = hurtPed; hurtPed = function (p, dmg, by, dir, car) { if (p && p.who && GIVERWHO[p.who] && !p.hostile && !p.mission && !p.boss) { p.hp = Math.max(p.hp || 50, 50); p.fear = Math.max(p.fear || 0, 1); if (!(p.sayT > 0)) say(p, pick(['Oi! Watch it!', 'Do you want the job or not?', 'Not the face!', 'I bruise easy, mate.', 'Rude.'])); return; } return hp.apply(this, arguments); }; })();
+
+/* ---- police you can see: officers with guns are drawn twice as far away as other people, and they don't shoot from further
+   than you can see them (he said invisible police followed him and he couldn't get away). A police car that has not seen
+   you for 40 s gives up and drives off. ---- */
+(function () {
+  var sh = shoot; shoot = function (who, W0) { if (who && who !== P && who.cop && !who.inVeh && Math.hypot(who.x - P.x, who.z - P.z) > 60) return; return sh(who, W0); };
+  var dfs = drawFun; drawFun = function () { dfs(); if (G.interior) return; PEDS.forEach(function (p) { if (p.inVeh || p.inside || !(p.cop || p.hostile) || p.dead) return; var d = dist2(p.x, p.z, CAM.x, CAM.z); if (d <= 75 * 75 || d > 150 * 150 || !inView(p.x, p.z, 3)) return; drawPed(p); }); };
+  var cd = copDrive; copDrive = function (v, dt) { var me = P.state === 'car' && P.veh ? P.veh : P; if (Math.hypot(v.x - me.x, v.z - me.z) < 70) v.ai.seenT = 0; else v.ai.seenT = (v.ai.seenT || 0) + dt;
+    if (v.ai.seenT > 40 && !v.ai.copHeli && v.type !== 'tank') { v.ai.cop = 0; v.ai.flee = 1; v.keep = 0; v.siren = 0; var r = nearestRoad(v.x, v.z, 40); if (r) { v.ai.E = r.E; v.ai.s = r.s; v.ai.back = false; v.ai.lane = r.E.w / 4; v.ai.want = 12; } return; } return cd(v, dt); };
+})();
+
+/* ---- co-op ---- */
+/* the other player is seen inside a shop when you are both in the same room (he said you couldn't see each other indoors) */
+function roomKey() { var I = G.interior; return I ? (I.id || '') + '|' + (I.home || '') + '|' + (I.key || '') : ''; }
+(function () {
+  var pk = packMe; packMe = function () { var o = pk(); o.rk = roomKey(); return o; };
+  var dws = drawWorldStuff; drawWorldStuff = function () { var R = G.coop && G.coop.other;
+    if (R && R.tg && (R.tg.rk || '') !== roomKey()) { var tg = R.tg, pv = R.pv; R.tg = null; R.pv = null; try { dws(); } finally { R.tg = tg; R.pv = pv; } return; } // in different places: not drawn at all
+    if (R && R.tg && G.interior && R.tg.rk === roomKey()) { dws(); var rig = RIGS[isGuest() ? 'cumhead' : 'laboozie'], Q = pose0(); if (R.sp > 0.3) poseWalk(Q, R.ph || 0, Math.min(1, R.sp / 5)); var W0 = WPN[R.w] || WPN.fists; if (R.aim && !W0.melee) { Q.sh[0] = [1.5, 0.1, 0]; Q.el[0] = 0.1; }
+      drawPerson(rig, R.x, R.y, R.z, R.a, Q, { held: W0.mesh ? RIGS[W0.mesh] : null, heldP: W0.swing ? -Math.PI / 2 - 0.2 : -Math.PI / 2 }); return; }
+    return dws(); };
+})();
+/* player two's cars no longer double up: a car he takes out of the traffic is never made again from the host's picture
+   (the picture can still hold it for a moment before the host has taken it away), and it can be driven at once */
+var TAKEN = {};
+(function () {
+  var gc = guestCars; guestCars = function () { var v = P.state === 'enter' && P.ent && P.ent.v; if (v && v.pup && !v.mis) { TAKEN[v.nid] = G.t; v.rest = 0; v.ai = null; } gc(); };
+  // bikes, boards and boats are hopped onto at once (no 'enter'): take those over too, or they stay the host's frozen copy
+  var gc2 = guestCars; guestCars = function () { var v = (P.state === 'car' || P.state === 'pass') && P.veh; if (v && v.pup && !v.mis && P.state === 'car') { netSendOther({ t: 'take', id: v.nid }); TAKEN[v.nid] = G.t; delete PUPV[v.nid]; v.pup = 0; v.tg = null; v.mine = 1; v.rest = 0; v.ai = null; } if (P.state === 'car' && P.veh) P.veh.rest = 0; gc2(); };
+  var gp = guestPop; guestPop = function (m) { if (m && m.v) m.v = m.v.filter(function (q) { return !(TAKEN[q[0]] && G.t - TAKEN[q[0]] < 30); }); return gp(m); };
+  // the host never sends back a car player two is sitting in (it is player two's own until he leaves it)
+  var pp = packPop; packPop = function () { var m = pp(); var R = coopOther(); if (m.v && R && R.pv) m.v = m.v.filter(function (q) { var dx = q[3] - R.pv.x, dz = q[5] - R.pv.z; return dx * dx + dz * dz > 4; }); return m; };
+})();
+/* people are shoved by cars as before, but Cumhead standing on top of a car is not shoved off it */
+vehPush = function (o, r) { VEH.forEach(function (v) { if (v === o.veh) return; var c = Math.cos(v.a), s = Math.sin(v.a), dx = o.x - v.x, dz = o.z - v.z, lx = dx * c - dz * s, lz = dx * s + dz * c, hw = v.t.wid / 2 + r, hl = v.t.len / 2 + r;
+    if (Math.abs(lx) < hw && Math.abs(lz) < hl && o.y < v.y + v.t.hgt && o.y + 1.6 > v.y) { if (o === P && v.t.cls === 'car' && o.y > v.y + carTopAt(v, lz) - 0.3) return;
+      var px = hw - Math.abs(lx), pz = hl - Math.abs(lz); if (px < pz) lx += Math.sign(lx || 1) * px; else lz += Math.sign(lz || 1) * pz; o.x = v.x + lx * c + lz * s; o.z = v.z - lx * s + lz * c;
+      var sp = Math.hypot(v.vx || 0, v.vz || 0); if (sp > 5 && o === P && P.state === 'foot') { hurtPlayer(sp * 2.5, v.driver); P.ragT = 1.2; P.vx = v.vx * 0.8; P.vz = v.vz * 0.8; P.vy = 4; } } }); };
+/* ---- getting high: the whole picture sways and swims as one (he saw a second floor under the floor and shop fronts going
+   behind walls: the old wobble bent every mesh by itself, so layers drawn on top of each other came apart). The 3D
+   wobble is off; the finished picture is swayed, skewed and breathed instead, so it is only ever the layer you see. ---- */
+(function () { var dw = drawWorld; drawWorld = function (look) { var w = Math.min(1.4, G.fxWarp || 0); G.fxWarp = 0; G.wob = w; return dw(look); };
+  var cv = null, last = '';
+  var dfs = drawFun; drawFun = function () { dfs(); if (!cv) cv = document.getElementById('gl'); if (!cv) return; var w = G.interior ? Math.min(1.4, (G.high || 0) * 0.55 + (G.pilled || 0) * 1.5) : (G.wob || 0), t = G.t || 0, tr = '';
+    if (w > 0.02 && G.mode === 'play') { var k = Math.min(1, w); tr = 'rotate(' + (Math.sin(t * 0.6) * 1.6 * k).toFixed(2) + 'deg) skewX(' + (Math.sin(t * 1.05) * 3.2 * k).toFixed(2) + 'deg) skewY(' + (Math.sin(t * 0.83 + 1) * 1.4 * k).toFixed(2) + 'deg) scale(' + (1.04 + 0.025 * k * Math.sin(t * 1.4)).toFixed(3) + ')'; }
+    if (tr !== last) { cv.style.transform = tr; last = tr; } };
+  var dwi = drawInterior; drawInterior = function (look) { G.fxWarp = 0; return dwi(look); };
+})();
+/* ---- the fishing jetties: proper handrails down both sides of the ramp and the deck (posts every 2 m standing on the
+   planks, a top rail and a middle rail) and you can't walk through them ---- */
+(function () { var j1 = LMBUILD.jetty; LMBUILD.jetty = function (o, p) { j1(o, p); var a = p.a || 0, c = Math.sin(a), s = Math.cos(a), y = Math.max(1.4, p.h + 0.4), L = 32, X = p.x, Z = p.z, L0 = -9;
+  function Pt(u, v) { return [X + c * v + s * u, Z + s * v - c * u]; } var g0 = groundY(Pt(0, L0)[0], Pt(0, L0)[1]);
+  function deckY(v) { return v >= 0 ? y : g0 + (y - g0) * clamp((v - L0) / (-0.6 - L0), 0, 1); }
+  var W = '#5a3a20', Wd = '#3a2414';
+  [-1, 1].forEach(function (side) { var uu = function (v) { return side * (v >= 0 ? 1.45 : 1.25); };
+    for (var v = L0 + 0.5; v <= L - 0.2; v += 2) { var q = Pt(uu(v), v), yy = deckY(v); tub(o.m, [q[0], yy, q[1]], [q[0], yy + 1.05, q[1]], 0.055, 0.05, Wd, 6, { cap: 1 }); }
+    for (var v2 = L0 + 0.5; v2 < L - 0.2; v2 += 2) { var v3 = Math.min(L - 0.2, v2 + 2), q0 = Pt(uu(v2), v2), q1 = Pt(uu(v3), v3), y0 = deckY(v2), y1 = deckY(v3);
+      tub(o.m, [q0[0], y0 + 1.05, q0[1]], [q1[0], y1 + 1.05, q1[1]], 0.045, 0.045, W, 6); tub(o.m, [q0[0], y0 + 0.55, q0[1]], [q1[0], y1 + 0.55, q1[1]], 0.035, 0.035, W, 6);
+      var m = Pt(uu((v2 + v3) / 2) + side * 0.02, (v2 + v3) / 2); addOBB(m[0], m[1], a, 0.08, (v3 - v2) / 2 + 0.05, Math.min(y0, y1) - 0.3, Math.max(y0, y1) + 1.1); } });
+  // the end across, with a gap in the middle for the rod
+  [-1, 1].forEach(function (side) { var q0 = Pt(side * 1.45, L - 0.2), q1 = Pt(side * 0.6, L - 0.2); tub(o.m, [q0[0], y + 1.05, q0[1]], [q1[0], y + 1.05, q1[1]], 0.045, 0.045, W, 6); tub(o.m, [q1[0], y, q1[1]], [q1[0], y + 1.05, q1[1]], 0.055, 0.05, Wd, 6, { cap: 1 });
+    var m2 = Pt(side * 1.02, L - 0.2); addOBB(m2[0], m2[1], a, 0.45, 0.08, y - 0.3, y + 1.1); }); }; })();
+
+/* ---------- update 169: content from his playtest ---------- */
+
+/* ---- T'S HUSSY HOUSE AND BONJO'S BJ BOUTIQUE: T and Bonjo own the places, they are not the girls (his correction). Both
+   have a back room door on the right wall. Paying for the back rooms plays a little scene: Cumhead walks round the
+   counter and through the door, love hearts float out round the door frame, he comes back out, walks to the owner and
+   thanks them, they answer, and he leaves the room loaded (health over the top). ---- */
+var BACKROOM = { t: { pay: 80, name: "T's back rooms", me: ["Cheers, T. Same time next week?", 'Lovely as always, T. Put it on my tab... joking, joking.', 'Thank you, T. I needed that more than the city did.'], her: ['Come again, darling.', 'Any time, Mister Mayor. Mind your blood pressure.', 'The girls say you were a gentleman. Mostly.'] },
+  bonjo: { pay: 80, name: "The Boutique's back rooms", me: ['Thanks, Bonjo. You run a classy place.', 'Bonjo, I owe you one. Well, eighty.', 'Same time next week, Bonjo?'], her: ['Always a pleasure, sweetie. Mind the step.', 'You know where the door is, darling.', 'Come back soon. Bring cash. Bring flowers.'] } };
+var HEARTM = null;
+function heartMesh() { if (HEARTM) return HEARTM; var m = new R3.Mesh(); ell(m, -0.09, 0.06, 0, 0.11, 0.11, 0.05, '#ff3a6a', 8, 5); ell(m, 0.09, 0.06, 0, 0.11, 0.11, 0.05, '#ff3a6a', 8, 5); tub(m, [0, 0.04, 0], [0, -0.2, 0], 0.17, 0.0, '#ff3a6a', 8, { cap0: 1 }); HEARTM = m.upload(); return HEARTM; }
+var BRDOOR = {};
+function backDoorMesh(id, RM) { if (BRDOOR[id]) return BRDOOR[id]; var m = new R3.Mesh(), gl = new R3.Mesh(), w = RM.w, z = RM.d - 1.6, x = w - 0.04;
+  boxC(m, x - 0.06, 0, z - 0.68, x + 0.02, 2.35, z - 0.56, '#2a0a10'); boxC(m, x - 0.06, 0, z + 0.56, x + 0.02, 2.35, z + 0.68, '#2a0a10'); boxC(m, x - 0.06, 2.23, z - 0.68, x + 0.02, 2.35, z + 0.68, '#2a0a10');
+  boxC(m, x - 0.03, 0, z - 0.56, x, 2.23, z + 0.56, '#5a0a18'); [0.5, 1.4].forEach(function (y) { boxC(m, x - 0.05, y, z - 0.42, x - 0.03, y + 0.6, z + 0.42, '#7a1428'); }); ell(m, x - 0.07, 1.05, z - 0.42, 0.035, 0.035, 0.035, '#c8a040', 5, 4);
+  boxC(gl, x - 0.05, 2.45, z - 0.5, x - 0.02, 2.75, z + 0.5, '#ff2a6a'); for (var q = 0; q < 3; q++) ell(gl, x - 0.06, 2.6, z - 0.3 + q * 0.3, 0.05, 0.06, 0.05, '#ffd0e0', 5, 3); // the PRIVATE light over it
+  BRDOOR[id] = { m: m.upload(), gl: gl.upload(), x: w - 0.9, z: z }; return BRDOOR[id]; }
+function brStart(id) { var I = G.interior, RM = I.RM, D = backDoorMesh(id, RM), k = G.keeper, B = BACKROOM[id];
+  var path = [[P.x, P.z], [RM.w - 1.3, Math.min(RM.d - 3.2, 4.8)], [D.x, D.z]];
+  G.brs = { id: id, t: 0, ph: 'in', path: path, seg: 0, hearts: [], D: D, k: k, line: 0, B: B }; G.talk = 1; KIT.closeMenu(); sfx.play('door'); }
+function brWalk(S, dt) { var p = S.path; if (S.seg >= p.length - 1) return true; var a = p[S.seg], b = p[S.seg + 1], dx = b[0] - P.x, dz = b[1] - P.z, d = Math.hypot(dx, dz), sp = 2.0;
+  if (d < sp * dt + 0.02) { P.x = b[0]; P.z = b[1]; S.seg++; return S.seg >= p.length - 1; } P.x += dx / d * sp * dt; P.z += dz / d * sp * dt; P.a += angDiff(P.a, Math.atan2(dx, dz)) * Math.min(1, dt * 10); P.sp = sp; P.ph += dt * sp * 2.4; return false; }
+function brStep(dt) { var S = G.brs; if (!S || !G.interior) { G.brs = null; G.talk = 0; return; } S.t += dt; P.vx = P.vz = 0; P.y = 0;
+  if (S.ph === 'in') { if (brWalk(S, dt)) { S.ph = 'room'; S.t = 0; S.hide = 1; P.sp = 0; sfx.play('door'); } }
+  else if (S.ph === 'room') { if (Math.random() < dt * 9) S.hearts.push({ x: S.D.x + 0.75 + rnd(-0.1, 0.1), y: rnd(0.6, 2.2), z: S.D.z + rnd(-0.7, 0.7), vx: -rnd(0.3, 0.9), vy: rnd(0.4, 0.9), vz: rnd(-0.3, 0.3), s: rnd(0.6, 1.2), t: 0 });
+    if (Math.random() < dt * 1.6) [0, 1].forEach(function (q) { sfx.tone('sine', 660 + q * 330 + rnd(0, 80), 880 + q * 330, 0.35, 0.03, q * 0.12); });
+    if (S.t > 4.6) { S.ph = 'out'; S.t = 0; S.hide = 0; sfx.play('door'); var k = S.k, kx = k ? k.x + 0.5 : G.interior.RM.w / 2, kz = (k ? k.z : G.interior.RM.d - 1.6) - 2.3; S.path = [[S.D.x, S.D.z], [G.interior.RM.w - 1.3, kz], [kx, kz]]; S.seg = 0; P.x = S.D.x; P.z = S.D.z; } }
+  else if (S.ph === 'out') { if (brWalk(S, dt)) { S.ph = 'thanks'; S.t = 0; P.sp = 0; if (S.k) P.a = Math.atan2(S.k.x - P.x, S.k.z - P.z); var me = pick(S.B.me); subtitle('Cumhead', me); if (typeof voiceLine === 'function') try { voiceLine('cumhead', me); } catch (e) {} } }
+  else if (S.ph === 'thanks') { if (S.t > 2.6 && !S.said) { S.said = 1; var her = pick(S.B.her); if (S.k) say(S.k, her); subtitle(S.id === 't' ? 'T' : 'Bonjo', her); if (typeof voiceLine === 'function') try { voiceLine(S.id === 't' ? 't' : 'bonjo', her); } catch (e) {} }
+    if (S.t > 5.4) { G.brs = null; G.talk = 0; P.hp = SV.maxHp + 50; bigText('FEELING LOADED', 'Health over the top', '#ffe36a', 2.4); } }
+  S.hearts = S.hearts.filter(function (h) { h.t += dt; h.x += h.vx * dt; h.y += h.vy * dt; h.z += h.vz * dt; return h.t < 2.4; }); }
+(function () {
+  var gd = goods; goods = function (id) { var L = gd(id); if (!BACKROOM[id]) return L; L = L.filter(function (g) { return !/Private Room|Boutique Special/.test(g.n); });
+    L.push({ n: 'The back rooms (health over the top)', p: BACKROOM[id].pay, fn: function () { brStart(id); } }); return L; };
+  var sf = stepFoot; stepFoot = function (dt) { if (G.brs) { brStep(dt); return; } return sf(dt); };
+  var dp = drawPlayer; drawPlayer = function () { if (G.brs && G.brs.hide) return; return dp(); };
+  var di = drawInterior; drawInterior = function (look) { di(look); var I = G.interior; if (!I || !BACKROOM[I.id] || I.special) return; var D = backDoorMesh(I.id, I.RM); R3.draw(D.m, ATT); R3.draw(D.gl, ATT, { lit: false });
+    if (G.brs) G.brs.hearts.forEach(function (h) { var sc = h.s * (h.t < 0.3 ? h.t / 0.3 : h.t > 1.9 ? Math.max(0, (2.4 - h.t) / 0.5) : 1); R3.draw(heartMesh(), ATT, { lit: false, m: MD(h.x, h.y, h.z, -Math.PI / 2 + Math.sin(h.t * 3) * 0.3, 0, Math.sin(h.t * 4) * 0.2, sc) }); }); };
+  var sc = stepCamera; stepCamera = function (dt) { var r = sc(dt); var S = G.brs; if (S && G.interior) { var RM = G.interior.RM; CAM.x = RM.w * 0.28; CAM.y = 2.5; CAM.z = 1.2; CAM.at = [S.ph === 'thanks' ? P.x : RM.w - 1.4, 1.2, S.ph === 'thanks' ? P.z : RM.d - 2.4]; } return r; };
+})();
+
+/* ---- CUMHEAD TALKS BACK in every mission (his ask): after the person giving the job finishes each piece of talk,
+   Cumhead answers. The words fit the moment: taking the job on (by what the job is: a chase, a race, a fight, a
+   delivery...), carrying on, and thanking them at the end; some lines are his own for each of the regulars. ---- */
+var CUMSAYS = {
+  start: { chase: ["Which way did they go? Never mind. I'll find them.", 'Leave it with me, {n}. Nobody nicks from you on my watch.', "They won't get far. I've got a city full of cream behind me.", 'Right. I run them off the road, I bring it back. Simple.'],
+    race: ['A race? {n}, I was born in the fast lane.', "I'll be over the line before they find second gear.", "Hold my drip. I'm going in.", 'First place or nothing. Mostly first place.'],
+    fight: ["Say no more. They'll be sorry they came to Cum City.", 'Mayor\'s orders: they\'re done.', 'Point me at them, {n}.', "I'll keep it quick. I've got a city to run."],
+    go: ['On my way, {n}.', 'Consider it done.', "I know a shortcut. Probably.", 'Easy. I could do this in my sleep. I have, actually.'],
+    deliver: ['Delivered hot, delivered fast. That\'s the mayor\'s promise.', "Leave it with me. I won't spill a drop.", 'Fragile? Got it. I drive like a saint.'],
+    def: ["Leave it with me, {n}.", "I'm on it.", 'For you, {n}? Anything. Within reason.', 'Right. Let\'s get this done.'] },
+  mid: ['Got it.', 'Easy.', 'On it.', 'Right behind you.', 'Understood.', 'Nearly there.', 'No problem.', "Don't worry, I've got this."],
+  end: ['Any time, {n}. That\'s what the mayor\'s for.', 'Pleasure doing business, {n}.', "Call me if they come back. They won't.", 'Cheers, {n}. Put the kettle on next time.', 'All in a day\'s drip.', "Just keep my name off the news, yeah?"],
+  who: { tb: ["TB, I'm only doing this so you stop ringing me.", 'Keep your pills to yourself this time, TB.', "If this is another one of your schemes, TB, I'm out."], greebo: ['For you, Greebo, and for the pies.', "Sir Johnathan's watching, isn't he? Fine. I'm going.", 'I never ask what\'s in them, Greebo. I never will.'],
+    lab: ["Sheriff's business, eh? I'll keep it legal. Ish.", 'You owe me a pint after this, Laboozie.', "Right you are, Sheriff."], spermaid: ['For you, sweetie? Of course.', "I'll be careful. You worry too much, Spermaid."],
+    saba: ['Hitless, Saba. I know, I know.', "No hits taken. That's the plan."], amy: ['Mild, hot or dynamite? With you it\'s always dynamite, Amy.', 'Keep the chilli warm, Amy.'], potbelly: ['High score or nothing, Potbelly.', 'Insert coin, eh Potbelly?'],
+    pulsar: ["Just vibes, Pulsar. I'm on it.", 'Keep the beat going, I\'ll be back.'], beeb: ['First one\'s warm, eh Beeb? Line one up.', 'For you, Uncle Beeb.'], joff: ['Pineapple still does not belong on pizza, Joff. But fine.', 'For you, Joff. Not for the pineapple.'] } };
+function cumReply(m, ti, nTalks, nextStep) { var name = CAST[m.who] ? CAST[m.who].name.split(' ')[0] : 'mate', h = 0, s = m.id + ':' + ti; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  function from(L) { return L[h % L.length].replace('{n}', name); }
+  if (ti === nTalks - 1 && ti > 0) return from(CUMSAYS.end);
+  if (ti === 0) { if (CUMSAYS.who[m.who] && h % 3 === 0) return from(CUMSAYS.who[m.who]); var t = nextStep ? nextStep.t : '', kind = t === 'chase' || t === 'destroy' ? 'chase' : t === 'race' ? 'race' : /kill|goons|survive|boss|fight|wave|horde/.test(t) ? 'fight' : t === 'drops' || t === 'deliver' || t === 'collect' ? 'deliver' : t === 'go' || t === 'getin' || t === 'trail' ? 'go' : 'def'; return from(CUMSAYS.start[kind]); }
+  return from(CUMSAYS.mid); }
+(function () { MISSIONS.forEach(function (m) { var talks = (m.steps || []).filter(function (s) { return s.t === 'talk' && s.lines && s.lines.length; }); var ti = 0;
+  (m.steps || []).forEach(function (s, si) { if (s.t !== 'talk' || !s.lines || !s.lines.length) return; if (s.lines.some(function (l) { return l[0] === 'cumhead'; }) || s.cumDone) { ti++; return; }
+    var next = (m.steps || []).slice(si + 1).filter(function (x) { return x.t !== 'talk'; })[0]; s.lines = s.lines.concat([['cumhead', cumReply(m, ti, talks.length, next)]]); s.cumDone = 1; ti++; }); }); })();
+
+/* ---- PULSAROCTOPUS BEATS: two matching speaker stacks either side of the decks, cones that pump to the beat, light bars
+   and a lit DJ booth, and his station (PulsarOctopus Beats FM) plays out of them while you are inside ---- */
+var PULSARM = null;
+function pulsarMesh(RM) { if (PULSARM) return PULSARM; var m = new R3.Mesh(), gl = new R3.Mesh(), w = RM.w, d = RM.d, cx = w / 2, CONES = [];
+  // the DJ booth in the middle of the back wall
+  // the decks and the mixer on the counter, with a light strip along its front
+  boxC(gl, cx - 3, 1.02, d - 3.02, cx + 3, 1.07, d - 2.98, '#4adfff'); boxC(m, cx - 1.5, 1.1, d - 2.85, cx - 0.25, 1.18, d - 2.3, '#2a2a2e'); boxC(m, cx + 0.25, 1.1, d - 2.85, cx + 1.5, 1.18, d - 2.3, '#2a2a2e'); boxC(m, cx - 0.22, 1.1, d - 2.8, cx + 0.22, 1.22, d - 2.35, '#1a1a1e');
+  [-0.88, 0.88].forEach(function (o) { tub(m, [cx + o, 1.18, d - 2.57], [cx + o, 1.21, d - 2.57], 0.26, 0.26, '#0a0a0c', 14, { cap: 1 }); ell(gl, cx + o, 1.22, d - 2.57, 0.05, 0.01, 0.05, '#c48aff', 6, 2); });
+  // the stacks: exactly the same on both sides
+  [-1, 1].forEach(function (s) { var x = cx + s * (w / 2 - 1.1); for (var lv = 0; lv < 3; lv++) { var y0 = lv * 1.05; boxC(m, x - 0.75, y0, d - 1.6, x + 0.75, y0 + 1.0, d - 0.3, '#0e0e10'); boxC(m, x - 0.78, y0 + 0.97, d - 1.63, x + 0.78, y0 + 1.03, d - 0.27, '#3a1a5a');
+      CONES.push({ x: x, y: y0 + (lv === 2 ? 0.5 : 0.48), z: d - 1.62, r: lv === 2 ? 0.26 : 0.38 }); if (lv === 2) [-0.4, 0.4].forEach(function (o) { CONES.push({ x: x + o, y: y0 + 0.75, z: d - 1.62, r: 0.11 }); }); }
+    boxC(gl, x - 0.8, 3.18, d - 1.65, x + 0.8, 3.24, d - 0.25, '#c48aff'); RM.boxes.push([x - 0.8, d - 1.65, x + 0.8, d]); });
+  for (var lz = 2; lz < d - 2; lz += 2.2) [-1, 1].forEach(function (s) { boxC(gl, s < 0 ? 0.04 : w - 0.1, 2.4, lz, s < 0 ? 0.1 : w - 0.04, 2.5, lz + 1.4, lz % 4 < 2 ? '#4adfff' : '#c48aff'); });
+  var cone = new R3.Mesh(); tub(cone, [0, 0, 0], [0, 0, -0.06], 1, 0.6, '#1a1a1e', 16, { cap0: 1 }); tub(cone, [0, 0, -0.06], [0, 0, -0.1], 0.3, 0.25, '#3a3a3e', 12, { cap: 1 }); ell(cone, 0, 0, -0.12, 0.2, 0.2, 0.06, '#4a4a50', 8, 4);
+  var ring = new R3.Mesh(); tub(ring, [0, 0, 0.005], [0, 0, -0.005], 1.12, 1.12, '#c48aff', 16);
+  PULSARM = { m: m.upload(), gl: gl.upload(), cones: CONES, cone: cone.upload(), ring: ring.upload() }; return PULSARM; }
+(function () {
+  var rp = ROOMS.pulsar; if (rp) rp.props = rp.props.filter(function (p) { return p !== 'speaker' && p !== 'deck'; });
+  var di = drawInterior; drawInterior = function (look) { di(look); var I = G.interior; if (!I || I.id !== 'pulsar' || I.special) return; var M = pulsarMesh(I.RM); R3.draw(M.m, ATT); R3.draw(M.gl, ATT, { lit: false });
+    var beat = (G.t * 2.1) % 1, pump = Math.pow(1 - beat, 3); M.cones.forEach(function (c) { R3.draw(M.cone, ATT, { m: MD(c.x, c.y, c.z + 0.02 - pump * 0.035, 0, 0, 0, c.r) }); R3.draw(M.ring, ATT, { lit: false, m: MD(c.x, c.y, c.z + 0.01, 0, 0, 0, c.r * (1 + pump * 0.08)) }); }); };
+  var es = enterShop; enterShop = function (id, homeId, special) { var r = es.apply(this, arguments); if (id === 'pulsar' && !special && G.interior) { var idx = 0; STATIONS.forEach(function (s, i) { if (s.id === 'po') idx = i; }); RAD.st = idx; RAD.on = true; RAD.seg = null; G.pulsarRadio = 1; G.radioName = STATIONS[idx].name; G.radioT = 3; try { radioNextSeg(); } catch (e) {} } return r; };
+  var ls = leaveShop; leaveShop = function () { var was = G.pulsarRadio; G.pulsarRadio = 0; var r = ls.apply(this, arguments); if (was) radioOff(); return r; };
+  var sr = stepRadio; stepRadio = function (dt) { if (G.pulsarRadio && G.interior && G.interior.id === 'pulsar' && RAD.on) { var st = P.state; P.state = 'car'; try { return sr(dt); } finally { P.state = st; } } return sr(dt); };
+})();
+
+/* ---- CUM HILLS: every house has its path, the cars on the drives are real cars, the front doors sit over the wall ---- */
+/* real cars on the drives: made when you come within 110 m, taken away past 180 m (unless you have moved them) */
+var DRIVEV = {};
+function stepDrives(dt) { if ((G.drT = (G.drT || 0) - dt) > 0 || G.interior) return; G.drT = 0.8; var px = P.x, pz = P.z;
+  DRIVES.forEach(function (d, i) { var dd = (d.x - px) * (d.x - px) + (d.z - pz) * (d.z - pz), v = DRIVEV[i];
+    if (dd < 110 * 110 && !v && !(G.guest && G.netSync)) { var types = ['hatch', 'saloon', 'saloon', 'muscle', 'hatch', 'sports', 'saloon'], cols = ['#c4121c', '#f1e7d0', '#2a4a6a', '#12040a', '#3a6a3a', '#5a5a62', '#ffe36a'];
+      var nv = makeVeh(types[(d.c + i) % types.length], d.x, d.z, d.a, {}); nv.y = groundY(d.x, d.z); nv.drive = i; nv.keep = 0; nv.parked = 1; DRIVEV[i] = nv; nv.home = [d.x, d.z]; }
+    else if (v && (VEH.indexOf(v) < 0 || dd > 180 * 180)) { if (VEH.indexOf(v) >= 0 && Math.hypot(v.x - v.home[0], v.z - v.home[1]) < 2 && v !== P.veh) VEH.splice(VEH.indexOf(v), 1); if (VEH.indexOf(v) < 0 || Math.hypot(v.x - v.home[0], v.z - v.home[1]) >= 2) DRIVEV[i] = null; } }); }
+(function () { var df = despawnFar; despawnFar = function () { var keep = VEH.filter(function (v) { return v.drive !== undefined && v !== P.veh; }); df(); keep.forEach(function (v) { if (VEH.indexOf(v) < 0 && DRIVEV[v.drive] === v && Math.hypot(v.x - P.x, v.z - P.z) < 180) VEH.push(v); }); }; })();
+(function () { var hd = houseDress; houseDress = function (m, glow, b) { hd(m, glow, b);
+  var F = frontFace(b), nx = F.n[0], nz = F.n[2], ux = F.R[0] - F.L[0], uz = F.R[1] - F.L[1], wF = Math.hypot(ux, uz) || 1, mx = (F.L[0] + F.R[0]) / 2, mz = (F.L[1] + F.R[1]) / 2, a = Math.atan2(nx, nz), y0 = b.y0 !== undefined ? b.y0 : groundY(mx, mz); ux /= wF; uz /= wF;
+  // the front door, standing a little proud of the wall so no painted window ever shows over it
+  var dx = mx + nx * 0.07, dz = mz + nz * 0.07; boxR(m, dx, dz, a, 0.62, 0.05, y0, y0 + 2.28, '#2a1a10'); boxR(m, dx + nx * 0.03, dz + nz * 0.03, a, 0.5, 0.04, y0 + 0.02, y0 + 2.16, ['#7a0c14', '#12040a', '#2a3a5a', '#3a5a3a', '#f1e7d0'][b.i % 5]);
+  [[0.25, 0.55], [1.25, 0.85]].forEach(function (q) { boxR(m, dx + nx * 0.06, dz + nz * 0.06, a, 0.36, 0.02, y0 + q[0], y0 + q[0] + q[1] * 0.75, '#1e1010'); }); var kx = dx + nx * 0.1 + ux * 0.32, kz = dz + nz * 0.1 + uz * 0.32; ell(m, kx, y0 + 1.05, kz, 0.04, 0.04, 0.04, '#c8a040', 5, 4);
+  boxR(m, mx + nx * 0.45, mz + nz * 0.45, a, 0.75, 0.4, y0, y0 + 0.16, '#8a8480'); // the step
+  // a path to the pavement even when the pavement is not straight ahead
+  var D = 0; for (var s = 0.5; s < 16; s += 0.25) { var k = kAt(mx + nx * s, mz + nz * s); if (k === K_PAVE || k === K_ROAD || k === K_BRIDGE) { D = s; break; } if (bldAt(mx + nx * s, mz + nz * s)) break; }
+  if (!D) { var best = null, bd = 1e9; for (var r = 1; r < 9 && !(best && r > 3); r++) for (var di = -r; di <= r; di++) for (var dj = -r; dj <= r; dj++) { if (Math.abs(di) !== r && Math.abs(dj) !== r) continue; var tx = Math.floor((mx + nx * 2) / CT) + di, tz = Math.floor((mz + nz * 2) / CT) + dj; if (tx < 0 || tz < 0 || tx >= MW || tz >= MH || KM[tz * MW + tx] !== K_PAVE) continue; var px = tx * CT + 2, pz = tz * CT + 2, dd = (px - mx) * (px - mx) + (pz - mz) * (pz - mz); if (dd < bd) { bd = dd; best = [px, pz]; } }
+    if (best) { var sx = mx + nx * 0.8, sz = mz + nz * 0.8, ex = best[0], ez = best[1], L = Math.hypot(ex - sx, ez - sz), ax2 = Math.atan2(ex - sx, ez - sz); for (var t = 0; t < L - 0.3; t += 0.95) { var cx = sx + (ex - sx) * (t + 0.4) / L, cz = sz + (ez - sz) * (t + 0.4) / L; if (bldAt(cx, cz)) break; var gy = groundY(cx, cz); boxR(m, cx, cz, ax2, 0.55, 0.36, gy, gy + 0.05, '#9a948e', 'paver'); } } } }; })();
+(function () { var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepDrives(dt); } catch (e) { if (!window.__dre) { window.__dre = 1; console.warn(e); } } }; })();
+
+/* ---------- update 169: the wildlife rebuilt (he said the animals were poles with legs that weren't attached and didn't
+   walk). Each animal is a body, a head on its own pivot and legs in two parts joined at the knee, drawn every frame:
+   cows, sheep and deer walk with a real four-legged gait (the diagonal legs together, knees folding as a foot lifts),
+   run faster with a longer stride, lower their heads to graze, flick their tails; rabbits hop on long back legs; chickens
+   strut and peck. They fall over stiff when a car gets them. ---------- */
+var ANB = {};
+function anBuild(k) { if (ANB[k]) return ANB[k]; var B = { body: new R3.Mesh(), head: new R3.Mesh(), tail: new R3.Mesh(), up: new R3.Mesh(), lo: new R3.Mesh(), up2: null, lo2: null, legs: [] };
+  var b = B.body, h = B.head;
+  function leg(m, L, r0, r1, col, hoof, hcol) { tub(m, [0, 0, 0], [0, -L, 0], r0, r1, col, 7, { cap0: 1 }); ell(m, 0, 0, 0, r0 * 1.05, r0 * 1.05, r0 * 1.05, col, 6, 4); if (hoof) { tub(m, [0, -L + 0.07, 0.01], [0, -L - 0.01, 0.02], r1 * 1.05, r1 * 1.15, hcol, 7, { cap: 1 }); } }
+  if (k === 'cow') { var W = '#f1ece0', D = '#1a1416', PK = '#e8a8a0';
+    ell(b, 0, 1.3, 0, 0.56, 0.5, 1.0, W, 14, 8); ell(b, 0, 1.15, 0.05, 0.5, 0.4, 0.8, W, 12, 6); // body and belly
+    [[0.38, 1.45, 0.25, 0.32, 0.34, 0.42], [-0.32, 1.25, -0.45, 0.35, 0.32, 0.4], [0.2, 1.62, -0.6, 0.3, 0.12, 0.3], [-0.45, 1.4, 0.45, 0.14, 0.24, 0.26]].forEach(function (q) { ell(b, q[0], q[1], q[2], q[3], q[4], q[5], D, 8, 5); });
+    ell(b, 0, 0.88, -0.45, 0.2, 0.13, 0.22, PK, 8, 4); [[-0.08, -0.4], [0.08, -0.4], [-0.08, -0.52], [0.08, -0.52]].forEach(function (q) { tub(b, [q[0], 0.8, q[1]], [q[0], 0.72, q[1]], 0.03, 0.02, PK, 4, { cap: 1 }); }); // udder
+    tub(b, [0, 1.45, 0.75], [0, 1.5, 1.05], 0.28, 0.24, W, 10); // neck
+    ell(h, 0, 0.05, 0.12, 0.24, 0.26, 0.3, W, 10, 6); ell(h, 0, -0.08, 0.38, 0.19, 0.16, 0.16, PK, 8, 5); [-1, 1].forEach(function (s) { ell(h, s * 0.07, -0.08, 0.53, 0.035, 0.03, 0.02, D, 4, 3); ell(h, s * 0.16, 0.12, 0.25, 0.05, 0.06, 0.04, D, 5, 4); ell(h, s * 0.17, 0.13, 0.28, 0.02, 0.025, 0.015, '#f1e7d0', 4, 3);
+      ell(h, s * 0.3, 0.1, 0.05, 0.14, 0.05, 0.08, W, 6, 4); tub(h, [s * 0.15, 0.24, 0.02], [s * 0.3, 0.38, -0.02], 0.045, 0.02, '#d8c8a0', 5, { cap: 1 }); }); ell(h, 0, 0.22, 0.08, 0.16, 0.08, 0.14, D, 6, 4);
+    tub(B.tail, [0, 0, 0], [0, -0.55, -0.06], 0.035, 0.03, W, 5); ell(B.tail, 0, -0.62, -0.07, 0.07, 0.12, 0.07, D, 6, 4);
+    leg(B.up, 0.46, 0.11, 0.09, W); leg(B.lo, 0.48, 0.08, 0.065, W, 1, D);
+    B.hip = 0.94; B.legs = [[0.27, 0.62], [-0.27, 0.62], [0.27, -0.62], [-0.27, -0.62]]; B.headAt = [0, 1.5, 1.08]; B.tailAt = [0, 1.62, -0.98]; B.amp = 0.42; }
+  else if (k === 'sheep') { var WO = '#ece6d6', DK = '#1a1416';
+    ell(b, 0, 0.95, 0, 0.46, 0.42, 0.66, WO, 12, 7); for (var q = 0; q < 14; q++) { var aa = q * 2.4, yy = 0.95 + Math.sin(q * 1.3) * 0.25; ell(b, Math.cos(aa) * 0.36, yy, Math.sin(aa * 0.7) * 0.5, 0.2, 0.18, 0.2, q % 3 ? WO : '#f6f2e8', 6, 4); }
+    ell(b, 0, 1.08, 0.58, 0.24, 0.24, 0.2, WO, 8, 5);
+    ell(h, 0, 0, 0.12, 0.13, 0.17, 0.22, DK, 8, 5); ell(h, 0, 0.12, 0.02, 0.15, 0.1, 0.13, WO, 6, 4); [-1, 1].forEach(function (s) { ell(h, s * 0.17, 0.02, 0.06, 0.11, 0.04, 0.06, DK, 5, 3); ell(h, s * 0.08, 0.04, 0.24, 0.025, 0.025, 0.02, '#e8d890', 4, 3); });
+    ell(B.tail, 0, -0.08, -0.04, 0.08, 0.12, 0.07, WO, 6, 4);
+    leg(B.up, 0.3, 0.06, 0.05, DK); leg(B.lo, 0.32, 0.045, 0.038, DK, 1, '#0a0606');
+    B.hip = 0.62; B.legs = [[0.2, 0.42], [-0.2, 0.42], [0.2, -0.42], [-0.2, -0.42]]; B.headAt = [0, 1.05, 0.74]; B.tailAt = [0, 1.05, -0.68]; B.amp = 0.45; }
+  else if (k === 'deer') { var BR = '#8a5a34', LT = '#c8a070', DD = '#4a2a18';
+    ell(b, 0, 1.2, 0, 0.3, 0.33, 0.72, BR, 12, 7); ell(b, 0, 1.06, 0.02, 0.24, 0.2, 0.6, LT, 10, 5); ell(b, 0, 1.25, -0.7, 0.16, 0.18, 0.08, '#f1e7d0', 6, 4);
+    tub(b, [0, 1.3, 0.5], [0, 1.78, 0.78], 0.15, 0.1, BR, 8); ell(b, 0, 1.55, 0.7, 0.1, 0.14, 0.08, LT, 6, 4);
+    ell(h, 0, 0.02, 0.1, 0.12, 0.14, 0.2, BR, 8, 5); ell(h, 0, -0.04, 0.3, 0.07, 0.07, 0.1, '#6a4028', 6, 4); ell(h, 0, -0.04, 0.4, 0.04, 0.035, 0.03, '#12040a', 4, 3);
+    [-1, 1].forEach(function (s) { ell(h, s * 0.11, 0.06, 0.18, 0.03, 0.035, 0.025, '#12040a', 4, 3); ell(h, s * 0.15, 0.18, 0.0, 0.05, 0.12, 0.03, BR, 5, 3); });
+    tub(B.tail, [0, 0, 0], [0, -0.15, -0.05], 0.05, 0.04, BR, 5); ell(B.tail, 0, -0.1, -0.06, 0.05, 0.08, 0.03, '#f1e7d0', 5, 3);
+    leg(B.up, 0.47, 0.07, 0.05, BR); leg(B.lo, 0.48, 0.045, 0.03, DD, 1, '#12040a');
+    // a buck's antlers go on a second head
+    B.head2 = new R3.Mesh(); var h2 = B.head2; ell(h2, 0, 0.02, 0.1, 0.12, 0.14, 0.2, BR, 8, 5); ell(h2, 0, -0.04, 0.3, 0.07, 0.07, 0.1, '#6a4028', 6, 4); ell(h2, 0, -0.04, 0.4, 0.04, 0.035, 0.03, '#12040a', 4, 3);
+    [-1, 1].forEach(function (s) { ell(h2, s * 0.11, 0.06, 0.18, 0.03, 0.035, 0.025, '#12040a', 4, 3); ell(h2, s * 0.15, 0.18, 0.0, 0.05, 0.12, 0.03, BR, 5, 3); var A0 = [s * 0.06, 0.12, 0.05], A1 = [s * 0.2, 0.42, -0.02], A2 = [s * 0.28, 0.62, 0.08];
+      tub(h2, A0, A1, 0.025, 0.02, '#d8c8a0', 5); tub(h2, A1, A2, 0.02, 0.012, '#d8c8a0', 5, { cap: 1 }); tub(h2, A1, [s * 0.14, 0.58, 0.1], 0.015, 0.01, '#d8c8a0', 4, { cap: 1 }); tub(h2, [s * 0.24, 0.52, 0.02], [s * 0.36, 0.6, -0.08], 0.014, 0.009, '#d8c8a0', 4, { cap: 1 }); });
+    B.head2 = h2.upload();
+    B.hip = 0.95; B.legs = [[0.16, 0.5], [-0.16, 0.5], [0.16, -0.52], [-0.16, -0.52]]; B.headAt = [0, 1.82, 0.84]; B.tailAt = [0, 1.32, -0.72]; B.amp = 0.5; }
+  else if (k === 'rabbit') { var GR = '#9a8a7a', GL = '#c8b8a8';
+    ell(b, 0, 0.19, -0.02, 0.12, 0.13, 0.19, GR, 10, 6); ell(b, 0, 0.15, 0.04, 0.09, 0.08, 0.14, GL, 8, 4); ell(b, 0, 0.21, -0.2, 0.05, 0.05, 0.05, '#f1ece0', 5, 4);
+    [-1, 1].forEach(function (s) { ell(b, s * 0.09, 0.12, -0.1, 0.05, 0.08, 0.11, GR, 6, 4); });
+    ell(h, 0, 0, 0.04, 0.085, 0.085, 0.1, GR, 8, 5); ell(h, 0, -0.02, 0.12, 0.035, 0.03, 0.03, GL, 5, 3); [-1, 1].forEach(function (s) { ell(h, s * 0.05, 0.02, 0.09, 0.016, 0.02, 0.012, '#12040a', 4, 3); tub(h, [s * 0.03, 0.06, 0.0], [s * 0.05, 0.22, -0.04], 0.022, 0.016, GR, 5, { cap: 1 }); });
+    leg(B.up, 0.07, 0.025, 0.02, GR); leg(B.lo, 0.06, 0.02, 0.016, GR, 1, GL);
+    B.hip = 0.13; B.legs = [[0.06, 0.1], [-0.06, 0.1]]; B.headAt = [0, 0.3, 0.17]; B.amp = 0.3; B.hop = 1; }
+  else if (k === 'chicken') { var CW = '#f1ece0', Y = '#e0a020';
+    ell(b, 0, 0.32, -0.02, 0.13, 0.14, 0.19, CW, 10, 6); [-1, 1].forEach(function (s) { ell(b, s * 0.12, 0.33, -0.04, 0.03, 0.09, 0.13, '#e8e2d4', 6, 4); }); tub(b, [0, 0.36, -0.15], [0, 0.48, -0.24], 0.07, 0.02, CW, 6, { cap: 1 });
+    ell(h, 0, 0, 0.02, 0.07, 0.08, 0.07, CW, 8, 5); ell(h, 0, 0.09, 0.02, 0.025, 0.045, 0.05, '#c4121c', 5, 3); ell(h, 0, -0.06, 0.07, 0.02, 0.03, 0.015, '#c4121c', 4, 3); tub(h, [0, 0, 0.07], [0, -0.01, 0.13], 0.022, 0, Y, 4); [-1, 1].forEach(function (s) { ell(h, s * 0.055, 0.02, 0.04, 0.012, 0.014, 0.01, '#12040a', 3, 3); });
+    leg(B.up, 0.09, 0.018, 0.014, Y); leg(B.lo, 0.09, 0.013, 0.011, Y); tub(B.lo, [0, -0.09, 0], [0, -0.095, 0.06], 0.01, 0.006, Y, 3, { cap: 1 });
+    B.hip = 0.2; B.legs = [[0.05, 0], [-0.05, 0]]; B.headAt = [0, 0.45, 0.13]; B.amp = 0.6; B.biped = 1; }
+  ['body', 'head', 'tail', 'up', 'lo'].forEach(function (n) { B[n] = B[n].n ? B[n].upload() : null; });
+  ANB[k] = B; return B; }
+function anDraw(A) { var B = anBuild(A.k), y = groundY(A.x, A.z), dead = A.st === 'dead', run = A.sp > (ANSPD[A.k] || 1) * 0.6, ph = A.ph || 0;
+  var bob = 0, pitch = 0; if (!dead) { if (B.hop) { bob = A.sp > 0.3 ? Math.abs(Math.sin(ph)) * 0.22 : 0; pitch = A.sp > 0.3 ? -Math.cos(ph) * 0.25 : 0; } else bob = A.sp > 0.2 ? Math.abs(Math.sin(ph * 2)) * (run ? 0.06 : 0.025) : 0; }
+  var base = MD(A.x, y + bob, A.z, A.a, pitch, dead ? Math.PI / 2 : 0);
+  if (B.body) R3.draw(B.body, ATT, { m: base });
+  // the legs: diagonal pairs swing together, the knee folds as the foot comes forward
+  var amp = dead ? 0 : (A.sp > 0.15 ? (run ? B.amp * 1.7 : B.amp) : 0), off = B.biped ? [0, Math.PI] : [0, Math.PI, Math.PI, 0];
+  B.legs.forEach(function (L, i) { var s = Math.sin(ph + off[i]), sw = -s * amp, kn = Math.max(0, Math.cos(ph + off[i])) * amp * 1.4, dz = dead ? (i < 2 ? 0.35 : -0.35) : 0;
+    if (B.hop && !dead) { var front = L[1] > 0; sw = A.sp > 0.3 ? (front ? -0.6 : 0.9) * Math.sin(ph) : 0; kn = A.sp > 0.3 ? 0.6 * Math.abs(Math.sin(ph)) : 0.4; }
+    var up = MM(base, MD(L[0], B.hip, L[1], 0, sw + dz, 0)); if (B.up) R3.draw(B.up, ATT, { m: up });
+    var ul = B.hip > 0.5 ? (A.k === 'cow' ? 0.46 : A.k === 'sheep' ? 0.3 : 0.47) : (A.k === 'rabbit' ? 0.07 : 0.09);
+    if (B.lo) R3.draw(B.lo, ATT, { m: MM(up, MD(0, -ul, 0, 0, kn, 0)) }); });
+  // the head: grazing lowers it, a walk nods it, a chicken pecks
+  var graze = !dead && A.st === 'idle' && (A.k === 'cow' || A.k === 'sheep' || A.k === 'deer' && Math.sin(ph * 0.1 + A.x) > 0.3) ? 0.95 : 0, nod = A.sp > 0.2 ? Math.sin(ph * 2) * 0.08 : 0;
+  if (A.k === 'chicken' && !dead && A.st === 'idle') graze = Math.max(0, Math.sin(G.t * 3 + A.x)) > 0.8 ? 1.1 : 0.1;
+  var hd = B.headAt, hm = MM(base, MD(hd[0], hd[1], hd[2], 0, graze + nod, 0)); var HM = A.k === 'deer' && A.buck && B.head2 ? B.head2 : B.head; if (HM) R3.draw(HM, ATT, { m: hm });
+  if (B.tail && B.tailAt) R3.draw(B.tail, ATT, { m: MM(base, MD(B.tailAt[0], B.tailAt[1], B.tailAt[2], Math.sin(G.t * 2.3 + A.x) * 0.35, 0.15, 0)) }); }
+drawAnimals = function () { ANIM.forEach(function (A) { if (dist2(A.x, A.z, CAM.x, CAM.z) > 120 * 120 || !inView(A.x, A.z, 3)) return; if (A.k === 'deer' && A.buck === undefined) A.buck = Math.random() < 0.4; anDraw(A); }); };
+/* the walk cycle goes at the pace of the legs (the old one ran the phase at the speed alone) */
+(function () { var sa = stepAnimals; stepAnimals = function (dt) { sa(dt); ANIM.forEach(function (A) { if (A.st === 'dead') return; var B = anBuild(A.k), stride = B.hip * (A.k === 'rabbit' ? 2.6 : 1.5); A.ph += A.sp * dt / Math.max(0.15, stride) * 2.2 - A.sp * dt * (A.k === 'rabbit' ? 5 : 3); }); }; })();
+
+/* ---------- update 169: new places and things to do (his asks) ---------- */
+BLIPS.act = '#4adfff'; BLIPS.rail = '#c48aff';
+function rngOf(seed) { var s = seed >>> 0 || 1; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+function distCentre(id) { var sx = 0, sz = 0, n = 0, di = -1; DIST.forEach(function (d, i) { if (d.id === id) di = i; }); if (di < 0) return null; for (var t = 0; t < MW * MH; t += 7) if (DM[t] === di) { sx += t % MW; sz += Math.floor(t / MW); n++; } return n ? { x: (sx / n + 0.5) * CT, z: (sz / n + 0.5) * CT } : null; }
+function tileNear(x, z, okFn, R) { var ci = Math.floor(x / CT), cj = Math.floor(z / CT); for (var r = 0; r < (R || 40); r++) for (var dj = -r; dj <= r; dj++) for (var di = -r; di <= r; di++) { if (Math.abs(di) !== r && Math.abs(dj) !== r) continue; var i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= MW || j >= MH) continue; if (okFn(KM[j * MW + i], i, j)) return { x: i * CT + 2, z: j * CT + 2 }; } return null; }
+function onPave(x, z) { return tileNear(x, z, function (k) { return k === K_PAVE; }, 30) || { x: x, z: z }; }
+function nearRoadPt(x, z) { var r = nearestRoad(x, z, 400); return r ? { x: r.x, z: r.z, r: r } : { x: x, z: z }; }
+
+/* ================================ SEAMEN BEACH ================================ */
+/* towels and parasols, people sunbathing on them, a beach party with a DJ, speakers, a bonfire and dancers, a beach bar,
+   deckchairs and a lifeguard tower. You can lie on a free towel and sunbathe, dance at the party, and buy a drink. */
+var BEACH = null;
+function beachPlan() { if (BEACH) return BEACH; var bi = -1; DIST.forEach(function (d, i) { if (d.id === 'beach') bi = i; }); var tiles = [];
+  for (var t = 0; t < MW * MH; t++) if (DM[t] === bi && KM[t] === K_SAND) { var i = t % MW, j = (t - i) / MW, wet = false; for (var q = -2; q <= 2 && !wet; q++) for (var r = -2; r <= 2; r++) { var n = (j + q) * MW + i + r; if (n >= 0 && n < MW * MH && isWaterK(KM[n])) { wet = true; break; } } if (!wet) tiles.push([i, j]); }
+  var R = rngOf(16909), B = { towels: [], chairs: [], tiles: tiles }; if (!tiles.length) { BEACH = B; return B; }
+  // the party where the beach is widest (the most dry sand round it)
+  var bestN = 0, cen = tiles[0]; for (var k = 0; k < tiles.length; k += 9) { var c = tiles[k], n2 = 0; for (var k2 = 0; k2 < tiles.length; k2 += 3) { var o = tiles[k2]; if (Math.abs(o[0] - c[0]) < 7 && Math.abs(o[1] - c[1]) < 7) n2++; } if (n2 > bestN) { bestN = n2; cen = c; } }
+  B.party = { x: cen[0] * CT + 2, z: cen[1] * CT + 2 };
+  var ft = tiles.filter(function (c) { return Math.hypot(c[0] * CT - B.party.x, c[1] * CT - B.party.z) > 22; }); for (var q2 = 0; q2 < Math.min(70, ft.length); q2++) { var c2 = ft[Math.floor(R() * ft.length)], x = c2[0] * CT + R() * 3 + 0.5, z = c2[1] * CT + R() * 3 + 0.5;
+    if (B.towels.some(function (o) { return Math.hypot(o.x - x, o.z - z) < 4; })) continue; B.towels.push({ x: x, z: z, a: R() * 6.28, c: ['#c4121c', '#f1e7d0', '#ffe36a', '#4adfff', '#ff7ab0', '#7aff6a'][Math.floor(R() * 6)], par: R() < 0.6, pc: ['#c4121c', '#ffe36a', '#4adfff', '#f1e7d0'][Math.floor(R() * 4)], who: R() < 0.72, id: q2 }); }
+  for (var q3 = 0; q3 < 14; q3++) { var c3 = ft[Math.floor(R() * ft.length)]; if (!c3) break; B.chairs.push({ x: c3[0] * CT + 2, z: c3[1] * CT + 2, a: R() * 6.28 }); }
+  B.bar = { x: B.party.x + 14, z: B.party.z - 6 }; B.tower = { x: B.party.x - 26, z: B.party.z + 10 }; BEACH = B; return B; }
+var BEACHM = null;
+function beachMesh() { if (BEACHM) return BEACHM; var B = beachPlan(), m = new R3.Mesh(), gl = new R3.Mesh();
+  function flat(x, z, a, w, d, col, lift) { var c = Math.cos(a), s = Math.sin(a), y = groundY(x, z) + (lift || 0.03); function P2(u, v) { return [x + u * c + v * s, y, z - u * s + v * c]; } m.quad(P2(-w, -d), P2(-w, d), P2(w, d), P2(w, -d), UV1, TL('cloth'), (function () { var h = col.replace('#', ''); return [parseInt(h.substr(0, 2), 16) / 510 + 0.1, parseInt(h.substr(2, 2), 16) / 510 + 0.1, parseInt(h.substr(4, 2), 16) / 510 + 0.1]; })(), [0, 1, 0]); }
+  B.towels.forEach(function (T) { flat(T.x, T.z, T.a, 0.55, 1.0, T.c); boxR(m, T.x, T.z, T.a, 0.5, 0.06, groundY(T.x, T.z) + 0.03, groundY(T.x, T.z) + 0.06, T.c); // the towel and a rolled end
+    if (T.par) { var px = T.x + Math.cos(T.a) * 0.9, pz = T.z - Math.sin(T.a) * 0.9, gy = groundY(px, pz); tub(m, [px, gy, pz], [px, gy + 2.3, pz], 0.03, 0.03, '#f1e7d0', 5); for (var k = 0; k < 8; k++) { var a0 = k / 8 * 6.283, a1 = (k + 1) / 8 * 6.283; m.tri([px, gy + 2.5, pz], [px + Math.cos(a1) * 1.4, gy + 2.05, pz + Math.sin(a1) * 1.4], [px + Math.cos(a0) * 1.4, gy + 2.05, pz + Math.sin(a0) * 1.4], [0.5, 0, 1, 1, 0, 1], TL('cloth'), k % 2 ? [0.6, 0.6, 0.6] : [0.45, 0.2, 0.2], [0, 1, 0]); } } });
+  B.chairs.forEach(function (C) { var gy = groundY(C.x, C.z); boxR(m, C.x, C.z, C.a, 0.3, 0.6, gy + 0.25, gy + 0.3, '#f1e7d0'); boxR(m, C.x - Math.sin(C.a) * 0.55, C.z - Math.cos(C.a) * 0.55, C.a, 0.3, 0.08, gy + 0.3, gy + 0.9, '#4adfff'); [[-0.25, -0.5], [0.25, -0.5], [-0.25, 0.5], [0.25, 0.5]].forEach(function (l) { var lx = C.x + l[0] * Math.cos(C.a) + l[1] * Math.sin(C.a), lz = C.z - l[0] * Math.sin(C.a) + l[1] * Math.cos(C.a); tub(m, [lx, gy, lz], [lx, gy + 0.27, lz], 0.02, 0.02, '#c8c8c0', 4); }); });
+  // the party: a DJ booth on a deck, two speaker stacks, lights on poles and a bonfire
+  var Pp = B.party, py = groundY(Pp.x, Pp.z); boxC(m, Pp.x - 5, py, Pp.z + 6, Pp.x + 5, py + 0.4, Pp.z + 10, '#6a4a2a'); boxC(m, Pp.x - 1.6, py + 0.4, Pp.z + 7, Pp.x + 1.6, py + 1.4, Pp.z + 8, '#12040a'); boxC(gl, Pp.x - 1.6, py + 1.35, Pp.z + 6.98, Pp.x + 1.6, py + 1.42, Pp.z + 7.02, '#ff7ab0');
+  [-1, 1].forEach(function (s) { var sx = Pp.x + s * 4; for (var lv = 0; lv < 2; lv++) { boxC(m, sx - 0.7, py + 0.4 + lv * 1.2, Pp.z + 7.2, sx + 0.7, py + 1.5 + lv * 1.2, Pp.z + 8.4, '#0e0e10'); tub(m, [sx, py + 0.95 + lv * 1.2, Pp.z + 7.18], [sx, py + 0.95 + lv * 1.2, Pp.z + 7.12], 0.38, 0.3, '#2a2a2e', 12, { cap: 1 }); }
+    tub(m, [sx + s * 1.4, py, Pp.z + 6], [sx + s * 1.4, py + 5, Pp.z + 6], 0.06, 0.06, '#2a2a2e', 5); ell(gl, sx + s * 1.4, py + 5.1, Pp.z + 6, 0.25, 0.2, 0.25, s < 0 ? '#ff2630' : '#4adfff', 6, 4); });
+  for (var lg = 0; lg < 6; lg++) { var la = lg / 6 * 6.283; tub(m, [Pp.x + Math.cos(la) * 0.7, py, Pp.z - 2 + Math.sin(la) * 0.7], [Pp.x - Math.cos(la) * 0.3, py + 0.5, Pp.z - 2 - Math.sin(la) * 0.3], 0.1, 0.08, '#4a2a18', 5); } // the bonfire's logs
+  [[-6, -6], [6, -6], [-7, 2], [7, 2]].forEach(function (q) { var x = Pp.x + q[0], z = Pp.z + q[1], gy = groundY(x, z); tub(m, [x, gy, z], [x, gy + 2.4, z], 0.07, 0.06, '#5a3a20', 5); ell(gl, x, gy + 2.5, z, 0.12, 0.2, 0.12, '#ffb030', 5, 4); }); // tiki torches
+  // the beach bar: a thatched hut with a counter and stools
+  var Bb = B.bar, by = groundY(Bb.x, Bb.z); boxC(m, Bb.x - 3, by, Bb.z - 1.2, Bb.x + 3, by + 1.1, Bb.z - 0.5, '#7a5a34'); boxC(m, Bb.x - 3.2, by + 1.1, Bb.z - 1.3, Bb.x + 3.2, by + 1.18, Bb.z - 0.4, '#5a3a20');
+  [[-2.9, -2.6], [2.9, -2.6], [-2.9, 0.4], [2.9, 0.4]].forEach(function (q) { tub(m, [Bb.x + q[0], by, Bb.z + q[1]], [Bb.x + q[0], by + 2.6, Bb.z + q[1]], 0.08, 0.08, '#6a4a2a', 5); }); roofP(m, Bb.x - 3.4, Bb.z - 3.0, Bb.x + 3.4, Bb.z + 0.8, by + 2.6, 1.2, 'leaves', true, 'plank');
+  for (var st = 0; st < 4; st++) { var sx2 = Bb.x - 2.2 + st * 1.45; tub(m, [sx2, by, Bb.z + 0.3], [sx2, by + 0.75, Bb.z + 0.3], 0.04, 0.04, '#5a3a20', 4); tub(m, [sx2, by + 0.75, Bb.z + 0.3], [sx2, by + 0.8, Bb.z + 0.3], 0.22, 0.22, '#c4121c', 8, { cap: 1 }); }
+  sign(m, null, Bb.x, Bb.z - 1.3, Math.PI, by + 2.0, 'sg_bbar', 2.6);
+  // the lifeguard tower
+  var Tw = B.tower, ty = groundY(Tw.x, Tw.z); [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]].forEach(function (q) { tub(m, [Tw.x + q[0], ty, Tw.z + q[1]], [Tw.x + q[0] * 0.7, ty + 3, Tw.z + q[1] * 0.7], 0.07, 0.06, '#f1e7d0', 5); });
+  boxC(m, Tw.x - 1.2, ty + 3, Tw.z - 1.2, Tw.x + 1.2, ty + 3.15, Tw.z + 1.2, '#c4121c'); boxC(m, Tw.x - 1.1, ty + 3.15, Tw.z - 1.1, Tw.x + 1.1, ty + 4.6, Tw.z - 1.0, '#c4121c'); boxC(m, Tw.x - 1.25, ty + 4.6, Tw.z - 1.25, Tw.x + 1.25, ty + 4.75, Tw.z + 1.25, '#f1e7d0');
+  BEACHM = { m: m.upload(), gl: gl.upload() }; return BEACHM; }
+HIPAINT.sg_bbar = parkSign('THE SALTY LOAD', '#12040a', '#ffe36a'); HIPAINT.sg_mall = parkSign('SPERM WORLD', '#12040a', '#ff7ab0'); HIPAINT.sg_rail = parkSign('SPUZZRAIL', '#12040a', '#c48aff');
+var BEACHP = [], BEACHON = false;
+function beachPeople(on) { if (on === BEACHON) return; BEACHON = on; PEDS = PEDS.filter(function (p) { return !p.beach; }); BEACHP = []; if (!on || (G.guest && G.netSync)) return; var B = beachPlan(), R = rngOf(4242);
+  B.towels.forEach(function (T) { if (!T.who) return; var p = makePed({ x: T.x, z: T.z, a: T.a, kind: 'cit', rig: rigFor('cit'), state: 'idle', keep: 1 }); p.beach = 1; p.towel = T; T.taken = p; p.y = groundY(T.x, T.z) + 0.08; var face = R() < 0.3;
+    p.pose = function (Q) { poseDown(Q, 1, face); Q.sh[0] = [0.4, 1.9, 0]; Q.sh[1] = [0.4, 1.9, 0]; }; p.ctl = function (q) { q.vx = q.vz = 0; q.x = T.x; q.z = T.z; q.a = T.a; }; BEACHP.push(p); });
+  for (var k = 0; k < 14; k++) { var a = k / 14 * 6.283, r = 3.5 + R() * 2.5, x = B.party.x + Math.cos(a) * r, z = B.party.z + Math.sin(a) * r + 1; var p2 = makePed({ x: x, z: z, a: Math.atan2(B.party.x - x, B.party.z + 7 - z), kind: 'cit', rig: rigFor('cit'), state: 'idle', keep: 1 }); p2.beach = 1; p2.danceT = 1e9;
+    (function (px, pz) { p2.ctl = function (q) { q.vx = q.vz = 0; q.x = px; q.z = pz; }; })(x, z); BEACHP.push(p2); }
+  var dj = makePed({ x: B.party.x, z: B.party.z + 8.2, a: Math.PI, kind: 'cit', who: 'pulsar', rig: rigOf('pulsar'), state: 'idle', keep: 1 }); dj.beach = 1; dj.god = 1; dj.y = groundY(B.party.x, B.party.z) + 0.4; dj.danceT = 1e9; dj.ctl = function (q) { q.vx = q.vz = 0; q.x = B.party.x; q.z = B.party.z + 8.2; q.a = Math.PI; }; BEACHP.push(dj);
+  var bk = makePed({ x: B.bar.x, z: B.bar.z - 2, a: 0, kind: 'cit', rig: rigFor('cit'), state: 'idle', keep: 1 }); bk.beach = 1; bk.god = 1; bk.ctl = function (q) { q.vx = q.vz = 0; q.x = B.bar.x; q.z = B.bar.z - 2; q.a = 0; }; BEACHP.push(bk);
+  B.chairs.forEach(function (C) { addSeat(C.x, C.z, C.a, 'chair', { y: groundY(C.x, C.z) + 0.32 }); }); }
+var FIREM = null;
+function stepBeach(dt) { if (G.interior) { beachPeople(false); return; } var B = beachPlan(); if (!B.party) return; var d = Math.hypot(P.x - B.party.x, P.z - B.party.z); beachPeople(d < 260);
+  // the party's music comes out of the speakers when you are on foot near it
+  var near = d < 45 && P.state !== 'car'; if (near && !G.partyRadio && !RAD.on) { var idx = 1; STATIONS.forEach(function (s, i) { if (s.id === 'bl') idx = i; }); RAD.st = idx; RAD.on = true; RAD.seg = null; G.partyRadio = 1; try { radioNextSeg(); } catch (e) {} }
+  else if (!near && G.partyRadio) { G.partyRadio = 0; radioOff(); }
+  if (G.sunT) { G.sunT -= dt; P.hp = Math.min(SV.maxHp, P.hp + dt * 4); if (G.sunT <= 0 || Math.hypot(KIT.stick(0).x, KIT.stick(0).y) > 0.6) { G.sunT = 0; G.sunTowel = null; P.y = standY(P.x, P.z, P.y + 1); toast('That was lovely. You smell of coconut.'); } } }
+(function () { var sr = stepRadio; stepRadio = function (dt) { if (G.partyRadio && RAD.on && P.state !== 'car') { var st = P.state; P.state = 'car'; try { return sr(dt); } finally { P.state = st; } } return sr(dt); }; })();
+
+/* ================================ SPERM WORLD (the mall) ================================ */
+var MALL = null;
+function mallSite() { if (MALL) return MALL; var cw = 24, ch = 18, best = { i: 408, j: 424 }; // open country by the main road, south side on the road
+
+  var x0 = best.i * CT + 3, z0 = best.j * CT + 3, x1 = (best.i + cw) * CT - 3, z1 = (best.j + ch) * CT - 3; MALL = { x0: x0, z0: z0, x1: x1, z1: z1, y: groundY((x0 + x1) / 2, z1), door: { x: (x0 + x1) / 2, z: z1 + 1.6 } }; return MALL; }
+var MALLM = null;
+function mallExterior() { if (MALLM) return MALLM; var M0 = mallSite(), m = new R3.Mesh(), gl = new R3.Mesh(), x0 = M0.x0, z0 = M0.z0, x1 = M0.x1, z1 = M0.z1, cx = (x0 + x1) / 2, y = M0.y, H = 16;
+  boxT(m, x0, y - 2, z0, x1, y + H, z1, { wall: 'w_down2', top: 'concrete', u: (x1 - x0) / 6, v: (H + 2) / 6 }); // the main hall
+  boxC(m, x0 - 0.3, y + H, z0 - 0.3, x1 + 0.3, y + H + 0.8, z1 + 0.3, '#12040a'); boxC(gl, x0 - 0.32, y + H + 0.3, z1 + 0.28, x1 + 0.32, y + H + 0.45, z1 + 0.34, '#ff7ab0'); // parapet and a pink light line
+  // the glass atrium over the entrance, a canopy and the big sign
+  boxT(m, cx - 14, y, z1, cx + 14, y + H + 4, z1 + 3, { wall: 'w_glass', top: 'steel', u: 7, v: 5 }); boxC(gl, cx - 14.1, y + H + 3.6, z1 + 2.9, cx + 14.1, y + H + 4.1, z1 + 3.1, '#4adfff');
+  boxC(m, cx - 9, y + 4.2, z1 + 3, cx + 9, y + 4.6, z1 + 9, '#1a1a1e'); boxC(gl, cx - 9, y + 4.15, z1 + 8.9, cx + 9, y + 4.25, z1 + 9.05, '#ff7ab0'); [-8, -3, 3, 8].forEach(function (o) { tub(m, [cx + o, y, z1 + 8.6], [cx + o, y + 4.2, z1 + 8.6], 0.15, 0.15, '#c8c8c0', 8); });
+  for (var q = 0; q < 6; q++) { var sx = cx - 3.6 + q * 1.44; boxC(m, sx - 0.65, y, z1 + 3.0, sx + 0.65, y + 3.2, z1 + 3.12, '#2a3848'); boxC(gl, sx - 0.02, y + 0.2, z1 + 3.13, sx + 0.02, y + 3.0, z1 + 3.16, '#c8e8ff'); } // the doors
+  boxC(m, cx - 9.4, y + H - 4.2, z1 + 3.0, cx + 9.4, y + H + 3.8, z1 + 3.15, '#12040a'); standQ(gl, cx, z1 + 3.2, 0, 18, y + H - 4, y + H + 3.56, TL('sg_mall'), 0, 0, SGUV);
+  // a big cream droplet on the roof
+  var dx = cx, dz = (z0 + z1) / 2; ell(m, dx, y + H + 6, dz, 4, 5, 4, '#f1e7d0', 14, 10); tub(m, [dx, y + H + 10.5, dz], [dx + 1.2, y + H + 13, dz + 0.4], 1.4, 0.2, '#f1e7d0', 10, { cap: 1 }); ell(gl, dx - 1.2, y + H + 6.6, dz + 3.6, 0.5, 0.7, 0.2, '#12040a', 6, 4); ell(gl, dx + 1.2, y + H + 6.6, dz + 3.6, 0.5, 0.7, 0.2, '#12040a', 6, 4);
+  tub(m, [dx, y + H, dz], [dx, y + H + 1.2, dz], 3, 3, '#3a3a3e', 14, { cap: 1 });
+  // the car park in front: lines and lamps
+  for (var k = -6; k <= 6; k++) { if (Math.abs(k) < 2) continue; var lx = cx + k * 3.4; m.quad([lx - 0.06, y + 0.06, z1 + 10], [lx - 0.06, y + 0.06, z1 + 15], [lx + 0.06, y + 0.06, z1 + 15], [lx + 0.06, y + 0.06, z1 + 10], UV1, TL('white'), [0.6, 0.6, 0.6], [0, 1, 0]); }
+  addBox(x0, z0, x1, z1, y - 2, y + H); addBox(cx - 14, z1, cx - 2.5, z1 + 3, y, y + H + 4); addBox(cx + 2.5, z1, cx + 14, z1 + 3, y, y + H + 4);
+  MALLM = { m: m.upload(), gl: gl.upload() }; return MALLM; }
+ROOMS.mall = { wall: 'tilew', floor: 'marble', keeper: null, props: [], w: 44, d: 60, h: 11, place: 'mall' };
+var MALLSHOPS = [
+  { n: "DRIPPY'S DONUTS", c: '#ff7ab0', items: [['A glazed Drippy (+30 health)', 8, function () { P.hp = Math.min(SV.maxHp, P.hp + 30); }], ['A box of twelve (full health)', 30, function () { P.hp = SV.maxHp; }]] },
+  { n: 'LOAD & CO', c: '#f1e7d0', items: [['A smart new coat (armour +40)', 120, function () { P.armour = Math.min(100, (P.armour || 0) + 40); }], ['Lucky socks (+5 max health)', 400, function () { SV.maxHp = (SV.maxHp || 100) + 5; }, 'socks']] },
+  { n: 'SPUNK ELECTRONICS', c: '#4adfff', items: [['A phone charger (nothing happens)', 15, function () { toast('It does not fit your phone. Of course it doesn\'t.'); }], ['Noise-cancelling headphones (radio louder)', 90, function () { toast('The radio sounds amazing now. Probably.'); }]] },
+  { n: 'THE AMMO SHACK', c: '#c4121c', items: [['Pistol rounds (30)', 60, function () { SV.ammo['9mm'] = (SV.ammo['9mm'] || 0) + 30; }], ['Shells (12)', 80, function () { SV.ammo.shells = (SV.ammo.shells || 0) + 12; }]] },
+  { n: 'CONDOM CASTLE', c: '#ffe36a', items: [['A pack of condoms (armour +25)', 40, function () { P.armour = Math.min(100, (P.armour || 0) + 25); }]] },
+  { n: 'SABA EXPRESS', c: '#7aff6a', items: [['Hemp Joints (5)', 40, function () { SV.joints = (SV.joints || 0) + 5; }]] },
+  { n: 'CREAM CINEMA', c: '#c48aff', items: [['Watch a film (two hours pass, you feel rested)', 12, function () { G.fade = 1.4; G.time = (G.time + 2) % 24; P.hp = SV.maxHp; toast('Cumhead Kart: The Movie. Four stars.'); }]] },
+  { n: 'STICKY TOYS', c: '#ff2630', items: [['A Cumhead plushie (a souvenir)', 25, function () { SV.plush = (SV.plush || 0) + 1; toast('You now own ' + SV.plush + ' Cumhead plushie' + (SV.plush > 1 ? 's' : '') + '.'); }]] },
+  { n: 'GREEBO\'S PIE STAND', c: '#d8a050', items: [['A cream pie (+40 health)', 10, function () { P.hp = Math.min(SV.maxHp, P.hp + 40); }]] },
+  { n: 'SEAMEN SURF', c: '#4adfff', items: [['A beach towel (sunbathe anywhere on the beach)', 20, function () { SV.towel = 1; }]] }];
+MALLSHOPS.forEach(function (S, i) { HIPAINT['sg_ms' + i] = parkSign(S.n, '#12040a', S.c); });
+(function () { var rmP = roomMesh; roomMesh = function (id) { var RM = rmP(id), R0 = ROOMS[id]; if (!R0 || R0.place !== 'mall') return RM; var m = new R3.Mesh(), gl = new R3.Mesh(), w = RM.w, d = RM.d, h = R0.h, cx = w / 2, L = [];
+  // shop units down both sides: a glass front, a lit name board, a counter inside
+  RM.units = []; for (var k = 0; k < 10; k++) { var side = k < 5 ? -1 : 1, z = 8 + (k % 5) * 9.5, x0 = side < 0 ? 0 : w - 7, x1 = side < 0 ? 7 : w, fx = side < 0 ? 7 : w - 7, S = MALLSHOPS[k];
+    boxC(m, Math.min(x0, x1), 0, z - 4.2, Math.max(x0, x1), h, z - 4.0, '#e8e4dc'); boxC(m, Math.min(x0, x1), 0, z + 4.0, Math.max(x0, x1), h, z + 4.2, '#e8e4dc');
+    boxC(m, fx - 0.1, 3.4, z - 4.2, fx + 0.1, h, z + 4.2, '#e8e4dc'); boxC(gl, fx - 0.15 * side, 3.6, z - 3.6, fx - 0.15 * side - 0.02 * side, 4.6, z + 3.6, S.c); standQ(gl, fx - 0.2 * side, z, side < 0 ? Math.PI / 2 : -Math.PI / 2, 4.05, 3.45, 5.15, TL('sg_ms' + k), 0, 0, SGUV);
+    [-1, 1].forEach(function (e) { boxC(m, fx - 0.06, 0, z + e * 3.9 - 0.06, fx + 0.06, 3.4, z + e * 3.9 + 0.06, '#c8c8c0'); }); boxC(m, fx - 0.03, 0, z - 3.85, fx + 0.03, 3.3, z - 1.4, '#3a4a5a'); boxC(m, fx - 0.03, 0, z + 1.4, fx + 0.03, 3.3, z + 3.85, '#3a4a5a');
+    var cxx = side < 0 ? 2.2 : w - 2.2; boxC(m, cxx - 0.6, 0, z - 2.5, cxx + 0.6, 1.1, z + 2.5, '#2a2a2e'); boxC(gl, cxx - 0.62, 1.05, z - 2.5, cxx + 0.62, 1.1, z + 2.5, S.c); RM.boxes.push([cxx - 0.6, z - 2.5, cxx + 0.6, z + 2.5]);
+    for (var sh = 0; sh < 3; sh++) boxC(m, side < 0 ? 0.05 : w - 0.6, 0.6 + sh * 0.8, z - 3.5, side < 0 ? 0.6 : w - 0.05, 0.66 + sh * 0.8, z + 3.5, '#5a3a20');
+    RM.units.push({ k: k, x: side < 0 ? 4.6 : w - 4.6, z: z, kx: cxx + (side < 0 ? -0.1 : 0.1), side: side }); L.push({ x: side < 0 ? 3.5 : w - 3.5, y: 3.2, z: z, r: 7, c: [1, 0.95, 0.9], k: 0.8 }); }
+  // the fountain with a cream droplet, benches round it, palms in pots, the escalators to the gallery
+  var fz = 22; tub(m, [cx, 0, fz], [cx, 0.6, fz], 4, 4, '#c8c4bc', 20, { cap: 1 }); tub(gl, [cx, 0.62, fz], [cx, 0.64, fz], 3.7, 3.7, '#4aa8ff', 20, { cap: 1 }); ell(m, cx, 2.2, fz, 1.0, 1.3, 1.0, '#f1e7d0', 12, 8); tub(m, [cx, 3.3, fz], [cx + 0.4, 4.0, fz], 0.35, 0.05, '#f1e7d0', 8, { cap: 1 }); RM.boxes.push([cx - 4, fz - 4, cx + 4, fz + 4]);
+  [[cx - 6, fz, Math.PI / 2], [cx + 6, fz, -Math.PI / 2], [cx, fz - 6, 0], [cx, fz + 6, Math.PI]].forEach(function (b) { boxR(m, b[0], b[1], b[2], 1.2, 0.3, 0.4, 0.48, '#5a3a20'); });
+  [[11, 6], [w - 11, 6], [11, 40], [w - 11, 40]].forEach(function (q) { tub(m, [q[0], 0, q[1]], [q[0], 0.8, q[1]], 0.5, 0.4, '#3a3a3e', 10, { cap: 1 }); tub(m, [q[0], 0.8, q[1]], [q[0], 3.2, q[1]], 0.12, 0.1, '#6a4a2a', 6); for (var f = 0; f < 6; f++) { var fa = f / 6 * 6.283; tub(m, [q[0], 3.2, q[1]], [q[0] + Math.cos(fa) * 1.4, 2.6, q[1] + Math.sin(fa) * 1.4], 0.15, 0.02, '#3a7a2a', 4); } RM.boxes.push([q[0] - 0.5, q[1] - 0.5, q[0] + 0.5, q[1] + 0.5]); });
+  // the gallery round the top with a glass rail, and escalators up to it (for show)
+  [[0, 7.5], [w - 7.5, w]].forEach(function (r) { boxC(m, r[0], 5.2, 2, r[1], 5.5, d - 8, '#e8e4dc'); boxC(gl, r[0] === 0 ? 7.45 : w - 7.55, 5.5, 2, r[0] === 0 ? 7.55 : w - 7.45, 6.5, d - 8, '#bfe2ff'); });
+  [cx - 3, cx + 3].forEach(function (ex, i) { var z0 = 30, z1 = 38; m.quad([ex - 0.6, 0.02, z0], [ex - 0.6, 5.2, z1], [ex + 0.6, 5.2, z1], [ex + 0.6, 0.02, z0], uvR(1, 8), TL('grate'), [0.55, 0.55, 0.55], [0, 0.8, -0.6]); [-0.65, 0.65].forEach(function (s) { boxC(gl, ex + s - 0.03, 0.9, z0, ex + s + 0.03, 1.0, z0 + 0.1, '#4adfff'); }); RM.boxes.push([ex - 0.7, z0, ex + 0.7, z1]); });
+  // the food court at the back: tables with stools and a big screen
+  RM.food = []; for (var tx = 0; tx < 4; tx++) for (var tz = 0; tz < 2; tz++) { var X = 12 + tx * 6.5, Z = 46 + tz * 5; tub(m, [X, 0, Z], [X, 0.75, Z], 0.08, 0.08, '#2a2a2e', 6); tub(m, [X, 0.75, Z], [X, 0.8, Z], 0.9, 0.9, '#f1e7d0', 12, { cap: 1 }); RM.boxes.push([X - 0.9, Z - 0.9, X + 0.9, Z + 0.9]);
+    [[1.4, 0], [-1.4, 0]].forEach(function (o) { tub(m, [X + o[0], 0, Z], [X + o[0], 0.5, Z], 0.05, 0.05, '#2a2a2e', 5); tub(m, [X + o[0], 0.5, Z], [X + o[0], 0.56, Z], 0.3, 0.3, '#c4121c', 8, { cap: 1 }); RM.food.push({ x: X + o[0], z: Z, a: o[0] > 0 ? -Math.PI / 2 : Math.PI / 2 }); }); }
+  standQ(gl, cx, d - 0.1, Math.PI, 14, 4, 11, TL('bb_twitch'), 0, 0);
+  for (var lz = 6; lz < d - 4; lz += 10) L.push({ x: cx, y: h - 1, z: lz, r: 16, c: [1, 0.95, 0.9], k: 0.9 }); L.push({ x: cx, y: 2.5, z: fz, r: 8, c: [0.5, 0.8, 1], k: 0.8 });
+  for (var sk = 0; sk < 4; sk++) m.quad([cx - 6, h - 0.02, 6 + sk * 12], [cx + 6, h - 0.02, 6 + sk * 12], [cx + 6, h - 0.02, 12 + sk * 12], [cx - 6, h - 0.02, 12 + sk * 12], UV1, TL('w_glass'), [0.8, 0.9, 1], [0, -1, 0]); // skylights
+  RM.extra3 = m.upload(); RM.glow3 = gl.upload(); RM.lights = L; return RM; }; })();
+function mallShopMenu(k) { var S = MALLSHOPS[k]; KIT.menu({ title: S.n, sub: 'Sperm World', items: S.items.map(function (it) { var owned = it[3] && SV[it[3]]; return { label: it[0] + '  ·  $' + it[1], dis: SV.money < it[1] || owned, fn: function () { KIT.confirm({ title: it[0], price: it[1], have: Math.floor(SV.money), unit: '$', yes: function () { money(-it[1]); it[2](); if (it[3]) SV[it[3]] = 1; sfx.play('coin'); persist(); mallShopMenu(k); }, no: function () { mallShopMenu(k); } }); } }; }).concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }
+(function () { var es = enterShop; enterShop = function (id, homeId, special) { var r = es.apply(this, arguments); var I = G.interior; if (special !== 'mall' || !I) return r; var RM = I.RM, M0 = mallSite();
+  I.exitX = M0.door.x; I.exitZ = M0.door.z + 1.5; I.exitA = 0; G.indoorUses = [{ x: RM.w / 2, z: 0.6, r: 2.4, label: 'LEAVE SPERM WORLD', fn: leaveShop }];
+  RM.units.forEach(function (u) { var kp = makePed({ x: u.kx, z: u.z, a: u.side < 0 ? Math.PI / 2 : -Math.PI / 2, kind: 'cit', rig: rigFor('cit'), state: 'idle', keep: 1 }); kp.inside = 'mall'; kp.god = 1; kp.ctl = function (q) { q.vx = q.vz = 0; q.x = u.kx; q.z = u.z; q.y = 0; }; kp.y = 0;
+    G.indoorUses.push({ x: u.x, z: u.z, r: 2.2, label: 'SHOP AT ' + MALLSHOPS[u.k].n, fn: function () { mallShopMenu(u.k); } }); });
+  RM.food.forEach(function (s, i) { G.indoorUses.push({ x: s.x, z: s.z, r: 0.8, label: 'SIT DOWN', fn: function () { sitDown({ id: 'mall' + i, x: s.x, z: s.z, a: s.a, kind: 'chair', y: 0.56 }); } }); });
+  for (var k = 0; k < 22; k++) { var sx = 10 + Math.random() * (RM.w - 20), sz = 4 + Math.random() * 40, sp = makePed({ x: sx, z: sz, kind: 'cit', rig: rigFor('cit'), state: 'walk', keep: 1 }); sp.inside = 'mall'; sp.god = 1;
+    (function (q0) { var tx = sx, tz = sz; q0.y = 0; q0.ctl = function (q, dt) { q.y = 0; if (Math.hypot(tx - q.x, tz - q.z) < 1) { tx = 9 + Math.random() * (RM.w - 18); tz = 3 + Math.random() * 42; if (Math.abs(tx - RM.w / 2) < 5 && Math.abs(tz - 22) < 5) tx += 7; } var a = Math.atan2(tx - q.x, tz - q.z); q.a += angDiff(q.a, a) * Math.min(1, dt * 4); q.vx = Math.sin(q.a) * 1.2; q.vz = Math.cos(q.a) * 1.2; }; })(sp); }
+  return r; }; })();
+
+/* ================================ THE SPUZZRAIL (monorail) ================================ */
+/* An elevated monorail loop along the main roads: Clubhouse Row, the Red Light District, the Docks, Seamen Beach,
+   Ejaculand, the Cafe Streets, Sperm World, Cum Hills, the Cumstruction Site and Spunk Brain Labs. A train runs round it
+   all the time. At any station (stairs up from the street) pay $5 and ride to any other: you ride in the front car with
+   the city going by below; A skips to the stop. */
+var RAIL = null, RAILY = 9.5;
+function railBuild() { if (RAIL) return RAIL; var order = ['club', 'red', 'docks', 'beach', 'ejac', 'cafe', 'mall', 'hills', 'site', 'brain'], names = { club: 'Clubhouse Row', red: 'Red Light District', docks: 'The Docks', beach: 'Seamen Beach', ejac: 'Ejaculand', cafe: 'The Cafe Streets', mall: 'Sperm World', hills: 'Cum Hills', site: 'The Cumstruction Site', brain: 'Spunk Brain Labs' };
+  var st = []; order.forEach(function (id) { var c = id === 'mall' ? (function () { var M0 = mallSite(); return { x: M0.door.x, z: M0.door.z + 12 }; })() : id === 'beach' ? (function () { var B = beachPlan(); return B.party ? { x: B.party.x, z: B.party.z } : distCentre('beach'); })() : distCentre(id); if (!c) return; var r = nearRoadPt(c.x, c.z); st.push({ id: id, name: names[id], x: r.x, z: r.z }); });
+  // the line: road routes between stations, joined into one loop, thinned and smoothed
+  var pts = []; for (var i = 0; i < st.length; i++) { var A = st[i], B2 = st[(i + 1) % st.length], R = gpsRoute(A.x, A.z, B2.x, B2.z) || [[A.x, A.z], [B2.x, B2.z]]; A.at = pts.length; R.forEach(function (p) { var l = pts[pts.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 6) pts.push([p[0], p[1]]); }); }
+  // the line runs over the pavement, not down the middle of the road, so the pillars stand on the pavement
+  pts = pts.map(function (p, k) { var a = pts[(k - 1 + pts.length) % pts.length], b = pts[(k + 1) % pts.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = dz / l, nz = -dx / l;
+    for (var d = 4; d <= 14; d += 0.5) { var x = p[0] + nx * d, z = p[1] + nz * d; if (roadF(x, z) > 0.6) return [x, z]; } return [p[0] + nx * 7, p[1] + nz * 7]; });
+  for (var pass = 0; pass < 3; pass++) pts = pts.map(function (p, k) { var a = pts[(k - 1 + pts.length) % pts.length], b = pts[(k + 1) % pts.length]; return [(a[0] + 2 * p[0] + b[0]) / 4, (a[1] + 2 * p[1] + b[1]) / 4]; });
+  var S = [0]; for (var k = 1; k <= pts.length; k++) { var p0 = pts[k - 1], p1 = pts[k % pts.length]; S.push(S[k - 1] + Math.hypot(p1[0] - p0[0], p1[1] - p0[1])); }
+  var Y = pts.map(function (p) { return groundY(p[0], p[1]); }); for (var sm = 0; sm < 30; sm++) Y = Y.map(function (y, k) { return Math.max(groundY(pts[k][0], pts[k][1]), (Y[(k - 1 + Y.length) % Y.length] + y * 2 + Y[(k + 1) % Y.length]) / 4); });
+  st.forEach(function (s) { var bi = 0, bd = 1e9; pts.forEach(function (p, k) { var d = Math.hypot(p[0] - s.x, p[1] - s.z); if (d < bd) { bd = d; bi = k; } }); s.k = bi; s.s = S[bi]; var p = pts[bi], q = pts[(bi + 1) % pts.length], a = Math.atan2(q[0] - p[0], q[1] - p[1]); s.a = a; s.px = p[0]; s.pz = p[1];
+    var side = 3.4; s.gx = p[0] + Math.cos(a) * side; s.gz = p[1] - Math.sin(a) * side; s.y = Y[bi] + RAILY; });
+  RAIL = { st: st, pts: pts, S: S, len: S[S.length - 1], Y: Y, chunks: [], t: 0 }; railMesh(RAIL); return RAIL; }
+function railAt(R, s) { s = ((s % R.len) + R.len) % R.len; var lo = 0, hi = R.S.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (R.S[mid] <= s) lo = mid; else hi = mid; } var p0 = R.pts[lo % R.pts.length], p1 = R.pts[(lo + 1) % R.pts.length], f = (s - R.S[lo]) / ((R.S[lo + 1] - R.S[lo]) || 1), y0 = R.Y[lo % R.pts.length], y1 = R.Y[(lo + 1) % R.pts.length];
+  return { x: p0[0] + (p1[0] - p0[0]) * f, z: p0[1] + (p1[1] - p0[1]) * f, y: y0 + (y1 - y0) * f + RAILY, a: Math.atan2(p1[0] - p0[0], p1[1] - p0[1]) }; }
+function railMesh(R) { var n = R.pts.length, per = 24;
+  for (var c0 = 0; c0 < n; c0 += per) { var m = new R3.Mesh(), gl = new R3.Mesh(), sx = 0, sz = 0, cnt = 0;
+    for (var k = c0; k < Math.min(n, c0 + per); k++) { var a = R.pts[k], b = R.pts[(k + 1) % n], ya = R.Y[k] + RAILY, yb = R.Y[(k + 1) % n] + RAILY, dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = dz / l * 0.55, nz = -dx / l * 0.55; sx += a[0]; sz += a[1]; cnt++;
+      // the beam (a box along the line) and a glowing strip on its side
+      m.quad([a[0] - nx, ya, a[1] - nz], [b[0] - nx, yb, b[1] - nz], [b[0] + nx, yb, b[1] + nz], [a[0] + nx, ya, a[1] + nz], uvR(l / 4, 1), TL('concrete'), [0.55, 0.55, 0.55], [0, 1, 0]);
+      [-1, 1].forEach(function (s) { var ox = nx * s, oz = nz * s, nn = [ox / 0.55, 0, oz / 0.55]; m.quad([a[0] + ox, ya - 1.1, a[1] + oz], [b[0] + ox, yb - 1.1, b[1] + oz], [b[0] + ox, yb, b[1] + oz], [a[0] + ox, ya, a[1] + oz], uvR(l / 4, 0.3), TL('concrete'), lit(nn, 0.85), nn); gl.quad([a[0] + ox * 1.02, ya - 0.5, a[1] + oz * 1.02], [b[0] + ox * 1.02, yb - 0.5, b[1] + oz * 1.02], [b[0] + ox * 1.02, yb - 0.4, b[1] + oz * 1.02], [a[0] + ox * 1.02, ya - 0.4, a[1] + oz * 1.02], UV1, TL('white'), [0.77, 0.54, 1], nn); });
+      m.quad([a[0] + nx, ya - 1.1, a[1] + nz], [b[0] + nx, yb - 1.1, b[1] + nz], [b[0] - nx, yb - 1.1, b[1] - nz], [a[0] - nx, ya - 1.1, a[1] - nz], uvR(l / 4, 1), TL('concrete'), [0.3, 0.3, 0.3], [0, -1, 0]);
+      // a pillar every 24 m (where the ground is under it)
+      if (Math.floor(R.S[k] / 24) !== Math.floor(R.S[k + 1] / 24) && roadF(a[0], a[1]) > 0.3 && !isWaterK(kAt(a[0], a[1]))) { var gy = groundY(a[0], a[1]); addBox(a[0] - 0.55, a[1] - 0.55, a[0] + 0.55, a[1] + 0.55, gy - 1, ya - 1.1); tub(m, [a[0], gy, a[1]], [a[0], ya - 1.1, a[1]], 0.55, 0.45, '#8a8480', 10); boxC(m, a[0] - 0.9, ya - 1.5, a[1] - 0.9, a[0] + 0.9, ya - 1.1, a[1] + 0.9, '#6a645e'); } }
+    R.chunks.push({ m: m.upload(), gl: gl.upload(), x: sx / cnt, z: sz / cnt }); }
+  // the stations: a platform beside the beam, a roof, stairs down to the street, the SPUZZRAIL sign
+  var m2 = new R3.Mesh(), g2 = new R3.Mesh(); R.st.forEach(function (s) { var c = Math.cos(s.a), sn = Math.sin(s.a); function L(u, v) { return [s.px + u * c + v * sn, s.pz - u * sn + v * c]; } var y = s.y - 1.1, gy = groundY(L(2.2, -9)[0], L(2.2, -9)[1]);
+    var q = [L(-3.4, -12), L(-0.7, -12), L(-0.7, 12), L(-3.4, 12)]; m2.quad([q[0][0], y + 0.3, q[0][1]], [q[3][0], y + 0.3, q[3][1]], [q[2][0], y + 0.3, q[2][1]], [q[1][0], y + 0.3, q[1][1]], uvR(2, 8), TL('tilefloor'), [0.6, 0.6, 0.6], [0, 1, 0]);
+    boxR(m2, L(-2.05, 0)[0], L(-2.05, 0)[1], s.a, 1.35, 12, y - 0.3, y + 0.3, '#6a645e'); boxR(g2, L(-0.75, 0)[0], L(-0.75, 0)[1], s.a, 0.05, 12, y + 0.3, y + 0.34, '#ffe36a'); boxR(g2, L(-3.4, 0)[0], L(-3.4, 0)[1], s.a, 0.04, 12, y + 0.3, y + 1.3, '#bfe2ff');
+    boxR(m2, L(-2.05, 0)[0], L(-2.05, 0)[1], s.a, 1.6, 12.2, y + 3.4, y + 3.6, '#12040a'); [[-3.3, -10], [-3.3, 10], [-3.3, 0]].forEach(function (o) { var p = L(o[0], o[1]); tub(m2, [p[0], y + 0.3, p[1]], [p[0], y + 3.4, p[1]], 0.08, 0.08, '#2a2a2e', 6); });
+    // the lift tower on the pavement (glass sides, a lit top), joined to the platform by a bridge under the beam
+    var lt = L(2.2, -9); boxR(m2, lt[0], lt[1], s.a, 1.1, 1.1, gy, gy + 0.2, '#6a645e'); boxR(g2, lt[0], lt[1], s.a, 1.0, 1.0, gy + 0.2, y + 3.0, '#bfe2ff'); boxR(m2, lt[0], lt[1], s.a, 1.15, 1.15, y + 3.0, y + 3.4, '#c48aff'); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { var c2 = L(2.2 + o[0] * 1.05, -9 + o[1] * 1.05); tub(m2, [c2[0], gy, c2[1]], [c2[0], y + 3.0, c2[1]], 0.07, 0.07, '#2a2a2e', 5); });
+    boxR(m2, L(0, -9)[0], L(0, -9)[1], s.a, 1.2, 1.0, y - 1.55, y - 1.3, '#6a645e'); addOBB(lt[0], lt[1], s.a, 1.1, 1.1, gy - 1, y + 3.4); var ld = L(2.2, -11); s.gx = ld[0]; s.gz = ld[1];
+    var sg = L(-2.05, 0); standQ(g2, sg[0], sg[1], s.a + Math.PI / 2, 2.2, y + 2.4, y + 3.32, TL('sg_rail'), 0, 0, SGUV); standQ(g2, sg[0], sg[1], s.a - Math.PI / 2, 2.2, y + 2.4, y + 3.32, TL('sg_rail'), 0, 0, SGUV); });
+  R.stm = { m: m2.upload(), gl: g2.upload() };
+  var car = new R3.Mesh(), cg = new R3.Mesh(); boxC(car, -1.3, 0, -5, 1.3, 2.6, 5, '#c4121c'); boxC(car, -1.32, 1.3, -4.6, 1.32, 2.2, 4.6, '#1a2838'); boxC(cg, -1.34, 1.32, -4.5, -1.33, 2.18, 4.5, '#bfe2ff'); boxC(cg, 1.33, 1.32, -4.5, 1.34, 2.18, 4.5, '#bfe2ff'); boxC(car, -1.2, 2.6, -4.8, 1.2, 2.8, 4.8, '#12040a'); boxC(cg, -1.31, 0.4, -5, -1.3, 0.55, 5, '#c48aff'); boxC(cg, 1.3, 0.4, -5, 1.31, 0.55, 5, '#c48aff'); boxC(car, -1.0, -0.6, -4, 1.0, 0, 4, '#2a2a2e');
+  var nose = new R3.Mesh(); ell(nose, 0, 1.3, 5, 1.3, 1.3, 1.6, '#c4121c', 12, 8); ell(cg, 0, 1.8, 5.9, 0.8, 0.5, 0.6, '#1a2838', 8, 4); R.car = car.upload(); R.carg = cg.upload(); R.nose = nose.upload(); }
+function stepRail(dt) { var R = railBuild(); R.t += dt; var Rd = G.rail; if (Rd) { Rd.t += dt; var go = Rd.s1 - Rd.s0; if (go < 0) go += R.len; var sp = Math.min(46, 8 + Rd.t * 8); Rd.d = Math.min(go, (Rd.d || 0) + sp * dt * (Rd.d > go - 60 ? Math.max(0.25, (go - Rd.d) / 60) : 1));
+    if (KIT.pressed('a') || KIT.pressed('x') || (KIT.ptr && KIT.ptr.tap)) Rd.d = go; if (Rd.d >= go - 0.05) { var s = Rd.to; G.rail = null; G.talk = 0; P.x = s.gx; P.z = s.gz; P.y = standY(P.x, P.z, 999); P.a = s.a; CAM.snap = 1; G.fade = 1.2; toast(s.name + '. Mind the gap.'); } } }
+function drawRail() { var R = railBuild(); R.chunks.forEach(function (c) { if (dist2(c.x, c.z, CAM.x, CAM.z) > 520 * 520 || !inView(c.x, c.z, 70)) return; R3.draw(c.m, ATT); R3.draw(c.gl, ATT, { lit: false }); }); R3.draw(R.stm.m, ATT); R3.draw(R.stm.gl, ATT, { lit: false });
+  // the train: round and round, slowing into each station and waiting
+  var s0 = (R.t * 14) % R.len; if (G.rail) s0 = (G.rail.s0 + G.rail.d) % R.len; for (var k = 0; k < 3; k++) { var p = railAt(R, s0 - k * 10.6), q = railAt(R, s0 - k * 10.6 + 2), a = Math.atan2(q.x - p.x, q.z - p.z); if (dist2(p.x, p.z, CAM.x, CAM.z) > 400 * 400) continue; var M1 = MD(p.x, p.y + 0.6, p.z, a, 0, 0);
+    R3.draw(R.car, ATT, { m: M1 }); R3.draw(R.carg, ATT, { m: M1, lit: false }); if (k === 0) R3.draw(R.nose, ATT, { m: M1 }); } }
+function railMenu(s) { var R = railBuild(); KIT.menu({ title: 'SPUZZRAIL', sub: s.name + ' station  ·  $5 to anywhere on the loop', items: R.st.filter(function (o) { return o !== s; }).map(function (o) { return { label: o.name.toUpperCase(), dis: SV.money < 5, fn: function () { KIT.confirm({ title: 'Ride to ' + o.name, price: 5, have: Math.floor(SV.money), unit: '$', yes: function () { money(-5); KIT.closeMenu(); G.rail = { from: s, to: o, s0: s.s, s1: o.s, t: 0, d: 0 }; G.talk = 1; sfx.play('door'); }, no: function () { railMenu(s); } }); } }; }).concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }
+(function () {
+  var sc = stepCamera; stepCamera = function (dt) { var r = sc(dt); if (G.rail) { var R = railBuild(), Rd = G.rail, p = railAt(R, Rd.s0 + Rd.d), q = railAt(R, Rd.s0 + Rd.d + 30), a = Math.atan2(q.x - p.x, q.z - p.z); P.x = p.x; P.z = p.z; P.y = p.y + 0.6; var bk = railAt(R, Rd.s0 + Rd.d - 34); CAM.x = bk.x; CAM.z = bk.z; CAM.y = Math.max(bk.y + 7, groundY(bk.x, bk.z) + 3); CAM.at = [q.x, q.y, q.z]; } return r; };
+  var dp = drawPlayer; drawPlayer = function () { if (G.rail) return; return dp(); };
+  var sf = stepFoot; stepFoot = function (dt) { if (G.craneT) { var C = G.craneT; C.t -= dt; P.vx = P.vz = P.vy = 0; P.x = C.x; P.z = C.z; P.y = C.y; P.a += dt * 0.4; if (C.t <= 0) { G.craneT = null; P.x = C.x + 4; P.z = C.z + 4; P.y = standY(P.x, P.z, 999); G.fade = 1; } return; } if (G.rail) { P.vx = P.vz = 0; P.sp = 0; return; } if (G.sunTowel) { P.vx = P.vz = 0; P.sp = 0; var T = G.sunTowel; P.x = T.x; P.z = T.z; P.y = groundY(T.x, T.z) + 0.1; P.a = T.a; return; } return sf(dt); };
+  var po = poseOfPlayer; poseOfPlayer = function () { var Q = po(); if (G.sunTowel) { poseDown(Q, 1, 0); Q.sh[0] = [0.4, 1.9, 0]; Q.sh[1] = [0.4, 1.9, 0]; } return Q; };
+})();
+
+/* ================================ THINGS TO DO (every area) ================================ */
+/* Three kinds of little job or game, each started at a spot on the map (a blue blip): TIMING (stop the needle in the
+   red three times: the high striker, ring toss and coconut shy, the beach party's dance-off), COLLECT (things to walk or
+   drive over against the clock: lawns to mow, mushrooms, shells, litter, treasure) and CARRY (back and forth between two
+   marks with a load: bricks up the scaffold, crates off the ship). Each pays out, more for a better run. */
+var ACT = null;
+function actFinish(score, max, pay) { var k = clamp(score / max, 0, 1), cash = Math.round(pay * (0.25 + 0.75 * k)); if (score <= 0) { toast('No luck this time.'); } else { money(cash); bigText(k >= 1 ? 'PERFECT!' : k > 0.5 ? 'NICE ONE' : 'NOT BAD', '+$' + cash, '#ffe36a', 2.2); } ACT = null; G.talk = 0; persist(); }
+function startTiming(name, pay, rounds) { ACT = { k: 'timing', name: name, pay: pay, n: rounds || 3, r: 0, score: 0, t: 0, pos: 0, dir: 1, zone: 0.22, cx: 0.3 + Math.random() * 0.4, cool: 0 }; G.talk = 1; toast(name + ': stop the needle in the red (A).'); }
+function startCollect(name, pay, pts, secs, msg) { ACT = { k: 'collect', name: name, pay: pay, pts: pts.map(function (p) { return { x: p.x, z: p.z, got: 0 }; }), left: secs, max: pts.length }; toast(msg || name + ': get to every blue ring before time runs out.'); }
+function startCarry(name, pay, A, B, n, secs, msg) { ACT = { k: 'carry', name: name, pay: pay, A: A, B: B, n: n, done: 0, holding: 0, left: secs }; toast(msg || name + ': pick up at the blue ring, drop at the red one. ' + n + ' trips.'); }
+function stepAct(dt) { var a = ACT; if (!a) return; if (P.state === 'dead') { ACT = null; G.talk = 0; return; }
+  if (a.k === 'timing') { a.t += dt; a.cool -= dt; var sp = 1.1 + a.r * 0.45; a.pos += a.dir * sp * dt; if (a.pos > 1) { a.pos = 1; a.dir = -1; } if (a.pos < 0) { a.pos = 0; a.dir = 1; }
+    if (a.cool <= 0 && (KIT.pressed('a') || KIT.pressed('x') || (KIT.ptr && KIT.ptr.tap) || gpPressed(0))) { var hit = Math.abs(a.pos - a.cx) < a.zone / 2; a.score += hit ? 1 : 0; sfx.play(hit ? 'coin' : 'back'); a.r++; a.cool = 0.4; a.zone *= 0.8; a.cx = 0.2 + Math.random() * 0.6; if (a.r >= a.n) actFinish(a.score, a.n, a.pay); } return; }
+  a.left -= dt; if (a.left <= 0) { if (a.k === 'collect') actFinish(a.pts.filter(function (p) { return p.got; }).length, a.max, a.pay); else actFinish(a.done, a.n, a.pay); return; }
+  var me = P.state === 'car' && P.veh ? P.veh : P, R = P.state === 'car' ? 4 : 2.2;
+  if (a.k === 'collect') { a.pts.forEach(function (p) { if (!p.got && Math.hypot(p.x - me.x, p.z - me.z) < R) { p.got = 1; sfx.play('coin'); } }); if (a.pts.every(function (p) { return p.got; })) actFinish(a.max, a.max, a.pay); }
+  else if (a.k === 'carry') { var tg = a.holding ? a.B : a.A; if (Math.hypot(tg.x - me.x, tg.z - me.z) < R) { if (a.holding) { a.holding = 0; a.done++; sfx.play('coin'); if (a.done >= a.n) actFinish(a.n, a.n, a.pay); } else { a.holding = 1; sfx.play('select'); } } }
+  G.blips = (G.blips || []).filter(function (b) { return !b.act; }); if (a.k === 'collect') a.pts.forEach(function (p) { if (!p.got) G.blips.push({ x: p.x, z: p.z, c: '#4adfff', act: 1 }); }); else if (a.k === 'carry') { var t2 = a.holding ? a.B : a.A; G.blips.push({ x: t2.x, z: t2.z, c: a.holding ? '#ff2630' : '#4adfff', big: 1, act: 1 }); } }
+var RINGM = null, CRATEM = null;
+function drawAct() { var a = ACT; if (!a || G.interior) return; if (!RINGM) { var m = new R3.Mesh(); tub(m, [0, 0, 0], [0, 0.12, 0], 1, 1, '#ffffff', 20); tub(m, [0, 0.12, 0], [0, 3, 0], 1, 1.0, '#ffffff', 20); RINGM = m.upload(); var c = new R3.Mesh(); boxC(c, -0.3, -0.25, -0.3, 0.3, 0.25, 0.3, '#8a6a3a', 0); CRATEM = c.upload(); }
+  function ring(p, col) { var y = groundY(p.x, p.z); R3.draw(RINGM, ATT, { lit: false, m: MD(p.x, y, p.z, G.t, 0, 0, 1.3), tint: col, alpha: 0.35 }); }
+  if (a.k === 'collect') a.pts.forEach(function (p) { if (!p.got && dist2(p.x, p.z, CAM.x, CAM.z) < 250 * 250) ring(p, [0.3, 0.9, 1]); });
+  if (a.k === 'carry') { ring(a.holding ? a.B : a.A, a.holding ? [1, 0.2, 0.2] : [0.3, 0.9, 1]); if (a.holding && P.state === 'foot') R3.draw(CRATEM, ATT, { m: MD(P.x + Math.sin(P.a) * 0.45, P.y + 1.15, P.z + Math.cos(P.a) * 0.45, P.a, 0, 0) }); } }
+function drawActHud(ctx) { var a = ACT; if (!a) return; var W = KIT.W, H = KIT.H, tx = KIT.text || null;
+  if (a.k === 'timing') { var bw = Math.min(260, W * 0.6), bx = (W - bw) / 2, by = H * 0.62; KIT.panel(bx - 8, by - 26, bw + 16, 44); ctx.fillStyle = '#2a1a1c'; ctx.fillRect(bx, by, bw, 10); ctx.fillStyle = '#c4121c'; ctx.fillRect(bx + (a.cx - a.zone / 2) * bw, by, a.zone * bw, 10); ctx.fillStyle = '#ffe36a'; ctx.fillRect(bx + a.pos * bw - 1, by - 4, 3, 18);
+    var t1 = a.name.toUpperCase() + '  ' + a.score + '/' + a.r + '  (A)'; tx(t1, W / 2 - tw2(t1, 7) / 2, by - 18, { col: '#f1e7d0', size: 7 }); return; }
+  var s = a.name.toUpperCase() + '  ' + (a.k === 'collect' ? a.pts.filter(function (p) { return p.got; }).length + '/' + a.max : a.done + '/' + a.n + (a.holding ? '  CARRYING' : '')) + '  ' + Math.ceil(a.left) + 's'; tx(s, W / 2 - tw2(s, 8) / 2, 30, { col: '#4adfff', size: 8 }); }
+/* where everything is */
+function ptsAround(x, z, n, r, okK, seed) { var R = rngOf(seed), L = [], tries = 0; while (L.length < n && tries++ < 4000) { var a = R() * 6.283, d = 6 + R() * r, px = x + Math.sin(a) * d, pz = z + Math.cos(a) * d, k = kAt(px, pz); if (!okK(k) || bldAt(px, pz) || L.some(function (o) { return Math.hypot(o.x - px, o.z - pz) < 7; })) continue; L.push({ x: px, z: pz }); } return L; }
+function payFor(price, fn) { KIT.confirm({ title: 'That will be $' + price, price: price, have: Math.floor(SV.money), unit: '$', yes: function () { KIT.closeMenu(); if (SV.money < price) { toast('Not enough money.'); return; } money(-price); fn(); }, no: KIT.closeMenu }); }
+function actSpots() { var U = [], C;
+  function spot(x, z, label, fn, icon) { U.push({ x: x, z: z, r: 2.6, label: label, blip: 'act', icon: icon || '?', fn: function () { if (ACT) { toast('Finish what you are doing first.'); return; } fn(x, z); } }); }
+  function isGrass(k) { return k === K_GRASS || k === K_PARK || k === K_YARD; }
+  // Cum Hills: mow the front lawns, a garage sale, a barbecue
+  if ((C = distCentre('hills'))) { var h1 = onPave(C.x, C.z); spot(h1.x, h1.z, 'MOW THE LAWNS ($90)', function (x, z) { startCollect('Lawn mowing', 90, ptsAround(x, z, 8, 70, isGrass, 77), 75, 'Lawn mowing: walk over every blue lawn ring. 75 seconds.'); }, 'M');
+    var h2 = onPave(C.x + 60, C.z - 40); spot(h2.x, h2.z, 'GARAGE SALE', function () { KIT.menu({ title: 'Garage Sale', sub: 'Everything must go. Including the cat.', items: [['A slightly used bat', 15, function () { SV.weapons.bat = 1; }], ['Some old ammo (20 rounds)', 20, function () { SV.ammo['9mm'] = (SV.ammo['9mm'] || 0) + 20; }], ['A dented helmet (armour +20)', 25, function () { P.armour = Math.min(100, (P.armour || 0) + 20); }], ['A bag of crisps (+15 health)', 2, function () { P.hp = Math.min(SV.maxHp, P.hp + 15); }]].map(function (it) { return { label: it[0] + '  ·  $' + it[1], dis: SV.money < it[1], fn: function () { KIT.confirm({ title: it[0], price: it[1], have: Math.floor(SV.money), unit: '$', yes: function () { money(-it[1]); it[2](); sfx.play('coin'); KIT.closeMenu(); }, no: KIT.closeMenu }); } }; }).concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }, '$');
+    var h3 = onPave(C.x - 50, C.z + 50); spot(h3.x, h3.z, 'JOIN THE BARBECUE', function () { P.hp = SV.maxHp; toast(pick(['A neighbour hands you a burger. It is mostly charcoal. Lovely.', 'You get a sausage and a lecture about fences.', 'Somebody\'s dad lets you turn the steaks. Proudest moment of your term.'])); }, 'B'); }
+  // the Cumstruction Site: carry bricks up, smash the rubble, climb the crane
+  if ((C = distCentre('site'))) { var s1 = onPave(C.x, C.z), s2 = tileNear(C.x + 25, C.z + 10, function (k) { return k !== K_ROAD && k !== K_PAVE && !isWaterK(k); }, 20) || { x: C.x + 25, z: C.z + 10 };
+    spot(s1.x, s1.z, 'BRICK RUN ($120)', function (x, z) { var far = ptsAround(x, z, 12, 45, function (k) { return k !== K_ROAD && !isWaterK(k); }, 57).filter(function (p) { return Math.hypot(p.x - x, p.z - z) > 25; })[0] || s2; startCarry('Brick run', 120, { x: x + 4, z: z }, far, 5, 100, 'Brick run: carry five loads of bricks from the pallet (blue) to the scaffold (red). 100 seconds.'); }, 'B');
+    spot(s1.x + 6, s1.z + 6, 'CLEAR THE RUBBLE ($100)', function (x, z) { startCollect('Rubble', 100, ptsAround(x, z, 7, 45, function (k) { return k !== K_ROAD && !isWaterK(k); }, 91), 60, 'Clear the rubble: get to each pile and kick it about. 60 seconds.'); }, 'R');
+    var cr = poisOf('crane')[0] || C; spot(cr.x + 4, cr.z + 4, 'CLIMB THE CRANE', function () { G.fade = 1; var y0 = P.y; P.x = cr.x; P.z = cr.z; P.y = groundY(cr.x, cr.z) + 38; P.vy = 0; G.craneT = { t: 6, x: cr.x, z: cr.z, y: P.y }; if (!SV.craneDone) { SV.craneDone = 1; money(150); toast('The whole of Cum City from the top of the crane. Someone left $150 up here.'); } else toast('Cum City from the top of the crane. Do not look down.');  }, 'C'); }
+  // Ejaculand: the high striker, ring toss and a coconut shy
+  if ((C = distCentre('ejac'))) { var e1 = tileNear(C.x - 20, C.z + 10, function (k) { return k === K_PARK || k === K_PAVE || k === K_LOT; }, 20) || C;
+    spot(e1.x, e1.z, 'HIGH STRIKER ($3)', function () { payFor(3, function () { startTiming('High striker', 40, 3); }); }, 'H'); spot(e1.x + 8, e1.z, 'RING TOSS ($3)', function () { payFor(3, function () { startTiming('Ring toss', 35, 4); }); }, 'R'); spot(e1.x + 16, e1.z, 'SHOOTING GALLERY ($5)', function () { payFor(5, function () { startTiming('Shooting gallery', 60, 5); }); }, 'S');
+    spot(e1.x + 24, e1.z, 'CANDY FLOSS ($4)', function () { payFor(4, function () { P.hp = Math.min(SV.maxHp, P.hp + 25); toast('Pink, sticky, gone in a second.'); }); }, 'C'); }
+  // the Sperm Isles: treasure on the islands, a coconut shy by the huts
+  if ((C = distCentre('isles'))) { var hut = poisOf('hut')[0] || C; spot(hut.x + 3, hut.z + 3, 'TREASURE HUNT ($400)', function () { var pts = poisOf('hut').concat(poisOf('cove'), poisOf('lighthouse'), poisOf('volcano')).slice(0, 7).map(function (p) { return { x: p.x + 6, z: p.z - 6 }; }); startCollect('Treasure hunt', 400, pts, 420, 'Treasure hunt: seven chests hidden round the Sperm Isles. Seven minutes. A boat helps.'); }, 'T');
+    spot(hut.x - 4, hut.z + 3, 'COCONUT SHY ($3)', function () { payFor(3, function () { startTiming('Coconut shy', 45, 3); }); }, 'C'); }
+  // the Docks: unload the ship, sell your catch
+  if ((C = distCentre('docks'))) { var d1 = onPave(C.x, C.z), d2 = (poisOf('containers')[3] || { x: C.x + 30, z: C.z }); spot(d1.x, d1.z, 'UNLOAD THE SHIP ($150)', function (x, z) { var q = poisOf('boats')[0] || poisOf('pierend')[0] || { x: x + 40, z: z + 20 }; var dd = Math.hypot(x - q.x, z - q.z) || 1, f = Math.min(1, 50 / dd), dst = { x: q.x + (x - q.x) * f, z: q.z + (z - q.z) * f }; startCarry('Unloading', 150, { x: q.x, z: q.z }, dst, 6, 150, 'Unload the ship: carry six crates from the quay (blue) to the containers (red). Drive a forklift if you can find one.'); }, 'U');
+    spot(d1.x + 6, d1.z, 'FISH MARKET', function () { var n = (SV.fish || 0) - (SV.fishMkt || 0); if (n <= 0) { toast('The fishmonger wants proof. Catch some fish off a jetty first.'); return; } SV.fishMkt = SV.fish; money(n * 6); toast('The fishmonger pays a bonus of $6 a fish for the ' + n + ' you caught. $' + n * 6 + '.'); persist(); }, 'F'); }
+  // the Forest: mushrooms, the Cumsquatch, the campfire
+  if ((C = distCentre('forest'))) { var f1 = tileNear(C.x, C.z, function (k) { return k === K_DIRT || k === K_GRASS; }, 30) || C;
+    spot(f1.x, f1.z, 'PICK MUSHROOMS ($80)', function (x, z) { startCollect('Mushrooms', 80, ptsAround(x, z, 8, 80, function (k) { return k === K_FOREST || k === K_GRASS || k === K_DIRT; }, 13), 120, 'Mushrooms: pick eight before they rot. Two minutes. Do not eat them.'); }, 'M');
+    spot(f1.x + 8, f1.z + 4, 'FOLLOW THE BIG FOOTPRINTS', function (x, z) { var L = []; for (var k = 0; k < 6; k++) L.push({ x: x + 30 + k * 28, z: z + Math.sin(k) * 25 }); startCollect('Cumsquatch tracks', 500, L, 240, 'Big, hairy footprints. Follow them to the end. Four minutes.'); }, '?');
+    spot(f1.x - 6, f1.z + 2, 'SIT BY THE CAMPFIRE', function () { P.hp = SV.maxHp; G.time = (G.time + 1) % 24; toast('The fire crackles. An hour goes by like nothing.'); }, 'F'); }
+  // Seamen Beach: sunbathe, the dance-off, the bar, the litter pick
+  var B = beachPlan(); if (B.party) { spot(B.party.x, B.party.z + 3, 'DANCE-OFF AT THE PARTY', function () { startTiming('Dance-off', 70, 6); }, 'D');
+    spot(B.bar.x, B.bar.z + 1.5, 'THE SALTY LOAD BAR', function () { KIT.menu({ title: 'The Salty Load', sub: 'Cocktails with umbrellas in. Umbrellas extra.', items: [['A Sex on Seamen Beach', 9, function () { G.drunk = Math.min(1, (G.drunk || 0) + 0.3); P.hp = Math.min(SV.maxHp, P.hp + 15); }], ['A coconut with a straw', 5, function () { P.hp = Math.min(SV.maxHp, P.hp + 20); }]].map(function (it) { return { label: it[0] + '  ·  $' + it[1], dis: SV.money < it[1], fn: function () { KIT.confirm({ title: it[0], price: it[1], have: Math.floor(SV.money), unit: '$', yes: function () { money(-it[1]); it[2](); sfx.play('coin'); KIT.closeMenu(); }, no: KIT.closeMenu }); } }; }).concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }, 'B');
+    spot(B.tower.x + 2, B.tower.z, 'BEACH LITTER PICK ($70)', function (x, z) { startCollect('Litter pick', 70, ptsAround(x, z, 9, 90, function (k) { return k === K_SAND; }, 31), 90, 'Pick up the litter before the tide does. 90 seconds.'); }, 'L');
+    B.towels.forEach(function (T) { if (T.who) return; U.push({ x: T.x, z: T.z, r: 1.4, label: 'SUNBATHE', fn: function () { G.sunTowel = T; G.sunT = 20; toast('You lie down in the sun. Move to get up.'); } }); }); }
+  // Sperm World and the Spuzzrail stations
+  var M0 = mallSite(); U.push({ x: M0.door.x, z: M0.door.z + 1, r: 3.2, label: 'ENTER SPERM WORLD', blip: 'shop', icon: 'W', fn: function () { enterShop(null, null, 'mall'); } });
+  railBuild().st.forEach(function (s) { U.push({ x: s.gx, z: s.gz, r: 3, label: 'SPUZZRAIL: ' + s.name.toUpperCase(), blip: 'rail', icon: 'R', fn: function () { railMenu(s); } }); });
+  return U; }
+(function () {
+  var ws = worldSetup; worldSetup = function () { ws(); try { G.uses = G.uses.concat(actSpots()); } catch (e) { console.warn('actSpots', e); } };
+  var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepAct(dt); stepBeach(dt); stepRail(dt); } catch (e) { if (!window.__u169e) { window.__u169e = 1; console.warn(e); } } };
+  var df = drawFun; drawFun = function () { df(); if (G.interior) return; try { var B = beachPlan(); if (B.party && dist2(B.party.x, B.party.z, CAM.x, CAM.z) < 500 * 500) { var M = beachMesh(); R3.draw(M.m, ATT); R3.draw(M.gl, ATT, { lit: false });
+      if (!FIREM) { var fm = new R3.Mesh(); ell(fm, 0, 0.5, 0, 0.5, 0.8, 0.5, '#ff7a20', 8, 5); FIREM = fm.upload(); } for (var k = 0; k < 3; k++) { var ph = G.t * (5 + k) + k; R3.draw(FIREM, ATT, { lit: false, m: MD(B.party.x + (k - 1) * 0.25, groundY(B.party.x, B.party.z - 2) + 0.1, B.party.z - 2, ph * 0.1, 0, 0, 0.8 + 0.15 * Math.sin(ph)) }); } }
+    var M0 = mallSite(); if (dist2((M0.x0 + M0.x1) / 2, M0.z1, CAM.x, CAM.z) < 700 * 700) { var ME = mallExterior(); R3.draw(ME.m, ATT); R3.draw(ME.gl, ATT, { lit: false }); }
+    drawRail(); drawAct(); } catch (e) { if (!window.__u169d) { window.__u169d = 1; console.warn(e); } } };
+  var dh = drawHud; drawHud = function () { var r = dh.apply(this, arguments); try { drawActHud(KIT.ctx); } catch (e) {} return r; };
 })();
 
 </script>

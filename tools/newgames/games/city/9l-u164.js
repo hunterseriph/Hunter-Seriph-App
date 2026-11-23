@@ -147,7 +147,7 @@ WPN.hook = { n: 'Fapling Hook', hook: 1, dmg: 6, rate: 0.55, range: 70, mesh: 'h
     sw(dt, mi); /* aiming and lock-on as for a gun; the fire button is ours */ };
   /* fire is read here so it works with the aim, the trigger and the touch button */
   var sf = stepFoot; stepFoot = function (dt) {
-    if (!SV.hookTold && G.t > 6 && !G.cut && !G.mission) { SV.hookTold = 1; toast('New: the Fapling Hook. Swap to it, aim and fire at a wall, a car, a chopper or a person.', 6); }
+    if (!SV.hookTold && G.t > 6 && !G.cut && !G.mission && SV.weapons && SV.weapons.hook) { /* update 169: only once you have earned it */ SV.hookTold = 1; toast('New: the Fapling Hook. Swap to it, aim and fire at a wall, a car, a chopper or a person.', 6); }
     if (P.wpn === 'hook' && !HOOK && P.state === 'foot' && !G.cut && !G.talk && !P.swim && P.cool <= 0 && (KIT.pressed('x') || gpPressed(7))) fireHook();
     if (!HOOK) { if (P.roofV) return rideRoof(dt); return sf(dt); }
     var H = HOOK, A = anchor();

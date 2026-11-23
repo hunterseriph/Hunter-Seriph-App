@@ -109,20 +109,21 @@ function cabinOf(type) { if (CABIN[type] !== undefined) return CABIN[type]; var 
 
 /* ---- places to eat and drink get proper tables with chairs you can sit on (his ask: Uncle Beeb's had one table, too
    close to the bar) ---- */
-var DINE = { beebs: [16, 14], tb: [14, 12], amy: [14, 12], joff: [14, 12], greebo: [14, 12], ali: [14, 12], harold: [14, 12], jessiah: [14, 12] };
+var DINE = { beebs: [16, 14], tb: [14, 12], amy: [14, 12], joff: [14, 12], greebo: [14, 12], ali: [14, 12], harold: [14, 12], jessiah: [14, 12], cafe: [14, 12] };
 Object.keys(DINE).forEach(function (k) { var R0 = ROOMS[k]; if (!R0) return; R0.w = Math.max(R0.w || 10, DINE[k][0]); R0.d = Math.max(R0.d || 9, DINE[k][1]); });
 (function () {
   var rm = roomMesh; roomMesh = function (id) { var R0 = ROOMS[id]; if (!R0 || !DINE[id]) return rm(id); var keep = R0.props; R0.props = keep.filter(function (p) { return p !== 'table'; }); var RM = rm(id); R0.props = keep;
     var m = new R3.Mesh(), w = RM.w, d = RM.d, seats = [], wood = id === 'beebs' || id === 'jessiah' || id === 'tb' ? '#5a3a20' : '#3a2a2a', cloth = { amy: '#c4121c', joff: '#f1e7d0', greebo: '#f1e7d0', harold: '#3a1a4a', ali: '#e8c070' }[id];
-    var cols = [2.6, 5.6, w - 5.6, w - 2.6], rows = []; for (var z = 3.2; z <= d - 5.6; z += 2.9) rows.push(z);
-    rows.forEach(function (tz, ri) { cols.forEach(function (tx, ci) { if (rows.length * cols.length > 8 && ri === rows.length - 1 && (ci === 1 || ci === 2)) return;
-      tub(m, [tx, 0, tz], [tx, 0.74, tz], 0.06, 0.06, '#2a1a10', 6); tub(m, [tx, 0.0, tz], [tx, 0.04, tz], 0.3, 0.3, '#2a1a10', 8, { cap: 1 }); tub(m, [tx, 0.74, tz], [tx, 0.8, tz], 0.62, 0.62, cloth || wood, 12, { cap: 1 }); RM.boxes.push([tx - 0.55, tz - 0.55, tx + 0.55, tz + 0.55]);
+    // update 169 (his ask): four tables, two by two, with room to walk round them
+    var cols = [w * 0.3, w * 0.7], rows = [3.6, Math.min(d - 5.2, 6.8)];
+    rows.forEach(function (tz, ri) { cols.forEach(function (tx, ci) {
+      tub(m, [tx, 0, tz], [tx, 0.74, tz], 0.06, 0.06, '#2a1a10', 6); tub(m, [tx, 0.0, tz], [tx, 0.04, tz], 0.3, 0.3, '#2a1a10', 8, { cap: 1 }); tub(m, [tx, 0.74, tz], [tx, 0.8, tz], 0.62, 0.62, cloth || wood, 12, { cap: 1 }); RM.boxes.push([tx - 1.22, tz - 0.62, tx + 1.22, tz + 0.62]); /* the table and both chairs are solid */
       // what is on the table: pints in the tavern, plates elsewhere, a candle
       if (id === 'beebs' || id === 'tb') { tub(m, [tx - 0.2, 0.8, tz + 0.1], [tx - 0.2, 0.98, tz + 0.1], 0.06, 0.07, '#c88a20', 6, { cap: 1 }); ell(m, tx - 0.2, 1.0, tz + 0.1, 0.07, 0.03, 0.07, '#f1e7d0', 6, 3); tub(m, [tx + 0.18, 0.8, tz - 0.15], [tx + 0.18, 0.96, tz - 0.15], 0.06, 0.07, '#3a1a0a', 6, { cap: 1 }); }
       else { ell(m, tx - 0.22, 0.81, tz, 0.17, 0.02, 0.17, '#e8e4dc', 8, 2); ell(m, tx + 0.22, 0.81, tz, 0.17, 0.02, 0.17, '#e8e4dc', 8, 2); }
       tub(m, [tx, 0.8, tz], [tx, 0.92, tz], 0.03, 0.03, '#f1e7d0', 5, { cap: 1 });
       [[-1, Math.PI / 2], [1, -Math.PI / 2]].forEach(function (q, k) { var cx = tx + q[0] * 0.95, a = q[1]; boxC(m, cx - 0.22, 0.42, tz - 0.22, cx + 0.22, 0.48, tz + 0.22, wood); [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(function (l) { boxC(m, cx + l[0] - 0.03, 0, tz + l[1] - 0.03, cx + l[0] + 0.03, 0.42, tz + l[1] + 0.03, '#2a1a10'); });
-        var bx = cx - q[0] * 0.2; boxC(m, bx - 0.03 * 1, 0.48, tz - 0.22, bx + 0.03, 1.05, tz + 0.22, wood); seats.push({ id: 'ch' + ri + ci + k, x: cx + q[0] * 0.02, z: tz, a: a, kind: 'chair', y: 0.5 }); }); }); });
+        var bx = cx + q[0] * 0.2; boxC(m, bx - 0.03 * 1, 0.48, tz - 0.22, bx + 0.03, 1.05, tz + 0.22, wood); /* update 169: the chair back is on the far side, so you face the table */ seats.push({ id: 'ch' + ri + ci + k, x: cx + q[0] * 0.02, z: tz, a: a, kind: 'chair', y: 0.5 }); }); }); });
     if (id === 'beebs') { // a booth along the left wall and a fire for the cold nights
       boxC(m, 0.1, 0, d - 4.6, 0.9, 1.4, d - 2.2, '#4a1a14'); boxC(m, 0.1, 0, d - 4.6, 1.4, 0.45, d - 2.2, '#5a2018'); seats.push({ id: 'booth', x: 1.05, z: d - 3.4, a: Math.PI / 2, kind: 'sofa', y: 0.48 });
       boxC(m, w - 0.6, 0, 2.2, w, 1.6, 4.2, '#4a4440'); boxC(m, w - 0.5, 0, 2.6, w - 0.02, 1.0, 3.8, '#0a0606'); RM.fire = { x: w - 0.35, z: 3.2 }; }

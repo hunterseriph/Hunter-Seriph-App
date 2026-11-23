@@ -95,4 +95,4 @@ var _hurtPlayer = hurtPlayer;
 hurtPlayer = function (dmg, by) { if (G.stim > 0) dmg *= 0.5; return _hurtPlayer(dmg, by); };
 var _hurtPed = hurtPed;
 hurtPed = function (p, dmg, by, dir, car) { if (G.stim > 0 && by === P) dmg *= 1.6; return _hurtPed(p, dmg, by, dir, car); };
-function stepStim(dt) { if (!(G.stim > 0)) return; G.stim -= dt; G.high = Math.max(G.high || 0, 0.35); if (G.stim <= 0) { G.stim = 0; toast('The stims wear off. You feel like a wet sock.'); G.drunk = Math.max(G.drunk || 0, 0.25); } }
+function stepStim(dt) { if (!(G.stim > 0)) return; G.stim -= dt; G.high = Math.max(G.high || 0, 0.35); if (G.stim <= 0) { G.stim = 0; toast('The high wears off.'); G.high = Math.max(G.high || 0, 0.25); /* update 169: a joint gets you high, not drunk */ } }

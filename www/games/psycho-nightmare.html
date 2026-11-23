@@ -2785,7 +2785,7 @@ function players() { var L = [G.P]; if (G.R && !G.R.gone) L.push(G.R); return L;
 function wfoes() { return G.foes; } // the boys as the world sees them (the guest's come from the host)
 /* ---------- a level ---------- */
 function loadFloor(fi, how) {
-  var th = FLOORS[fi], seed = (G.seed * 7919 + fi * 104729) >>> 0; setMapSize(th.size); G.crash = null; G.R && (G.R.gone = 0);
+  var th = FLOORS[fi], seed = (G.seed * 7919 + fi * 104729) >>> 0; setMapSize(th.size); G.crash = null; G.bags = []; G.bagsNet = null; G.tbShots = 0; G.R && (G.R.gone = 0);
   if (th.kind === 'drive') { startDrive(fi, how); return; }
   if (th.kind === 'ride') { startRide(fi, how); return; }
   if (how === 'arena') setMapSize(ARENASIZE);
@@ -2996,6 +2996,9 @@ function hurtFoe(f, dmg, a, push, w) {
 }
 function hurtTB(dmg, a, w) {
   var tb = G.tb; if (tb.st === 'boss') { bossHurt(dmg, w); return; }
+  if (tb.koShot && (tb.st === 'pills' || tb.st === 'out')) { blood(tb.x, 1.0, tb.z, 3); sfx.play('tbhurt'); return; } // update 169: checked out after 5 hits, he stays out
+  if (tb.st === 'chase' || tb.st === 'roam' || tb.st === 'investigate' || tb.st === 'search') { if (tb.shotT === undefined || G.time - tb.shotT > 30) tb.shots = 0; tb.shots = (tb.shots || 0) + 1; tb.shotT = G.time;
+    if (tb.shots >= 5) { tb.shots = 0; tb.koShot = 1; tb.st = 'pills'; tb.t = 2.6; tb.tgt = null; tb.sus = 0; blood(tb.x, 1.4, tb.z, 6); sfx.play('tbhurt'); sfx.play('rattle'); sayAll('Five hits. TB necks a handful of Silly Pills and checks out for a bit...', 4, '#ff4a8a'); netEv({ k: 'sfx', n: 'rattle' }); return; } }
   tb.flinch = 0.7; tb.rage = 7; blood(tb.x, 1.4, tb.z, 4); sfx.play('tbhurt'); if (tb.st === 'out') { tb.st = 'chase'; } else if (tb.st !== 'grab') { tb.st = 'chase'; tb.sus = 1; }
   if (!tb.tgt) tb.tgt = nearestPlayer(tb); if (Math.random() < 0.5) subtitle('TB', tbLine());
 }
@@ -3018,16 +3021,16 @@ function hurtPlayer(P, dmg, from, dose) {
 /* ---------- Shithead Laboozie's flaming bag of shit: hits a foe = covered in it (poison), hits the floor = it burns there 8 s ---------- */
 function throwBag(P) {
   var tgt = aimTarget(P.aim ? 0.25 : 0.5), a = tgt ? Math.atan2(tgt.x - P.x, tgt.z - P.z) : P.ca, d = tgt ? Math.min(14, dist2(tgt, P)) : 9, sp = 10, t = d / sp;
-  var b = { x: P.x + Math.sin(a) * 0.5, z: P.z + Math.cos(a) * 0.5, y: 1.6, vx: Math.sin(a) * sp, vz: Math.cos(a) * sp, vy: (0.4 - 1.6) / Math.max(0.3, t) + 6 * t, t: 3, by: P === G.P && isGuest() ? 'g' : 'h' };
+  var b = { x: P.x + Math.sin(a) * 0.5, z: P.z + Math.cos(a) * 0.5, y: 1.4, vx: Math.sin(a) * sp, vz: Math.cos(a) * sp, vy: tgt ? (1.15 - 1.4) / Math.max(0.3, t) : -0.15, flat: 1, t: Math.min(2, t + 0.6), by: P === G.P && isGuest() ? 'g' : 'h' };
   makeNoise(P.x, P.z, 5, 'hit');
   if (isGuest()) { netSend({ t: 'bag', b: b }); G.bags.push(Object.assign({ ghost: 1 }, b)); return; } // the guest's own copy is only for looks
   G.bags.push(b);
 }
 function stepBags(dt) {
-  for (var i = G.bags.length - 1; i >= 0; i--) { var b = G.bags[i]; b.t -= dt; b.vy -= 12 * dt; b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
+  for (var i = G.bags.length - 1; i >= 0; i--) { var b = G.bags[i]; b.t -= dt; b.vy -= (b.flat ? 0 : 12) * dt; b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
     var open = G.mode === 'drive' || G.mode === 'ride';
     if (b.ghost) { if (b.y <= 0.1 || b.t <= 0 || !open && blocksEyes(tileOf(b.x), tileOf(b.z))) G.bags.splice(i, 1); continue; }
-    var hit = null; targets().forEach(function (f) { if (!hit && f !== G.ghost && f.st !== 'dead' && Math.hypot(f.x - b.x, f.z - b.z) < 0.55 && b.y < 2.1) hit = f; });
+    var hit = null; targets().forEach(function (f) { if (!hit && f !== G.ghost && f.st !== 'dead' && Math.hypot(f.x - b.x, f.z - b.z) < 0.7 && b.y < 2.3) hit = f; });
     var wall = !open && blocksEyes(tileOf(b.x), tileOf(b.z));
     if (hit) { G.bags.splice(i, 1); sfx.play('splat'); if (hit === G.tb) { hurtTB(14, 0, 'bag'); G.tb.poison = 5; } else { hit.poison = 6; hurtFoe(hit, 10, Math.atan2(b.vx, b.vz), 0.6, 'bag'); } continue; }
     if (b.y <= 0.05 || wall || b.t <= 0) { if (wall) { b.x -= b.vx * dt * 2; b.z -= b.vz * dt * 2; } G.bags.splice(i, 1); G.burns.push({ x: b.x, z: b.z, t: 8, r: 1.7 }); sfx.play('splat'); sfx.play('fireup'); }
@@ -3105,8 +3108,8 @@ function stepTB(dt) {
   if (tb.st === 'away') { tb.t -= dt; if (tb.t <= 0) { var a = FL.arrive || FL.tbIn || FL.exit; tb.x = tx(a.i + (a.di || 0)); tb.z = tx(a.j + (a.dj || 0)); tb.a = Math.atan2(a.di || 0, a.dj || 1); tb.st = 'roam'; tb.grace = 4; var kd = FLOORS[G.fi].kind; sayAll(kd === 'woods' ? 'Branches snapping somewhere behind you. TB is in the woods.' : kd === 'park' ? 'A horn honks by the gate. TB is in the park, and he is wearing a clown suit.' : 'Footsteps on the stairs below. TB is on this floor now.', 4, '#c4121c'); if (kd === 'park') sfx.play('honk'); sfx.play('tblaugh'); } return; }
   if (tb.st === 'grab') return;
   if (!tb.angry) tb.pillT -= dt;
-  if (tb.st === 'out') { tb.t -= dt; if (Math.random() < dt * 0.5) sfx.play('snore'); if (tb.t <= 0) { tb.st = 'roam'; tb.pillT = TBK.gap[0] + Math.random() * (TBK.gap[1] - TBK.gap[0]); sayAll('TB is back on his feet...', 3, '#c4121c'); sfx.play('tblaugh'); } return; }
-  if (tb.st === 'pills') { tb.t -= dt; if (Math.random() < dt * 6) sfx.play('rattle'); if (tb.t <= 0) { tb.st = 'out'; tb.t = TBK.out[0] + Math.random() * (TBK.out[1] - TBK.out[0]); } return; }
+  if (tb.st === 'out') { tb.t -= dt; if (Math.random() < dt * 0.5) sfx.play('snore'); if (tb.t <= 0) { tb.st = 'roam'; tb.koShot = 0; tb.pillT = TBK.gap[0] + Math.random() * (TBK.gap[1] - TBK.gap[0]); sayAll('TB is back on his feet...', 3, '#c4121c'); sfx.play('tblaugh'); } return; }
+  if (tb.st === 'pills') { tb.t -= dt; if (Math.random() < dt * 6) sfx.play('rattle'); if (tb.t <= 0) { tb.st = 'out'; tb.t = tb.koShot ? 16 + Math.random() * 6 : TBK.out[0] + Math.random() * (TBK.out[1] - TBK.out[0]); } return; }
   if (tb.flinch > 0) return;
   var sight = TBK.sight * (tb.angry ? 1.3 : 1), sw = tb.grace > 0 ? { p: null, s: 0 } : bestSeen(tb, sight, tb.angry ? 1.4 : 1.1), see = sw.s, P = tb.st === 'chase' && tb.tgt && !tb.tgt.gone ? tb.tgt : sw.p || nearestPlayer(tb), pd = dist2(tb, P);
   if (tb.st === 'chase') see = tb.grace > 0 ? 0 : watching(tb, sight, tb.angry ? 1.4 : 1.1, P);
@@ -3970,13 +3973,13 @@ function drawRideHud() {
 /* ---------- the crash: watch TB's car go into T's Hussy House ---------- */
 function drawCrash() {
   var c = G.crash, P = G.P, T = tripLook(), k = Math.min(1, c.t / 2.2), car = { x: c.from.x + (c.hit.x - c.from.x) * k, z: c.from.z + (c.hit.z - c.from.z) * k }, yaw = Math.atan2(c.hit.x - c.from.x, c.hit.z - c.from.z);
-  var at = c.t < 2.2 ? car : c.hit, eye = [c.eye.x, 2.1, c.eye.z], f = [at.x - eye[0], 1.2 - eye[1], at.z - eye[2]], l = Math.hypot(f[0], f[1], f[2]); f = [f[0] / l, f[1] / l, f[2] / l];
-  R3.begin(FLOORS[G.fi].fog); R3.setCam(eye, [at.x, 1.2, at.z], 0.9 * (KIT.W < KIT.H ? 1.3 : 1), upVec(T.roll, f));
+  var at = c.t < 2.2 ? car : c.hit, eye = [c.eye.x, 2.1, c.eye.z]; if (c.out && c.t > 4.6) { var tbz = G.tb, kz = Math.min(1, (c.t - 4.6) / 1.2), vx = c.eye.x - tbz.x, vz = c.eye.z - tbz.z, vl = Math.hypot(vx, vz) || 1, ex = tbz.x + vx / vl * 3.3, ez = tbz.z + vz / vl * 3.3; eye = [eye[0] + (ex - eye[0]) * kz, 2.1 + 0.25 * kz, eye[2] + (ez - eye[2]) * kz]; at = { x: at.x + (tbz.x - at.x) * kz, z: at.z + (tbz.z - at.z) * kz }; } var f = [at.x - eye[0], 1.2 - eye[1], at.z - eye[2]], l = Math.hypot(f[0], f[1], f[2]); f = [f[0] / l, f[1] / l, f[2] / l];
+  R3.begin(FLOORS[G.fi].fog); var lookY = c.out && c.t > 4.6 ? 1.2 + 0.3 * Math.min(1, (c.t - 4.6) / 1.2) : 1.2; R3.setCam(eye, [at.x, lookY, at.z], 0.9 * (KIT.W < KIT.H ? 1.3 : 1), upVec(T.roll, f));
   var L = lightsNow(eye); if (c.t < 2.2) L.unshift({ x: car.x + Math.sin(yaw) * 3, y: 1, z: car.z + Math.cos(yaw) * 3, r: 12, c: [1, 0.95, 0.8], k: 2 }); L = fireLights(eye).concat(L).slice(0, NL - 1);
   var amb = FLOORS[G.fi].amb; R3.scene({ fog: FLOORS[G.fi].fog, fogR: [12, 60], amb: [amb[0] * 1.6, amb[1] * 1.6, amb[2] * 1.6], lights: L, torch: { p: [0, -50, 0], d: [0, -1, 0], c: [0, 0, 0] }, t: KIT.t, warp: T.warp, hue: T.hue, meat: 0, neg: 0 });
   R3.draw(MESH, ATT, {}); if (FRONTMESH && sheetTex()) R3.draw(FRONTMESH, sheetTex(), {});
   R3.draw(carMesh('car'), ATT, { m: R3.model(car.x, c.boom ? 0.2 : 0, car.z, yaw, c.boom ? 0.25 : 0, c.boom ? 0.12 : 0), flash: c.boom ? [0.2, 0.05, 0] : null });
-  if (c.out) { var tb = G.tb, Q = pose0(); if (G.tb.st === 'emerge') { Q.sh[0] = [2.8, 0.6, 0]; Q.sh[1] = [2.8, 0.6, 0]; Q.el = [0.3, 0.3]; Q.hp = -0.4; } drawRig(RIGS.tbmad, tb.x, 0, tb.z, tb.a, Q, { heldL: RIGS.tbmad.P.bottle }); }
+  if (c.out && c.t <= 5.0) { var tb = G.tb, Q = pose0(); if (G.tb.st === 'emerge') { Q.sh[0] = [2.8, 0.6, 0]; Q.sh[1] = [2.8, 0.6, 0]; Q.el = [0.3, 0.3]; Q.hp = -0.4; } drawRig(RIGS.tbmad, tb.x, 0, tb.z, tb.a, Q, { heldL: RIGS.tbmad.P.bottle }); }
   var m = DYN || (DYN = new R3.Mesh()); m.clear(); G.fx.forEach(function (e) { if (e.k === 'smoke') bill(m, e.x, e.y + (4 - e.t) * (e.vy || 1) * 0.6, e.z, 0.6 + (4 - e.t) * 0.4, 0.6 + (4 - e.t) * 0.4, TL('smoke'), [0.22, 0.2, 0.18], 0); }); R3.draw(m, ATT, {});
   m.clear(); drawFlames(m, P); R3.draw(m, ATT, { add: 1, soft: 1, lit: false });
 }
@@ -4257,7 +4260,7 @@ function guestSnap(s) {
   if (s.tb && G.tb) { var tb = G.tb, q = s.tb; tb.tx = q.x; tb.tz = q.z; if (tb.x < -40 || Math.hypot(tb.x - q.x, tb.z - q.z) > 4) { tb.x = q.x; tb.z = q.z; } tb.a = q.a; tb.ph = q.ph; tb.spd = q.spd; tb.sus = q.sus; tb.clown = q.clown; tb.fire = q.fire; tb.angry = q.angry; tb.hp = q.hp; tb.max = q.max; tb.phase = q.phase; tb.mv = q.mv ? { k: q.mv[0], t: q.mv[1] } : null; tb.stun = q.stun; tb.hurtT = q.hurtT; tb.downT = q.downT; tb.flinch = q.flinch; if (G.mode !== 'catch' && G.mode !== 'crash') tb.st = q.st; }
   if (s.f) { var map = {}; G.foes.forEach(function (f) { map[f.id] = f; }); G.foes = s.f.map(function (q) { var f = map[q[0]] || { id: q[0], k: q[12], d: FOES[q[12]] || FOES.gimp, x: q[1], z: q[2], hurt: 0, ph: 0 }; f.tx = q[1]; f.tz = q[2]; if (Math.hypot(f.x - q[1], f.z - q[2]) > 3) { f.x = q[1]; f.z = q[2]; } f.a = q[3]; if (f.st !== 'dead' && q[4] === 'dead') f.t = 0; f.st = q[4]; f.ph = q[5]; f.spd = q[6]; f.atk = q[7]; f.hurt = Math.max(f.hurt || 0, q[8]); f.sus = q[9]; f.poison = q[10]; f.burnT = q[11]; f.k = q[12]; f.d = FOES[q[12]] || FOES.gimp; f.hp = q[13]; f.max = q[14]; f.under = q[15]; f.y = q[16]; f.wind = q[17]; f.p2 = q[18]; f.mv = q[19] ? { k: q[19] } : null; f.spinT = q[20]; return f; }); }
   if (s.hz) G.hazards = s.hz.map(function (q) { return { x: q[0], z: q[1], r: q[2], t: q[3], k: q[4], delay: q[5] }; });
-  if (s.bags) G.bagsNet = s.bags; if (s.burns) G.burns = s.burns.map(function (q) { return { x: q[0], z: q[1], t: q[2], r: q[3] }; }); if (s.shots) G.shots = s.shots.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, t: 1, tex: q[3] || null, sz: q[4] }; });
+  if (s.bags) { G.bagsNet = s.bags; G.bagsNetT = 0; } if (s.burns) G.burns = s.burns.map(function (q) { return { x: q[0], z: q[1], t: q[2], r: q[3] }; }); if (s.shots) G.shots = s.shots.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, t: 1, tex: q[3] || null, sz: q[4] }; });
   if (s.dr && DR) { var d = s.dr; ['z', 'x', 'yaw', 'v', 'steer', 'hp', 'end', 'hits', 'splat'].forEach(function (k) { DR[k] = d[k]; }); DR.peds = d.peds.map(function (q) { return { id: q[0], k: q[1], z: q[2], x: q[3], st: q[4], y: q[5], spin: q[6], a: q[7], ph: q[8] }; }); }
   if (s.rd && RD) { RD.d = s.rd.d; RD.v = s.rd.v; RD.fly = s.rd.fly; }
   if (s.doors && FL.doors) s.doors.forEach(function (o, i) { if (FL.doors[i]) FL.doors[i].open = o; });
@@ -4265,7 +4268,7 @@ function guestSnap(s) {
 function stepGuestWorld(dt) { // smooth the host's people between snapshots
   G.foes.forEach(function (f) { f.hurt = Math.max(0, (f.hurt || 0) - dt); f.t = (f.t || 0) + dt; if (f.tx !== undefined) { f.x += (f.tx - f.x) * Math.min(1, dt * 10); f.z += (f.tz - f.z) * Math.min(1, dt * 10); } });
   var tb = G.tb; if (tb && tb.tx !== undefined) { tb.x += (tb.tx - tb.x) * Math.min(1, dt * 10); tb.z += (tb.tz - tb.z) * Math.min(1, dt * 10); }
-  if (G.bagsNet) G.bags = G.bagsNet.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, vy: 0, t: 1, ghost: 1 }; });
+  G.bagsNetT = (G.bagsNetT || 0) + dt; if (G.bagsNetT > 0.5) G.bagsNet = null; if (G.bagsNet) G.bags = G.bagsNet.map(function (q) { return { x: q[0], y: q[1], z: q[2], vx: 0, vz: 0, vy: 0, t: 1, ghost: 1 }; });
 }
 function guestEv(e) { var P = G.P;
   if (e.k === 'say') say(e.s, e.t, e.col); else if (e.k === 'sub') { G.sub = { who: e.who, s: e.s, t: e.t || 3.2 }; voice(e.who, e.s); }
@@ -4446,7 +4449,7 @@ function update(dt) {
 }
 function idle(dt) { if (G && G.mode === 'title') update(dt); ambience(dt); }
 function stepDoors(dt) {
-  var P = G.P, mv = []; if (!P.hide) mv.push(P); if (G.tb && G.tb.st !== 'away') mv.push(G.tb); G.foes.forEach(function (f) { if (f.st !== 'dead' && f.st !== 'ko') mv.push(f); });
+  var P = G.P, mv = []; players().forEach(function (pl) { if (!pl.hide && !pl.dead) mv.push(pl); }); /* update 169: player 2 opens doors too (they flapped) */ if (G.tb && G.tb.st !== 'away') mv.push(G.tb); G.foes.forEach(function (f) { if (f.st !== 'dead' && f.st !== 'ko') mv.push(f); });
   FL.doors.forEach(function (D) { var cx = tx(D.i), cz = tx(D.j), near = mv.some(function (m) { return Math.hypot(m.x - cx, m.z - cz) < 1.75; });
     if (near) { if (D.open < 0.02) { sfx.play('door'); makeNoise(cx, cz, 2.5, 'door'); } D.open = Math.min(1, D.open + dt * 3.2); D.idle = 0; } else { D.idle += dt; if (D.idle > 4) D.open = Math.max(0, D.open - dt * 1.1); } });
 }
@@ -4624,5 +4627,73 @@ else { var FONTOK = false, fontT = Date.now(); try { document.fonts.load('22px "
 window.__pn = { get G() { return G; }, get FL() { return FL; }, get RD() { return RD; }, get DR() { return DR; }, startCrash: startCrash, hostStart: hostStart, NET: NET, SV: SV, newGame: newGame, continueGame: continueGame, loadFloor: loadFloor, titleMenu: titleMenu, beginEnding: beginEnding, catchPlayer: catchPlayer, takePill: takePill, startFloorOne: startFloorOne,
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); } };
 
+
+/* ---------- update 169 (his ask): the crash scene is longer. First we see TB inside the car, driving down the red
+   light district and chugging medicine straight from the bottle; then the crash as before; then TB climbs out of the
+   burning wreck and lights a cigarette before he comes for you. ---------- */
+var CARIN = null;
+function carInMesh() { if (CARIN) return CARIN; var m = M();
+  function bx(x0, y0, z0, x1, y1, z1, T, q) { var c = [0.5 * q, 0.5 * q, 0.5 * q], d = [0.38 * q, 0.38 * q, 0.38 * q], U = [0, 0, 1, 0, 1, 1, 0, 1];
+    m.quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], U, T, c, [0, 1, 0]); m.quad([x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0], U, T, d, [0, -1, 0]);
+    m.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], U, T, d, [0, 0, 1]); m.quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], U, T, d, [0, 0, -1]);
+    m.quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], U, T, d, [1, 0, 0]); m.quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], U, T, d, [-1, 0, 0]); }
+  bx(-0.95, 0.3, -2.2, 0.95, 0.42, 2.2, TL('black'), 0.8); // floor
+  [-1, 1].forEach(function (s) { bx(s * 0.95 - 0.06, 0.3, -2.2, s * 0.95 + 0.06, 0.95, 2.2, TL('black'), 1); bx(s * 0.97 - 0.01, 0.6, -2.22, s * 0.97 + 0.01, 0.7, 2.22, TL('carpaint'), 0.5); // doors and the red stripe
+    bx(s * 0.9 - 0.05, 0.95, 0.8, s * 0.9 + 0.05, 1.75, 0.9, TL('black'), 0.9); bx(s * 0.9 - 0.05, 0.95, -1.15, s * 0.9 + 0.05, 1.75, -1.05, TL('black'), 0.9); }); // pillars
+  bx(-0.95, 1.75, -1.15, 0.95, 1.82, 0.9, TL('black'), 0.7); // the roof
+  bx(-0.95, 0.42, 0.9, 0.95, 0.95, 2.2, TL('black'), 0.9); bx(-0.95, 0.95, 0.85, 0.95, 1.1, 1.25, TL('black'), 0.6); // bonnet and dashboard
+  bx(-0.95, 0.42, -2.2, 0.95, 0.95, -1.15, TL('black'), 0.9); // the boot
+  [-0.45, 0.45].forEach(function (x) { bx(x - 0.28, 0.42, -0.45, x + 0.28, 0.62, 0.15, TL('carpaint'), 0.5); bx(x - 0.28, 0.62, -0.5, x + 0.28, 1.45, -0.35, TL('carpaint'), 0.5); }); // the front seats
+  bx(-0.85, 0.42, -1.05, 0.85, 0.65, -0.6, TL('carpaint'), 0.45); bx(-0.85, 0.65, -1.15, 0.85, 1.35, -1.0, TL('carpaint'), 0.45); // the back seat
+  tub(m, [0.45, 1.12, 0.62], [0.45, 1.2, 0.68], 0.19, 0.19, '#1a1416', 12); tub(m, [0.45, 1.05, 0.85], [0.45, 1.15, 0.66], 0.03, 0.03, '#1a1416', 5); // the wheel
+  [[-1, 1.4], [1, 1.4], [-1, -1.6], [1, -1.6]].forEach(function (w) { bx(w[0] * 0.85 - 0.14, 0, w[1] - 0.36, w[0] * 0.85 + 0.14, 0.62, w[1] + 0.36, TL('black'), 0.6); });
+  bx(-0.8, 0.55, 2.2, -0.45, 0.75, 2.24, TL('glow'), 1.3); bx(0.45, 0.55, 2.2, 0.8, 0.75, 2.24, TL('glow'), 1.3);
+  CARIN = m.upload(); return CARIN; }
+var CIGM = null;
+function cigMesh() { if (CIGM) return CIGM; var m = M(); tub(m, [0, 0, -0.03], [0, 0, 0.15], 0.022, 0.022, '#f4f0e8', 6); tub(m, [0, 0, 0.15], [0, 0, 0.17], 0.024, 0.024, '#ff6a20', 6); CIGM = m.upload(); return CIGM; }
+function cigPuff(dt) { var tb = G.tb; if (Math.random() < dt * 3) G.fx.push({ k: 'cigsmoke', x: tb.x + Math.sin(tb.a) * 0.25, y: 1.72, z: tb.z + Math.cos(tb.a) * 0.25, t: 1.6, vy: 0.5 }); }
+function crashCarAt(c) { var T = c.preT, k = 1 - Math.max(0, c.pre) / T; return { x: c.pre0.x + (c.from.x - c.pre0.x) * k, z: c.pre0.z + (c.from.z - c.pre0.z) * k }; }
+function crashL2W(o, yaw, lx, ly, lz) { var cy = Math.cos(yaw), sy = Math.sin(yaw); return [o.x + lx * cy + lz * sy, ly, o.z - lx * sy + lz * cy]; }
+function tbSeatPose(Q, chug) { Q.y = -0.3; Q.hip = [1.5, 1.5]; Q.kn = [1.45, 1.45]; Q.lean = 0.05; Q.sh[1] = [1.25, -0.15, 0]; Q.el[1] = 0.55; Q.sh[0] = [1.25, 0.15, 0]; Q.el[0] = 0.55;
+  if (chug > 0) { Q.sh[0] = [2.3, 0.1, 0.5]; Q.el[0] = 1.9; Q.hp = -0.35 - Math.sin(KIT.t * 9) * 0.04; } }
+(function () {
+  var sc0 = startCrash; startCrash = function () { sc0(); var c = G.crash; if (!c) return; G.bags = [];
+    var H = c.H, hx = tx(H.i), hz = tx(H.j), dx = c.from.x - hx, dz = c.from.z - hz, l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; var far = 0;
+    for (var d = 1; d <= TSZ * 9; d += 0.5) { if (!walkable(tileOf(c.from.x + dx * d), tileOf(c.from.z + dz * d), 'tb')) break; far = d; }
+    c.pre0 = { x: c.from.x + dx * far, z: c.from.z + dz * far }; c.preYaw = Math.atan2(-dx, -dz); c.preT = c.pre = 4.6; c.chug = 0; };
+  var st0 = stepCrash; stepCrash = function (dt) { var c = G.crash;
+    if (c.pre > 0) { c.pre -= dt; var e = c.preT - c.pre; if (e > 0.9 && !c.g1) { c.g1 = 1; sfx.play('rattle'); } if (e > 1.1 && e < 2.3) c.chug = 1; else if (e > 3.1 && e < 3.9) c.chug = 1; else c.chug = 0;
+      if (e > 1.2 && !c.g2) { c.g2 = 1; sfx.play('eat'); } if (e > 2.4 && !c.s1) { c.s1 = 1; subtitle('TB', tbLine(), 2.6); sfx.play('tblaugh'); } if (e > 3.2 && !c.g3) { c.g3 = 1; sfx.play('eat'); sfx.play('engine'); }
+      if (c.pre <= 0) { c.t = 0; sfx.play('engine'); } return; }
+    if (c.t + dt > 7 && c.t + dt < 10.5) { c.t += dt; if (c.t > 5.6 && !c.lit) { c.lit = 1; sfx.play('click'); } if (c.t > 6.0 && !c.puff0) { c.puff0 = 1; sfx.play('fireup'); }
+      cigPuff(dt); return; }
+    if (c.t + dt >= 10.5) { c.t = 6.999; st0(0.01); return; }
+    if (c.t > 5.6 && !c.lit) { c.lit = 1; sfx.play('click'); }
+    if (c.t > 6.1) cigPuff(dt);
+    st0(dt); };
+  var dc0 = drawCrash; drawCrash = function () { var c = G.crash;
+    if (c.pre > 0) { var T = tripLook(), car = crashCarAt(c), yaw = c.preYaw, e = c.preT - c.pre, eye, at;
+      if (e < 2.4) { eye = crashL2W(car, yaw, -0.6, 1.5, -0.15); at = crashL2W(car, yaw, 0.45, 1.35, 0.4); } // from the passenger seat: TB at the wheel
+      else { eye = crashL2W(car, yaw, 0.1, 1.75, 3.1); at = crashL2W(car, yaw, 0.4, 1.35, 0); } // through the windscreen
+      var f = [at[0] - eye[0], at[1] - eye[1], at[2] - eye[2]], l = Math.hypot(f[0], f[1], f[2]); f = [f[0] / l, f[1] / l, f[2] / l];
+      R3.begin(FLOORS[G.fi].fog); R3.setCam(eye, at, 1.0 * (KIT.W < KIT.H ? 1.3 : 1), upVec(T.roll + Math.sin(KIT.t * 13) * 0.004, f));
+      var L = lightsNow(eye); L.unshift({ x: car.x + Math.sin(yaw) * 4, y: 1, z: car.z + Math.cos(yaw) * 4, r: 14, c: [1, 0.95, 0.8], k: 2 }); L.unshift({ x: crashL2W(car, yaw, 0, 1.3, 0.6)[0], y: 1.3, z: crashL2W(car, yaw, 0, 1.3, 0.6)[2], r: 2.4, c: [0.9, 0.3, 0.4], k: 1.2 }); L = L.slice(0, NL - 1);
+      var amb = FLOORS[G.fi].amb; R3.scene({ fog: FLOORS[G.fi].fog, fogR: [12, 60], amb: [amb[0] * 1.6, amb[1] * 1.6, amb[2] * 1.6], lights: L, torch: { p: [0, -50, 0], d: [0, -1, 0], c: [0, 0, 0] }, t: KIT.t, warp: T.warp, hue: T.hue, meat: 0, neg: 0 });
+      R3.draw(MESH, ATT, {}); if (FRONTMESH && sheetTex()) R3.draw(FRONTMESH, sheetTex(), {});
+      R3.draw(carInMesh(), ATT, { m: R3.model(car.x, Math.sin(KIT.t * 17) * 0.01, car.z, yaw, 0, 0) });
+      var sp = crashL2W(car, yaw, 0.45, 0, 0.0), Q = pose0(); tbSeatPose(Q, c.chug); drawRig(RIGS.tbmad, sp[0], 0, sp[2], yaw, Q, { heldL: RIGS.tbmad.P.bottle, noShadow: 1, still: 1 });
+      return; }
+    dc0();
+    if (c.out && c.t > 5.0) { // TB, out of the wreck, lights up (drawn over the first TB pose)
+      var tb = G.tb, Q2 = pose0(), k = c.t; if (k < 7.0) { Q2.sh[1] = [2.0, -0.35, -0.3]; Q2.el[1] = 1.7; Q2.hp = 0.15; if (k > 5.4 && k < 6.5) { Q2.sh[0] = [2.0, 0.2, 0.6]; Q2.el[0] = 1.9; } }
+      else { var dr = (k - 7) % 1.8 < 0.7; Q2.sh[1] = dr ? [2.0, -0.35, -0.3] : [0.4, 0.1, 0]; Q2.el[1] = dr ? 1.7 : 0.9; }
+      // redraw the camera closer on him: the first draw set its own view, so draw a second pass only of TB and the cigarette
+      var out = drawRig(RIGS.tbmad, tb.x + 0.0, 0, tb.z, tb.a, Q2, { heldL: k > 5.4 && k < 6.5 ? null : RIGS.tbmad.P.bottle, noShadow: 1, alpha: 0.999 });
+      if (out && out.hand) { R3.draw(cigMesh(), ATT, { m: out.hand }); var hp = [out.hand[12], out.hand[13], out.hand[14]], m = DYN || (DYN = new R3.Mesh()); m.clear();
+        if (k > 5.5 && k < 6.4 && out.handL) bill(m, out.handL[12], out.handL[13] + 0.08, out.handL[14], 0.04, 0.07, TL('flame'), [0.7, 0.5, 0.3], 1);
+        bill(m, hp[0], hp[1], hp[2], 0.05, 0.05, TL('flame'), [0.8, 0.35, 0.1], 1);
+        G.fx.forEach(function (e) { if (e.k === 'cigsmoke') bill(m, e.x, e.y + (1.6 - e.t) * 0.5, e.z, 0.1 + (1.6 - e.t) * 0.12, 0.1 + (1.6 - e.t) * 0.12, TL('smoke'), [0.35, 0.33, 0.32], 1); });
+        R3.draw(m, ATT, { add: 1, soft: 1, lit: false }); } } };
+})();
 </script>
 </body></html>

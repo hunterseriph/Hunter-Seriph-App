@@ -157,7 +157,7 @@ var LMC = {
     [-1.5, 1.5].forEach(function (u) { var q0 = Pt(u, 0), q1 = Pt(u, L); tub(o.m, [q0[0], y + 1.0, q0[1]], [q1[0], y + 1.0, q1[1]], 0.05, 0.05, '#5a3a20', 4); });
     for (var k = 0; k < L; k += 0.8) { var a1 = Pt(-1.5, k), a2 = Pt(1.5, k + 0.8); addBox(Math.min(a1[0], a2[0]), Math.min(a1[1], a2[1]), Math.max(a1[0], a2[0]), Math.max(a1[1], a2[1]), y - 0.6, y).top = 1; }
     var e = Pt(0, L - 1.5), lp = Pt(1.2, L - 0.5); tub(o.m, [lp[0], y, lp[1]], [lp[0], y + 3.2, lp[1]], 0.06, 0.05, '#1a1a1e', 5); ell(o.glow, lp[0], y + 3.3, lp[1], 0.22, 0.28, 0.22, '#fff2c8', 6, 4);
-    var bs = Pt(-0.8, L - 3); sfDraw(o.m, 'bench', bs[0], y, bs[1], a + Math.PI / 2, o.glow); var sg = Pt(0, -1); sign(o.m, null, sg[0], sg[1], a + Math.PI, groundY(sg[0], sg[1]), 'sg_fish', 2.6);
+    var bs = Pt(-0.8, L - 3); sfDraw(o.m, 'bench', bs[0], y, bs[1], a + Math.PI / 2, o.glow); var sg = Pt(-3.2, -10.5); /* update 169: the sign stands beside the way on, not in the middle of it */ sign(o.m, null, sg[0], sg[1], a + Math.PI, groundY(sg[0], sg[1]), 'sg_fish', 2.6);
     p.end = { x: e[0], z: e[1], y: y, a: a }; o.r = 50; o.lights = [{ x: lp[0], y: y + 3, z: lp[1], c: [1, 0.9, 0.7], r: 10 }]; },
   view: function (o, p) { var y = groundY(p.x, p.z), X = p.x, Z = p.z; tub(o.m, [X, y, Z], [X, y + 1.1, Z], 0.08, 0.08, '#2a3a2a', 5); boxC(o.m, X - 0.35, y + 1.1, Z - 0.2, X + 0.35, y + 1.45, Z + 0.25, '#2a4a2a'); [-0.15, 0.15].forEach(function (s) { tub(o.m, [X + s, y + 1.3, Z + 0.2], [X + s, y + 1.3, Z + 0.45], 0.1, 0.1, '#1a1a1e', 6, { cap: 1 }); }); boxC(o.m, X + 0.8, y, Z - 0.3, X + 1.6, y + 0.8, Z + 0.3, '#6a645e'); o.r = 20; }
 };

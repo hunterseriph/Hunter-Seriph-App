@@ -79,6 +79,7 @@ function sign(m, glow, x, z, a, y, txt, w, post) { var c = Math.cos(a), s = Math
 var HDONE = {};
 (function () { var bd = building; building = function (m, night, fr, glow, b, lamps) { bd(m, night, fr, glow, b, lamps); if (b.style === 'house' || b.style === 'suburb') houseDress(m, glow, b); }; })();
 function bldAt(x, z) { var ls = near(BGRID, x, z, 1); for (var k = 0; k < ls.length; k++) { var q = ls[k]; if (x > q.x0 - 0.3 && x < q.x1 + 0.3 && z > q.z0 - 0.3 && z < q.z1 + 0.3) return q; } return null; }
+var DRIVES = [];
 function houseDress(m, glow, b) {
   var F = frontFace(b), nx = F.n[0], nz = F.n[2], ux = F.R[0] - F.L[0], uz = F.R[1] - F.L[1], wF = Math.hypot(ux, uz) || 1, mx = (F.L[0] + F.R[0]) / 2, mz = (F.L[1] + F.R[1]) / 2, first = !HDONE[b.i], d = dAt(mx, mz);
   ux /= wF; uz /= wF; HDONE[b.i] = 1;
@@ -91,7 +92,7 @@ function houseDress(m, glow, b) {
   // the drive, on whichever side is free
   var side = 0; [r1 < 0.5 ? -1 : 1, r1 < 0.5 ? 1 : -1].some(function (sd) { var c = wF / 2 + 1.7, p = at(sd * c, -2.5); if (!bldAt(p[0], p[1]) && !bldAt(at(sd * c, -0.5)[0], at(sd * c, -0.5)[1])) { side = sd; return true; } return false; });
   if (side) { var tc = side * (wF / 2 + 1.7); flat(tc - 1.35, tc + 1.35, -4.5, D, TL(groundTile(K_ROAD, d)), 0.035, uvR(0.7, (D + 4.5) / 4));
-    if (r2 < 0.62 && !(b.shop && b.shop.indexOf('home') === 0)) { var cp = at(tc, -1.6), cy = groundY(cp[0], cp[1]); car3(m, cp[0], cp[1], a, cy, ['#c4121c', '#f1e7d0', '#2a4a6a', '#12040a', '#3a6a3a', '#5a5a62', '#ffe36a'][Math.floor(r3 * 7)]); if (first) addPost(cp[0], cp[1], 1.1, cy, cy + 1.5); }
+    if (r2 < 0.62 && !(b.shop && b.shop.indexOf('home') === 0) && first) { var cp = at(tc, -1.6); /* update 169: a real car you can get in, made when you come near (DRIVES, stepDrives) */ DRIVES.push({ x: cp[0], z: cp[1], a: a + (r4 < 0.5 ? Math.PI : 0), c: Math.floor(r3 * 7), b: b.i }); }
     // two wheelie bins by the drive
     for (var q = 0; q < 2; q++) { var bp = at(tc + side * 1.75, 0.3 + q * 0.75), by = groundY(bp[0], bp[1]), bc = ['#2a3a2a', '#3a3a5a', '#5a2a1a'][Math.floor((r4 + q * 0.4) * 3) % 3]; boxR(m, bp[0], bp[1], a, 0.3, 0.33, by, by + 1.0, bc); boxR(m, bp[0], bp[1], a, 0.32, 0.37, by + 1.0, by + 1.08, bc); } }
   // the fence or hedge along the front, with a gap for the path and the drive

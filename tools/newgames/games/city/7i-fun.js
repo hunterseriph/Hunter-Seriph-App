@@ -17,7 +17,7 @@ var SEATS = [], SEATG = {};
 function addSeat(x, z, a, kind, o) { var k = Math.round(x * 2) + ',' + Math.round(z * 2); if (SEATG[k]) return; var s = { x: x, z: z, a: a, kind: kind, y: o && o.y !== undefined ? o.y : groundY(x, z) + (kind === 'bench' ? 0.6 : 0.45), fire: o && o.fire }; SEATG[k] = s; SEATS.push(s); }
 function seatNear() { var best = null, bd = 1.6 * 1.6; for (var i = 0; i < SEATS.length; i++) { var s = SEATS[i]; if (Math.abs(s.x - P.x) > 3 || Math.abs(s.z - P.z) > 3) continue; var d = dist2(s.x, s.z, P.x, P.z); if (d < bd) { bd = d; best = s; } } return best; }
 function sitDown(s) { G.seat = { s: s, t: 0, smoke: 0, puffT: 0 }; P.vx = P.vz = 0; sfx.play('select'); }
-function standUp() { var s = G.seat.s; G.seat = null; P.x = s.x + Math.sin(s.a) * 0.9; P.z = s.z + Math.cos(s.a) * 0.9; P.y = standY(P.x, P.z, P.y + 1); }
+function standUp() { var s = G.seat.s; G.seat = null; var off = s.kind === 'chair' ? -0.75 : 0.9; /* update 169: you get up from a chair backwards, not into the table */ P.x = s.x + Math.sin(s.a) * off; P.z = s.z + Math.cos(s.a) * off; P.y = standY(P.x, P.z, P.y + 1); }
 function lightJoint() { if (G.seat.smoke > 0) return; var have = SV.joints || 0; if (have <= 0) { toast('No joints left. Saba sells them.'); return; } SV.joints = have - 1; G.seat.smoke = 14; sfx.play('blip'); toast(pick(['You spark one up. Cum City slows right down.', 'A long drag. The streetlights go soft at the edges.', 'You light up. Somewhere a dog laughs.', 'Ahh. Everything is going to be fine.'])); }
 var _stepFoot158 = stepFoot; stepFoot = function (dt) {
   if (G.fish) { P.vx = P.vz = 0; P.sp = 0; return; } // fishing: the rod has your hands
