@@ -40,7 +40,11 @@ function raisedTile(M0, i, j, d, TP) { var ax = i * CT, az = j * CT, N = 4, c = 
       else if (s[0] === -1) { A = [ax, az + q * c]; B = [ax, az + (q + 1) * c]; ia = q * (N + 1); ib = ia + N + 1; } else { A = [ax + CT, az + q * c]; B = [ax + CT, az + (q + 1) * c]; ia = q * (N + 1) + N; ib = ia + N + 1; }
       if (F[ia] >= 0 && F[ib] >= 0) raisedFace(M0, A, B, inT, TK); } }); }
 /* pavement squares beside the road: raised and cut along the road (the other kinds of ground are drawn as before) */
-(function () { var rt = ribbonTile; ribbonTile = function (M0, NAT, i, j, k, d, h00, h10, h01, h11) {
+(function () { var rt0 = ribbonTile; /* update 172 (his screenshot: still a pale square of 'pavement' in some junctions): the
+   original drawing measured from the nearest road's middle line only, so where a wide road meets a narrow one it took
+   a square inside the wide road for pavement; it now measures from the edge of all the roads round it */
+  function rt() { var r0 = roadF; roadF = roadFU; try { return rt0.apply(this, arguments); } finally { roadF = r0; } }
+  ribbonTile = function (M0, NAT, i, j, k, d, h00, h10, h01, h11) {
   var kk = k;
   if (k === K_ROAD) { var f = roadFU(i * CT + 2, j * CT + 2); if (!(f > -1.6)) return rt.apply(this, arguments); kk = -1;
     var nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
