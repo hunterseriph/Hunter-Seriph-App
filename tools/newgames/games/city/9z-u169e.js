@@ -126,60 +126,8 @@ function mallShopMenu(k) { var S = MALLSHOPS[k]; KIT.menu({ title: S.n, sub: 'Sp
     (function (q0) { var tx = sx, tz = sz; q0.y = 0; q0.ctl = function (q, dt) { q.y = 0; if (Math.hypot(tx - q.x, tz - q.z) < 1) { tx = 9 + Math.random() * (RM.w - 18); tz = 3 + Math.random() * 42; if (Math.abs(tx - RM.w / 2) < 5 && Math.abs(tz - 22) < 5) tx += 7; } var a = Math.atan2(tx - q.x, tz - q.z); q.a += angDiff(q.a, a) * Math.min(1, dt * 4); q.vx = Math.sin(q.a) * 1.2; q.vz = Math.cos(q.a) * 1.2; }; })(sp); }
   return r; }; })();
 
-/* ================================ THE SPUZZRAIL (monorail) ================================ */
-/* An elevated monorail loop along the main roads: Clubhouse Row, the Red Light District, the Docks, Seamen Beach,
-   Ejaculand, the Cafe Streets, Sperm World, Cum Hills, the Cumstruction Site and Spunk Brain Labs. A train runs round it
-   all the time. At any station (stairs up from the street) pay $5 and ride to any other: you ride in the front car with
-   the city going by below; A skips to the stop. */
-var RAIL = null, RAILY = 9.5;
-function railBuild() { if (RAIL) return RAIL; var order = ['club', 'red', 'docks', 'beach', 'ejac', 'cafe', 'mall', 'hills', 'site', 'brain'], names = { club: 'Clubhouse Row', red: 'Red Light District', docks: 'The Docks', beach: 'Seamen Beach', ejac: 'Ejaculand', cafe: 'The Cafe Streets', mall: 'Sperm World', hills: 'Cum Hills', site: 'The Cumstruction Site', brain: 'Spunk Brain Labs' };
-  var st = []; order.forEach(function (id) { var c = id === 'mall' ? (function () { var M0 = mallSite(); return { x: M0.door.x, z: M0.door.z + 12 }; })() : id === 'beach' ? (function () { var B = beachPlan(); return B.party ? { x: B.party.x, z: B.party.z } : distCentre('beach'); })() : distCentre(id); if (!c) return; var r = nearRoadPt(c.x, c.z); st.push({ id: id, name: names[id], x: r.x, z: r.z }); });
-  // the line: road routes between stations, joined into one loop, thinned and smoothed
-  var pts = []; for (var i = 0; i < st.length; i++) { var A = st[i], B2 = st[(i + 1) % st.length], R = gpsRoute(A.x, A.z, B2.x, B2.z) || [[A.x, A.z], [B2.x, B2.z]]; A.at = pts.length; R.forEach(function (p) { var l = pts[pts.length - 1]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) > 6) pts.push([p[0], p[1]]); }); }
-  // the line runs over the pavement, not down the middle of the road, so the pillars stand on the pavement
-  pts = pts.map(function (p, k) { var a = pts[(k - 1 + pts.length) % pts.length], b = pts[(k + 1) % pts.length], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = dz / l, nz = -dx / l;
-    for (var d = 4; d <= 14; d += 0.5) { var x = p[0] + nx * d, z = p[1] + nz * d; if (roadF(x, z) > 0.6) return [x, z]; } return [p[0] + nx * 7, p[1] + nz * 7]; });
-  for (var pass = 0; pass < 3; pass++) pts = pts.map(function (p, k) { var a = pts[(k - 1 + pts.length) % pts.length], b = pts[(k + 1) % pts.length]; return [(a[0] + 2 * p[0] + b[0]) / 4, (a[1] + 2 * p[1] + b[1]) / 4]; });
-  var S = [0]; for (var k = 1; k <= pts.length; k++) { var p0 = pts[k - 1], p1 = pts[k % pts.length]; S.push(S[k - 1] + Math.hypot(p1[0] - p0[0], p1[1] - p0[1])); }
-  var Y = pts.map(function (p) { return groundY(p[0], p[1]); }); for (var sm = 0; sm < 30; sm++) Y = Y.map(function (y, k) { return Math.max(groundY(pts[k][0], pts[k][1]), (Y[(k - 1 + Y.length) % Y.length] + y * 2 + Y[(k + 1) % Y.length]) / 4); });
-  st.forEach(function (s) { var bi = 0, bd = 1e9; pts.forEach(function (p, k) { var d = Math.hypot(p[0] - s.x, p[1] - s.z); if (d < bd) { bd = d; bi = k; } }); s.k = bi; s.s = S[bi]; var p = pts[bi], q = pts[(bi + 1) % pts.length], a = Math.atan2(q[0] - p[0], q[1] - p[1]); s.a = a; s.px = p[0]; s.pz = p[1];
-    var side = 3.4; s.gx = p[0] + Math.cos(a) * side; s.gz = p[1] - Math.sin(a) * side; s.y = Y[bi] + RAILY; });
-  RAIL = { st: st, pts: pts, S: S, len: S[S.length - 1], Y: Y, chunks: [], t: 0 }; railMesh(RAIL); return RAIL; }
-function railAt(R, s) { s = ((s % R.len) + R.len) % R.len; var lo = 0, hi = R.S.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (R.S[mid] <= s) lo = mid; else hi = mid; } var p0 = R.pts[lo % R.pts.length], p1 = R.pts[(lo + 1) % R.pts.length], f = (s - R.S[lo]) / ((R.S[lo + 1] - R.S[lo]) || 1), y0 = R.Y[lo % R.pts.length], y1 = R.Y[(lo + 1) % R.pts.length];
-  return { x: p0[0] + (p1[0] - p0[0]) * f, z: p0[1] + (p1[1] - p0[1]) * f, y: y0 + (y1 - y0) * f + RAILY, a: Math.atan2(p1[0] - p0[0], p1[1] - p0[1]) }; }
-function railMesh(R) { var n = R.pts.length, per = 24;
-  for (var c0 = 0; c0 < n; c0 += per) { var m = new R3.Mesh(), gl = new R3.Mesh(), sx = 0, sz = 0, cnt = 0;
-    for (var k = c0; k < Math.min(n, c0 + per); k++) { var a = R.pts[k], b = R.pts[(k + 1) % n], ya = R.Y[k] + RAILY, yb = R.Y[(k + 1) % n] + RAILY, dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = dz / l * 0.55, nz = -dx / l * 0.55; sx += a[0]; sz += a[1]; cnt++;
-      // the beam (a box along the line) and a glowing strip on its side
-      m.quad([a[0] - nx, ya, a[1] - nz], [b[0] - nx, yb, b[1] - nz], [b[0] + nx, yb, b[1] + nz], [a[0] + nx, ya, a[1] + nz], uvR(l / 4, 1), TL('concrete'), [0.55, 0.55, 0.55], [0, 1, 0]);
-      [-1, 1].forEach(function (s) { var ox = nx * s, oz = nz * s, nn = [ox / 0.55, 0, oz / 0.55]; m.quad([a[0] + ox, ya - 1.1, a[1] + oz], [b[0] + ox, yb - 1.1, b[1] + oz], [b[0] + ox, yb, b[1] + oz], [a[0] + ox, ya, a[1] + oz], uvR(l / 4, 0.3), TL('concrete'), lit(nn, 0.85), nn); gl.quad([a[0] + ox * 1.02, ya - 0.5, a[1] + oz * 1.02], [b[0] + ox * 1.02, yb - 0.5, b[1] + oz * 1.02], [b[0] + ox * 1.02, yb - 0.4, b[1] + oz * 1.02], [a[0] + ox * 1.02, ya - 0.4, a[1] + oz * 1.02], UV1, TL('white'), [0.77, 0.54, 1], nn); });
-      m.quad([a[0] + nx, ya - 1.1, a[1] + nz], [b[0] + nx, yb - 1.1, b[1] + nz], [b[0] - nx, yb - 1.1, b[1] - nz], [a[0] - nx, ya - 1.1, a[1] - nz], uvR(l / 4, 1), TL('concrete'), [0.3, 0.3, 0.3], [0, -1, 0]);
-      // a pillar every 24 m (where the ground is under it)
-      if (Math.floor(R.S[k] / 24) !== Math.floor(R.S[k + 1] / 24) && roadF(a[0], a[1]) > 0.3 && !isWaterK(kAt(a[0], a[1]))) { var gy = groundY(a[0], a[1]); addBox(a[0] - 0.55, a[1] - 0.55, a[0] + 0.55, a[1] + 0.55, gy - 1, ya - 1.1); tub(m, [a[0], gy, a[1]], [a[0], ya - 1.1, a[1]], 0.55, 0.45, '#8a8480', 10); boxC(m, a[0] - 0.9, ya - 1.5, a[1] - 0.9, a[0] + 0.9, ya - 1.1, a[1] + 0.9, '#6a645e'); } }
-    R.chunks.push({ m: m.upload(), gl: gl.upload(), x: sx / cnt, z: sz / cnt }); }
-  // the stations: a platform beside the beam, a roof, stairs down to the street, the SPUZZRAIL sign
-  var m2 = new R3.Mesh(), g2 = new R3.Mesh(); R.st.forEach(function (s) { var c = Math.cos(s.a), sn = Math.sin(s.a); function L(u, v) { return [s.px + u * c + v * sn, s.pz - u * sn + v * c]; } var y = s.y - 1.1, gy = groundY(L(2.2, -9)[0], L(2.2, -9)[1]);
-    var q = [L(-3.4, -12), L(-0.7, -12), L(-0.7, 12), L(-3.4, 12)]; m2.quad([q[0][0], y + 0.3, q[0][1]], [q[3][0], y + 0.3, q[3][1]], [q[2][0], y + 0.3, q[2][1]], [q[1][0], y + 0.3, q[1][1]], uvR(2, 8), TL('tilefloor'), [0.6, 0.6, 0.6], [0, 1, 0]);
-    boxR(m2, L(-2.05, 0)[0], L(-2.05, 0)[1], s.a, 1.35, 12, y - 0.3, y + 0.3, '#6a645e'); boxR(g2, L(-0.75, 0)[0], L(-0.75, 0)[1], s.a, 0.05, 12, y + 0.3, y + 0.34, '#ffe36a'); boxR(g2, L(-3.4, 0)[0], L(-3.4, 0)[1], s.a, 0.04, 12, y + 0.3, y + 1.3, '#bfe2ff');
-    boxR(m2, L(-2.05, 0)[0], L(-2.05, 0)[1], s.a, 1.6, 12.2, y + 3.4, y + 3.6, '#12040a'); [[-3.3, -10], [-3.3, 10], [-3.3, 0]].forEach(function (o) { var p = L(o[0], o[1]); tub(m2, [p[0], y + 0.3, p[1]], [p[0], y + 3.4, p[1]], 0.08, 0.08, '#2a2a2e', 6); });
-    // the lift tower on the pavement (glass sides, a lit top), joined to the platform by a bridge under the beam
-    var lt = L(2.2, -9); boxR(m2, lt[0], lt[1], s.a, 1.1, 1.1, gy, gy + 0.2, '#6a645e'); boxR(g2, lt[0], lt[1], s.a, 1.0, 1.0, gy + 0.2, y + 3.0, '#bfe2ff'); boxR(m2, lt[0], lt[1], s.a, 1.15, 1.15, y + 3.0, y + 3.4, '#c48aff'); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { var c2 = L(2.2 + o[0] * 1.05, -9 + o[1] * 1.05); tub(m2, [c2[0], gy, c2[1]], [c2[0], y + 3.0, c2[1]], 0.07, 0.07, '#2a2a2e', 5); });
-    boxR(m2, L(0, -9)[0], L(0, -9)[1], s.a, 1.2, 1.0, y - 1.55, y - 1.3, '#6a645e'); addOBB(lt[0], lt[1], s.a, 1.1, 1.1, gy - 1, y + 3.4); var ld = L(2.2, -11); s.gx = ld[0]; s.gz = ld[1];
-    var sg = L(-2.05, 0); standQ(g2, sg[0], sg[1], s.a + Math.PI / 2, 2.2, y + 2.4, y + 3.32, TL('sg_rail'), 0, 0, SGUV); standQ(g2, sg[0], sg[1], s.a - Math.PI / 2, 2.2, y + 2.4, y + 3.32, TL('sg_rail'), 0, 0, SGUV); });
-  R.stm = { m: m2.upload(), gl: g2.upload() };
-  var car = new R3.Mesh(), cg = new R3.Mesh(); boxC(car, -1.3, 0, -5, 1.3, 2.6, 5, '#c4121c'); boxC(car, -1.32, 1.3, -4.6, 1.32, 2.2, 4.6, '#1a2838'); boxC(cg, -1.34, 1.32, -4.5, -1.33, 2.18, 4.5, '#bfe2ff'); boxC(cg, 1.33, 1.32, -4.5, 1.34, 2.18, 4.5, '#bfe2ff'); boxC(car, -1.2, 2.6, -4.8, 1.2, 2.8, 4.8, '#12040a'); boxC(cg, -1.31, 0.4, -5, -1.3, 0.55, 5, '#c48aff'); boxC(cg, 1.3, 0.4, -5, 1.31, 0.55, 5, '#c48aff'); boxC(car, -1.0, -0.6, -4, 1.0, 0, 4, '#2a2a2e');
-  var nose = new R3.Mesh(); ell(nose, 0, 1.3, 5, 1.3, 1.3, 1.6, '#c4121c', 12, 8); ell(cg, 0, 1.8, 5.9, 0.8, 0.5, 0.6, '#1a2838', 8, 4); R.car = car.upload(); R.carg = cg.upload(); R.nose = nose.upload(); }
-function stepRail(dt) { var R = railBuild(); R.t += dt; var Rd = G.rail; if (Rd) { Rd.t += dt; var go = Rd.s1 - Rd.s0; if (go < 0) go += R.len; var sp = Math.min(46, 8 + Rd.t * 8); Rd.d = Math.min(go, (Rd.d || 0) + sp * dt * (Rd.d > go - 60 ? Math.max(0.25, (go - Rd.d) / 60) : 1));
-    if (KIT.pressed('a') || KIT.pressed('x') || (KIT.ptr && KIT.ptr.tap)) Rd.d = go; if (Rd.d >= go - 0.05) { var s = Rd.to; G.rail = null; G.talk = 0; P.x = s.gx; P.z = s.gz; P.y = standY(P.x, P.z, 999); P.a = s.a; CAM.snap = 1; G.fade = 1.2; toast(s.name + '. Mind the gap.'); } } }
-function drawRail() { var R = railBuild(); R.chunks.forEach(function (c) { if (dist2(c.x, c.z, CAM.x, CAM.z) > 520 * 520 || !inView(c.x, c.z, 70)) return; R3.draw(c.m, ATT); R3.draw(c.gl, ATT, { lit: false }); }); R3.draw(R.stm.m, ATT); R3.draw(R.stm.gl, ATT, { lit: false });
-  // the train: round and round, slowing into each station and waiting
-  var s0 = (R.t * 14) % R.len; if (G.rail) s0 = (G.rail.s0 + G.rail.d) % R.len; for (var k = 0; k < 3; k++) { var p = railAt(R, s0 - k * 10.6), q = railAt(R, s0 - k * 10.6 + 2), a = Math.atan2(q.x - p.x, q.z - p.z); if (dist2(p.x, p.z, CAM.x, CAM.z) > 400 * 400) continue; var M1 = MD(p.x, p.y + 0.6, p.z, a, 0, 0);
-    R3.draw(R.car, ATT, { m: M1 }); R3.draw(R.carg, ATT, { m: M1, lit: false }); if (k === 0) R3.draw(R.nose, ATT, { m: M1 }); } }
-function railMenu(s) { var R = railBuild(); KIT.menu({ title: 'SPUZZRAIL', sub: s.name + ' station  ·  $5 to anywhere on the loop', items: R.st.filter(function (o) { return o !== s; }).map(function (o) { return { label: o.name.toUpperCase(), dis: SV.money < 5, fn: function () { KIT.confirm({ title: 'Ride to ' + o.name, price: 5, have: Math.floor(SV.money), unit: '$', yes: function () { money(-5); KIT.closeMenu(); G.rail = { from: s, to: o, s0: s.s, s1: o.s, t: 0, d: 0 }; G.talk = 1; sfx.play('door'); }, no: function () { railMenu(s); } }); } }; }).concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }
 (function () {
-  var sc = stepCamera; stepCamera = function (dt) { var r = sc(dt); if (G.rail) { var R = railBuild(), Rd = G.rail, p = railAt(R, Rd.s0 + Rd.d), q = railAt(R, Rd.s0 + Rd.d + 30), a = Math.atan2(q.x - p.x, q.z - p.z); P.x = p.x; P.z = p.z; P.y = p.y + 0.6; var bk = railAt(R, Rd.s0 + Rd.d - 34); CAM.x = bk.x; CAM.z = bk.z; CAM.y = Math.max(bk.y + 7, groundY(bk.x, bk.z) + 3); CAM.at = [q.x, q.y, q.z]; } return r; };
-  var dp = drawPlayer; drawPlayer = function () { if (G.rail) return; return dp(); };
-  var sf = stepFoot; stepFoot = function (dt) { if (G.craneT) { var C = G.craneT; C.t -= dt; P.vx = P.vz = P.vy = 0; P.x = C.x; P.z = C.z; P.y = C.y; P.a += dt * 0.4; if (C.t <= 0) { G.craneT = null; P.x = C.x + 4; P.z = C.z + 4; P.y = standY(P.x, P.z, 999); G.fade = 1; } return; } if (G.rail) { P.vx = P.vz = 0; P.sp = 0; return; } if (G.sunTowel) { P.vx = P.vz = 0; P.sp = 0; var T = G.sunTowel; P.x = T.x; P.z = T.z; P.y = groundY(T.x, T.z) + 0.1; P.a = T.a; return; } return sf(dt); };
+  var sf = stepFoot; stepFoot = function (dt) { if (G.craneT) { var C = G.craneT; C.t -= dt; P.vx = P.vz = P.vy = 0; P.x = C.x; P.z = C.z; P.y = C.y; P.a += dt * 0.4; if (C.t <= 0) { G.craneT = null; P.x = C.x + 4; P.z = C.z + 4; P.y = standY(P.x, P.z, 999); G.fade = 1; } return; } if (G.sunTowel) { P.vx = P.vz = 0; P.sp = 0; var T = G.sunTowel; P.x = T.x; P.z = T.z; P.y = groundY(T.x, T.z) + 0.1; P.a = T.a; return; } return sf(dt); };
   var po = poseOfPlayer; poseOfPlayer = function () { var Q = po(); if (G.sunTowel) { poseDown(Q, 1, 0); Q.sh[0] = [0.4, 1.9, 0]; Q.sh[1] = [0.4, 1.9, 0]; } return Q; };
 })();
 
@@ -247,14 +195,13 @@ function actSpots() { var U = [], C;
     B.towels.forEach(function (T) { if (T.who) return; U.push({ x: T.x, z: T.z, r: 1.4, label: 'SUNBATHE', fn: function () { G.sunTowel = T; G.sunT = 20; toast('You lie down in the sun. Move to get up.'); } }); }); }
   // Sperm World and the Spuzzrail stations
   var M0 = mallSite(); U.push({ x: M0.door.x, z: M0.door.z + 1, r: 3.2, label: 'ENTER SPERM WORLD', blip: 'shop', icon: 'W', fn: function () { enterShop(null, null, 'mall'); } });
-  railBuild().st.forEach(function (s) { U.push({ x: s.gx, z: s.gz, r: 3, label: 'SPUZZRAIL: ' + s.name.toUpperCase(), blip: 'rail', icon: 'R', fn: function () { railMenu(s); } }); });
   return U; }
 (function () {
   var ws = worldSetup; worldSetup = function () { ws(); try { G.uses = G.uses.concat(actSpots()); } catch (e) { console.warn('actSpots', e); } };
-  var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepAct(dt); stepBeach(dt); stepRail(dt); } catch (e) { if (!window.__u169e) { window.__u169e = 1; console.warn(e); } } };
+  var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepAct(dt); stepBeach(dt); } catch (e) { if (!window.__u169e) { window.__u169e = 1; console.warn(e); } } };
   var df = drawFun; drawFun = function () { df(); if (G.interior) return; try { var B = beachPlan(); if (B.party && dist2(B.party.x, B.party.z, CAM.x, CAM.z) < 500 * 500) { var M = beachMesh(); R3.draw(M.m, ATT); R3.draw(M.gl, ATT, { lit: false });
       if (!FIREM) { var fm = new R3.Mesh(); ell(fm, 0, 0.5, 0, 0.5, 0.8, 0.5, '#ff7a20', 8, 5); FIREM = fm.upload(); } for (var k = 0; k < 3; k++) { var ph = G.t * (5 + k) + k; R3.draw(FIREM, ATT, { lit: false, m: MD(B.party.x + (k - 1) * 0.25, groundY(B.party.x, B.party.z - 2) + 0.1, B.party.z - 2, ph * 0.1, 0, 0, 0.8 + 0.15 * Math.sin(ph)) }); } }
     var M0 = mallSite(); if (dist2((M0.x0 + M0.x1) / 2, M0.z1, CAM.x, CAM.z) < 700 * 700) { var ME = mallExterior(); R3.draw(ME.m, ATT); R3.draw(ME.gl, ATT, { lit: false }); }
-    drawRail(); drawAct(); } catch (e) { if (!window.__u169d) { window.__u169d = 1; console.warn(e); } } };
+    drawAct(); } catch (e) { if (!window.__u169d) { window.__u169d = 1; console.warn(e); } } };
   var dh = drawHud; drawHud = function () { var r = dh.apply(this, arguments); try { drawActHud(KIT.ctx); } catch (e) {} return r; };
 })();
