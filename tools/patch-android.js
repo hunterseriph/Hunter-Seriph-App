@@ -77,10 +77,15 @@ public class MainActivity extends BridgeActivity {
     }
 }
 `);
-// 3b. (update 132) OrientPlugin: Octobeats asks to be held upright; closing the game lets the screen turn again
+// 3b. (update 132) OrientPlugin: Octobeats asks to be held upright; closing the game lets the screen turn again.
+//     (update 175) immersive({on}): full screen for games, no notification bar or home buttons
 write(path.join(javaDir, 'OrientPlugin.java'), `package com.hunterseriph.app;
 
 import android.content.pm.ActivityInfo;
+import android.view.Window;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -98,6 +103,23 @@ public class OrientPlugin extends Plugin {
                 if ("portrait".equals(mode)) o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
                 else if ("landscape".equals(mode)) o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
                 getActivity().setRequestedOrientation(o);
+            }
+        });
+        call.resolve();
+    }
+    // update 175: a game's Full screen setting hides the notification bar and the home buttons (swipe from an edge to see them for a moment)
+    @PluginMethod
+    public void immersive(PluginCall call) {
+        final boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Window w = getActivity().getWindow();
+                WindowInsetsControllerCompat c = WindowCompat.getInsetsController(w, w.getDecorView());
+                if (on) {
+                    c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                    c.hide(WindowInsetsCompat.Type.systemBars());
+                } else c.show(WindowInsetsCompat.Type.systemBars());
             }
         });
         call.resolve();

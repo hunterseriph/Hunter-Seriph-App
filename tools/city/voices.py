@@ -22,7 +22,7 @@ LT = 'en-us-libritts-high'
 # who: (model, speaker, slowness, pitch, extra ffmpeg filters)
 V = { # update 157 (he said people sounded robotic and weird): no pitch shifting any more (it smeared the voices), natural
   # pace, a little more expression from Piper (noise settings in speak), and each character keeps one real speaker.
- 'lab': (LT, 51, 1.0, 1.0, ''), 'cumhead': (LT, 66, 1.0, 1.0, ''), 'greebo': (LT, 54, 0.98, 1.0, ''), 'spermaid': (LT, 9, 1.0, 1.0, ''),
+ 'lab': (LT, 51, 1.0, 1.0, ''), 'cumhead': (LT, 50, 1.0, 1.0, ''), 'greebo': (LT, 54, 0.98, 1.0, ''), 'spermaid': (LT, 9, 1.0, 1.0, ''),
  'amy': (LT, 21, 0.98, 1.0, ''), 'saba': (LT, 27, 1.06, 1.0, ''), 'joff': (LT, 57, 0.98, 1.0, ''), 'beeb': (LT, 90, 1.04, 1.0, ''),
  'harold': (LT, 105, 0.95, 1.0, ''), 'kaya': (LT, 15, 0.98, 1.0, ''), 'elden': (LT, 72, 1.0, 1.0, ''), 'ali': (LT, 78, 0.98, 1.0, ''),
  'potbelly': (LT, 102, 1.02, 1.0, ''), 'pulsar': (LT, 117, 1.08, 1.0, ''), 'bonjo': (LT, 18, 1.0, 1.0, ''), 't': (LT, 0, 1.08, 1.0, ''),

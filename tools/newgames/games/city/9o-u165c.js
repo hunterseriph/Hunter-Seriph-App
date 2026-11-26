@@ -145,5 +145,4 @@ function stepSpooge() { if (G.interior) return; if (SPOOGE && (SPOOGE.dead || PE
 (function () { var sf = stepFun; stepFun = function (dt) { sf(dt); try { stepKnights(dt); stepDemons(dt); stepSpooge(); } catch (e) { if (!window.__u165err) { window.__u165err = 1; console.warn(e); } } };
   var df = drawFun; drawFun = function () { df(); drawKnights(); drawDemons(); };
   var dh = drawHud; drawHud = function () { dh.apply(this, arguments); if (!KNIGHTS || G.interior) return; var ctx = KIT.ctx; KNIGHTS.forEach(function (p) { if (!p.said || p.sayT <= 0) return;
-      var s = R3.project(p.x, p.y + 4.0, p.z); if (!s || dist2(p.x, p.z, P.x, P.z) > 30 * 30) return; var w = Math.min(190, tw2(p.said, 8) + 10), L = KIT.wrap ? KIT.wrap(p.said, 180, 8, 'body') : [p.said];
-      ctx.fillStyle = 'rgba(241,231,208,0.94)'; ctx.fillRect(s.x - w / 2, s.y - L.length * 10 - 5, w, L.length * 10 + 5); L.forEach(function (l, i) { tx(l, s.x - tw2(l, 8) / 2, s.y - L.length * 10 - 1 + i * 10, { col: '#12040a', size: 8 }); }); }); }; })();
+      var s = R3.project(p.x, p.y + 4.0, p.z); if (!s || dist2(p.x, p.z, P.x, P.z) > 30 * 30) return; drawBubble(p.said, s.x, s.y); }); }; })();

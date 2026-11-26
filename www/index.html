@@ -32,6 +32,8 @@ a{text-decoration:none;color:inherit}
 #gameTitle{font:20px 'Pirata One',serif;letter-spacing:.02em;color:#f1e7d0}
 #gameFrame{flex:1;min-height:0;width:100%;border:0;background:#000}
 @media (orientation:landscape) and (max-height:520px){#gameBar{height:32px;padding-top:0}#gameBack{height:32px}}
+/* update 175: a game's Full screen setting: no back bar or game name (the phone's back button still works) */
+html.gamefull #gameBar{display:none}
 /* games list: logo and a play tag only, no blurb; two columns when the phone is sideways or on PC */
 .games-list>a>div:last-child>div[style*="font-weight: 500"]{display:none}
 .games-list>a{height:116px!important}
@@ -1023,7 +1025,19 @@ function freshFrame(id,src){ var old=$(id), f=old.cloneNode(false); if(src) f.se
 /* update 132: a game can ask the phone to stay upright (Octobeats). OrientPlugin is our own few lines in MainActivity's
    package (tools/patch-android.js); without it the game asks you to turn the phone. Closing a game frees the screen again. */
 window.hsOrient=function(mode){ try{ var C=window.Capacitor, O=C&&((C.Plugins&&C.Plugins.Orient)||(C.registerPlugin&&C.registerPlugin('Orient'))); if(O&&O.lock) O.lock({mode:mode}).catch(function(){}); }catch(e){} };
-function closeGame(){ if($('gameWrap').hidden) return; $('gameWrap').hidden=true; freshFrame('gameFrame'); window.hsOrient('any'); }
+/* update 175: full screen for a game (Cum City Nights' Options > Full screen). The game asks with hsFull(on, fromSetting).
+   It hides the bar with BACK and the game's name; on the phone it hides the notification bar and the home buttons
+   (OrientPlugin.immersive, tools/patch-android.js); on PC the window goes full screen (it needs a click or a key,
+   which the game's own input passes on). Esc on PC leaves full screen and brings the bar back until the game is opened again. */
+var FULL={on:false,left:false};
+function hsImm(on){ try{ var C=window.Capacitor, O=C&&((C.Plugins&&C.Plugins.Orient)||(C.registerPlugin&&C.registerPlugin('Orient'))); if(O&&O.immersive) O.immersive({on:!!on}).catch(function(){}); }catch(e){} }
+function isNative(){ return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()); }
+window.hsFull=function(on,fromSetting){ if($('gameWrap').hidden) on=false; if(fromSetting) FULL.left=false; if(on&&FULL.left) return; FULL.on=!!on;
+  document.documentElement.classList.toggle('gamefull',FULL.on); hsImm(FULL.on);
+  if(!isNative()){ try{ if(FULL.on&&!document.fullscreenElement&&document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function(){}); else if(!FULL.on&&document.fullscreenElement) document.exitFullscreen().catch(function(){}); }catch(e){} } };
+document.addEventListener('fullscreenchange',function(){ if(!document.fullscreenElement&&FULL.on&&!isNative()){ FULL.on=false; FULL.left=true; document.documentElement.classList.remove('gamefull'); } });
+(function(){ var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App; if(A&&A.addListener) A.addListener('resume',function(){ if(FULL.on) hsImm(true); }); })();
+function closeGame(){ if($('gameWrap').hidden) return; $('gameWrap').hidden=true; freshFrame('gameFrame'); window.hsOrient('any'); if(FULL.on||FULL.left){ FULL.left=false; window.hsFull(false); } }
 $('gameBack').addEventListener('click',function(){ history.back(); });
 /* ---------- the phone's own Back button: step back inside the app, never straight out of it ---------- */
 var backTap=0;

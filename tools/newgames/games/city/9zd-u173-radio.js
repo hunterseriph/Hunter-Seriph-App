@@ -7,7 +7,7 @@
 var RADART = {};
 function radArt(src) { if (!src) return null; var im = RADART[src]; if (!im) { im = RADART[src] = new Image(); im.onload = function () { im.ok = 1; }; im.src = src; } return im.ok ? im : null; }
 function radReal(st) { return window.CCNRADIO && CCNRADIO[st.id] && CCNRADIO[st.id].length ? CCNRADIO[st.id] : null; }
-function radVol() { return sfx.muted ? 0 : DUCK.line || DUCK.bark ? 0.3 : 0.8; }
+function radVol() { return sfx.muted ? 0 : (DUCK.line || DUCK.bark ? 0.3 : 0.8) * sndV('radio'); } // update 175: times the radio volume setting
 (function () {
   function radPlay(src, st) { if (RAD.audio) { RAD.audio.onended = null; RAD.audio.pause(); }
     var M = (window.CCNRADIO_META || {})[src] || {}, a = RAD.audio = new Audio(src); a.volume = radVol(); a.play().catch(function () {});
