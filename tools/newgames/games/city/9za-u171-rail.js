@@ -395,7 +395,7 @@ function spzUses() { var Z = spzBuild(), L0 = []; if (G.interior || G.lift || G.
   var df = drawFun; drawFun = function () { df(); if (G.interior) return; try { spzDraw(); } catch (e) { if (!window.__spzD) { window.__spzD = 1; console.warn(e); } } };
   var nu = nearestUse; nearestUse = function () { if (G.spz && G.spz.phase === 'ride') return null; var u = nu(); if (u && u.blip === 'rail') u = null; if (G.interior || P.state !== 'foot' || G.seat) return u; var best = null, bd = 1e9;
     spzUses().forEach(function (q) { if (Math.abs(P.y - q.top) > 2) return; var d = dist2(P.x, P.z, q.x, q.z); if (d < q.r * q.r && d < bd) { bd = d; best = q; } });
-    if (u && spzOnPlatform() && Math.abs(P.y - (u.top !== undefined ? u.top : groundY(u.x, u.z))) > 3) u = null; // nothing down on the street works from up on a platform
+    if (u && spzOnPlatform() && !/^SIT /.test(u.label || '') && Math.abs(P.y - (u.top !== undefined ? u.top : groundY(u.x, u.z))) > 3) u = null; // (update 176: the platform benches' own SIT DOWN is not from the street; seatNear already checks its height) // nothing down on the street works from up on a platform
     if (best && (!u || bd < dist2(P.x, P.z, u.x, u.z))) return best; return u; };
   var sn = seatNear; seatNear = function () { var s = sn(); if (s && (s.spz || spzOnPlatform()) && Math.abs(P.y - s.y) > 2.5) return null; return s; }; // a bench up on a platform is not a bench on the street
   var sfo = stepFoot; stepFoot = function (dt) { if (G.lift || G.spz && G.spz.phase === 'ride') { P.vx = P.vz = 0; P.sp = 0; return; } return sfo(dt); };

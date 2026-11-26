@@ -761,7 +761,9 @@ var music = (function () {
   }
   function stop(sec) { want = null; if (A) fadeOut(sec || 1); cur = null; song = null; }
   setInterval(tick, 40);
-  return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, duck: function (k) { if (bus && A) { bus.gain.cancelScheduledValues(A.currentTime); bus.gain.setTargetAtTime(0.6 * OPT.mus * k, A.currentTime, 0.12); } }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
+  /* update 176: start a song part-way through (the radio stations keep playing while you are not listening) */
+  function seek(sec) { if (!song || !A) return; var sd = 60 / song.sp.bpm / 4; stepI = Math.max(0, Math.floor(sec / sd)); T0 = nextT - stepI * sd; }
+  return { play: play, stop: stop, seek: seek, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, duck: function (k) { if (bus && A) { bus.gain.cancelScheduledValues(A.currentTime); bus.gain.setTargetAtTime(0.6 * OPT.mus * k, A.currentTime, 0.12); } }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
 })();
 
 /* =====================================================================================================
@@ -9969,7 +9971,7 @@ function spzUses() { var Z = spzBuild(), L0 = []; if (G.interior || G.lift || G.
   var df = drawFun; drawFun = function () { df(); if (G.interior) return; try { spzDraw(); } catch (e) { if (!window.__spzD) { window.__spzD = 1; console.warn(e); } } };
   var nu = nearestUse; nearestUse = function () { if (G.spz && G.spz.phase === 'ride') return null; var u = nu(); if (u && u.blip === 'rail') u = null; if (G.interior || P.state !== 'foot' || G.seat) return u; var best = null, bd = 1e9;
     spzUses().forEach(function (q) { if (Math.abs(P.y - q.top) > 2) return; var d = dist2(P.x, P.z, q.x, q.z); if (d < q.r * q.r && d < bd) { bd = d; best = q; } });
-    if (u && spzOnPlatform() && Math.abs(P.y - (u.top !== undefined ? u.top : groundY(u.x, u.z))) > 3) u = null; // nothing down on the street works from up on a platform
+    if (u && spzOnPlatform() && !/^SIT /.test(u.label || '') && Math.abs(P.y - (u.top !== undefined ? u.top : groundY(u.x, u.z))) > 3) u = null; // (update 176: the platform benches' own SIT DOWN is not from the street; seatNear already checks its height) // nothing down on the street works from up on a platform
     if (best && (!u || bd < dist2(P.x, P.z, u.x, u.z))) return best; return u; };
   var sn = seatNear; seatNear = function () { var s = sn(); if (s && (s.spz || spzOnPlatform()) && Math.abs(P.y - s.y) > 2.5) return null; return s; }; // a bench up on a platform is not a bench on the street
   var sfo = stepFoot; stepFoot = function (dt) { if (G.lift || G.spz && G.spz.phase === 'ride') { P.vx = P.vz = 0; P.sp = 0; return; } return sfo(dt); };
@@ -10318,49 +10320,115 @@ var SFXG = null;
       u.voice = m[0] || vs[0] || null; u.pitch = m[0] ? 1 : 0.6; u.rate = 1; u.volume = 0.9; speechSynthesis.speak(u); return 1; } catch (e) { return 0; } };
 })();
 // the DJ under a line, at the radio volume
-setInterval(function () { try { if (VOX.radio) { var v = (VOX.line && !VOX.line.paused && !VOX.line.ended ? 0.25 : 0.95) * sndV('radio'); if (Math.abs(VOX.radio.volume - v) > 0.02) VOX.radio.volume = v; } } catch (e) {} }, 200);
+setInterval(function () { try { if (VOX.radio) { var v = (VOX.line && !VOX.line.paused && !VOX.line.ended ? 0.25 : 0.95) * sndV('radio') * (window.RADF === undefined ? 1 : RADF); if (Math.abs(VOX.radio.volume - v) > 0.02) VOX.radio.volume = v; } } catch (e) {} }, 200);
 /* ---------------- engines, tyres, the city ---------------- */
 var AMB = null;
+/* update 176 (his ask: more realistic revving, more city sound). An engine here is built like a real one sounds: a train of
+   firing pulses (four cylinders, or a lumpy V8 in the fast cars, a diesel in the vans, a high-revving four on the bikes),
+   through an exhaust resonance, with a breathy rasp, a rough edge that wobbles, real revs from a five-speed gearbox
+   (speed times the gear's ratio), a dip at each gear change, the rev limiter bouncing when you hold it flat out standing
+   still, and pops and crackles from the exhaust when you lift off at high revs. */
+var ENGK = {
+  car: { cyl: 4, idle: 850, red: 6800, gr: [3.4, 2.05, 1.42, 1.05, 0.82], lump: 0, rasp: 1, nz: 0.010, pk: 170 },
+  v8: { cyl: 8, idle: 720, red: 6400, gr: [3.0, 1.95, 1.38, 1.0, 0.78], lump: 0.34, rasp: 1.2, nz: 0.012, pk: 120 },
+  van: { cyl: 4, idle: 760, red: 4300, gr: [3.9, 2.3, 1.5, 1.08, 0.86], lump: 0.08, rasp: 1.6, nz: 0.016, pk: 140 },
+  bike: { cyl: 4, idle: 1300, red: 11500, gr: [2.8, 1.95, 1.55, 1.3, 1.12], lump: 0.05, rasp: 0.8, nz: 0.010, pk: 260 },
+  boat: { cyl: 2, idle: 950, red: 6000, gr: [1], lump: 0.18, rasp: 1.4, nz: 0.018, pk: 150 },
+  fly: { cyl: 6, idle: 1600, red: 2900, gr: [1], lump: 0.45, rasp: 2.0, nz: 0.03, pk: 90 } };
+function engKind(v) { var t = v.t || {}, c = t.cls; return c === 'bike' ? 'bike' : c === 'boat' ? 'boat' : c === 'heli' || c === 'plane' ? 'fly' : (t.hgt || 1.4) > 1.8 ? 'van' : (t.top || 40) > 52 || t.cop ? 'v8' : 'car'; }
 function ambInit() { var a = sfx.audio && sfx.audio(); if (!a || AMB) return AMB; var A = a.ctx, out = A.createGain(); out.gain.value = 1; out.connect(a.master);
-  function eng() { var o1 = A.createOscillator(), o2 = A.createOscillator(), o3 = A.createOscillator(), lp = A.createBiquadFilter(), g = A.createGain(), ws = A.createWaveShaper(), c = new Float32Array(128);
-    for (var i = 0; i < 128; i++) { var x = i / 64 - 1; c[i] = Math.tanh(x * 3); } ws.curve = c; o1.type = 'sawtooth'; o2.type = 'square'; o3.type = 'sine'; o2.detune.value = 7;
-    var g1 = A.createGain(), g2 = A.createGain(), g3 = A.createGain(); g1.gain.value = 0.5; g2.gain.value = 0.35; g3.gain.value = 0.9; o1.connect(g1); o2.connect(g2); o3.connect(g3); g1.connect(ws); g2.connect(ws); g3.connect(ws);
-    lp.type = 'lowpass'; lp.frequency.value = 500; lp.Q.value = 2.5; ws.connect(lp); lp.connect(g); g.gain.value = 0; g.connect(out); o1.start(); o2.start(); o3.start(); return { o1: o1, o2: o2, o3: o3, lp: lp, g: g, rpm: 0.2 }; }
-  function nz(type, f, q) { var s = A.createBufferSource(), b = A.createBuffer(1, A.sampleRate * 2, A.sampleRate), d = b.getChannelData(0), last = 0; for (var i = 0; i < d.length; i++) { var w = Math.random() * 2 - 1; last = type === 'brown' ? (last + 0.02 * w) / 1.02 : w; d[i] = type === 'brown' ? last * 3.5 : w; }
-    s.buffer = b; s.loop = true; var fl = A.createBiquadFilter(), g = A.createGain(); fl.type = f < 600 ? 'lowpass' : 'bandpass'; fl.frequency.value = f; fl.Q.value = q || 0.7; g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(out); s.start(); return { s: s, f: fl, g: g }; }
-  AMB = { A: A, out: out, me: eng(), them: [eng(), eng()], skid: nz('white', 1900, 3), city: nz('brown', 280, 0.6), room: nz('brown', 160, 0.5), wind: nz('white', 700, 0.5), nextEv: 0 }; return AMB; }
+  var nbuf = A.createBuffer(1, A.sampleRate * 2, A.sampleRate), nd = nbuf.getChannelData(0); for (var i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  var N = 40, re = new Float32Array(N), im = new Float32Array(N); for (var h = 1; h < N; h++) im[h] = Math.pow(h, -0.75) * (h % 2 ? 1 : 0.62) * (1 + 0.35 * Math.sin(h * 1.7)); var pw = A.createPeriodicWave(re, im);
+  function src() { var s = A.createBufferSource(); s.buffer = nbuf; s.loop = true; s.start(0, Math.random() * 1.9); return s; }
+  function eng() { var o = A.createOscillator(), sub = A.createOscillator(), subG = A.createGain(), shp = A.createWaveShaper(), lp = A.createBiquadFilter(), pk = A.createBiquadFilter(), amp = A.createGain(), g = A.createGain();
+    var c = new Float32Array(256); for (var i = 0; i < 256; i++) { var x = i / 128 - 1; c[i] = Math.tanh(x * 2.2); } shp.curve = c; o.setPeriodicWave(pw); sub.type = 'sine'; subG.gain.value = 0.5;
+    o.connect(shp); sub.connect(subG); subG.connect(shp); lp.type = 'lowpass'; lp.Q.value = 1.2; pk.type = 'peaking'; pk.gain.value = 6; pk.Q.value = 1.4; shp.connect(lp); lp.connect(pk); pk.connect(amp); amp.connect(g); g.gain.value = 0; g.connect(out);
+    var r = src(), rl = A.createBiquadFilter(), rg = A.createGain(); rl.type = 'lowpass'; rl.frequency.value = 28; rg.gain.value = 0.35; r.connect(rl); rl.connect(rg); rg.connect(amp.gain); // the rough, never-quite-even edge
+    var lump = A.createOscillator(), lg = A.createGain(); lump.type = 'sine'; lg.gain.value = 0; lump.connect(lg); lg.connect(amp.gain); amp.gain.value = 1; // a V8's lope
+    var ns = src(), bp = A.createBiquadFilter(), ng = A.createGain(); bp.type = 'bandpass'; bp.Q.value = 1.1; ng.gain.value = 0; ns.connect(bp); bp.connect(ng); ng.connect(out); // breath of the exhaust
+    o.start(); sub.start(); lump.start(); return { o: o, sub: sub, lp: lp, pk: pk, g: g, lump: lump, lg: lg, bp: bp, ng: ng, rpm: 900, gear: 0, load: 0, thr0: 0, kind: '' }; }
+  function nz(f, q, kind) { var s = src(), fl = A.createBiquadFilter(), g = A.createGain(); fl.type = kind || (f < 600 ? 'lowpass' : 'bandpass'); fl.frequency.value = f; fl.Q.value = q || 0.7; g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(out); return { s: s, f: fl, g: g }; }
+  function brown(f) { var b = A.createBuffer(1, A.sampleRate * 3, A.sampleRate), d = b.getChannelData(0), l = 0; for (var i = 0; i < d.length; i++) { l = (l + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = l * 3.5; }
+    var s = A.createBufferSource(); s.buffer = b; s.loop = true; s.start(); var fl = A.createBiquadFilter(), g = A.createGain(); fl.type = 'lowpass'; fl.frequency.value = f; g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(out); return { s: s, f: fl, g: g }; }
+  // slow swells for the water and the crowd
+  function swell(node, rate, depth) { var l = A.createOscillator(), lg = A.createGain(); l.frequency.value = rate; lg.gain.value = depth; l.connect(lg); lg.connect(node.g.gain); l.start(); }
+  var water = brown(520), crowd = nz(900, 0.9), cr2 = src(), crl = A.createBiquadFilter(), crg = A.createGain(); crl.type = 'lowpass'; crl.frequency.value = 6; crg.gain.value = 0; cr2.connect(crl); crl.connect(crg); crg.connect(crowd.g.gain); // syllables
+  var rain = nz(3200, 0.4, 'highpass'), rain2 = nz(900, 0.6), train = brown(160), whine = A.createOscillator(), wg = A.createGain(); whine.type = 'sine'; wg.gain.value = 0; whine.connect(wg); wg.connect(out); whine.start();
+  swell(water, 0.23, 0.0);
+  AMB = { A: A, out: out, src: src, me: eng(), them: [eng(), eng(), eng()], skid: nz(1900, 3), city: brown(280), room: brown(160), wind: nz(700, 0.5), water: water, crowd: crowd, crg: crg, rain: rain, rain2: rain2, train: train, whine: whine, wg: wg, nextEv: 0, nextThump: 0 }; return AMB; }
 function setG(g, v, k) { g.gain.setTargetAtTime(v, AMB.A.currentTime, k || 0.08); }
-function engDrive(E, v, isMe, near) { var t = v.t || {}, cl = t.cls, top = t.top || 40, s = Math.min(1.2, Math.abs(v.sp || 0) / top), thr = isMe ? (v.thrIn || 0) : 0.4, bike = cl === 'bike', boat = cl === 'boat', fly = cl === 'heli' || cl === 'plane';
-  // a five-gear box: the revs climb through each gear and drop at the change; foot down while still = a rev
-  var gears = boat || fly ? 1 : 5, gp = s * gears, gi = Math.min(gears - 1, Math.floor(gp)), fr = gp - gi, want = gears === 1 ? 0.25 + s * 0.7 : 0.28 + fr * 0.62 + gi * 0.03;
-  if (thr > 0.1 && s < 0.08) want = 0.35 + thr * 0.55; if (v.dead) want = 0;
-  E.rpm += (want - E.rpm) * (want > E.rpm ? 0.25 : 0.12); var base = bike ? 70 : boat ? 42 : fly ? 30 : t.top > 55 ? 48 : t.cls === 'car' && (t.hgt || 1.4) > 1.8 ? 30 : 38, f = base + E.rpm * base * 2.6, now = AMB.A.currentTime;
-  E.o1.frequency.setTargetAtTime(f, now, 0.05); E.o2.frequency.setTargetAtTime(f * 0.5, now, 0.05); E.o3.frequency.setTargetAtTime(f * 0.5, now, 0.05); E.lp.frequency.setTargetAtTime(300 + E.rpm * 1400 + thr * 500, now, 0.06);
-  var vol = (isMe ? 0.03 + thr * 0.035 + E.rpm * 0.02 : 0.02) * near; setG(E.g, v.dead ? 0 : vol, 0.06); }
-function ambStep() { var A = ambInit(); if (!A || !G) return; var play = G.mode === 'play' && P && !(KIT.menuOpen && KIT.menuOpen()) && !document.hidden, now = A.A.currentTime;
+function engPops(E, n) { var C = AMB.A, t = C.currentTime; for (var i = 0; i < n; i++) { var s = AMB.src(), f = C.createBiquadFilter(), g = C.createGain(), at = t + 0.05 + i * (0.05 + Math.random() * 0.12), v = 0.05 + Math.random() * 0.06;
+    f.type = 'lowpass'; f.frequency.value = 900 + Math.random() * 900; g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(v, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05 + Math.random() * 0.05);
+    s.connect(f); f.connect(g); g.connect(AMB.out); s.stop(at + 0.2); } }
+function engDrive(E, v, isMe, near, dt) { var t = v.t || {}, kk = engKind(v), K = ENGK[kk], top = t.top || 40, sp = Math.abs(v.sp || 0), thr = isMe ? Math.max(0, v.thrIn || 0) : Math.min(1, 0.25 + sp / top * 0.6), now = AMB.A.currentTime;
+  if (E.kind !== kk) { E.kind = kk; E.rpm = K.idle; E.gear = 0; }
+  var gr = K.gr, last = gr.length - 1, Kf = 0.92 * K.red / (top * gr[last]), want;
+  if (kk === 'fly' || kk === 'boat') want = K.idle + (K.red - K.idle) * Math.min(1, 0.15 + thr * 0.6 + sp / top * 0.35);
+  else { var r = sp * gr[E.gear] * Kf; // up and down the box
+    if (r > K.red * 0.9 && E.gear < last && thr > 0.25) { E.gear++; E.shift = 0.14; } else if (r < K.red * 0.38 && E.gear > 0) E.gear--;
+    r = sp * gr[E.gear] * Kf; if (sp < 2.5) want = K.idle + thr * (K.red * 0.97 - K.idle); else want = Math.max(K.idle, r) * (1 + thr * 0.04); }
+  if (v.dead) want = 0; var up = want > E.rpm, rate = up ? (sp < 2.5 ? 9000 : 5500) * (0.4 + thr) : 3800; E.rpm += Math.max(-rate * dt, Math.min(rate * dt, want - E.rpm));
+  var limit = E.rpm > K.red * 0.965 && thr > 0.8; if (limit) E.rpm -= 350 * Math.random();
+  E.load += ((thr > 0.05 ? 0.35 + thr * 0.65 : 0.08) - E.load) * Math.min(1, dt * 7);
+  if (isMe && E.thr0 > 0.5 && thr < 0.1 && E.rpm > K.red * 0.55 && kk !== 'fly') engPops(E, 2 + Math.floor(Math.random() * 4)); E.thr0 = thr;
+  var rn = (E.rpm - K.idle) / (K.red - K.idle), fire = Math.max(8, E.rpm / 60 * K.cyl / 2);
+  E.o.frequency.setTargetAtTime(fire, now, 0.03); E.sub.frequency.setTargetAtTime(fire / 2, now, 0.03); E.lump.frequency.setTargetAtTime(fire / K.cyl * 2, now, 0.05); E.lg.gain.setTargetAtTime(K.lump * (1 - rn * 0.7), now, 0.1);
+  E.lp.frequency.setTargetAtTime(220 + E.load * 1500 + rn * 2400, now, 0.04); E.pk.frequency.setTargetAtTime(K.pk + rn * 90, now, 0.1); E.bp.frequency.setTargetAtTime(fire * 3.2, now, 0.05);
+  if (E.shift > 0) E.shift -= dt; var dip = E.shift > 0 ? 0.35 : 1, chop = limit && Math.random() < 0.5 ? 0.3 : 1;
+  var vol = (isMe ? 0.028 + E.load * 0.045 + rn * 0.018 : 0.016 + rn * 0.012) * near * dip * chop; setG(E.g, v.dead ? 0 : vol, limit ? 0.01 : 0.04); setG({ gain: E.ng.gain }, (K.nz * E.load * (0.3 + rn)) * K.rasp * near * dip, 0.05); }
+function ambStep(dt) { var A = ambInit(); if (!A || !G) return; dt = dt || 0.05; var play = G.mode === 'play' && P && !(KIT.menuOpen && KIT.menuOpen()) && !document.hidden, now = A.A.currentTime;
   var my = play && P.state === 'car' && P.veh && !P.veh.dead && P.veh.t && P.veh.t.cls !== 'board' ? P.veh : null;
-  if (my) engDrive(A.me, my, true, 1); else setG(A.me.g, 0, 0.15);
-  // tyres: sliding sideways or the handbrake at speed, on the road
+  if (my) engDrive(A.me, my, true, 1, dt); else setG(A.me.g, 0, 0.15), setG({ gain: A.me.ng.gain }, 0, 0.15);
   var slip = 0; if (my && my.t.cls !== 'boat' && !my.air) { var fx = Math.sin(my.a), fz = Math.cos(my.a), ls = Math.abs(my.vx * fz - my.vz * fx); slip = Math.max(0, Math.min(1, (ls - 3) / 8)); if (my.handIn && Math.abs(my.sp) > 8) slip = Math.max(slip, 0.6); }
   setG(A.skid.g, slip * 0.06, 0.05);
-  // the two nearest cars somebody else is driving
-  var cars = play && !G.interior ? VEH.filter(function (v) { return v !== my && !v.dead && v.driver && Math.abs(v.sp || 0) > 0.5 && v.t && v.t.cls !== 'board' && dist2(v.x, v.z, P.x, P.z) < 45 * 45; }).sort(function (a, b) { return dist2(a.x, a.z, P.x, P.z) - dist2(b.x, b.z, P.x, P.z); }) : [];
-  A.them.forEach(function (E, i) { var v = cars[i]; if (v) engDrive(E, v, false, Math.max(0, 1 - Math.sqrt(dist2(v.x, v.z, P.x, P.z)) / 45)); else setG(E.g, 0, 0.2); });
-  // the city: a rumble of traffic (more by day, in the middle of town), wind up high, a room tone indoors
-  var out = play && !G.interior, day = G.time > 7 && G.time < 20 ? 1 : 0.55, alt = out ? Math.max(0, Math.min(1, (P.y - groundY(P.x, P.z) - 12) / 40)) : 0;
-  setG(A.city.g, out ? 0.05 * day * (1 - alt * 0.7) : 0, 0.5); setG(A.wind.g, out ? 0.006 + alt * 0.03 : 0, 0.5); setG(A.room.g, play && G.interior ? 0.025 : 0, 0.5);
-  if (out && now > A.nextEv) { A.nextEv = now + 4 + Math.random() * 9; ambEvent(A, G.time > 6 && G.time < 20); } }
-function ambEvent(A, day) { var C = A.A, t = C.currentTime, pan = C.createStereoPanner ? C.createStereoPanner() : null, g = C.createGain(); if (pan) { pan.pan.value = Math.random() * 1.6 - 0.8; g.connect(pan); pan.connect(A.out); } else g.connect(A.out);
-  function o(type, f0, f1, t0, d, v) { var x = C.createOscillator(), e = C.createGain(); x.type = type; x.frequency.setValueAtTime(f0, t + t0); x.frequency.linearRampToValueAtTime(f1, t + t0 + d); e.gain.setValueAtTime(0.0001, t + t0); e.gain.linearRampToValueAtTime(v, t + t0 + Math.min(0.03, d / 4)); e.gain.setValueAtTime(v, t + t0 + d * 0.8); e.gain.linearRampToValueAtTime(0.0001, t + t0 + d); x.connect(e); e.connect(g); x.start(t + t0); x.stop(t + t0 + d + 0.05); }
-  var lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; var g2 = g; g = C.createGain(); g.connect(lp); lp.connect(g2);
-  var r = Math.random(), k = day ? (r < 0.3 ? 'horn' : r < 0.45 ? 'siren' : r < 0.6 ? 'dog' : r < 0.85 ? 'birds' : 'horn') : (r < 0.3 ? 'horn' : r < 0.5 ? 'siren' : r < 0.65 ? 'dog' : 'crickets');
-  if (k === 'horn') { var f = 330 + Math.random() * 120, n = Math.random() < 0.5 ? 1 : 2; for (var i = 0; i < n; i++) { o('square', f, f, i * 0.32, 0.22 + Math.random() * 0.3, 0.012); o('square', f * 1.26, f * 1.26, i * 0.32, 0.22, 0.008); } }
-  else if (k === 'siren') { for (var j = 0; j < 4; j++) { o('sine', 650, 950, j * 1.1, 0.55, 0.008); o('sine', 950, 650, j * 1.1 + 0.55, 0.55, 0.008); } }
+  var cars = play && !G.interior ? VEH.filter(function (v) { return v !== my && !v.dead && v.driver && Math.abs(v.sp || 0) > 0.5 && v.t && v.t.cls !== 'board' && dist2(v.x, v.z, P.x, P.z) < 50 * 50; }).sort(function (a, b) { return dist2(a.x, a.z, P.x, P.z) - dist2(b.x, b.z, P.x, P.z); }) : [];
+  A.them.forEach(function (E, i) { var v = cars[i]; if (v) engDrive(E, v, false, Math.pow(Math.max(0, 1 - Math.sqrt(dist2(v.x, v.z, P.x, P.z)) / 50), 1.5), dt); else { setG(E.g, 0, 0.2); setG({ gain: E.ng.gain }, 0, 0.2); } });
+  // the city around you
+  var out = play && !G.interior, day = G.time > 7 && G.time < 20, night = G.time < 5.5 || G.time > 21, alt = out ? Math.max(0, Math.min(1, (P.y - groundY(P.x, P.z) - 12) / 40)) : 0, low = 1 - alt * 0.75;
+  var busy = 0; if (out) VEH.forEach(function (v) { if (Math.abs(v.sp || 0) > 2 && dist2(v.x, v.z, P.x, P.z) < 120 * 120) busy++; });
+  setG(A.city.g, out ? (0.025 + Math.min(1, busy / 14) * 0.04) * (day ? 1 : 0.6) * low : 0, 0.6); setG(A.wind.g, out ? 0.006 + alt * 0.03 : 0, 0.5); setG(A.room.g, play && G.interior ? 0.025 : 0, 0.5);
+  // water lapping by the sea, the river and the docks
+  var wet = 0; if (out) for (var k = 0; k < 8; k++) { var an = k / 8 * 6.283; [10, 22].forEach(function (rr) { if (isWaterK(kAt(P.x + Math.cos(an) * rr, P.z + Math.sin(an) * rr))) wet += rr === 10 ? 0.1 : 0.05; }); }
+  setG(A.water.g, Math.min(1, wet) * 0.07 * low, 0.6);
+  // people talking: more of them, louder; quieter at night
+  var ppl = 0; if (out) PEDS.forEach(function (p) { if (!p.dead && !p.inside && dist2(p.x, p.z, P.x, P.z) < 22 * 22) ppl++; }); var cv = Math.min(1, ppl / 10) * (night ? 0.5 : 1) * low; setG(A.crowd.g, cv * 0.012, 0.8); A.crg.gain.setTargetAtTime(cv * 0.02, now, 0.8);
+  // rain on everything
+  var rv = out && (G.weather === 'rain' || G.weather === 'storm') ? (G.weather === 'storm' ? 1 : 0.65) : play && G.interior && (G.weather === 'rain' || G.weather === 'storm') ? 0.2 : 0;
+  setG(A.rain.g, rv * 0.035, 1.2); setG(A.rain2.g, rv * 0.03, 1.2);
+  // the Spuzzrail going past
+  var tr = 0, tv = 0; if (out && window.SPZ && SPZ.trains) SPZ.trains.forEach(function (T) { try { var w = spzW(T.L, T.s, T.u), d = Math.hypot(w[0] - P.x, w[1] - P.z); var f = Math.max(0, 1 - d / 90) * Math.min(1, Math.abs(T.vs || 0) / 6); if (f > tr) { tr = f; tv = Math.abs(T.vs || 0); } } catch (e) {} });
+  setG(A.train.g, tr * 0.09, 0.4); A.wg.gain.setTargetAtTime(tr * 0.006, now, 0.4); A.whine.frequency.setTargetAtTime(220 + tv * 28, now, 0.3);
+  // a club's bass through the walls at night
+  if (out && (night || G.time > 20) && now > A.nextThump) { var cl = ['club', 'tb', 'pulsar'].map(function (id) { var b = SHOPS[id] && SHOPS[id].b; return b ? Math.hypot((b.x0 + b.x1) / 2 - P.x, (b.z0 + b.z1) / 2 - P.z) : 999; }).sort(function (a, b) { return a - b; })[0];
+    if (cl < 70) { var cv2 = (1 - cl / 70) * 0.09, C = A.A, tt = now + 0.05; for (var bt = 0; bt < 4; bt++) { var o = C.createOscillator(), g = C.createGain(), at = tt + bt * 0.5; o.frequency.setValueAtTime(110, at); o.frequency.exponentialRampToValueAtTime(42, at + 0.12); g.gain.setValueAtTime(cv2, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22); o.connect(g); g.connect(A.out); o.start(at); o.stop(at + 0.25); } A.nextThump = now + 2; } else A.nextThump = now + 1; }
+  if (out && now > A.nextEv) { A.nextEv = now + 2.5 + Math.random() * 6; ambEvent(A, day, night, wet > 0.2, low); } }
+function ambEvent(A, day, night, nearWater, low) { var C = A.A, t = C.currentTime, pan = C.createStereoPanner ? C.createStereoPanner() : null, g0 = C.createGain(); g0.gain.value = low; if (pan) { pan.pan.value = Math.random() * 1.6 - 0.8; g0.connect(pan); pan.connect(A.out); } else g0.connect(A.out);
+  var lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; lp.connect(g0); var g = lp;
+  function o(type, f0, f1, t0, d, v) { var x = C.createOscillator(), e = C.createGain(); x.type = type; x.frequency.setValueAtTime(f0, t + t0); x.frequency.linearRampToValueAtTime(f1, t + t0 + d); e.gain.setValueAtTime(0.0001, t + t0); e.gain.linearRampToValueAtTime(v, t + t0 + Math.min(0.03, d / 4)); e.gain.setValueAtTime(v, t + t0 + d * 0.8); e.gain.linearRampToValueAtTime(0.0001, t + t0 + d); x.connect(e); e.connect(g); x.start(t + t0); x.stop(t + t0 + d + 0.05); return x; }
+  function n(t0, d, v, f, q) { var s = A.src(), fl = C.createBiquadFilter(), e = C.createGain(); fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = q || 1; e.gain.setValueAtTime(0.0001, t + t0); e.gain.linearRampToValueAtTime(v, t + t0 + 0.01); e.gain.exponentialRampToValueAtTime(0.0001, t + t0 + d); s.connect(fl); fl.connect(e); e.connect(g); s.stop(t + t0 + d + 0.1); }
+  var P0 = [['horn', 3], ['siren', 1.5], ['dog', 1.2], ['alarm', 0.6], ['moto', 1.2], ['plane', 0.5], ['heli', 0.5], ['slam', 1], ['shout', 0.8]];
+  if (day) P0 = P0.concat([['birds', 2.5], ['pigeons', 1], ['build', 1]]); if (night) P0 = P0.concat([['crickets', 2], ['bottle', 0.8], ['owl', 0.4]]); if (nearWater && day) P0.push(['gulls', 3]); if (nearWater) P0.push(['bell', 0.6]); if (G.weather === 'storm') P0.push(['thunder', 3]);
+  var tot = 0; P0.forEach(function (q) { tot += q[1]; }); var r = Math.random() * tot, k = 'horn'; for (var i = 0; i < P0.length; i++) { r -= P0[i][1]; if (r <= 0) { k = P0[i][0]; break; } }
+  if (k === 'horn') { var f = 330 + Math.random() * 120, nn = Math.random() < 0.5 ? 1 : 2; for (var h = 0; h < nn; h++) { o('square', f, f, h * 0.32, 0.22 + Math.random() * 0.3, 0.012); o('square', f * 1.26, f * 1.26, h * 0.32, 0.22, 0.008); } }
+  else if (k === 'siren') { var up = Math.random() < 0.5, v = 0.006 + Math.random() * 0.006; for (var j = 0; j < 6; j++) { var dpl = up ? 1 + j * 0.02 : 1.08 - j * 0.02; o('sine', 650 * dpl, 950 * dpl, j * 1.0, 0.5, v); o('sine', 950 * dpl, 650 * dpl, j * 1.0 + 0.5, 0.5, v); } }
   else if (k === 'dog') { lp.frequency.value = 1200; for (var b = 0; b < 2 + Math.floor(Math.random() * 3); b++) { o('sawtooth', 520, 260, b * 0.38, 0.12, 0.016); o('square', 300, 180, b * 0.38, 0.1, 0.01); } }
-  else if (k === 'birds') { lp.frequency.value = 8000; for (var c = 0; c < 5; c++) { var f2 = 2600 + Math.random() * 1600; o('sine', f2, f2 * 1.35, c * 0.17, 0.08, 0.01); } }
-  else { lp.frequency.value = 6000; for (var q = 0; q < 14; q++) o('sine', 4400, 4500, q * 0.11, 0.045, 0.006); } }
+  else if (k === 'alarm') { lp.frequency.value = 2600; for (var a2 = 0; a2 < 10; a2++) o('square', a2 % 2 ? 1400 : 900, a2 % 2 ? 900 : 1400, a2 * 0.35, 0.33, 0.004); }
+  else if (k === 'moto') { var x = o('sawtooth', 90, 160, 0, 2.6, 0.012); o('sawtooth', 180, 320, 0, 2.6, 0.006); x.frequency.setValueAtTime(90, t); x.frequency.linearRampToValueAtTime(170, t + 1.3); x.frequency.linearRampToValueAtTime(120, t + 2.6); }
+  else if (k === 'plane') { lp.frequency.value = 500; n(0, 9, 0.05, 220, 0.4); o('sawtooth', 70, 62, 0, 9, 0.006); }
+  else if (k === 'heli') { lp.frequency.value = 700; for (var c = 0; c < 40; c++) n(c * 0.085, 0.07, 0.03, 300, 0.7); }
+  else if (k === 'slam') { lp.frequency.value = 900; n(0, 0.25, 0.06, 180, 0.8); }
+  else if (k === 'shout') { lp.frequency.value = 1400; var f3 = 240 + Math.random() * 160; o('sawtooth', f3, f3 * 1.3, 0, 0.18, 0.006); o('sawtooth', f3 * 1.25, f3 * 0.8, 0.2, 0.35, 0.006); }
+  else if (k === 'birds') { lp.frequency.value = 8000; for (var bb = 0; bb < 5; bb++) { var f2 = 2600 + Math.random() * 1600; o('sine', f2, f2 * 1.35, bb * 0.17, 0.08, 0.01); } }
+  else if (k === 'pigeons') { lp.frequency.value = 900; for (var pc = 0; pc < 3; pc++) { o('sine', 420, 380, pc * 0.6, 0.25, 0.012); o('sine', 380, 440, pc * 0.6 + 0.28, 0.2, 0.01); } }
+  else if (k === 'build') { lp.frequency.value = 3000; for (var hm = 0; hm < 6; hm++) { n(hm * 0.42, 0.08, 0.03, 1800, 2); o('square', 880, 870, hm * 0.42, 0.03, 0.004); } }
+  else if (k === 'crickets') { lp.frequency.value = 6000; for (var q = 0; q < 14; q++) o('sine', 4400, 4500, q * 0.11, 0.045, 0.006); }
+  else if (k === 'bottle') { lp.frequency.value = 7000; n(0, 0.3, 0.03, 4200, 1.5); for (var sh = 0; sh < 5; sh++) o('sine', 3000 + Math.random() * 2500, 2800, 0.02 + sh * 0.04, 0.06, 0.004); }
+  else if (k === 'owl') { lp.frequency.value = 900; o('sine', 400, 380, 0, 0.35, 0.012); o('sine', 380, 360, 0.6, 0.5, 0.012); }
+  else if (k === 'gulls') { lp.frequency.value = 5000; for (var gl = 0; gl < 3 + Math.floor(Math.random() * 3); gl++) { o('sawtooth', 1300, 900, gl * 0.3, 0.22, 0.004); o('sine', 1900, 1300, gl * 0.3, 0.22, 0.007); } }
+  else if (k === 'bell') { lp.frequency.value = 3000; o('sine', 420, 420, 0, 3, 0.012); o('sine', 1130, 1130, 0, 1.5, 0.004); }
+  else if (k === 'thunder') { lp.frequency.value = 400; n(0, 3.5, 0.12, 90, 0.4); n(0.3, 2.5, 0.08, 160, 0.5); } }
 (function () { var sv = stepVehicle; stepVehicle = function (v, inp, dt) { if (inp) { v.thrIn = inp.thr || 0; v.handIn = !!inp.hand; } return sv.apply(this, arguments); };
-  setInterval(function () { try { ambStep(); } catch (e) { if (!window.__ambE) { window.__ambE = 1; console.warn(e); } } }, 50); })();
+  var last = 0; setInterval(function () { try { var n = performance.now(), d = last ? Math.min(0.2, (n - last) / 1000) : 0.05; last = n; ambStep(d); } catch (e) { if (!window.__ambE) { window.__ambE = 1; console.warn(e); } } }, 50); })();
 /* ---------------- bubbles and subtitles ---------------- */
 var BUBF = '600 10px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 function drawBubble(said, sx, sy) { var ctx = KIT.ctx; ctx.save(); ctx.font = BUBF; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; var L = [], line = '';
@@ -10376,6 +10444,87 @@ function fullSet(on) { try { localStorage.setItem('hs-fullscreen', on ? '1' : '0
 (function () { function poke() { if (!fullOn()) return; try { if (parent && parent !== window && parent.hsFull) parent.hsFull(true, false); } catch (e) {} }
   poke(); ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { document.addEventListener(ev, poke, true); }); })();
 sndApply();
+
+/* ---------- update 176 (his ask: the radio stations play all the time, so getting in a car tunes in to whatever is on
+   right now instead of starting it again; and you can hear the car's radio very faintly from outside the car).
+   - Every station runs on its own clock (real time) whether anyone is listening or not: songs, the DJ, adverts, news.
+     Tuning in drops you into the middle of whatever is on, at the right point in it (his songs, the made-up songs and
+     the recorded talk all pick up part-way through).
+   - The Shot Rope gig (TB at the docks) still puts Shot Rope on Brothers Load Radio there and then.
+   - Get out of a car with the radio on and it keeps playing in the car: faint, fading out as you walk away (gone by
+     about 30 m). Get back in and it comes up to full again; any other car tunes in to the same station live.
+   - The song lengths are in ccn-radio/radio.js (CCNRADIO_DUR) and the recorded lines' lengths in ccn-voice/durs.js. ---------- */
+var LIVE = {}, RADF = 1;
+(function () { var s = document.createElement('script'); s.src = 'ccn-voice/durs.js'; s.onerror = function () {}; document.head.appendChild(s); })();
+function liveNow() { return Date.now() / 1000; }
+function liveSongName(st, id) { return (music.songs && music.songs[id] && music.songs[id].name ? music.songs[id].name : ({ castle: 'Castle Gates', boss: 'Boss Door', roof: 'Over the Rooftops', town: 'Town Square Two-Step', park: 'Ejaculand Waltz' }[id] || id)) + ' · ' + ({ hs: 'Hunter Seriph', bl: 'Brothers Load', po: 'PulsarOctopus' }[st.id] || ''); }
+function liveLineDur(who, s) { var k = voiceKey(who, s), f = voiceFile(who, s); if (!f) return Math.max(3, s.length * 0.06); var d = window.CCNVDUR && CCNVDUR[k]; return (d || s.length * 0.08 + 0.6) + 0.5; }
+// the next thing on a station (nothing is played here: this is only the schedule)
+function liveGen(L, st) { var real = radReal(st); if (real && st.songs && st.songs.length) st.songs = []; // his own songs only on his stations
+  L.count = (L.count || 0) + 1;
+  if (st.id === 'talk' || L.count % 2 === 0) { var parts = radioTalkSeg(st), at = 0.3, P0 = [];
+    parts.forEach(function (p) { var d = p.sfx ? p.t : liveLineDur(p.who, p.s); P0.push({ sfx: p.sfx, who: p.who, s: p.s, at: at, d: d }); at += d; });
+    var bed = parts.bed && st.songs.length ? radioDeal('bed' + st.id, st.songs) : parts.bed && st.id === 'talk' ? pick(['town', 'park', 'roof']) : null;
+    return { k: 'talk', parts: P0, bed: bed, dur: at + 0.4 }; }
+  if (real) { var src = radioDeal('real' + st.id, real); return { k: 'real', src: src, dur: (window.CCNRADIO_DUR && CCNRADIO_DUR[src]) || 200 }; }
+  if (!st.songs.length) return { k: 'talk', parts: [], dur: 5 };
+  return { k: 'song', id: radioDeal('song' + st.id, st.songs), dur: rnd(70, 110), jingle: Math.random() < 0.6 }; }
+function liveGet(st) { var now = liveNow(), L = LIVE[st.id];
+  if (!L) { L = LIVE[st.id] = { count: Math.floor(Math.random() * 2) }; L.item = liveGen(L, st); L.start = now - Math.random() * L.item.dur * 0.85; } // you join every station part-way through something
+  var n = 0; while (now >= L.start + L.item.dur && n++ < 400) { L.start += L.item.dur; L.item = liveGen(L, st); }
+  if (now - L.start > L.item.dur) L.start = now; return L; }
+var LBLOB = { src: null, url: null };
+function liveBlob(src, cb) { if (LBLOB.src === src && LBLOB.url) { cb(LBLOB.url); return; }
+  fetch(src).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) { if (LBLOB.url) try { URL.revokeObjectURL(LBLOB.url); } catch (e) {} LBLOB.src = src; LBLOB.url = URL.createObjectURL(b); cb(LBLOB.url); }).catch(function () { cb(src); }); }
+function liveStop() { var Q = RAD.playing; RAD.playing = null; if (RAD.audio) { RAD.audio.onended = null; RAD.audio.pause(); RAD.audio = null; } if (VOX.radio) { VOX.radio.pause(); VOX.radio = null; } if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {}
+  RAD.bedOn = 0; G.radioLine = null; return Q; }
+function liveStart(st, L, tuned) { var it = L.item, off = Math.max(0, liveNow() - L.start), Q = RAD.playing = { st: st.id, item: it, done: {} };
+  if (it.k === 'real') { try { music.stop(); } catch (e) {} var M = (window.CCNRADIO_META || {})[it.src] || {}, a = RAD.audio = new Audio(); a.volume = radVol() * RADF;
+    // the song is read in whole first (a blob), so it can be joined part-way through on the phone and the PC alike
+    var go = function (url) { if (RAD.audio !== a) return; a.src = url; var seek = function () { try { var o = liveNow() - L.start; if (o > 0.5) a.currentTime = Math.min(o, Math.max(0, (a.duration || it.dur) - 1)); } catch (e) {} };
+      a.addEventListener('loadedmetadata', seek); a.play().catch(function () {}); };
+    liveBlob(it.src, go);
+    a.onerror = function () { if (RAD.audio === a && a.src) L.item.dur = Math.max(1, liveNow() - L.start + 0.5); };
+    G.radioSong = (M.t || it.src.split('/').pop()) + ' · ' + (M.by || ({ hs: 'Hunter Seriph', bl: 'Brothers Load', po: 'PulsarOctopus' }[st.id] || '')) + (M.a ? ' · ' + M.a : ''); G.radioArt = M.art || null; radArt(G.radioArt); }
+  else if (it.k === 'song') { if (it.jingle && off < 0.5 && RADF > 0.5) sfx.play('r_id_' + st.id); try { music.play(it.id); if (music.seek) music.seek(off); } catch (e) {} G.radioSong = liveSongName(st, it.id); G.radioArt = null; }
+  else { if (it.bed) { try { music.play(it.bed); if (music.seek) music.seek(off); } catch (e) {} RAD.bedOn = 1; } else { try { music.stop(); } catch (e) {} } G.radioSong = st.tag || null; G.radioArt = null;
+    it.parts.forEach(function (p, i) { if (p.at + p.d <= off) Q.done[i] = 1; }); } // what was said before you tuned in is gone
+  G.radioName = st.name; G.radioT = tuned ? 4 : 6; duckApply(); }
+// the talk: each line when its time comes; a line already under way when you tune in starts at that point
+function liveTalk(st, L) { var Q = RAD.playing, off = liveNow() - L.start; if (!Q || Q.item.k !== 'talk') return;
+  Q.item.parts.forEach(function (p, i) { if (Q.done[i] || off < p.at) return; Q.done[i] = 1; var into = off - p.at;
+    if (p.sfx) { if (into < 0.4 && RADF > 0.5) sfx.play(p.sfx); return; }
+    var ok = radioSay(p.who, p.s); if (ok && VOX.radio) { if (into > 0.4) { var a = VOX.radio; var sk = function () { try { a.currentTime = into; } catch (e) {} }; a.addEventListener('loadedmetadata', sk); sk(); } }
+    else if (RADF > 0.5) G.radioLine = { who: st.dj || 'Radio', s: p.s, t: Math.max(1.5, p.d - into) }; }); }
+// tuning in (getting in, changing station, a phone or house radio): pick up whatever the station is doing now
+radioNextSeg = function () { var st = STATIONS[RAD.st];
+  if (RAD.forced) { var f = RAD.forced, bi = STATIONS.map(function (q) { return q.id; }).indexOf('bl'); RAD.forced = null; if (bi >= 0) { RAD.st = bi; SV.radio = bi; st = STATIONS[bi]; }
+    var SR = 'ccn-radio/bl/shot-rope.mp3', L = liveGet(st), real = window.CCNRADIO && CCNRADIO.bl && CCNRADIO.bl.indexOf(SR) >= 0;
+    L.item = real ? { k: 'real', src: SR, dur: (window.CCNRADIO_DUR && CCNRADIO_DUR[SR]) || 200 } : { k: 'song', id: f, dur: 150 }; L.start = liveNow(); liveStop(); liveStart(st, L, false); RAD.seg = null; return; }
+  RAD.seg = null; if (!RAD.on || !st || st.id === 'off') { liveStop(); G.radioSong = null; G.radioArt = null; try { music.stop(); } catch (e) {} return; }
+  var L = liveGet(st); if (RAD.playing && RAD.playing.st === st.id && RAD.playing.item === L.item) { G.radioName = st.name; G.radioT = 3; return; } // already on: carry on
+  liveStop(); liveStart(st, L, true); };
+duckApply = function () { var talk = DUCK.line || DUCK.bark, radioTalk = DUCK.radio, bed = RAD.bedOn && RAD.playing && RAD.playing.item.k === 'talk';
+  try { if (music.duck) music.duck((talk ? 0.35 : radioTalk ? (bed ? 0.3 : 0.45) : bed ? 0.5 : 1) * (RAD.on ? RADF : 1)); } catch (e) {} };
+function liveStep(dt) { var st = STATIONS[RAD.st]; if (!RAD.on || !st || st.id === 'off') return; var L = liveGet(st);
+  if (!RAD.playing || RAD.playing.item !== L.item || RAD.playing.st !== st.id) { liveStop(); liveStart(st, L, false); }
+  liveTalk(st, L); var a = RAD.audio; if (a) { var v = radVol() * RADF; if (Math.abs(a.volume - v) > 0.01) a.volume = v;
+    // keep the song where the station is (a file that could not be jumped into until it had loaded, or after a pause)
+    if (RAD.playing && RAD.playing.item.k === 'real' && !a.seeking && a.readyState >= 2) { var want = liveNow() - L.start; if (Math.abs(a.currentTime - want) > 3 && want < (a.duration || 1e9) - 1) { try { var sk = a.seekable; if (sk.length && sk.end(sk.length - 1) >= want) a.currentTime = want; } catch (e) {} } } } }
+(function () {
+  var ro = radioOn; radioOn = function (v) { var wasOn = RAD.on; RAD.car = v && VEH.indexOf(v) >= 0 ? v : null; if (wasOn && RAD.playing) { RADF = 1; duckApply(); } return ro.apply(this, arguments); };
+  var rf = radioOff; radioOff = function () { RAD.car = null; RADF = 1; liveStop(); var r = rf.apply(this, arguments); duckApply(); return r; };
+  var rn = radioNext; radioNext = function () { liveStop(); return rn.apply(this, arguments); };
+  var sr = stepRadio; stepRadio = function (dt) {
+    // out of the car with its radio still on: faint, fading as you walk away
+    if (RAD.on && RAD.car && P && P.state !== 'car' && !G.interior && !G.partyRadio && !G.pulsarRadio && !G.homeRadio) { var c = RAD.car, d = Math.hypot(c.x - P.x, c.z - P.z);
+      if (c.dead || VEH.indexOf(c) < 0 || d > 30 || G.mode !== 'play') { radioOff(); return; }
+      var f = 0.16 * Math.pow(1 - d / 30, 1.4); if (Math.abs(f - RADF) > 0.01) { RADF = f; duckApply(); } RAD.seg = null; liveStep(dt); if (G.radioLine) { G.radioLine.t -= dt; if (G.radioLine.t <= 0) G.radioLine = null; } return; }
+    if (RADF !== 1 && P && P.state === 'car') { RADF = 1; duckApply(); }
+    RAD.seg = null; sr(dt); if (RAD.on) liveStep(dt); };
+  // back from the background: pick the station up where it has got to
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && RAD.on) { liveStop(); } });
+})();
 
 </script>
 </body></html>
