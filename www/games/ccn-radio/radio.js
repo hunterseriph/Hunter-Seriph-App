@@ -1,4 +1,5 @@
-/* Hunter Seriph FM: his own songs (Sweet Release, The Second Cumming, Hot Load). Paths are relative to games/. */
+/* Hunter Seriph FM: his own songs (Sweet Release, The Second Cumming, Hot Load). Brothers Load Radio: Piggy Bussy and the
+   single Shot Rope. Paths are relative to games/. */
 window.CCNRADIO = window.CCNRADIO || {};
 window.CCNRADIO.hs = [
  "ccn-radio/hs/sweet-release/a-wank-in-an-unfamiliar-place.mp3",
@@ -226,3 +227,71 @@ window.CCNRADIO_META = {
   "art": null
  }
 };
+window.CCNRADIO.bl = [
+ "ccn-radio/bl/piggy-bussy/cum-cicus-shmeat-jerkus.mp3",
+ "ccn-radio/bl/piggy-bussy/daddy-dont-cum.mp3",
+ "ccn-radio/bl/piggy-bussy/instant-dopamine-release.m4a",
+ "ccn-radio/bl/piggy-bussy/it-won-t-suck-itself.mp3",
+ "ccn-radio/bl/piggy-bussy/penetrate-then-urinate.m4a",
+ "ccn-radio/bl/piggy-bussy/rejection-of-the-cum-injection.mp3",
+ "ccn-radio/bl/piggy-bussy/tb-s-silly-pills.m4a",
+ "ccn-radio/bl/piggy-bussy/tucker-fucker.m4a",
+ "ccn-radio/bl/shot-rope.mp3"
+];
+(function () { var M = {
+ "ccn-radio/bl/piggy-bussy/cum-cicus-shmeat-jerkus.mp3": {
+  "t": "Cum Cicus, Shmeat Jerkus",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/daddy-dont-cum.mp3": {
+  "t": "Daddy Dont Cum",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/instant-dopamine-release.m4a": {
+  "t": "Instant Dopamine Release",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/it-won-t-suck-itself.mp3": {
+  "t": "It Won't Suck Itself",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/penetrate-then-urinate.m4a": {
+  "t": "Penetrate Then Urinate",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/rejection-of-the-cum-injection.mp3": {
+  "t": "Rejection of the Cum Injection",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/tb-s-silly-pills.m4a": {
+  "t": "TB's Silly Pills",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/piggy-bussy/tucker-fucker.m4a": {
+  "t": "Tucker Fucker",
+  "a": "Piggy Bussy",
+  "by": "Brothers Load",
+  "art": null
+ },
+ "ccn-radio/bl/shot-rope.mp3": {
+  "t": "Shot Rope",
+  "a": "single",
+  "by": "Brothers Load",
+  "art": null
+ }
+};
+  for (var k in M) window.CCNRADIO_META[k] = M[k]; })();

@@ -714,6 +714,7 @@ var music = (function () {
   function tick() {
     if (!A) { var a = sfx.audio && sfx.audio(); if (!a) return; setup(a); if (want) { var w = want; want = null; cur = null; play(w); } }
     if (!song || !tg || sfx.muted || A.state !== 'running') return;
+    if (song.sp.file) return;
     var sd = 60 / song.sp.bpm / 4;
     if (nextT < A.currentTime - 0.4) { nextT = A.currentTime + 0.05; T0 = nextT - stepI * sd; }
     while (nextT < A.currentTime + 0.3) { var evs = song.ev[stepI % song.len]; for (var i = 0; i < evs.length; i++) play1(evs[i], nextT, sd); nextT += sd; stepI++; }
@@ -729,6 +730,7 @@ var music = (function () {
     tg = A.createGain(); tg.gain.setValueAtTime(0.0001, A.currentTime); tg.gain.linearRampToValueAtTime(song.sp.vol || 1, A.currentTime + 0.8);
     if (song.sp.radio) { radioChain(tg); send = A.createGain(); send.gain.value = 0; } // an old radio: no hall reverb, everything through the little speaker
     else { tg.connect(bus); send = A.createGain(); send.gain.value = song.sp.wet; tg.connect(send); send.connect(dl); }
+    if (song.sp.file) fileStart(song.sp.file); // update 174: a real recording (Shot Rope), through the same chain
     stepI = 0; nextT = A.currentTime + 0.12; T0 = nextT;
   }
   /* update 131: a song played out of an old radio (Psycho Nightmare's bar). Thin (only the middle of the sound gets through
@@ -754,11 +756,19 @@ var music = (function () {
   function radioLevel(v) { RAD_LEVEL = v; if (RAD && A) RAD.out.gain.setTargetAtTime(v, A.currentTime, 0.15); }
   function fadeOut(sec) {
     if (RAD && RAD.src === tg) { var rr = RAD; RAD = null; setTimeout(function () { try { rr.noise.stop(); rr.wob.stop(); rr.out.disconnect(); } catch (e) {} }, sec * 1000 + 200); rr.out.gain.setTargetAtTime(0.0001, A.currentTime, sec / 3); }
+    if (song && song.sp.file) fileStop(sec);
     if (!tg) return; var g = tg, sn = send, now = A.currentTime;
     g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now); g.gain.linearRampToValueAtTime(0.0001, now + sec);
     setTimeout(function () { try { g.disconnect(); sn.disconnect(); } catch (e) {} }, sec * 1000 + 3000);
     tg = null; send = null;
   }
+  /* update 174 (his ask): Shot Rope on TB's bar radio is the real Brothers Load recording now, not the made-up one. It plays
+     from an audio element through the song's gain, so the old-radio sound and the near/far volume still work. */
+  var FEL = null, FES = null, FTOK = 0;
+  function fileStart(src) { try { if (!FEL) { FEL = new Audio(); FEL.loop = true; FEL.preload = 'auto'; FES = A.createMediaElementSource(FEL); }
+    FTOK++; FES.disconnect(); FES.connect(tg); if (FEL.getAttribute('src') !== src) FEL.src = src; FEL.currentTime = 0; var pr = FEL.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {} }
+  function fileStop(sec) { if (!FEL || FEL.paused) return; var k = ++FTOK; setTimeout(function () { if (k === FTOK && FEL) FEL.pause(); }, (sec || 0) * 1000 + 100); }
+  document.addEventListener('visibilitychange', function () { if (!FEL) return; if (document.hidden) FEL.pause(); else if (song && song.sp.file) { var pr = FEL.play(); if (pr && pr.catch) pr.catch(function () {}); } });
   function stop(sec) { want = null; if (A) fadeOut(sec || 1); cur = null; song = null; }
   setInterval(tick, 40);
   return { play: play, stop: stop, radioLevel: radioLevel, setVol: function () { if (bus) bus.gain.value = 0.6 * OPT.mus; }, duck: function (k) { if (bus && A) { bus.gain.cancelScheduledValues(A.currentTime); bus.gain.setTargetAtTime(0.6 * OPT.mus * k, A.currentTime, 0.12); } }, get current() { return cur; }, pos: pos, get song() { return song; }, get ctx() { return A; }, get steps() { return stepI; }, songs: SONGS, compile: compile };
@@ -4114,7 +4124,7 @@ function ambience(dt) { // a low drone for the floor, wind in the pipes, your he
     mel: 'e5 - - g5 - e5 | c6 - - g5 - - | d5 - - f5 - d5 | b5 - - g5 - - | d5 - f5 b5 - d6 | c6 - b5 a5 - g5 | g5 - e5 c5 - e5 | g5 - - - - - | a5 - - c6 - a5 | f5 - - a5 - - | g5 - - e5 - c5 | c#5 - e5 a5 - - | d5 - f5 a5 - d6 | b5 - a5 g5 - f5 | e5 - d5 c5 - - | c5 - - - - -' };
   // update 131: "Shot Rope" by Brothers Load, the record on TB's bar radio (his ask). A two-step: walking bass, boom-chick, a twangy lead,
   // and played through music.js's radio chain (radio: 1): thin, crackling, the tuning drifting. Heard faintly through the ceiling on B1.
-  S.shotrope = { bpm: 142, beats: 4, vol: 0.95, wet: 0, radio: 1, lead: 'pulse', bass: 'walk', acc: 'stabs', drums: 'shuffle', chords: 'G G C G D D G G C C G Em A A D D',
+  S.shotrope = { file: 'ccn-radio/bl/shot-rope.mp3', bpm: 142, beats: 4, vol: 0.95, wet: 0, radio: 1, lead: 'pulse', bass: 'walk', acc: 'stabs', drums: 'shuffle', chords: 'G G C G D D G G C C G Em A A D D',
     mel: 'd5 - g5 - b5 - a5 g5 | e5 - d5 - g4 - - - | e5 - g5 - c6 - b5 a5 | g5 - d5 - b4 - - - | a4 - d5 - f#5 - a5 - | g5 f#5 e5 - d5 - - - | b4 - d5 - g5 - b5 - | a5 g5 - - . . d5 - | ' +
          'e5 - e5 - g5 - c6 - | b5 - a5 - g5 - e5 - | d5 - g5 - b5 - d6 - | b5 - g5 - e5 - - - | c#5 - e5 - a5 - c#6 - | b5 - a5 - e5 - c#5 - | d5 - f#5 - a5 - c6 - | b5 - a5 - f#5 - d5 -' };
 })();
