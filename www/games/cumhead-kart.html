@@ -1078,6 +1078,7 @@ var CHARS = [
   { id: 'hom', n: 'The Homunculus', f: 'h_gloop_adult_idle0', side: 'h_gloop_adult_idle0', only: 1, sc: 0.62, kart: ['#3fb43a', '#12040a', '#9aff5a'], st: [2, 4, 5, 1], from: 'A Gloop at the wheel. Corners like nothing else.' },
   { id: 'saba', n: 'Saba', f: 'npc_saba', sc: 0.66, kart: ['#2a8a2a', '#ffe36a', '#c4121c'], st: [3, 3, 4, 2], from: 'Hitless runs only. Smooth lines through every bend.' },
   { id: 'joff', n: 'Joff', f: 'npc_joff', sc: 0.66, kart: ['#ffe36a', '#f1e7d0', '#5aa82a'], st: [4, 3, 2, 3], from: 'Pineapple belongs on pizza. Quick on the straights.' },
+  { id: 'elden', n: 'Elden', f: 'npc_elden', sc: 0.66, kart: ['#f1e7d0', '#2a1a10', '#c4121c'], st: [3, 3, 3, 4], from: 'Runs the Cum Cafe with Kaya. Cooks with a cleaver, drives like one.' }, /* update 187 (his ask): playable from the start */
   { id: 'lab', n: 'Shithead Laboozie', f: 'lab_s0', side: 'lab_pwalk0', sc: 0.5, kart: ['#5a3010', '#12040a', '#ff7a1a'], st: [3, 3, 4, 3], from: 'His Cream Pies are Flaming Bags of Shit: splat whoever they hit, then burn on the road.' },
   { id: 'kaya', n: 'Kaya', f: 'npc_kaya', sc: 0.66, kart: ['#8a3a20', '#f1e7d0', '#c4121c'], st: [2, 5, 3, 2], from: "Kaya's on the coffee. Shoots off every start.", lock: 'Win the Cream Cup' },
   { id: 'beebs', n: 'Uncle Beeb', f: 'npc_beebs', sc: 0.66, kart: ['#a8601e', '#d0c8d0', '#ffe36a'], st: [5, 2, 2, 5], from: 'First one is always warm. A tank on wheels.', lock: 'Win the Blood Cup' },
@@ -1730,7 +1731,7 @@ var SAYS = {
   tb: ['"Fuck muck"', '"Shithead Laboozie"', '"let me tighten that kynodesme"', '"dick skin"', '"whyma wimina"', '"suck your own and fuck your own"', '"suck me fuck me suck me fuck me"', '"I got lotion on my dick I\'m out here shooting my shit I\'m free man for real!"', '"Old geezer, Prick teaser"', '"I made muckies..."', '"a sissy doesn\'t deserve pleasure, a sissy is somebody\'s play thing"',
   '"you shoot real hard huh?"', '"Im a fuckin piggy"', '"who\'s ready for shithead pudding"', '"holy shit!"', '"Cock rinse"', '"you suck, ill spray"', '"where the fuck do you think you\'re goin? Prick!"', '"Oh god im pushing piss out of my dick"', '"im so fucked right now"', '"who\'s ready for sissification? I\'ll make you pretty, so pretty..."', '"Im a tucker fucker!"', '"you\'ll make a good sissy"'],
   joff: ['"Pineapple belongs on pizza. Fight me."'], amy: ['"Mild, hot or dynamite?"'], greebo: ['"Fresh cream pies. Don\'t ask what\'s in them."'], saba: ['"Hitless runs only."'],
-  beebs: ['"Sit down, lad. First one\'s always warm."'], ali: ['"Everything is better with garlic."'], potbelly: ['"Cabinets are free, kid."'], kaya: ['"Kaya\'s on the coffee!"'],
+  beebs: ['"Sit down, lad. First one\'s always warm."'], ali: ['"Everything is better with garlic."'], potbelly: ['"Cabinets are free, kid."'], elden: ['"Order up!"', '"Mind the cleaver."'], kaya: ['"Kaya\'s on the coffee!"'],
   spermaid: ['"Sweetie!"'], kingblum: ['"ON MY OWN GROUND I AM KING."'], blum: ['"THE LOAD AT THE END."'], sirj: ['"Mrrrow."'], cumhead: ['"Splat!"'], hom: ['"Blub!"']
 };
 function say(k, why) {
@@ -2216,6 +2217,7 @@ var DRV3D = {
   hom: { kind: 'blob', col: '#3fb43a', eye: '#f1e7d0', body: '#3fb43a', arm: '#3fb43a', hand: '#3fb43a' },
   saba: { kind: 'human', rect: [9, 8, 21, 20], face: ['npc_saba', 4, 22], skin: '#e0b090', hair: '#e8e0d8', hat: 'beanie', hatcols: ['#c4121c', '#ffe36a', '#3a9a2a'], body: '#3a8a2a', arm: '#3a8a2a', hand: '#e0b090', beard: '#e8e0d8' },
   joff: { kind: 'human', rect: [9, 7, 19, 17], face: ['npc_joff', 4, 20], skin: '#f0c8a0', hair: '#3a2418', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0' },
+  elden: { kind: 'human', rect: [9, 7, 19, 17], face: ['npc_elden', 4, 22], skin: '#f0c8a0', hair: '#2a1a10', hat: 'chef', hatc: '#f6f0e4', body: '#f1e7d0', arm: '#f1e7d0', hand: '#f0c8a0', beard: '#2a1a10' },
   kaya: { kind: 'human', rect: [11, 8, 19, 16], face: ['npc_kaya', 0, 20], skin: '#f0c8a0', hair: '#8a3a20', long: 1, body: '#c4121c', arm: '#c4121c', hand: '#f0c8a0' },
   beebs: { kind: 'human', rect: [8, 8, 20, 19], face: ['npc_beebs', 4, 22], skin: '#f0c8a0', hair: '#c8702a', hat: 'viking', hatc: '#a8a0a8', body: '#7a4a20', arm: '#7a4a20', hand: '#f0c8a0', beard: '#c8702a' },
   ali: { kind: 'human', rect: [11, 8, 19, 17], face: ['npc_ali', 0, 20], skin: '#d8a880', hair: '#2a1a10', body: '#f1e7d0', arm: '#f1e7d0', hand: '#d8a880' },
@@ -4838,6 +4840,7 @@ var HAIR = {
   tb: { style: 'short', collar: '#3a2412' },
   saba: { style: 'short', beard: '#e8e0d8', collar: '#2a6a1a' },
   joff: { style: 'short', apron: '#f6f0e4', collar: '#c4121c' },
+  elden: { style: 'short', beard: '#2a1a10', apron: '#f6f0e4', collar: '#2a1a10' },
   kaya: { style: 'long', fringe: 1, side: 1, collar: '#f1e7d0', apron: '#f1e7d0' },
   beebs: { style: 'short', beard: '#c8702a', braids: 1, collar: '#4a2a10', belt: '#3a2010' },
   ali: { style: 'quiff', collar: '#c4121c', apron: '#3a9a2a' }
@@ -5018,6 +5021,11 @@ var FACEPAINT = {
     for (var s = 0; s < 6; s++) fLine(g, [[24 + s * 16, 98], [28 + s * 16, 118]], 2, '#c8c0b8'); } },
   joff: { bg: '#f0c090', f: function (g) { fEye(g, 46, 60, 10, 12, '#3a2418', 0.2); fEye(g, 82, 60, 10, 12, '#3a2418', 0.2); fLine(g, [[32, 44], [46, 39, 58, 45]], 5, '#3a2418'); fLine(g, [[70, 45], [82, 39, 96, 44]], 5, '#3a2418');
     fShape(g, [[64, 64], [58, 78], [66, 80]], null, K0, 2.5); fShape(g, [[34, 86], [50, 76, 64, 82], [78, 76, 94, 86], [80, 90, 64, 86], [48, 90, 34, 86]], '#3a2418', K0, 2.5); fLine(g, [[52, 96], [64, 101, 76, 96]], 3); } },
+  elden: { bg: '#f0c8a0', f: function (g) { // heavy dark brows and a big dark beard, like his sprite
+    fEye(g, 46, 58, 10, 11, '#3a2418', 0.1); fEye(g, 82, 58, 10, 11, '#3a2418', 0.1); fShape(g, [[30, 46], [46, 38, 60, 45], [46, 44, 30, 46]], '#2a1a10', K0, 2); fShape(g, [[68, 45], [82, 38, 98, 46], [82, 44, 68, 45]], '#2a1a10', K0, 2);
+    fShape(g, [[58, 64], [56, 76], [64, 79], [72, 76], [70, 64]], '#d8a07a', K0, 2.5);
+    fShape(g, [[10, 68], [30, 78, 50, 76], [64, 82, 78, 76], [98, 78, 118, 68], [120, 128], [8, 128]], '#2a1a10', K0, 3); fShape(g, [[46, 84], [64, 80, 82, 84], [64, 92, 46, 84]], '#2a1a10', K0, 2.5); fLine(g, [[54, 92], [64, 95, 74, 92]], 3, '#8a2a2a');
+    for (var s2 = 0; s2 < 6; s2++) fLine(g, [[22 + s2 * 16, 100], [26 + s2 * 16, 120]], 2, '#4a3020'); } },
   kaya: { bg: '#f6d0b0', f: function (g) { fEye(g, 46, 64, 10, 13, '#5a2a14', 0.2); fEye(g, 82, 64, 10, 13, '#5a2a14', 0.2); fLine(g, [[36, 50], [46, 46, 56, 50]], 3, '#8a3a20'); fLine(g, [[72, 50], [82, 46, 92, 50]], 3, '#8a3a20');
     [[36, 56], [92, 56]].forEach(function (l, i) { fLine(g, [[l[0], l[1]], [l[0] + (i ? 5 : -5), l[1] - 4]], 2.5); }); fShape(g, [[52, 88], [64, 82, 76, 88], [64, 98, 52, 88]], '#c4121c', K0, 2.5); fBlush(g, 36, 80); fBlush(g, 92, 80); } },
   beebs: { bg: '#f0c8a0', f: function (g) { // bushy brows, red nose, big ginger beard and moustache
@@ -5052,6 +5060,7 @@ HAIR = {
   tb: { style: 'short', top: '#5a3a20', collar: '#3a2412', scarf: '#8a1a1a' },
   saba: { style: 'none', beard: '#ece6de', longbeard: 1, top: '#3a8a2a' },
   joff: { style: 'short', top: '#f6f0e4', scarf: '#c4121c' },
+  elden: { style: 'short', beard: '#2a1a10', top: '#f6f0e4', scarf: '#2a1a10' },
   kaya: { style: 'long', fringe: 1, side: 1, top: '#c4121c', front: '#f1e7d0' },
   beebs: { style: 'short', beard: '#c8702a', braids: 1, top: '#7a4a20', belt: '#3a2010', buckle: '#c8903a' },
   ali: { style: 'short', bandana: '#3a9a2a', top: '#f1e7d0' }
@@ -5437,6 +5446,7 @@ var KPAS = {
   hom: ['Little Legs', 'Drifts charge 20% faster'],
   saba: ['Hitless', 'The first hit every lap does nothing'],
   joff: ['Pizza Power', 'Boosts last 35% longer'],
+  elden: ['Chef', 'Back on the grill: gets going again 40% sooner after a spin-out'],
   lab: ['Covered In It', 'His pies are Flaming Bags of Shit: they burn on the road'],
   kaya: ['Barista', 'Shields, magnets, the meatnado, balloons and the Gloop last 50% longer'],
   beebs: ['Beer Belly', 'A little faster every lap'],
@@ -5455,7 +5465,7 @@ var KPAS = {
       if ((k.ch === 'spermaid' && Math.random() < 0.08) || (k.ch === 'sirj' && Math.random() < 0.15)) { k.invT = 0.4; if (k === R.me) R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.4, col: '#9adfff' }); return false; }
       if (k.ch === 'saba' && k.sabaLap !== k.lap) { k.sabaLap = k.lap; k.invT = 0.6; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.4, col: '#7dff3a' }); if (k === R.me) sfx.play('magic'); return false; }
       if (k.ch === 'cumhead' && !k.wind) { k.wind = 1; k.invT = 1; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.5, col: '#ffe36a' }); if (k === R.me) { R.bannerTxt = 'SECOND WIND'; R.lapBanner = 1.4; sfx.play('power'); } return false; } }
-    var r = hk.apply(this, arguments); if (!r || !by || by === k) return r;
+    var r = hk.apply(this, arguments); if (r && k.ch === 'elden' && spin) { if (k.spinT > 0) k.spinT *= 0.6; if (k.splatT > 0) k.splatT *= 0.6; } /* update 187: Elden's Chef */ if (!r || !by || by === k) return r;
     if (by.ch === 'spermaid' && by.drops < 10) by.drops++;
     if (by.ch === 'tb' && spin) { k.spinT *= 1.2; k.splatT *= 1.2; if (Math.random() < 0.12) k.revT = Math.max(k.revT || 0, 3); }
     if (by.ch === 'amy' && Math.random() < 0.2) { k.wobT = Math.max(k.wobT || 0, 2); k.spd *= 0.6; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.2, z: k.z, t: 0.5, col: '#ff7a1a' }); }
