@@ -4,6 +4,7 @@ the game as key art, the title in the same chunky lettering as the logos, and a 
 
 python3 tools/newgames/covers.py <shots dir>          -> www/assets/cover-<id>.webp for every game (354 x 414, shown at 118 x 138)
 python3 tools/newgames/covers.py <shots dir> kart pn  -> only those
+python3 tools/newgames/covers.py bonk-logo           -> www/assets/bonk-logo.webp (Spermabonk has no logo of its own)
 The shots are 960 x 540 screenshots named <game file>.png (tools: covshots.js in the bonk folder's notes)."""
 import os, sys
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageChops
@@ -96,6 +97,12 @@ def cover(cid, shots):
     out = os.path.join(APP, 'www', 'assets', 'cover-' + cid + '.webp'); im.convert('RGB').save(out, 'WEBP', quality=86, method=6); return out
 
 
+def bonk_logo():
+    """Spermabonk's logo (the arcade cabinet's marquee and its cartridge in Cum City Nights): the cover's lettering on its own"""
+    t = title(['SPERMA', 'BONK'], RED, 300); out = os.path.join(APP, 'www', 'assets', 'bonk-logo.webp'); t.save(out, 'WEBP', quality=88, method=6); return out
+
+
 if __name__ == '__main__':
+    if sys.argv[1:] == ['bonk-logo']: print(bonk_logo()); sys.exit()
     shots = sys.argv[1]; want = sys.argv[2:] or list(COVERS)
     for k in want: print(cover(k, shots))

@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<html lang="en"><head><meta charset="utf-8">
+<script src="seriph-intro.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Cum City Nights</title>
 <link rel="stylesheet" href="../fonts/fonts.css">
 <style>
@@ -4965,13 +4966,14 @@ var SPRAYGAMES = {
   skeet: ['Skeet Fighter', 'skeet-fighter.html', 900], psycho: ['Psycho Nightmare', 'psycho-nightmare.html', 1400], adv: ['Spermhog Adventure', 'spermhog-adventure.html', 1200],
   dark: ['Dark Loads', 'dark-loads.html', 1500], legend: ['The Legend of Cumhead', 'legend-of-cumhead.html', 1200], cumstein: ['Cumstein 3D', 'cumstein-3d.html', 700],
   faprooms: ['The Fap Rooms', 'fap-rooms.html', 700], keeper: ['Gooning Cave Keeper', 'gooning-cave-keeper.html', 900], spunky: ['Super Spunky Ball', 'super-spunky-ball.html', 600],
-  octo: ["Pulsar's Octobeats", 'pulsars-octobeats.html', 600], cq: ['Cumheads Quest', 'cumheads-quest.html', 1500], ll: ['Load Legacy', 'load-legacy.html', 1500]
+  octo: ["Pulsar's Octobeats", 'pulsars-octobeats.html', 600], cq: ['Cumheads Quest', 'cumheads-quest.html', 1500], ll: ['Load Legacy', 'load-legacy.html', 1500],
+  bonk: ['Spermabonk', 'spermabonk.html', 1200] /* update 185: its cabinet stands next to Spermaid Survivors in the Ejaculand arcade */
 };
 // each arcade has its own cabinets
 var ARCADES = {
   arcade: { name: "Potbelly's Arcade", games: ['overdrive', 'meatnado', 'spermhog', 'skeet', 'kart', 'cq'] },
   arcade2: { name: "Potbelly's Arcade: Red Light", games: ['psycho', 'faprooms', 'cumstein', 'dark', 'grinding'] },
-  arcade3: { name: "Potbelly's Arcade: Ejaculand", games: ['spunky', 'octo', 'willy', 'survivors', 'adv'] },
+  arcade3: { name: "Potbelly's Arcade: Ejaculand", games: ['spunky', 'octo', 'willy', 'survivors', 'bonk', 'adv'] },
   arcade4: { name: "Potbelly's Arcade: The Docks", games: ['legend', 'void', 'keeper', 'spuzz', 'll'] }
 };
 (function () { // cabinet art: the game's name on the marquee and a screen glow
@@ -5030,11 +5032,12 @@ function sprayMenu() { SV.carts = SV.carts || {}; var own = Object.keys(SPRAYGAM
     items: own.map(function (g) { return { label: SPRAYGAMES[g][0], fn: function () { KIT.closeMenu(); sprayOpen(g, 'console'); } }; }).concat([{ label: 'WHERE ARE THE ARCADES?', fn: function () { var ids = Object.keys(ARCADES).filter(function (a) { return SHOPS[a]; }); var a = ids[Math.floor(Math.random() * ids.length)]; if (a) { var d = doorOf(SHOPS[a].b); SV.way = [d.x, d.z]; toast('Waypoint set: ' + ARCADES[a].name); } KIT.closeMenu(); } }, { label: 'BACK', back: true, fn: function () { KIT.closeMenu(); } }]) }); }
 function sprayOpen(g, how) {
   var Gm = SPRAYGAMES[g]; if (!Gm) return; var el = document.getElementById('spray'); if (!el) { el = document.createElement('div'); el.id = 'spray'; el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;display:none';
-    el.innerHTML = '<iframe id="sprayF" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay; fullscreen; gamepad"></iframe><div id="sprayHold" style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2;width:74px;height:74px;display:none;pointer-events:none"><svg viewBox="0 0 74 74" width="74" height="74"><circle cx="37" cy="37" r="30" fill="rgba(18,4,10,.82)" stroke="#4a1a1c" stroke-width="6"/><circle id="sprayRing" cx="37" cy="37" r="30" fill="none" stroke="#ff2630" stroke-width="6" stroke-dasharray="188.5" stroke-dashoffset="188.5" transform="rotate(-90 37 37)"/><path d="M26 26 L48 48 M48 26 L26 48" stroke="#f1e7d0" stroke-width="6" stroke-linecap="round"/></svg></div>';
+    el.innerHTML = '<iframe id="sprayF" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay; fullscreen; gamepad"></iframe><div id="sprayHold" style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2;width:74px;height:74px;display:none;pointer-events:none"><svg viewBox="0 0 74 74" width="74" height="74"><circle cx="37" cy="37" r="30" fill="rgba(18,4,10,.82)" stroke="#4a1a1c" stroke-width="6"/><circle id="sprayRing" cx="37" cy="37" r="30" fill="none" stroke="#ff2630" stroke-width="6" stroke-dasharray="188.5" stroke-dashoffset="188.5" transform="rotate(-90 37 37)"/><path d="M26 26 L48 48 M48 26 L26 48" stroke="#f1e7d0" stroke-width="6" stroke-linecap="round"/></svg></div><div id="sprayNote" style="position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:2;pointer-events:none;background:rgba(18,4,10,.88);border:2px solid #c4121c;color:#f1e7d0;font:700 15px/1.3 sans-serif;letter-spacing:.06em;padding:10px 18px;text-align:center;white-space:nowrap;transition:opacity .6s;opacity:0">HOLD SELECT / ESC TO TURN OFF THE GAME<div style="font-weight:500;font-size:12px;letter-spacing:.02em;color:#a6968f">Two fingers on a touch screen</div></div>';
     document.body.appendChild(el); }
   var f = document.getElementById('sprayF'); f.onload = function () { try { var cw = f.contentWindow; cw.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.key === 'Backspace') SPH.key = 1; }, true); cw.addEventListener('keyup', function (e) { if (e.key === 'Escape' || e.key === 'Backspace') SPH.key = 0; }, true);
       cw.addEventListener('touchstart', function (e) { SPH.touch = e.touches.length >= 2 ? 1 : 0; }, true); cw.addEventListener('touchend', function (e) { SPH.touch = e.touches.length >= 2 ? 1 : 0; }, true); cw.addEventListener('touchcancel', function () { SPH.touch = 0; }, true); cw.focus(); } catch (e) {} };
-  f.src = Gm[1]; el.style.display = 'block'; G.spray = { g: g, how: how }; try { music.stop(); } catch (e) {} if (window.HSPad && HSPad.audioPause) HSPad.audioPause(true); SPH.t = 0; SPH.key = SPH.touch = 0; SPH.lock = 1; if (!SPH.run) { SPH.run = 1; requestAnimationFrame(sprayHoldLoop); } toast(how === 'cabinet' ? 'Hold Select (two fingers on a touch screen) to leave the cabinet.' : 'Hold Select (two fingers on a touch screen) to switch it off.'); }
+  f.src = Gm[1]; el.style.display = 'block'; G.spray = { g: g, how: how };
+  var nt = document.getElementById('sprayNote'); if (nt) { nt.style.opacity = '1'; clearTimeout(sprayOpen.nt); sprayOpen.nt = setTimeout(function () { nt.style.opacity = '0'; }, 6000); } /* update 185 (his ask): the note says how to turn it off */ try { music.stop(); } catch (e) {} if (window.HSPad && HSPad.audioPause) HSPad.audioPause(true); SPH.t = 0; SPH.key = SPH.touch = 0; SPH.lock = 1; if (!SPH.run) { SPH.run = 1; requestAnimationFrame(sprayHoldLoop); } toast(how === 'cabinet' ? 'Hold Select (two fingers on a touch screen) to leave the cabinet.' : 'Hold Select (two fingers on a touch screen) to switch it off.'); }
 /* update 162 (his ask): leave a game by HOLDING Select (Esc on a keyboard, two fingers on a touch screen): an X appears
    with a ring that fills; let go and it goes away. The old always-there button is gone. */
 var SPH = { t: 0, key: 0, touch: 0, run: 0, last: 0, lock: 0 };
@@ -5216,7 +5219,8 @@ var GAMEART = { // logo file id, body colour, accent
   meatnado: ['meat', '#5a120c', '#ff7a3a'], spermhog: ['hog', '#14205a', '#ffe36a'], survivors: ['surv', '#0a3442', '#4adfff'], willy: ['wn', '#4a1608', '#ffb030'], spuzz: ['sw', '#2e2416', '#7aff6a'],
   grinding: ['gr', '#2a0a10', '#ff2630'], overdrive: ['ao', '#2a0a3a', '#ff3aa0'], void: ['jv', '#0a1a4a', '#4adfff'], kart: ['ck', '#4a0a0a', '#ffe36a'], skeet: ['sk', '#3a0a0a', '#ffb030'],
   psycho: ['pn', '#0a1a0a', '#7aff6a'], adv: ['sa', '#0a2a5a', '#ffe36a'], dark: ['dk', '#1a1418', '#c8a040'], legend: ['lc', '#0a3a1a', '#ffe36a'], cumstein: ['c3', '#2e2e30', '#ff2630'],
-  faprooms: ['fr', '#4a4418', '#ffe8a0'], keeper: ['gk', '#2a1a0a', '#ff7a20'], spunky: ['sb', '#3a0a4a', '#4adfff'], octo: ['ob', '#2a0a4a', '#ff3aa0'], cq: ['cq', '#12040a', '#c4121c'], ll: ['ll', '#12040a', '#ffe36a']
+  faprooms: ['fr', '#4a4418', '#ffe8a0'], keeper: ['gk', '#2a1a0a', '#ff7a20'], spunky: ['sb', '#3a0a4a', '#4adfff'], octo: ['ob', '#2a0a4a', '#ff3aa0'], cq: ['cq', '#12040a', '#c4121c'], ll: ['ll', '#12040a', '#ffe36a'],
+  bonk: ['bonk', '#2a0a10', '#ff2630']
 };
 var LOGO = {};
 (function () { Object.keys(GAMEART).forEach(function (g) { var im = new Image(); im.onload = function () { im.ok = 1; logoRefresh(g); }; im.src = '../assets/' + GAMEART[g][0] + '-logo.webp'; LOGO[g] = im; });
@@ -5236,12 +5240,22 @@ var LOGO = {};
 function logoPaint(c, g) { var A = GAMEART[g], im = LOGO[g]; c.fillStyle = A[1]; c.fillRect(0, 0, 64, 64); c.fillStyle = A[2]; c.fillRect(0, 0, 64, 2); c.fillRect(0, 62, 64, 2);
   if (im && im.ok) { var s = Math.min(60 / im.width, 56 / im.height), w = im.width * s, h = im.height * s; c.drawImage(im, 32 - w / 2, 32 - h / 2, w, h); }
   else { c.fillStyle = '#f1e7d0'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '11px "Pirata One", serif'; var L = SPRAYGAMES[g][0].split(' '); L.forEach(function (l, k) { c.fillText(l, 32, 32 + (k - (L.length - 1) / 2) * 11); }); } }
+/* update 185 (his ask): the cartridges on the Clubhouse shelf show the games' covers (assets/cover-<id>.webp, the same
+   covers as the Games tab), painted into the texture sheet as they load (`cover_<game>`) */
+var COVER = {};
+Object.keys(GAMEART).forEach(function (g) { var im = new Image(); im.onload = function () { im.ok = 1; coverRefresh(g); }; im.src = '../assets/cover-' + GAMEART[g][0] + '.webp'; COVER[g] = im;
+  var f = function (c) { coverPaint(c, g); }; f.big = 1; HIPAINT['cover_' + g] = f; });
+function coverPaint(c, g) { var im = COVER[g]; c.fillStyle = '#12040a'; c.fillRect(0, 0, 64, 64);
+  if (im && im.ok) c.drawImage(im, 4.6, 0, 54.8, 64); else logoPaint(c, g); }
+function coverRefresh(g) { if (!ATL || !ATL.canvas) return; var uv = ATL.tile('cover_' + g); if (!uv) return; var SZ = ATL.canvas.width, x = Math.round(uv[0] * SZ) - 1, y = Math.round(uv[1] * SZ) - 1, B = Math.round(uv[2] * SZ) + 2, c = ATL.canvas.getContext('2d');
+  c.save(); c.clearRect(x, y, B, B); c.beginPath(); c.rect(x, y, B, B); c.clip(); c.translate(x, y); c.scale(B / 64, B / 64); coverPaint(c, g); c.restore();
+  clearTimeout(logoRefresh.t); logoRefresh.t = setTimeout(function () { try { ATT = R3.texture(ATL.canvas, true); } catch (e) {} }, 300); }
 function logoRefresh(g) { // a logo that loaded after the texture sheet was made: paint it into its slot and send the sheet again
   if (!ATL || !ATL.canvas) return; var uv = ATL.tile('logo_' + g); if (!uv) return; var SZ = ATL.canvas.width, x = Math.round(uv[0] * SZ) - 1, y = Math.round(uv[1] * SZ) - 1, B = Math.round(uv[2] * SZ) + 2, c = ATL.canvas.getContext('2d');
   c.save(); c.clearRect(x, y, B, B); c.beginPath(); c.rect(x, y, B, B); c.clip(); c.translate(x, y); c.scale(B / 64, B / 64); logoPaint(c, g); c.restore();
   clearTimeout(logoRefresh.t); logoRefresh.t = setTimeout(function () { try { ATT = R3.texture(ATL.canvas, true); } catch (e) {} }, 300); }
 var _buildAtlasL = buildAtlas;
-buildAtlas = function () { var had = !!ATL; _buildAtlasL(); if (!had && ATL) Object.keys(LOGO).forEach(function (g) { if (LOGO[g].ok) logoRefresh(g); }); };
+buildAtlas = function () { var had = !!ATL; _buildAtlasL(); if (!had && ATL) { Object.keys(LOGO).forEach(function (g) { if (LOGO[g].ok) logoRefresh(g); }); Object.keys(COVER).forEach(function (g) { if (COVER[g].ok) coverRefresh(g); }); } };
 /* where the cabinets stand: down both side walls, facing in */
 function cabSpots(id, RM) { var cabs = ARCADES[id].games, w = RM.w, d = RM.d, L = [], nL = Math.ceil(cabs.length / 2);
   cabs.forEach(function (g, i) { var left = i < nL, k = left ? i : i - nL, n = left ? nL : cabs.length - nL, z = 3.2 + k * ((d - 6.8) / Math.max(1, n - 1)); if (n === 1) z = d / 2;
@@ -5285,7 +5299,7 @@ roomMesh = function (id) { var RM = _roomMeshA(id), R0 = ROOMS[id]; if (!R0 || (
   if (id === 'club') { // the cartridge shelf, on the wall beside the telly: three shelves, eight cartridges a shelf, labels facing out
     var sx = 0.06, z0 = 8.6, SL = 3.0; [0.9, 1.55, 2.2, 2.85].forEach(function (y) { boxC(m, sx, y, z0, sx + 0.36, y + 0.05, z0 + SL, '#3a2418'); }); boxC(m, sx, 0.9, z0 - 0.05, sx + 0.36, 2.9, z0, '#2a1810'); boxC(m, sx, 0.9, z0 + SL, sx + 0.36, 2.9, z0 + SL + 0.05, '#2a1810');
     var own = Object.keys(SPRAYGAMES).filter(function (g) { return SV.carts && SV.carts[g]; }); own.forEach(function (g, i) { var row = Math.floor(i / 8), k = i % 8, z = z0 + 0.08 + k * 0.36, y = [0.95, 1.6, 2.25][row]; if (row > 2) return;
-      boxC(m, sx + 0.04, y, z, sx + 0.3, y + 0.5, z + 0.32, '#2a2a2e'); boxC(m, sx + 0.04, y + 0.5, z + 0.02, sx + 0.3, y + 0.54, z + 0.3, '#1a1a1e'); standQ(gl, sx + 0.31, z + 0.16, Math.PI / 2, 0.28, y + 0.06, y + 0.46, TL('logo_' + g), 1.3, 0.4); });
+      boxC(m, sx + 0.04, y, z, sx + 0.3, y + 0.42, z + 0.32, '#12040a'); standQ(gl, sx + 0.305, z + 0.16, Math.PI / 2, 0.3, y + 0.03, y + 0.38, TL('cover_' + g), 1.2, 0.35, [0.072, 1, 0.928, 1, 0.928, 0, 0.072, 0]); }); /* update 185: each one stands in its case with the game's cover facing out */
     RM.club.shelf = { x: 0.9, z: z0 + SL / 2 }; RM.boxes.push([0, z0, 0.42, z0 + SL]); }
   RM.extra2 = m.n ? m.upload() : null; RM.glow2 = gl.n ? gl.upload() : null; return RM; };
 var _drawInteriorA = drawInterior;
@@ -7838,11 +7852,12 @@ window.RIBBON = 1;
 var RIBY = 0.045;
 function ribbonTile(M0, NAT, i, j, k, d, h00, h10, h01, h11) {
   var ax = i * CT, az = j * CT, bx = ax + CT, bz = az + CT, kk = k;
-  if (k === K_ROAD) { var f = roadF(ax + 2, az + 2);
-    if (f > -1.6) { kk = -1; var nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+  if (k === K_ROAD) { var f = roadF(ax + 2, az + 2), nrT = nearestRoad(ax + 2, az + 2, 16), onTrack = nrT && nrT.E.track; /* update 185: under a dirt track the square is the ground beside it, never tarmac (it showed through as black notches) */
+    if (f > -1.6 || onTrack) { kk = -1; var nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
       for (var q = 0; q < nb.length && kk !== K_PAVE; q++) { var ni = i + nb[q][0], nj = j + nb[q][1]; if (ni < 0 || nj < 0 || ni >= MW || nj >= MH) continue; var nk = KM[nj * MW + ni]; if (nk === K_PAVE) kk = K_PAVE; else if (kk < 0 && nk !== K_ROAD && nk !== K_BRIDGE && !isWaterK(nk)) kk = nk; }
-      if (kk < 0) kk = K_PAVE; } }
+      if (kk < 0) kk = onTrack ? K_GRASS : K_PAVE; if (onTrack && kk === K_PAVE) kk = K_DIRT; } }
   if (kk === K_PAVE) { var pe = paveEdge(M0, NAT, i, j, d); if (pe === true) return; if (pe) kk = pe; }
+  if (kk === K_PAVE && paveCorner(M0, NAT, i, j, d)) return;
   var nat = natural(kk) || kk === K_SAND || kk === K_DIRT || kk === K_ROCK, M = natural(kk) ? NAT : M0, T = TL(groundTile(kk, d)), n = groundN(ax + 2, az + 2);
   var col = nat ? [cLit(i, j), cLit(i, j + 1), cLit(i + 1, j + 1), cLit(i + 1, j)] : lit(n);
   if (Math.abs(h00 - h11) > Math.abs(h10 - h01) + 0.01) M.quad([ax, h01, bz], [bx, h11, bz], [bx, h10, az], [ax, h00, az], UVR1, T, col.length === 4 ? [col[1], col[2], col[3], col[0]] : col, n);
@@ -7861,6 +7876,24 @@ function paveEdge(M0, NAT, i, j, d, own) {
   for (var v2 = 0; v2 < N; v2++) for (var u2 = 0; u2 < N; u2++) { var C = [[ax + u2 * c, az + v2 * c], [ax + (u2 + 1) * c, az + v2 * c], [ax + (u2 + 1) * c, az + (v2 + 1) * c], [ax + u2 * c, az + (v2 + 1) * c]], f = [F[v2 * (N + 1) + u2], F[v2 * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2 + 1], F[(v2 + 1) * (N + 1) + u2]];
     [[1, TP, M0], [-1, TN, natural(nk) ? NAT : M0]].forEach(function (S) { var out = []; for (var q = 0; q < 4; q++) { var a = C[q], b = C[(q + 1) % 4], fa = -f[q] * S[0], fb = -f[(q + 1) % 4] * S[0]; if (fa >= 0) out.push(a); if ((fa >= 0) !== (fb >= 0)) { var t2 = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * t2, a[1] + (b[1] - a[1]) * t2]); } } poly(out, S[1], S[2], S[0] > 0 ? lit(up) : cLit(i, j)); }); }
   return true; }
+/* update 185 (his ask: roads and paths still looked jagged): a pavement square that sticks out into grass, sand or a
+   dirt path, with that ground on two sides and on the corner between them, is cut along its diagonal, so the edge of a
+   pavement runs at 45 degrees instead of in 4 m steps. Squares next to the road surface are left whole (the kerb is there). */
+function paveCornerK(k) { return k === K_GRASS || k === K_FOREST || k === K_FIELD || k === K_PARK || k === K_DIRT || k === K_SAND || k === K_GRAVE; }
+function paveCorner(M0, NAT, i, j, d) {
+  function K(a, b) { if (a < 0 || b < 0 || a >= MW || b >= MH) return -1; return KM[b * MW + a]; }
+  var ax = i * CT, az = j * CT, cut = [], up = [0, 1, 0];
+  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (c) { var k1 = K(i + c[0], j), k2 = K(i, j + c[1]), k3 = K(i + c[0], j + c[1]);
+    if (paveCornerK(k1) && paveCornerK(k2) && paveCornerK(k3)) cut.push([c[0], c[1], k1 === k2 ? k1 : k3]); });
+  if (cut.length !== 1) return false; /* nothing to cut, or a lone square sticking out (left whole) */
+  var c = cut[0], cx = c[0] > 0 ? ax + CT : ax, cz = c[1] > 0 ? az + CT : az, ox = c[0] > 0 ? ax : ax + CT, oz = c[1] > 0 ? az : az + CT;
+  if (roadF((cx * 2 + ox) / 3, (cz * 2 + oz) / 3) < PAVEW * 0.5) return false;
+  var A = [cx, groundY(cx, cz), cz], B = [ox, groundY(ox, cz), cz], C = [cx, groundY(cx, oz), oz], O = [ox, groundY(ox, oz), oz];
+  function uv(q) { return [(q[0] - ax) / CT, (q[2] - az) / CT]; }
+  function tri(M, a, b, e, T, col) { var ua = uv(a), ub = uv(b), ue = uv(e); if ((b[2] - a[2]) * (e[0] - a[0]) - (b[0] - a[0]) * (e[2] - a[2]) < 0) { var t = b; b = e; e = t; t = ub; ub = ue; ue = t; } M.tri(a, b, e, [ua[0], ua[1], ub[0], ub[1], ue[0], ue[1]], T, col, up); }
+  var nk = c[2], MN = natural(nk) ? NAT : M0, colN = natural(nk) ? cLit(i, j) : lit(up);
+  tri(MN, A, B, C, TL(groundTile(nk, d)), colN); tri(M0, O, C, B, TL(groundTile(K_PAVE, d)), lit(up));
+  return true; }
 function ribSkip(x, z) { var t = kAt(x, z); if (t === K_BRIDGE) return true; if (typeof BCOV !== 'undefined') { var i = Math.floor(x / CT), j = Math.floor(z / CT); if (BCOV[j * MW + i]) return true; } return isWaterK(t); }
 function roadRibbons(M0, x0, z0, CS, first) {
   var seen = {}, up = [0, 1, 0], L = lit(up);
@@ -7868,11 +7901,12 @@ function roadRibbons(M0, x0, z0, CS, first) {
   function Y(x, z, lo) { return groundY(x, z) + RIBY - (lo ? 0.012 : 0); }
   function quadW(a, b, c, e, T) { var A = uv(a), B = uv(b), C2 = uv(c), D = uv(e); M0.quad(a, b, c, e, [A[0], A[1], B[0], B[1], C2[0], C2[1], D[0], D[1]], T, L, up); }
   near(EGRID, x0 + CS / 2, z0 + CS / 2, CS * 0.75).forEach(function (E) { if (seen[E.__ri]) return; seen[E.__ri] = 1; if (E.off) return;
-    var hw = E.w / 2, step = 2, dd = DIST[DM[Math.floor((RN[E.a].z) / CT) * MW + Math.floor(RN[E.a].x / CT)]] || DIST[0], T = TL(E.track ? 'dirt' : groundTile(K_ROAD, dd));
+    var hw = E.w / 2, step = 1.5, dd = DIST[DM[Math.floor((RN[E.a].z) / CT) * MW + Math.floor(RN[E.a].x / CT)]] || DIST[0], T = TL(E.track ? 'dirt' : groundTile(K_ROAD, dd));
     for (var s = 0; s < E.len - 0.01; s += step) { var s1 = Math.min(E.len, s + step), m = edgeAt(E, (s + s1) / 2, false, 0); if (m.x < x0 || m.x >= x0 + CS || m.z < z0 || m.z >= z0 + CS) continue; if (ribSkip(m.x, m.z)) continue;
       var Lp = [edgeAt(E, s, false, hw), edgeAt(E, s1, false, hw)], Cp = [edgeAt(E, s, false, 0), edgeAt(E, s1, false, 0)], Rp = [edgeAt(E, s, false, -hw), edgeAt(E, s1, false, -hw)];
       function P(o) { return [o.x, Y(o.x, o.z, E.track), o.z]; } /* tracks sit a hair under tarmac where they meet it */
-      quadW(P(Lp[0]), P(Cp[0]), P(Cp[1]), P(Lp[1]), T); quadW(P(Cp[0]), P(Rp[0]), P(Rp[1]), P(Cp[1]), T);
+      var Lq = [edgeAt(E, s, false, hw / 2), edgeAt(E, s1, false, hw / 2)], Rq = [edgeAt(E, s, false, -hw / 2), edgeAt(E, s1, false, -hw / 2)]; /* update 185: four strips across, not two */
+      quadW(P(Lp[0]), P(Lq[0]), P(Lq[1]), P(Lp[1]), T); quadW(P(Lq[0]), P(Cp[0]), P(Cp[1]), P(Lq[1]), T); quadW(P(Cp[0]), P(Rq[0]), P(Rq[1]), P(Cp[1]), T); quadW(P(Rq[0]), P(Rp[0]), P(Rp[1]), P(Rq[1]), T);
       /* the kerb: a stone lip along this side wherever a pavement (not another road) is beside it */
       [1, -1].forEach(function (sd) { var A0 = sd > 0 ? Lp[0] : Rp[0], A1 = sd > 0 ? Lp[1] : Rp[1], nx = -m.dz * sd, nz = m.dx * sd, mx = (A0.x + A1.x) / 2 + nx * 0.7, mz = (A0.z + A1.z) / 2 + nz * 0.7;
         if (E.track || roadF(mx, mz) < 0.25 || kAt(mx, mz) !== K_PAVE) return; kerbSeg(M0, A0.x, A0.z, A1.x, A1.z, nx, nz); }); }
