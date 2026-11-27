@@ -45,8 +45,8 @@
   function draw(now) {
     if (done) return; if (!T0) T0 = now; var t = (now - T0) / 1000;
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.fillRect(0, 0, VW, VH);
-    var lw = Math.min(VW * 0.82, 380), lh = LIT.width ? lw * LIT.height / LIT.width : lw * 0.21, lx = (VW - lw) / 2, ly = VH * 0.5 - lh / 2 - 6;
-    var fw = SI_DATA.fw, fh = SI_DATA.fh, sc = 1.5, cw = fw * sc, ch = fh * sc, cy = ly + lh + 8 - ch;
+    var lw = Math.min(VW * 0.62, 290), lh = LIT.width ? lw * LIT.height / LIT.width : lw * 0.21, lx = (VW - lw) / 2, ly = VH * 0.5 - lh / 2 - 6;
+    var fw = SI_DATA.fw, fh = SI_DATA.fh, sc = 1.15, cw = fw * sc, ch = fh * sc, cy = ly + lh + 8 - ch;
     // Cumhead's dash: left to right across the screen, the logo left behind him as he goes
     var k = (t - RUN0) / (RUN1 - RUN0), cx = -cw - 20 + (VW + cw * 2 + 40) * k, reveal = Math.max(0, Math.min(VW, cx + cw * 0.35));
     if (LIT.complete && DIM.complete && reveal > 0) {
@@ -70,7 +70,7 @@
       g.restore();
     }
     if (k > -0.2 && k < 1.2 && RUN.complete) {
-      var fi = Math.floor(t * 28) % SI_DATA.n;
+      var fi = Math.floor(t * 20) % SI_DATA.n; /* the run plays at the speed Spermhog plays it at full tilt */
       // the speed blur behind him, then him
       for (var q = 3; q >= 1; q--) { g.globalAlpha = 0.16 * (4 - q); g.drawImage(RUN, fi * fw, 0, fw, fh, cx - q * 16, cy, cw, ch); }
       g.globalAlpha = 1; g.drawImage(RUN, fi * fw, 0, fw, fh, cx, cy, cw, ch);
