@@ -1750,7 +1750,7 @@ function stepRace(dt) {
   var CL = R.net === 'client';
   R.karts.forEach(function (k, i) {
     if (k.puppet) { puppetStep(k, dt); return; } // another player's kart, or anything else the host runs: shown where the host says
-    if (k.remote) { remoteGlide(k, dt); if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } return; } // a player on another machine drives this one; their reports move it
+    if (k.remote) { remoteGlide(k, dt); if (k.roul > 0) { k.roul -= dt; if (k.roul <= 0) k.roul = 0; } if (k.usePend) { k.usePend.t -= dt; if (k.roul <= 0 && R.phase === 'go') { var up = k.usePend; k.usePend = null; useItem(k, { back: up.back, fwd: up.fwd }); } else if (k.usePend.t <= 0) k.usePend = null; } return; } // a player on another machine drives this one; their reports move it
     var inp = k.ai || (R.phase === 'done') ? aiInput(k, dt) : playerInput(); driveKart(k, inp, dt);
     if (inp.chain && R.phase === 'go') chainPress(k);
     if (inp.item && R.phase === 'go') { if (CL) netSend({ t: 'use', back: !!inp.back, fwd: !!inp.fwd }); else useItem(k, inp); }
@@ -4138,9 +4138,14 @@ function netReport(pi, s) { // a guest says where their kart is
   var R = RACE; if (!R || !R.net) return; var id = NET.players[pi].id, k = R.all.filter(function (q) { return q.netId === id; })[0]; if (!k) return;
   var g = k.netGuard > 0;
   var G2 = k.rnet || (k.rnet = {}), first = !k.rnetInit; KF.forEach(function (f, i) { if (g && GUARD.indexOf(f) >= 0) return; if (s.v[i] === undefined || s.v[i] === null) return; if (!first && (f === 'x' || f === 'y' || f === 'z' || f === 'yaw')) G2[f] = s.v[i]; else k[f] = s.v[i]; }); G2.age = 0; k.rnetInit = 1; /* update 169: smoothed (see remoteGlide) */
-  k.air = !!s.air; k.half = !!s.half; if (s.done && !k.done) { k.done = true; R.places.push(k); } if (s.laps) k.laps = s.laps;
+  k.air = !!s.air; k.half = !!s.half; if (s.done && !k.done) { k.done = true; k.hostDone = R.t; R.places.push(k); } if (s.laps) k.laps = s.laps; if (k.done && k.hostDone !== undefined) k.time = k.hostDone; // update 179: finishing order by the host's clock
 }
-function netUse(pi, m) { var R = RACE; if (!R || R.phase !== 'go') return; var id = NET.players[pi].id, k = R.karts.filter(function (q) { return q.netId === id; })[0]; if (k) useItem(k, { back: m.back, fwd: m.fwd }); }
+function netUse(pi, m) { var R = RACE; if (!R || R.phase !== 'go') return; var id = NET.players[pi].id, k = R.karts.filter(function (q) { return q.netId === id; })[0]; if (!k) return;
+  /* update 179 (his report: player 2's item didn't work a couple of times): it fired from where the host last drew the
+     guest (a moment behind, sometimes against a wall on a bend), and a press while the roulette was still turning was lost */
+  if (k.roul > 0) { k.usePend = { t: 0.8, back: m.back, fwd: m.fwd }; return; }
+  var T = k.rnet; if (T && T.x !== undefined) { var lead = Math.min(T.age || 0, 0.15); k.x = T.x + Math.cos(T.yaw) * k.spd * lead; k.z = T.z + Math.sin(T.yaw) * k.spd * lead; k.y = T.y; k.yaw = T.yaw; }
+  useItem(k, { back: m.back, fwd: m.fwd }); }
 var netAcc = 0;
 function netTick(dt) {
   var R = RACE; R.all.forEach(function (k) { if (k.netGuard > 0) k.netGuard -= dt; });
@@ -4189,11 +4194,15 @@ function netSnap(m) {
   if (m.cn && R.chain) m.cn.forEach(function (c) { var f = R.all[c[0]], to = R.all[c[1]]; if (f && to && f.team) { R.fx.push({ sent: 1, k: 'pulse', team: f.team.i, from: f === f.team.a ? 0 : 1, t: 0.45, item: 1 }); if (to === R.me) { R.chainMsg = { s: 'GOT AN ITEM FROM ' + f.c.n.toUpperCase(), t: 1.3 }; sfx.play('select'); } } });
   if (m.gates && R.gates) m.gates.forEach(function (got, i) { var g = R.gates[i]; if (!g) return; g.got = {}; got.forEach(function (l) { g.got[l] = 1; }); g.lap = g.got[R.me.lap] ? R.me.lap : -1; });
 }
-function remoteGlide(k, dt) { var T = k.rnet; if (!T || T.x === undefined) return; T.age = (T.age || 0) + dt; var lead = Math.min(T.age, 0.15), ax = T.x + Math.cos(T.yaw) * k.spd * lead, az = T.z + Math.sin(T.yaw) * k.spd * lead, f = Math.min(1, dt * 14);
+function remoteGlide(k, dt) { var T = k.rnet; if (!T || T.x === undefined) return; T.age = (T.age || 0) + dt; var lead = Math.min(T.age, 0.15), ax = T.x + Math.cos(T.yaw) * k.spd * lead, az = T.z + Math.sin(T.yaw) * k.spd * lead, f = Math.min(1, dt * 14), qg = RACE.T.locate(ax, az, k.seg); if (!k.air && Math.abs(qg.lat) > RACE.T.edge - 0.8) { var sdg = qg.lat > 0 ? 1 : -1, ovg = Math.abs(qg.lat) - (RACE.T.edge - 0.8); ax -= qg.s.nx * sdg * ovg; az -= qg.s.nz * sdg * ovg; } /* update 179: the guess ahead stays on the track */
   if (Math.abs(ax - k.x) + Math.abs(az - k.z) > 25) { k.x = T.x; k.z = T.z; k.y = T.y; k.yaw = T.yaw; return; } k.x += (ax - k.x) * f; k.z += (az - k.z) * f; k.y += (T.y - k.y) * f; k.yaw += angDiff(T.yaw, k.yaw) * f; }
 function puppetStep(k, dt) { // glide towards where the host last saw it, guessing ahead by its speed
   var T = k.net; if (!T) return; T.age += dt;
-  var ax = T.x + Math.cos(T.yaw) * T.spd * T.age, az = T.z + Math.sin(T.yaw) * T.spd * T.age, f = Math.min(1, dt * 12);
+  /* update 179 (his report from online races: karts drove through corners on player 2's screen): when a picture from
+     the host came late, a kart was guessed onward in a straight line for as long as it took, straight through the bend
+     and the wall. The guess now stops after a fifth of a second and never goes past the track edge. */
+  var lead = Math.min(T.age, 0.2), ax = T.x + Math.cos(T.yaw) * T.spd * lead, az = T.z + Math.sin(T.yaw) * T.spd * lead, f = Math.min(1, dt * 12), qa = RACE.T.locate(ax, az, k.seg);
+  if (!k.air && !(T.floatY > 0.5) && Math.abs(qa.lat) > RACE.T.edge - 0.8) { var sda = qa.lat > 0 ? 1 : -1, ova = Math.abs(qa.lat) - (RACE.T.edge - 0.8); ax -= qa.s.nx * sda * ova; az -= qa.s.nz * sda * ova; }
   k.x += (ax - k.x) * f; k.z += (az - k.z) * f; k.y += (T.y - k.y) * f; k.yaw += angDiff(T.yaw, k.yaw) * f;
   ['spd', 'steerVis', 'floatY'].forEach(function (q) { k[q] += (T[q] - k[q]) * f; });
   ['lap', 'prog', 'place', 'drift', 'driftLvl', 'boostT', 'slingT', 'nadoT', 'spinA', 'squashT', 'splatT', 'tinyT', 'gooT', 'shieldT', 'orbit', 'petT', 'magT', 'hopT', 'drops', 'time'].forEach(function (q) { k[q] = T[q]; });
@@ -4368,6 +4377,11 @@ function passFx(from, to, sFrom, sTo) {
 }
 
 /* every frame, after the karts have moved */
+/* update 179 (his report: player 2 drove through corners in the co-op cup): the rope pulled a kart straight towards its
+   partner, so on a bend it could drag it through the wall (worst for the second player, whose partner is shown a moment
+   behind). A pull may not take a kart further out than the track edge, or further out than it already was. */
+function ropeLat(R, k) { var q = R.T.locate(k.x, k.z, k.seg); return Math.abs(q.lat); }
+function ropeKeep(R, k, before) { var q = R.T.locate(k.x, k.z, k.seg), lim = Math.max(before, R.T.edge - 0.6), a = Math.abs(q.lat); if (a <= lim) return; var sd = q.lat > 0 ? 1 : -1, back = a - lim; k.x -= q.s.nx * sd * back; k.z -= q.s.nz * sd * back; }
 function chainStep(R, dt) {
   var host = hostSide(R);
   R.all.forEach(function (k) { if (k.slingCd > 0) k.slingCd -= dt; });
@@ -4382,8 +4396,8 @@ function chainStep(R, dt) {
       var ex = Math.min(d - CHAIN.L, 10), corr = ex * Math.min(1, dt * 5.5);
       if (d > CHAIN.MAX) corr = d - CHAIN.MAX + corr * 0.2; // it only stretches so far
       corr = Math.min(corr, 40 * dt); // (and after a snap it reels you back in, it doesn't teleport you)
-      if (local(a)) { a.x += nx * corr * wa; a.z += nz * corr * wa; }
-      if (local(b)) { b.x -= nx * corr * wb; b.z -= nz * corr * wb; }
+      if (local(a)) { var la = ropeLat(R, a); a.x += nx * corr * wa; a.z += nz * corr * wa; ropeKeep(R, a, la); }
+      if (local(b)) { var lb = ropeLat(R, b); b.x -= nx * corr * wb; b.z -= nz * corr * wb; ropeKeep(R, b, lb); }
       var back = a.prog < b.prog ? a : b, front = back === a ? b : a; // tension tows the one behind and holds the one in front back
       if (local(back) && !back.done) back.spd = Math.min(back.top * 1.25, back.spd + ex * 2.6 * dt);
       if (local(front) && !front.done) front.spd -= Math.min(front.spd, ex * 1.1 * dt);
@@ -5278,7 +5292,8 @@ function hudPlace(R, k, pl, col) {
   ctx.strokeStyle = col; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, 26.5, 0, 6.29); ctx.stroke(); ctx.globalAlpha = 1;
   for (var i = 0; i < 8; i++) { var a = i * Math.PI / 4 + R.t * 0.3; ctx.fillStyle = col; ctx.fillRect(Math.cos(a) * 31 - 1.5, Math.sin(a) * 31 - 1.5, 3, 3); } ctx.restore();
   var tw = KIT.tw(String(pl), 48, 'title'); text(String(pl), cx - 8, cy - 30, { size: 48, col: col, font: 'title', outline: true, align: 'center' }); text(ordinal(pl).slice(-2).toUpperCase(), cx + 8, cy - 22, { size: 16, col: col, font: 'title', outline: true });
-  text(pl + '/' + R.karts.length, cx, cy + 36, { size: 6, col: '#a6968f', align: 'center', outline: true });
+  if (R.chain && R.teams && k.team) { text('TEAM', cx, cy - 42, { size: 7, col: col, align: 'center', outline: true }); text('TEAM ' + pl + '/' + R.teams.length + '   YOU ' + ordinal(k.place || 1).toUpperCase(), cx, cy + 36, { size: 6, col: '#f1e7d0', align: 'center', outline: true }); } // update 179: in the co-op cup the big number is the team's place, not yours
+  else text(pl + '/' + R.karts.length, cx, cy + 36, { size: 6, col: '#a6968f', align: 'center', outline: true });
 }
 var HUDPL = { p: 0, t: 0 };
 function hudMapBack(x, y, w, h) { var ctx = KIT.ctx; ctx.fillStyle = 'rgba(7,4,5,0.5)'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#4a1a1c'; ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y + h - 1, w, 1); ctx.fillRect(x, y, 1, h); ctx.fillRect(x + w - 1, y, 1, h);
