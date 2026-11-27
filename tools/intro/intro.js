@@ -76,7 +76,7 @@
       g.globalAlpha = 1; g.drawImage(RUN, fi * fw, 0, fw, fh, cx, cy, cw, ch);
       g.fillStyle = 'rgba(255,38,48,0.5)'; for (var s2 = 0; s2 < 3; s2++) g.fillRect(cx - 60 - s2 * 22, cy + ch * (0.35 + s2 * 0.2), 34 - s2 * 6, 1.5);
     }
-    if (t >= LIGHT - 0.04 && !spoke) { spoke = true; try { voice.currentTime = 0; var pr = oldPlay ? oldPlay.call(voice) : voice.play(); if (pr && pr.catch) pr.catch(function () { voiceBlocked = true; }); } catch (e) { voiceBlocked = true; } }
+    if (t >= LIGHT - (SI_DATA.lead || 0) - 0.04 && !spoke) { spoke = true; try { voice.currentTime = 0; var pr = oldPlay ? oldPlay.call(voice) : voice.play(); if (pr && pr.catch) pr.catch(function () { voiceBlocked = true; }); } catch (e) { voiceBlocked = true; } }
     if (t > FADE) { cv.style.opacity = String(1 - ease((t - FADE) / (END - FADE))); }
     if (t >= END) { finish(); return; }
     requestAnimationFrame(draw);

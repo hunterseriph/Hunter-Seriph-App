@@ -79,17 +79,15 @@ def dash_frames():
 
 
 def voice(hold=-9, step=-4):
-    """SEERIIIPH to his spec (updates 188-190): sung by seriph_voice.py (SEEEE held for 0.7 s, then RIIIIPH a little
-    higher with a long IIIII, cut off dead at 1.25 s), then made crisp like an early-90s console sample: hard top end
-    and sizzle (an exciter and a presence lift), squashed hard, then sampled down with no smoothing so it keeps the
-    gritty aliasing, and 8-bit grit on top."""
+    """SEERIIIPH to his spec (updates 188-192): sung by seriph_voice.py (SEEEE held for 0.7 s on G#3, then RIIIIPH
+    down a major third, ding-dong, with a long IIIII, cut off dead at 1.25 s), with a soft early-90s console sample
+    sound: a gentle presence lift, light squash, a lower sample rate and a little 8-bit grit, at half the old loudness."""
     import seriph_voice
     tmp = tempfile.mkdtemp(); sung = os.path.join(tmp, 'sung.wav'); mix = os.path.join(tmp, 'seriph.mp3'); seriph_voice.make(sung, hold, step)
-    af = ('highpass=f=120,equalizer=f=1000:t=q:w=1.0:g=3,equalizer=f=4000:t=q:w=1.0:g=4,highshelf=f=6000:g=1.5,'  # update 191: a bit less crisp
-          'aexciter=amount=1.5:drive=5:blend=0:freq=3000:ceil=10000,'
-          'acompressor=threshold=-26dB:ratio=6:attack=1:release=45:makeup=6,'
-          'aresample=16000:filter_size=4:phase_shift=0,acrusher=bits=8:mode=lin:mix=0.25,aresample=44100:filter_size=8,lowpass=f=8500,'
-          'alimiter=limit=0.9,loudnorm=I=-10:TP=-0.8')
+    af = ('highpass=f=110,equalizer=f=1000:t=q:w=1.0:g=2,equalizer=f=3500:t=q:w=1.2:g=1.5,'  # update 192 (he said too loud and harsh): softer top, no exciter
+          'acompressor=threshold=-24dB:ratio=3.5:attack=3:release=60:makeup=3,'
+          'aresample=16000:filter_size=8,acrusher=bits=8:mode=lin:mix=0.12,aresample=44100,lowpass=f=6800,'
+          'alimiter=limit=0.8,loudnorm=I=-16:TP=-3')  # half as loud as update 191 (-10 LUFS: 6 dB down)
     subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', sung, '-af', af, '-ac', '1', '-ar', '44100', '-b:a', '128k', mix], check=True)
     return open(mix, 'rb').read()
 
@@ -102,9 +100,18 @@ if __name__ == '__main__':
     lit, dim = logo(True), logo(False)
     lit.save('/tmp/claude-0/seriph-lit.png'); dim.save('/tmp/claude-0/seriph-dim.png')
     strip, fw, fh = dash_frames()
-    mp3 = voice(); open('/tmp/claude-0/seriph.mp3', 'wb').write(mp3)
+    # update 193: he made the voice himself (tools/intro/seriph.mp3): it is used as it is, and started early by the
+    # silence at its front so the SEERIIIPH lands as the logo lights up. Without that file, the sung one below.
+    own = os.path.join(HERE, 'seriph.mp3'); lead = 0.0
+    if os.path.exists(own):
+        mp3 = open(own, 'rb').read()
+        r = subprocess.run(['ffmpeg', '-v', 'info', '-i', own, '-af', 'silencedetect=n=-45dB:d=0.1', '-f', 'null', '-'], capture_output=True, text=True).stderr
+        ends = [float(x) for x in re.findall(r'silence_end: ([0-9.]+)', r)]; starts = [float(x) for x in re.findall(r'silence_start: ([0-9.]+)', r)]
+        lead = max([e for e, s in zip(ends, starts) if s < 0.9 and e < 1.2] or [0.0])  # where the voice itself starts
+    else:
+        mp3 = voice()
     js = open(os.path.join(HERE, 'intro.js'), encoding='utf-8').read()
     data = 'var SI_DATA = %s;\n' % json.dumps({'lit': b64png(lit), 'dim': b64png(dim), 'run': b64png(strip), 'fw': fw, 'fh': fh, 'n': 8,
-                                               'voice': 'data:audio/mpeg;base64,' + base64.b64encode(mp3).decode()})
+                                               'voice': 'data:audio/mpeg;base64,' + base64.b64encode(mp3).decode(), 'lead': round(lead, 3)})
     out = os.path.join(GAMES, 'seriph-intro.js'); open(out, 'w', encoding='utf-8').write(js.replace('/*SI_DATA*/', data))
     print(out, os.path.getsize(out) // 1024, 'KB')
