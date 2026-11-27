@@ -1275,7 +1275,8 @@ function hitFoe(f, dmg, fx, fy, stun) {
     var r = Math.random(); if (r < 0.35) PICK.push({ k: 'drop', x: f.x, y: f.y, n: Math.random() < 0.2 ? 5 : 1, t: 9 }); else if (r < 0.5) PICK.push({ k: 'heart', x: f.x, y: f.y, t: 9 }); else if (r < 0.57 && SV.items.bombs) PICK.push({ k: 'bomb', x: f.x, y: f.y, t: 9 });
     if (SCR.kind === 'dg' && ROOM && !BOSS && FOE.every(function (o) { return o.hp <= 0; })) markClear(ROOM); }
 }
-function hurtP(dmg, fx, fy) { if (P.inv > 0 || G.pillInv > 0) return; P.hp -= SV.items.ring ? Math.max(1, Math.ceil(dmg / 2)) : dmg; P.inv = 1; var a = Math.atan2(P.y - fy, P.x - fx); P.kx = Math.cos(a) * 200; P.ky = Math.sin(a) * 200; P.kb = 0.15; sfx.play('hurt'); KIT.shake(4); if (P.hp <= 0) { if (SV.bottle === 'full') { SV.bottle = 'empty'; P.hp = maxHp(); banner('THE CUMPUCCINO SAVED YOU'); sfx.play('power'); persist(); } else die(); } }
+function hurtP(dmg, fx, fy) { if (P.inv > 0 || G.pillInv > 0) return; var dw = SV.items.ring ? Math.max(1, Math.ceil(dmg / 2)) : dmg; if (P.hp - dw <= 0 && SV.bottle !== 'full' && !P.wind) { P.wind = 1; P.hp = 1; P.inv = 1.5; banner('SECOND WIND'); sfx.play('hurt'); return; } // update 184: Cumhead's passive from Cumheads Quest (once a life)
+  P.hp -= SV.items.ring ? Math.max(1, Math.ceil(dmg / 2)) : dmg; P.inv = 1; var a = Math.atan2(P.y - fy, P.x - fx); P.kx = Math.cos(a) * 200; P.ky = Math.sin(a) * 200; P.kb = 0.15; sfx.play('hurt'); KIT.shake(4); if (P.hp <= 0) { if (SV.bottle === 'full') { SV.bottle = 'empty'; P.hp = maxHp(); banner('THE CUMPUCCINO SAVED YOU'); sfx.play('power'); persist(); } else die(); } }
 /* ---------- bosses ---------- */
 function stepBoss(dt) {
   var b = BOSS; if (!b || b.hp <= 0) return; b.t += dt; b.hurt = Math.max(0, b.hurt - dt); var B = b.B, dx = P.x - b.x, dy = P.y - b.y, dist = Math.hypot(dx, dy) || 1, ph2 = b.hp < b.mhp / 2, sp = ph2 ? 1.3 : 1;

@@ -16,7 +16,7 @@ const DIR = __dirname, OUT = path.join(DIR, 'models.js');
     function xfm(M, d, out) { for (var i = 0; i < d.length; i += 16) { var x = d[i], y = d[i + 1], z = d[i + 2], nx = d[i + 12], ny = d[i + 13], nz = d[i + 14];
         out.push(M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14], d[i + 3], d[i + 4], d[i + 5], d[i + 6], d[i + 7], d[i + 8], d[i + 9], d[i + 10], d[i + 11],
           M[0] * nx + M[4] * ny + M[8] * nz, M[1] * nx + M[5] * ny + M[9] * nz, M[2] * nx + M[6] * ny + M[10] * nz, d[i + 15]); } }
-    var RIGL = ['cumhead', 'spermaid', 'greebo', 'pulsar', 'ali', 'amy', 'tb', 'saba', 'joff', 'potbelly', 'laboozie', 'pieclown', 'knight2', 'zombie2', 'goon'], META = {};
+    var RIGL = ['cumhead', 'spermaid', 'greebo', 'pulsar', 'ali', 'amy', 'tb', 'saba', 'joff', 'potbelly', 'laboozie', 'pieclown', 'knight2', 'zombie2', 'goon', 'bonjo', 't', 'kaya', 'elden', 'beeb'], META = {};
     RIGL.forEach(function (n) { var r = RIGS[n]; if (!r) { META[n] = null; return; } var D = r.D, S = r.P, parts = {};
       
       META[n] = { D: D, eyeY: r.eyeY, drip: r.drip ? 1 : 0, dripAt: r.dripAt || null, parts: parts };

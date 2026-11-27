@@ -1044,6 +1044,7 @@ function hurtP(n, by) {
   if (P.inv > 0 || G.mode !== 'play') return;
   if (S.ward && !P.wardUsed) { P.wardUsed = true; P.inv = 1; pop(P.x, P.y - 40, 'BLOCKED', '#7af0ff'); sfx.play('magic'); return; }
   if (P.shield > 0) { var s = Math.min(P.shield, n); P.shield -= s; n -= s; }
+  if (SV.who !== 'lab' && !run.wind && P.hp - n <= 0 && P.hp > 1) { run.wind = 1; P.hp = 1; P.inv = 1.5; pop(P.x, P.y - 40, 'SECOND WIND', '#ffe36a'); sfx.play('magic'); return; } // update 184: Cumhead's passive
   P.hp -= n; P.inv = 1; KIT.shake(6); sfx.play('hurt'); run.by = by;
   if (P.hp <= 0) die();
 }
@@ -1079,6 +1080,7 @@ function updFoes(dt) {
 function eshot(x, y, a, sp, k, delay) { eshots.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 3, r: 4, dmg: 1, k: k || 'r', delay: delay || 0 }); }
 function dmgFoe(e, n, dot) {
   if (e.dead) return; var crit = !dot && S.crit && Math.random() < S.crit; if (crit) n *= 2;
+  if (SV.who === 'lab' && e.poison > 0) n *= 1.33; // update 184: Laboozie's passive, Covered In It
   e.hp -= n; e.flash = 0.08; if (!dot) sfx.play('hit');
   if (e.hp <= 0) killFoe(e);
 }
@@ -1325,7 +1327,7 @@ function drawTitle() {
 function titleMenu() {
   G.mode = 'title'; run = null; music.play('grtitle');
   KIT.menu({ cls: 'clear', logo: '../assets/gr-logo.webp', title: 'The Grinding of Cumhead', sub: "Six floors of Blumhead's Lair. A boss at the end of every one. Blumhead at the bottom.",
-    items: [{ label: 'START A RUN', fn: function () { KIT.closeMenu(); pets = []; newRun(); }, cls: 'hot', def: true }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), sub: SV.who === 'lab' ? 'Flaming Bags of Shit: a hit poisons, the floor burns for 8 seconds' : 'Cream tears', fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'ITEMS FOUND', sub: Object.keys(SV.seen).length + ' of ' + ITEMS.length, fn: itemsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }],
+    items: [{ label: 'START A RUN', fn: function () { KIT.closeMenu(); pets = []; newRun(); }, cls: 'hot', def: true }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), sub: SV.who === 'lab' ? 'Flaming Bags of Shit: a hit poisons, the floor burns for 8 seconds. Covered In It: poisoned foes take a third more' : 'Cream tears. Second Wind: once a run, a killing blow leaves him on half a heart', fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'ITEMS FOUND', sub: Object.keys(SV.seen).length + ' of ' + ITEMS.length, fn: itemsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }],
     note: 'Best floor ' + SV.best + '  ·  Runs ' + SV.runs + '  ·  Wins ' + SV.wins });
 }
 function itemsMenu() {

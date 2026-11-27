@@ -1547,7 +1547,7 @@ function driveKart(k, inp, dt) {
   var yawRate;
   if (k.drift) {
     var bias = k.drift * (0.62 + 0.42 * st * k.drift); yawRate = bias * rate * 1.18;
-    k.driftT += dt * (0.6 + 0.6 * Math.abs(st)); var lv = k.driftT > 2.6 ? 3 : k.driftT > 1.6 ? 2 : k.driftT > 0.75 ? 1 : 0;
+    k.driftT += dt * (0.6 + 0.6 * Math.abs(st)) * (k.ch === 'hom' ? 1.2 : 1); var lv = k.driftT > 2.6 ? 3 : k.driftT > 1.6 ? 2 : k.driftT > 0.75 ? 1 : 0;
     if (lv > k.driftLvl) { k.driftLvl = lv; if (!k.ai) sfx.play('tick'); }
   } else yawRate = st * rate * sv;
   if (k.air) yawRate *= 0.5;
@@ -1774,11 +1774,11 @@ function stepRace(dt) {
   // item boxes and drops (the host decides who gets what)
   if (!CL) R.boxes.forEach(function (bx) {
     if (bx.t > 0) { bx.t -= dt; return; }
-    R.karts.forEach(function (k) { if (bx.t > 0) return; if (Math.hypot(k.x - bx.x, k.z - bx.z) < 1.9 && Math.abs(k.y - bx.y) < 2) { bx.t = 2.2; R.fx.push({ k: 'box', x: bx.x, y: bx.y + 1, z: bx.z, t: 0.35 }); if (!k.item && !(k.roul > 0)) { k.item = rollItem(k); k.itemN = ITEMS[k.item].n3 || 1; k.roul = k.ai ? 0.01 : 1.1; k.itemT = 0.8 + Math.random() * 1.5; if (k === R.me) sfx.play('blip'); } } });
+    R.karts.forEach(function (k) { if (bx.t > 0) return; if (Math.hypot(k.x - bx.x, k.z - bx.z) < 1.9 && Math.abs(k.y - bx.y) < 2) { bx.t = 2.2; R.fx.push({ k: 'box', x: bx.x, y: bx.y + 1, z: bx.z, t: 0.35 }); if (!k.item && !(k.roul > 0)) { k.item = rollItem(k); k.itemN = (ITEMS[k.item].n3 || 1) * (k.ch === 'potbelly' && Math.random() < 0.3 && !ITEMS[k.item].n3 ? 2 : 1); k.roul = k.ai ? 0.01 : 1.1; k.itemT = 0.8 + Math.random() * 1.5; if (k === R.me) sfx.play('blip'); } } });
   });
   if (!CL) R.drops.forEach(function (dr) {
     if (dr.t > 0) { dr.t -= dt; return; }
-    R.karts.forEach(function (k) { if (dr.t > 0) return; if (Math.hypot(k.x - dr.x, k.z - dr.z) < 1.6 && Math.abs(k.y - dr.y) < 2) { dr.t = 9; if (k.drops < 10) k.drops++; k.got = (k.got || 0) + 1; if (k === R.me) { sfx.play('coin'); R.got = (R.got || 0) + 1; } } });
+    R.karts.forEach(function (k) { if (dr.t > 0) return; if (Math.hypot(k.x - dr.x, k.z - dr.z) < 1.6 && Math.abs(k.y - dr.y) < 2) { dr.t = 9; if (k.drops < 10) k.drops++; if (k.ch === 'greebo' && k.drops < 10 && Math.random() < 0.3) k.drops++; k.got = (k.got || 0) + 1; if (k === R.me) { sfx.play('coin'); R.got = (R.got || 0) + 1; } } });
   });
   if (!CL) stepProjectiles(dt);
   if (R.TH.step) R.TH.step(R, dt);
@@ -3566,7 +3566,7 @@ function pickChar(next, back) {
   function info(id) {
     var c = CH[id], op = charOpen(id), names = ['SPEED', 'ACCEL', 'HANDLING', 'WEIGHT'];
     return '<div class="top">' + (op ? pic(id, 96) : '<span class="hsp-pic" style="display:inline-block;width:96px;height:96px;background:#0a0506"></span>') + '<div><h2>' + (op ? esc(c.n) : '???') + '</h2>' + (op && id === SV.ch ? '<p style="color:#ffe36a">' + (pickChar.title ? 'YOUR PARTNER' : 'YOUR DRIVER') + '</p>' : '') + '</div></div>' +
-      '<p class="fr"' + (op ? '' : ' style="color:#ff2630"') + '>' + esc(op ? c.from : 'Locked: ' + c.lock) + '</p>' +
+      '<p class="fr"' + (op ? '' : ' style="color:#ff2630"') + '>' + esc(op ? c.from : 'Locked: ' + c.lock) + '</p>' + (op && KPAS[id] ? '<p class="fr" style="color:#ffe36a">' + esc(KPAS[id][0] + ': ' + KPAS[id][1]) + '</p>' : '') +
       (op ? '<div class="ckst">' + c.st.map(function (v, i) { return '<span>' + names[i] + '</span><span class="bar">' + [0, 1, 2, 3, 4].map(function (q) { return '<i class="' + (q < v ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }).join('') + '</div>' +
         '<div class="sw">' + c.kart.map(function (k) { return '<i style="background:' + k + '"></i>'; }).join('') + '</div>' : '');
   }
@@ -5424,5 +5424,48 @@ function cumKart(m, k, fr) {
 }
 _drvBuild = (function (orig) { return function (m, k, fr) { if (k && k.c && k.c.id === 'cumhead') return cumKart(m, k, fr); return orig(m, k, fr); }; })(_drvBuild);
 
+
+/* ---------- update 184 (his ask): every driver has their own passive, the ones from Cumheads Quest turned into racing.
+   The ones who are not in Cumheads Quest (Ali, the Homunculus, Shithead Laboozie, Blumhead, King Blumhead, Sir Johnathan) get their own. ---------- */
+var KPAS = {
+  cumhead: ['Second Wind', 'Once a race, a hit that would spin him out does nothing'],
+  spermaid: ['Siren Song', 'Every rival she hits gives her a drop. 8% of hits miss her'],
+  greebo: ['Sticky Fingers', 'Drops he picks up are worth 30% more'],
+  amy: ['Hot Stuff', '20% of her hits leave the rival burning: slower for longer'],
+  tb: ['Unhinged', 'His hits last 20% longer, and 12% leave the rival driving drunk'],
+  hom: ['Little Legs', 'Drifts charge 20% faster'],
+  saba: ['Hitless', 'The first hit every lap does nothing'],
+  joff: ['Pizza Power', 'Boosts last 35% longer'],
+  lab: ['Covered In It', 'His pies are Flaming Bags of Shit: they burn on the road'],
+  kaya: ['Barista', 'Shields, magnets, the meatnado, balloons and the Gloop last 50% longer'],
+  beebs: ['Beer Belly', 'A little faster every lap'],
+  ali: ['Garlic Breath', 'Rivals right behind him are slowed'],
+  potbelly: ['Arcade Hero', '30% of item boxes give him two'],
+  blum: ['The Big Load', 'Bumping him knocks you twice as far'],
+  kingblum: ['King of the Lair', 'Goo never slows him'],
+  sirj: ['Cat Reflexes', '15% of hits miss him altogether']
+};
+(function () {
+  var hk = hitKart; hitKart = function (k, by, how, p) { var R = RACE;
+    if (!k || k.invT > 0 || k.nadoT > 0 || k.floatT > 0) return hk.apply(this, arguments);
+    var spin = how !== 'bite' && how !== 'goo';
+    if (how === 'goo' && k.ch === 'kingblum') return false;
+    if (spin && !(k.shieldT > 0) && !(k.orbit > 0)) {
+      if ((k.ch === 'spermaid' && Math.random() < 0.08) || (k.ch === 'sirj' && Math.random() < 0.15)) { k.invT = 0.4; if (k === R.me) R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.4, col: '#9adfff' }); return false; }
+      if (k.ch === 'saba' && k.sabaLap !== k.lap) { k.sabaLap = k.lap; k.invT = 0.6; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.4, col: '#7dff3a' }); if (k === R.me) sfx.play('magic'); return false; }
+      if (k.ch === 'cumhead' && !k.wind) { k.wind = 1; k.invT = 1; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.4, z: k.z, t: 0.5, col: '#ffe36a' }); if (k === R.me) { R.bannerTxt = 'SECOND WIND'; R.lapBanner = 1.4; sfx.play('power'); } return false; } }
+    var r = hk.apply(this, arguments); if (!r || !by || by === k) return r;
+    if (by.ch === 'spermaid' && by.drops < 10) by.drops++;
+    if (by.ch === 'tb' && spin) { k.spinT *= 1.2; k.splatT *= 1.2; if (Math.random() < 0.12) k.revT = Math.max(k.revT || 0, 3); }
+    if (by.ch === 'amy' && Math.random() < 0.2) { k.wobT = Math.max(k.wobT || 0, 2); k.spd *= 0.6; R.fx.push({ k: 'pop', x: k.x, y: k.y + 1.2, z: k.z, t: 0.5, col: '#ff7a1a' }); }
+    return r; };
+  var ld = lapDone; lapDone = function (k) { var l0 = k.lap; ld(k); if (k.ch === 'beebs' && k.lap > 1 && !k.done) k.top *= 1.02; };
+  var ui = useItem; useItem = function (k, inp) { var b = [k.boostT, k.shieldT, k.nadoT, k.magT, k.petT, k.floatT], it = k.item; ui(k, inp);
+    if (k.ch === 'kaya') { if (k.shieldT > b[1]) k.shieldT = b[1] + (k.shieldT - b[1]) * 1.5; if (k.nadoT > b[2]) { k.nadoT = b[2] + (k.nadoT - b[2]) * 1.5; k.invT = Math.max(k.invT, k.nadoT); } if (k.magT > b[3]) k.magT = b[3] + (k.magT - b[3]) * 1.5; if (k.petT > b[4]) k.petT = b[4] + (k.petT - b[4]) * 1.5; if (k.floatT > b[5]) { k.floatT = b[5] + (k.floatT - b[5]) * 1.5; k.invT = Math.max(k.invT, k.floatT + 0.2); } } };
+  var kp = kartPerks; kartPerks = function (k, dt) { kp(k, dt); var R = RACE;
+    if (k.ch === 'joff' && k.boostT > 0 && !k.jb) { k.jb = 1; k.boostT *= 1.35; } if (!(k.boostT > 0)) k.jb = 0;
+    if (k.ch === 'ali') R.karts.forEach(function (o) { if (o === k || o.done) return; var dx = o.x - k.x, dz = o.z - k.z, d = Math.hypot(dx, dz); if (d < 7 && (dx * Math.cos(k.yaw) + dz * Math.sin(k.yaw)) < 0) o.spd *= 1 - 0.35 * dt; });
+    if (k.ch === 'blum') R.karts.forEach(function (o) { if (o === k) return; var dx = o.x - k.x, dz = o.z - k.z, d = Math.hypot(dx, dz); if (d < 1.9 && d > 0.01 && !(o.blumT > 0)) { o.kx += dx / d * 14; o.kz += dz / d * 14; o.blumT = 0.5; } if (o.blumT > 0) o.blumT -= dt; }); };
+})();
 </script>
 </body></html>

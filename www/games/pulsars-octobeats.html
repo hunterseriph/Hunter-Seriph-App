@@ -857,7 +857,7 @@ function press(lane, st) {
   if (!best || bd > MISSW) return; // a press with nothing near it costs nothing
   var j = JUDGE.findIndex(function (q) { return bd <= q[1]; }); if (j < 0) { best.done = 1; miss(best); return; }
   best.hit = 1; if (!best.h) best.done = 1; R.cnt[j]++; R.combo++; R.max = Math.max(R.max, R.combo);
-  R.score += Math.round(JUDGE[j][2] * (1 + Math.min(R.combo, 100) / 100)); R.life = Math.min(1, R.life + [0.025, 0.015, 0.004][j]);
+  R.score += Math.round(JUDGE[j][2] * (1 + Math.min(R.combo, 100) / 100)); R.life = Math.min(1, R.life + [0.025, 0.015, 0.004][j] * 2); // update 184: Pulsar's passive from Cumheads Quest, Chill Waves: life comes back twice as fast
   R.judge = { j: j, t: 0.5, late: best.s < st }; addFx('hit', lane, JUDGE[j][3]); if (j === 0) sfx.play('tick');
 }
 function miss(n) { R.cnt[3]++; R.combo = 0; R.life -= 0.06; R.judge = { j: 3, t: 0.5 }; }

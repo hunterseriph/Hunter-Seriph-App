@@ -3021,7 +3021,9 @@ function addLoot(x, z, k, extra) { var l = { id: G.lootId++, x: x, z: z, k: k, t
 /* something hurts a player: the host's own, or (online) the guest is told */
 function hurtPlayer(P, dmg, from, dose) {
   if (P !== G.P) { if (isHost()) netEv({ k: 'hurt', dmg: dmg, dose: dose || 0, fx: from ? from.x : P.x, fz: from ? from.z : P.z }); return; }
-  if (P.dead || (G.mode !== 'play' && G.mode !== 'drive' && G.mode !== 'ride')) return; P.hp -= dmg; P.hurtT = 0.4; blood(P.x, 1.2, P.z, 6); sfx.play('hurt'); KIT.shake(5); KIT.flash(0.08);
+  if (P.dead || (G.mode !== 'play' && G.mode !== 'drive' && G.mode !== 'ride')) return;
+  if (P.hp - dmg <= 0 && P.hp > 1 && !P.wind) { P.wind = 1; P.hp = 1; P.hurtT = 0.6; sfx.play('hurt'); KIT.flash(0.2); say('Second wind. Not yet.', 2.5, '#ffe36a'); return; } // update 184: Cumhead's passive from Cumheads Quest (once a life)
+  P.hp -= dmg; P.hurtT = 0.4; blood(P.x, 1.2, P.z, 6); sfx.play('hurt'); KIT.shake(5); KIT.flash(0.08);
   if (dose) { G.trip = Math.min(TRIPMAX, G.trip + dose); say('Something sharp. Your head swims.', 2, '#ff4a8a'); }
   if (from) { var aa = Math.atan2(P.x - from.x, P.z - from.z); P.x += Math.sin(aa) * 0.25; P.z += Math.cos(aa) * 0.25; collide(P, 0.3, 'me'); }
   if (P.hp <= 0) { P.hp = 0; P.dead = 1; if (isGuest()) { netSend({ t: 'dead' }); say("You're down. Shithead Laboozie gets back up in a bit...", 4, '#c4121c'); }

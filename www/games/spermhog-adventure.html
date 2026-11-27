@@ -2180,6 +2180,7 @@ function startRun(o) { // o: { who, stage | boss | hub, ev }
   CAMS.yaw = 0; CAMS.x = P.x; CAMS.z = P.z - 7; CAMS.y = P.y + 3; G.mode = 'play'; G.time = 0; G.found = 0; G.check = { x: P.x, y: P.y, z: P.z };
   var song = o.boss ? (o.boss === 'supertb' ? 'super' : 'hogboss') : o.stage ? THEMES[LV.theme].song : HUBS[o.hub].song; music.play(song);
   G.banner = { t: 3, s: o.stage ? STAGES[o.stage].n : o.boss ? BOSSES[o.boss].n : HUBS[o.hub].n, b: o.stage ? jobLine(LV.job) : o.boss ? 'BOSS' : '' };
+  if (APAS[who] && !o.hub) G.pasMsg = { t: 4, s: APAS[who][0] + ': ' + APAS[who][1] };
 }
 function jobLine(j) { return j === 'hunt' ? 'FIND THE THREE INGREDIENTS' : j === 'water' ? 'SWIM TO THE END' : j === 'shoot' ? 'CLEAN UP THE STREETS' : 'RUN TO THE CHALICE'; }
 function camAxes() { return { f: [Math.sin(CAMS.yaw), Math.cos(CAMS.yaw)], r: [-Math.cos(CAMS.yaw), Math.sin(CAMS.yaw)] }; }
@@ -2222,7 +2223,7 @@ function stepPlayer(dt) {
   LV.springs.forEach(function (s) { if (Math.hypot(s.x - p.x, s.z - p.z) < 1.2 && Math.abs(s.y - p.y) < 1) { p.vy = s.vy; p.vz = s.vz; p.ground = 0; p.ball = 1; sfx.play('jump'); } });
   LV.pads.forEach(function (d) { if (Math.hypot(d.x - p.x, d.z - p.z) < 1.5 && Math.abs(d.y - p.y) < 1) { p.vx = d.dx * 28; p.vz = d.dz * 28; p.boost = 1.2; p.a = Math.atan2(d.dx, d.dz); sfx.play('power'); } });
   LV.loops.forEach(function (L2) { if (!p.loop && Math.abs(p.z - (L2.z - 4)) < 1 && Math.abs(p.x - L2.x) < 3 && p.vz > 14 && Math.abs(p.y - L2.y) < 1) { p.loop = { x: p.x, y: L2.y, z: L2.z - 4, r: L2.r, t: 0 }; } });
-  LV.drops.forEach(function (r) { if (!r.got && Math.hypot(r.x - p.x, r.y - (p.y + 0.7), r.z - p.z) < 1.1) { r.got = 1; p.rings++; sfx.play('coin'); } });
+  LV.drops.forEach(function (r) { if (!r.got && Math.hypot(r.x - p.x, r.y - (p.y + 0.7), r.z - p.z) < 1.1) { r.got = 1; p.rings++; if (p.who === 'greebo' && Math.random() < 0.3) p.rings++; sfx.play('coin'); } });
   LV.ibox.forEach(function (ib) { if (ib.got || Math.hypot(ib.x - p.x, ib.z - p.z) > 1.1 || Math.abs(ib.y + 0.5 - p.y - 0.5) > 1.2) return; if (p.ball || p.homing > 0 || p.atkT > 0.1 || p.vy < -1 || p.who === 'super') { ib.got = 1; var r3 = Math.random(); if (r3 < 0.5) { p.rings += 10; G.banner = { t: 1.5, s: '+10 DROPS' }; } else if (r3 < 0.8) { p.shield = 1; G.banner = { t: 1.5, s: 'CONDOM SHIELD' }; } else { p.boost = 5; G.banner = { t: 1.5, s: 'CUMPUCCINO RUSH' }; } sfx.play('power'); if (!p.ground) { p.vy = 8; p.homed = 0; } } });
   LV.checks.forEach(function (c) { if (!c.on && Math.hypot(c.x - p.x, c.z - p.z) < 1.4 && Math.abs(c.y - p.y) < 2) { c.on = 1; G.check = { x: c.x - 1, y: c.y, z: c.z }; sfx.play('magic'); G.banner = { t: 1.2, s: 'CHECKPOINT' }; } });
   LV.lava.forEach(function (lv) { if (p.x > lv.x0 && p.x < lv.x1 && p.z > lv.z0 && p.z < lv.z1 && p.y < lv.y + 0.5) hurt(true); });
@@ -2626,10 +2627,30 @@ function pauseMenu() { if (G.mode !== 'play') return; KIT.menu({ cls: 'clear', t
 function titleMenu() { G.mode = 'title'; LV = null; P = null; STORY = null; music.play('hogtitle');
   KIT.menu({ cls: 'clear', logo: '../assets/sa-logo.webp', title: 'Spermhog Adventure', items: [{ label: 'STORIES', cls: 'hot', def: true, fn: storyMenu }, { label: 'HOMUNCULUS GARDEN', fn: openGarden }, { label: 'FREE PLAY', fn: freeMenu }, { label: 'HOW TO PLAY', fn: helpMenu }], note: 'Stars ' + Object.keys(SV.stars).length + '  ·  Drops ' + SV.drops + '  ·  Homunculi ' + SV.homs.length }); }
 KIT.setKeymap({ ArrowLeft: 'sleft', ArrowRight: 'sright', ArrowUp: 'sup', ArrowDown: 'sdown', Space: 'a', KeyJ: 'a', KeyK: 'b', ShiftLeft: 'b' });
-KIT.start({ w: W, h: H, flex: 720, update: update, draw: draw, idleUpdate: function (dt) { G.t += dt; }, onPause: pauseMenu, startPauses: true,
+KIT.start({ w: W, h: H, flex: 720, update: function (dt) { update(dt); }, draw: function () { draw(); }, idleUpdate: function (dt) { G.t += dt; }, onPause: pauseMenu, startPauses: true,
   pad: { sticks: true, btns: [{ k: 'a', label: 'A', sub: 'JUMP', cls: 'big' }, { k: 'b', label: 'B', sub: 'ACTION' }] }, padKeys: { l: 'a', r: 'd', u: 'w', d: 's', a: 'z', b: 'x', x: 'c', y: 'v', lb: 'q', rb: 'e' } });
 titleMenu();
 window.__sa = { G: G, get P() { return P; }, get LV() { return LV; }, get BOSS() { return BOSS; }, get SV() { return SV; }, startRun: startRun, enterHub: enterHub, playStory: playStory, openGarden: openGarden, startRace: startRace, startKarate: startKarate, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, freshSave: function () { SV = freshSave(); }, hitBoss: hitBoss, finish: finish, get GD() { return GD; } };
 
+
+/* ---------- update 184 (his ask): each character's own passive, from Cumheads Quest (Shithead Laboozie's from Load Legacy) ---------- */
+var APAS = {
+  cumhead: ['Second Wind', 'Once a stage, a hit with no drops does not cost a life'],
+  super: ['Second Wind', 'Once a stage, a hit with no drops does not cost a life'],
+  greebo: ['Sticky Fingers', 'Drops are worth 30% more'],
+  spermaid: ['Siren Song', 'Every foe she beats gives her a drop. 8% of hits miss her'],
+  lab: ['Covered In It', 'A third of his hits on a boss count twice']
+};
+(function () {
+  var hu = hurt; hurt = function (fall) { var p = P; if (!p) return hu.apply(this, arguments);
+    if (!fall && !(p.inv > 0) && !p.shield) {
+      if (p.who === 'spermaid' && Math.random() < 0.08) { p.inv = 0.6; sfx.play('magic'); return; }
+      if ((p.who === 'cumhead' || p.who === 'super') && p.rings <= 0 && !p.wind) { p.wind = 1; p.inv = 2; p.hurtT = 0.5; p.vy = 6; G.banner = { t: 1.6, s: 'SECOND WIND', b: '' }; sfx.play('power'); return; } }
+    return hu.apply(this, arguments); };
+  var kf = killFoe; killFoe = function (e) { var was = e.dead; kf.apply(this, arguments); if (!was && P && P.who === 'spermaid') P.rings++; };
+  var hb = hitBoss; hitBoss = function () { var b = BOSS, h0 = b ? b.hp : 0; hb.apply(this, arguments); if (b && P && P.who === 'lab' && b.hp < h0 && b.hp > 0 && Math.random() < 0.33) { b.hp--; FX.push({ fire: 1, x: b.x, y: b.y + 1, z: b.z, t: 0.8 }); if (b.hp <= 0 && b.hp + 1 > 0) { b.hp = 1; b.hitCd = 0; hb(); } } };
+  var up = update; update = function (dt) { up(dt); if (G.pasMsg) { G.pasMsg.t -= dt; if (G.pasMsg.t <= 0) G.pasMsg = null; } };
+  var dr = draw; draw = function () { dr(); if (G.pasMsg && G.mode === 'play') { var a = Math.min(1, G.pasMsg.t); KIT.text(G.pasMsg.s, KIT.W / 2, KIT.H - 26, { size: 8, align: 'center', col: '#ffe36a', alpha: a }); } };
+})();
 </script>
 </body></html>

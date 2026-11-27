@@ -953,7 +953,7 @@ function newGroup() {
   else if (L.sides.length && Math.random() < L.side) order.push(pick(L.sides));
   if (pl.id === 'beebs' && main === 's' && Math.random() < 0.5) order = ['s', 'a'];
   var pat = who.reduce(function (a, f) { return Math.max(a, f.pat || 1); }, 0), tip = who.reduce(function (a, f) { return a + (f.tip || 1); }, 0) / who.length;
-  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * G.L.patK * (1 - U('juke') * 0.06) * (DC(1) ? 0.9 : 1) * (B('candles') ? 0.75 : 1) * (perk('pat') || 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
+  var g = { who: who, order: order, need: [], st: 'queue', t: 0, hearts: 5, pat: pat * G.L.patK * (1 - U('juke') * 0.06) * (DC(1) ? 0.9 : 1) * (B('candles') ? 0.75 : 1) * (perk('pat') || 1) * (SV.host === 'cafe' ? 0.8 : 1), tip: tip, x: -20, y: 156, table: null, spent: 0,
     read: who.reduce(function (a, f) { return Math.max(a, f.read || 1); }, 0), eat: who.reduce(function (a, f) { return a + (f.eat || 1); }, 0) / who.length, bob: Math.random() * 6 };
   groups.push(g); queue.push(g); sfx.play('bell'); G.doorT = 0.8;
 }
@@ -1010,7 +1010,7 @@ function doJob(job) {
     if (g.st === 'waitfood') {
       var gave = 0; for (var hi = host.hands.length - 1; hi >= 0; hi--) { var h = host.hands[hi], ni = g.need.indexOf(h.d); if (done(h) && ni >= 0) { g.need.splice(ni, 1); host.hands.splice(hi, 1); g.spent += DISH[h.d].p * g.who.length * (DISH[h.d].tipx || 1) * priceK(); gave++; } }
       if (!gave) { pop(tb.x, tb.y - 60, 'NOT THEIR ORDER', '#a6968f'); sfx.play('no'); return; }
-      if (!g.need.length) { g.st = 'eat'; g.t = 0; g.hearts = Math.min(5, g.hearts + 1); score(20, 'serve', tb.x, tb.y - 60); G.served++; } else { pop(tb.x, tb.y - 60, 'AND THE REST?', '#ffe36a'); sfx.play('coin'); g.hearts = Math.min(5, g.hearts + 0.5); }
+      if (!g.need.length) { g.st = 'eat'; g.t = 0; g.hearts = Math.min(5, g.hearts + 1); if (SV.host === 'joff' && Math.random() < 0.35) { g.hearts = Math.min(5, g.hearts + 1); pop(tb.x, tb.y - 76, 'PIZZA POWER', '#ffe36a'); } score(20, 'serve', tb.x, tb.y - 60); G.served++; } else { pop(tb.x, tb.y - 60, 'AND THE REST?', '#ffe36a'); sfx.play('coin'); g.hearts = Math.min(5, g.hearts + 0.5); }
       sfx.play('coin'); return;
     }
     if (g.st === 'bill') {
@@ -1054,7 +1054,11 @@ function updSts(dt) {
 }
 function score(n, kind, x, y, label) {
   if (chain.k === kind) chain.n++; else chain = { k: kind, n: 1 };
-  var bonus = chain.n >= 2 ? (5 + U('chain') * 3) * (chain.n - 1) : 0; G.score += n + bonus;
+  var bonus = chain.n >= 2 ? (5 + U('chain') * 3) * (chain.n - 1) : 0;
+  if (SV.host === 'greebo') n = Math.round(n * 1.3); // update 184: the Cumheads Quest passives, on top of each host's own perk
+  if (SV.host === 'amy' && (kind === 'bill' || kind === 'bag') && Math.random() < 0.2) { n = Math.round(n * 1.6); label = (label || '+' + n) + '  HOT STUFF'; }
+  if (SV.host === 'beebs') n = Math.round(n * (1 + Math.min(0.5, (SV.beebRow || 0) * 0.1)));
+  G.score += n + bonus;
   pop(x, y, (label || '+' + n) + (bonus ? '  CHAIN x' + chain.n : ''), bonus ? '#ffe36a' : '#f1e7d0');
 }
 function pop(x, y, t, c) { pops.push({ x: x, y: y, t: t, c: c, life: 1.4 }); }
@@ -1121,6 +1125,7 @@ function potBoy(dt) {
 }
 function endLevel() {
   var L = G.L, st = G.score >= L.expert ? 3 : G.score >= L.goal ? 2 : G.score >= L.goal * 0.6 ? 1 : 0, pass = G.score >= L.goal, pd = SV.places[G.pl.id];
+  if (SV.host === 'beebs') SV.beebRow = pass ? Math.min(5, (SV.beebRow || 0) + 1) : 0;
   SV.coins += G.score; if ((pd.best[G.lv] || 0) < G.score) pd.best[G.lv] = G.score; if ((pd.stars[G.lv] || 0) < st && pass) pd.stars[G.lv] = st;
   if (pass && pd.unl < G.lv + 2) pd.unl = Math.min(TOTAL, G.lv + 2);
   var nxt = PLACES[G.pl.i + 1], newPlace = null; if (pass && G.lv + 1 >= UNLOCK_AT && nxt && !SV.open[nxt.id]) { SV.open[nxt.id] = 1; SV.places[nxt.id] = SV.places[nxt.id] || { unl: 1, best: {}, stars: {} }; newPlace = nxt; }
@@ -1381,7 +1386,7 @@ function daysMenu(pid, sh) {
     .concat([{ label: 'BACK', back: true, fn: function () { if (pd.unl > NDAYS) shiftsMenu(pid); else placesMenu(); } }]) });
 }
 function hostsMenu() {
-  KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'SHITHEAD LABOOZIE' + (SV.host === 'lab' ? '  ✓' : ''), sub: HOSTLAB.perk, cls: SV.host === 'lab' ? 'done' : '', fn: function () { SV.host = 'lab'; persist(); sfx.play('select'); hostsMenu(); } }, { label: 'BACK', back: true, fn: titleMenu }]) });
+  KIT.menu({ title: 'Who Is Working', sub: 'Open a place and its owner joins. Anyone can work any kitchen.', items: PLACES.map(function (p) { var open = SV.open[p.id]; return { label: p.who.toUpperCase() + (SV.host === p.id ? '  ✓' : ''), sub: open ? p.perk + (WPAS[p.id] ? ' · ' + WPAS[p.id] : '') : 'Opens with ' + p.name, dis: !open, cls: SV.host === p.id ? 'done' : '', fn: function () { SV.host = p.id; persist(); sfx.play('select'); hostsMenu(); } }; }).concat([{ label: 'SHITHEAD LABOOZIE' + (SV.host === 'lab' ? '  ✓' : ''), sub: HOSTLAB.perk, cls: SV.host === 'lab' ? 'done' : '', fn: function () { SV.host = 'lab'; persist(); sfx.play('select'); hostsMenu(); } }, { label: 'BACK', back: true, fn: titleMenu }]) });
 }
 var shopBack = null;
 function keepScroll(fn) { var box = document.querySelector('#menu .mbox'), y = box ? box.scrollTop : 0; fn(); box = document.querySelector('#menu .mbox'); if (box) box.scrollTop = y; }
@@ -1500,5 +1505,14 @@ function wnCounter(th) { // the counter front: panels, a kick board, a shine alo
   R('#12040a', 282, 100, W - 282, 4); R('#a89a8a', 282, 104, W - 282, 1); R('rgba(255,255,255,0.18)', 300, 105, 40, 1); R('rgba(255,255,255,0.18)', 380, 105, 22, 1); R('rgba(0,0,0,0.35)', 282, 110, W - 282, 3);
 }
 
+
+/* ---------- update 184 (his ask): each host's passive from Cumheads Quest, on top of their own perk (Ali and Shithead Laboozie are not in it) ---------- */
+var WPAS = {
+  amy: 'Hot Stuff: 20% of bills come out hot, worth 60% more',
+  cafe: 'Barista: customers lose patience 20% slower',
+  greebo: 'Sticky Fingers: everything pays 30% more',
+  beebs: 'Beer Belly: +10% on everything for every day in a row he passes (up to +50%)',
+  joff: 'Pizza Power: 35% of the time, food cheers the table up twice as much'
+};
 </script>
 </body></html>

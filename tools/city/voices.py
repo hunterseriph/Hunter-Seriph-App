@@ -2,7 +2,7 @@
 """Cum City Nights: every line spoken (update 156, his ask: the radio needs spoken words, not subtitles, and everything
 people say should be spoken). Stand-in voices made with Piper until real recordings replace them.
 
-  node /home/claude/tools/ccvoicelines.js          (dumps every line in the game to /home/claude/ck/ccn/lines.json)
+  node cclines.js          (tools/city/cclines.js: dumps every line in the game to /home/claude/ck/ccn/lines.json)
   python3 tools/city/voices.py [lines.json] [piper folder]
 
 Writes www/games/ccn-voice/<id>.mp3 (mono, small) and www/games/ccn-voice/voices.js (window.CCNVOICE = {id: 1}).
@@ -27,17 +27,20 @@ V = { # update 157 (he said people sounded robotic and weird): no pitch shifting
  'harold': (LT, 105, 0.95, 1.0, ''), 'kaya': (LT, 15, 0.98, 1.0, ''), 'elden': (LT, 72, 1.0, 1.0, ''), 'ali': (LT, 78, 0.98, 1.0, ''),
  'potbelly': (LT, 102, 1.02, 1.0, ''), 'pulsar': (LT, 117, 1.08, 1.0, ''), 'bonjo': (LT, 18, 1.0, 1.0, ''), 't': (LT, 0, 1.08, 1.0, ''),
  'jessiah': (LT, 6, 1.04, 1.0, ''), 'natty': (LT, 114, 1.04, 1.0, ''), 'judge': (LT, 48, 1.08, 1.0, 'aecho=0.8:0.4:40:0.1'), 'fate': (LT, 60, 1.12, 1.0, 'aecho=0.8:0.4:60:0.12'),
- 'bates': (LT, 24, 1.1, 1.0, ''), 'blumhead': (LT, 42, 1.08, 1.0, 'aecho=0.8:0.5:50:0.18'), 'clown': (LT, 81, 0.95, 1.0, ''),
+ 'bates': (LT, 24, 1.1, 1.0, ''), 'blumhead': (LT, 42, 1.08, 1.0, 'aecho=0.8:0.5:50:0.18'), 'clown': (LT, 183, 0.95, 1.0, ''),
  'tb': ('en-us-ryan-medium', None, 1.42, 0.86, 'acompressor=threshold=-20dB:ratio=3,aecho=0.8:0.5:38:0.18,bass=g=5'),
  # the radio: DJs by station, the news desk
- 'hs': (LT, 81, 1.0, 1.0, 'highpass=f=100,lowpass=f=7000'), 'bl': (LT, 90, 1.05, 1.0, 'highpass=f=120,lowpass=f=6000'), 'po': (LT, 117, 1.08, 1.0, 'highpass=f=100,lowpass=f=7000'), 'talk': (LT, 51, 1.0, 1.0, 'highpass=f=120,lowpass=f=6500'),
- 'news': (LT, 39, 0.98, 1.0, 'highpass=f=100,lowpass=f=7500'), 'traffic': (LT, 24, 0.95, 1.0, 'highpass=f=300,lowpass=f=3400'), 'weather': (LT, 45, 1.0, 1.0, 'highpass=f=100,lowpass=f=7500'), 'sports': (LT, 3, 0.96, 1.0, 'highpass=f=100,lowpass=f=7500'),
+ 'hs': (LT, 81, 1.0, 1.0, 'highpass=f=100,lowpass=f=7000'), 'bl': (LT, 132, 1.05, 1.0, 'highpass=f=120,lowpass=f=6000'), 'po': (LT, 117, 1.08, 1.0, 'highpass=f=100,lowpass=f=7000'), 'talk': (LT, 51, 1.0, 1.0, 'highpass=f=120,lowpass=f=6500'),
+ 'news': (LT, 39, 0.98, 1.0, 'highpass=f=100,lowpass=f=7500'), 'traffic': (LT, 147, 0.95, 1.0, 'highpass=f=300,lowpass=f=3400'), 'weather': (LT, 45, 1.0, 1.0, 'highpass=f=100,lowpass=f=7500'), 'sports': (LT, 201, 0.96, 1.0, 'highpass=f=100,lowpass=f=7500'),
  # people in the street (three of each), callers and the police
- 'pedM0': (LT, 111, 1.0, 1.0, ''), 'pedM1': (LT, 57, 1.0, 1.0, ''), 'pedM2': (LT, 6, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'), 'pedF0': (LT, 30, 1.0, 1.0, ''), 'pedF1': (LT, 75, 1.0, 1.0, ''), 'pedF2': (LT, 84, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'),
+ 'pedM0': (LT, 156, 1.0, 1.0, ''), 'pedM1': (LT, 174, 1.0, 1.0, ''), 'pedM2': (LT, 198, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'), 'pedF0': (LT, 30, 1.0, 1.0, ''), 'pedF1': (LT, 75, 1.0, 1.0, ''), 'pedF2': (LT, 84, 1.0, 1.0, 'highpass=f=300,lowpass=f=3400'),
  'cop': (LT, 3, 1.0, 1.0, ''),
  # update 165: the Knights of Cum-a-lot speak through their helmets, Uncle Spooge is slow and wheezy
- 'worker': (LT, 30, 1.05, 1.0, ''), 'knight': (LT, 72, 1.02, 1.0, 'lowpass=f=3800,aecho=0.8:0.35:18:0.3'), 'spooge': (LT, 111, 1.14, 1.0, 'lowpass=f=6000'),
+ 'worker': (LT, 30, 1.05, 1.0, ''), 'knight': (LT, 135, 1.02, 1.0, 'lowpass=f=3800,aecho=0.8:0.35:18:0.3'), 'spooge': (LT, 111, 1.14, 1.0, 'lowpass=f=6000'),
 }
+# update 184 (his ask: some characters had more than one voice): nobody shares a speaker with a named character any more
+# (the Pie Clown, Cowboy Load, the knights, the street men, the traffic and sports desks got their own), and the game
+# no longer falls back to the browser's voice for a character's line with no recording.
 def key(who, text):
     h = 0x811c9dc5; s = (who + '|' + text).encode('utf-16-le')
     for i in range(0, len(s), 2):
@@ -80,4 +83,5 @@ def main():
     open(os.path.join(OUT, 'voices.js'), 'w').write('window.CCNVOICE = ' + json.dumps(done, separators=(',', ':')) + ';\n')
     size = sum(os.path.getsize(os.path.join(OUT, f)) for f in os.listdir(OUT))
     print(len(todo), 'made,', len(done), 'lines,', round(size / 1e6, 2), 'MB', 'errors', errs[:3])
-main()
+if __name__ == '__main__':
+    main()

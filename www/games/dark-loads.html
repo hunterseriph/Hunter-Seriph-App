@@ -3616,5 +3616,12 @@ function ending() {
     items: [{ label: 'NEW GAME+', sub: 'Keep your level and gear, the foes hit harder', def: true, fn: function () { var keep = {}; ['lvl', 'vig', 'mind', 'end', 'str', 'dex', 'arc', 'wpns', 'rings', 'shards', 'wpn', 'ring', 'won', 'deaths', 'bought', 'talked', 'seen'].forEach(function (k) { keep[k] = SV[k]; }); SV = freshSave(); for (var k in keep) SV[k] = keep[k]; SV.intro = 1; SV.lit = { hub: 1 }; SV.candle = 'hub'; persist(); enterArea(0, 'hub'); } }, { label: 'TITLE', back: true, fn: titleMenu }] });
 }
 
+
+/* ---------- update 184 (his ask): Cumhead's passive from Cumheads Quest, Second Wind: once a life, a killing blow leaves him on 1 HP ---------- */
+(function () {
+  var hp = hurtPlayer; hurtPlayer = function (dmg, fx, fz, unblock) { var was = P && P.hp; hp.apply(this, arguments);
+    if (P && was > 0 && P.hp <= 0 && !G.windLife) { G.windLife = 1; P.hp = 1; P.inv = Math.max(P.inv || 0, 1.2); POP.push({ x: P.x, y: P.y + 2.3, z: P.z, s: 'SECOND WIND', t: 1.4, col: '#ffe36a' }); sfx.play('block'); } };
+  var di = die; die = function () { G.windLife = 0; return di.apply(this, arguments); };
+})();
 </script>
 </body></html>

@@ -1175,7 +1175,8 @@ function fire(g) {
 }
 function hurtFoe(f, dmg) { f.hp -= dmg; f.pain = 0.15; if (f.st === 'idle') f.st = 'chase'; for (var i = 0; i < 4; i++) FX.push({ k: 'blood', x: f.x, y: 1.1 + Math.random() * 0.5, z: f.z, vx: (Math.random() - 0.5) * 3, vy: Math.random() * 3, vz: (Math.random() - 0.5) * 3, t: 0.5 }); sfx.play('hit');
   if (f.hp <= 0) { f.st = 'dead'; f.t = 0; G.kills++; P.score += f.d.pts; if (f.boss) { music.stop(2); sfx.play('win'); G.banner = { t: 4, s: f.B.n + ' IS DOWN', b: 'FIND THE LIFT' }; KIT.shake(12); } else if (Math.random() < 0.35) THINGS.push({ k: Math.random() < 0.5 ? 'cream' : 'cracker', x: f.x, z: f.z }); } }
-function hurtP(dmg) { var p = P; if (p.hp <= 0) return; var a = Math.min(p.arm, Math.round(dmg * 0.6)); p.arm -= a; p.hp -= dmg - a; p.hurt = 0.4; sfx.play('hurt'); KIT.shake(4); }
+function hurtP(dmg) { var p = P; if (p.hp <= 0) return; var a = Math.min(p.arm, Math.round(dmg * 0.6)); p.arm -= a; p.hp -= dmg - a; p.hurt = 0.4; sfx.play('hurt'); KIT.shake(4);
+  if (p.hp <= 0 && !p.wind) { p.wind = 1; p.hp = 1; p.hurt = 0.8; sfx.play('select'); } } // update 184: Cumhead's passive from Cumheads Quest, Second Wind (once a life)
 function stepFoes(dt) {
   var p = P; FOE.forEach(function (f) { if (f.st === 'dead') { f.t += dt; return; } f.t += dt; f.cd -= dt; f.pain = Math.max(0, f.pain - dt); var d = f.d, dx = p.x - f.x, dz = p.z - f.z, dist = Math.hypot(dx, dz), sees = dist < 22 && clear(f.x, f.z, p.x, p.z);
     if (f.st === 'idle') { if (sees && dist < 14 || (G.noise && dist < 16)) { f.st = 'chase'; sfx.tone('sawtooth', 200, 120, 0.2, 0.03); } return; }

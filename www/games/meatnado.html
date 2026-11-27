@@ -934,7 +934,7 @@ function startRun() {
   KIT.closeMenu(); var c = me();
   G.mode = 'play'; G.ride = 0; G.time = 0; G.drops = 0; G.total = 0; G.kills = 0; G.dist = 0; G.score = 0; G.nextMark = 500; G.v = 150; G.gap = 175 + headStart(); G.stumble = 0; G.caught = false; G.rainT = 9;
   G.pupT = 8; G.pw = {}; rain = []; pits = []; obs = []; drops = []; ledges = []; shots = []; G.fires = []; eshots = []; parts = []; pups = []; lastMix = '';
-  resetPlayer(0); P.shield = U('shield') ? 1 : 0; P.regrow = U('shield') >= 2 ? 1 : 0; P.revive = U('revive');
+  resetPlayer(0); P.shield = U('shield') ? 1 : 0; P.regrow = U('shield') >= 2 ? 1 : 0; P.revive = U('revive') + (c.id === 'cumhead' ? 1 : 0);
   if (U('launch')) G.pw.rocket = U('launch') * 2;
   G.cam = P.x - PXS; genX = P.x + 260; G.banner = 1.8; G.bannerTxt = 'RUN!';
   generate(); music.play('mnrun'); sfx.play('select'); G.char = c; G.say = null; G.hom = null; G.fx = [];
@@ -1096,7 +1096,7 @@ function updateWorld(dt) {
     if (d.fly) { d.vy += 700 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > GY - 5 && supported(d.x)) { d.y = GY - 5; d.vy *= -0.55; d.vx *= 0.8; } if (d.age > 4.5 || d.y > H + 30) continue; }
     var dx = d.x - P.x, dy = d.y - (P.y - PH / 2);
     if (mag && alive && dx < 170 && dx > -40 && (!d.fly || d.age > 0.5)) { var dd = Math.hypot(dx, dy) || 1, sp = 420 * dt; d.x -= dx / dd * Math.min(sp, dd); d.y -= dy / dd * Math.min(sp, dd); d.fly = false; dx = d.x - P.x; dy = d.y - (P.y - PH / 2); }
-    if (alive && (!d.fly || d.age > 0.5) && dx * dx + dy * dy < 15 * 15) { var n = G.pw.double > 0 ? 2 : 1; G.drops += n; G.total += n; G.gap = Math.min(maxGap(), G.gap + 2); homGain(2); pickSound(); continue; }
+    if (alive && (!d.fly || d.age > 0.5) && dx * dx + dy * dy < 15 * 15) { var n = (G.pw.double > 0 ? 2 : 1) + (G.char.id === 'greebo' && Math.random() < 0.3 ? 1 : 0); G.drops += n; G.total += n; G.gap = Math.min(maxGap(), G.gap + 2); homGain(2); pickSound(); continue; }
     keep.push(d);
   }
   drops = keep;
@@ -1326,7 +1326,7 @@ var RUNSPR = { cumhead: 'ch_idle0', greebo: 'greebo_s0', amy: 'npc_amy', hom: 'h
 function charsMenu(back, focus) {
   KIT.menu({ title: 'Runners', sub: 'Drops in the bank: ' + SV.bank,
     items: CHARS.map(function (c) { var own = SV.chars[c.id], on = SV.ch === c.id;
-      return { label: c.n.toUpperCase() + (on || own ? '' : '  ·  ' + c.cost + ' DROPS'), sub: c.d, cls: on ? 'done' : '', def: focus === c.id,
+      return { label: c.n.toUpperCase() + (on || own ? '' : '  ·  ' + c.cost + ' DROPS'), sub: c.d + (MPAS[c.id] ? ' ' + MPAS[c.id] : ''), cls: on ? 'done' : '', def: focus === c.id,
         fn: function () { var pick = function () { SV.ch = c.id; G.char = c; persist(); charsMenu(back, c.id); };
           if (own) { sfx.play('select'); return pick(); }
           KIT.confirm({ title: 'Unlock ' + c.n + '?', sub: c.d, spr: RUNSPR[c.id], price: c.cost, have: SV.bank, unit: 'DROPS', no: function () { charsMenu(back, c.id); },
@@ -1373,10 +1373,24 @@ music.songs.mntitle = { bpm: 108, beats: 4, vol: 0.85, wet: 0.4, lead: 'fm', fmb
   chords: 'Em Em C B Em Em Am B',
   mel: 'e5 - - - g5 - f#5 e5 | b4 - - - - - . . | c5 - e5 - g5 - c6 - | b5 - - - d#5 - - - | e5 - g5 - b5 - e6 - | d6 - b5 - g5 - e5 - | a5 - c6 - e6 - a5 - | b5 - - - d#6 - - -' };
 
-KIT.start({ w: W, h: H, wide: 640, update: update, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over') update(dt); },
+KIT.start({ w: W, h: H, wide: 640, update: function (dt) { update(dt); }, draw: draw, onPause: pauseMenu, idleUpdate: function (dt) { if (G.mode === 'title' || G.mode === 'over') update(dt); },
   pad: { dpad: false, btns: [{ k: 'b', label: 'B', sub: 'FIRE', cls: 'huge', side: 'l' }, { k: 'a', label: 'A', sub: 'JUMP', cls: 'huge' }] } });
 titleMenu();
 window.__mn = { G: G, get P() { return P; }, SV: SV, CHARS: CHARS, UPS: UPS, startRun: startRun, step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, get obs() { return obs; }, get pups() { return pups; }, spawnPup: spawnPup, takePup: takePup, foe: foe, endRun: endRun };
 
+
+/* ---------- update 184 (his ask): each runner's passive from Cumheads Quest (the Homunculus has his breeds, Shithead Laboozie his bags) ---------- */
+var MPAS = {
+  cumhead: 'Second Wind: one free Second Wind every run, on top of any you buy.',
+  greebo: 'Sticky Fingers: drops are worth 30% more.',
+  amy: 'Hot Stuff: 20% of her kills burn, shoving the meatnado back 60% further.',
+  tb: 'Unhinged: every kill shoves the meatnado back 20% further, and 12% of hits on him do nothing.'
+};
+(function () {
+  var kf = killFoe; killFoe = function (o, how) { var g0 = G.gap; kf.apply(this, arguments); var d = G.gap - g0; if (d <= 0) return;
+    if (G.char.id === 'amy' && Math.random() < 0.2) { G.gap = Math.min(maxGap(), G.gap + d * 0.6); poof(o.x, o.y - 10, 8, ['#ff7a1a', '#ffe36a']); }
+    if (G.char.id === 'tb') G.gap = Math.min(maxGap(), G.gap + d * 0.2); };
+  var hp = hurtPlayer; hurtPlayer = function (srcx) { if (G.char && G.char.id === 'tb' && !(P.inv > 0) && P.state === 'normal' && Math.random() < 0.12) { P.inv = 0.6; tbSay(); return; } return hp.apply(this, arguments); };
+})();
 </script>
 </body></html>

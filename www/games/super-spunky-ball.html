@@ -1756,7 +1756,7 @@ function buildMesh() { var m = new R3.Mesh(), wi = ST.w, top = TL('top' + wi), s
   return m.upload(); }
 var SPH = null;
 function sphere() { if (SPH) return SPH; var m = new R3.Mesh(), seg = 14, rings = 9; for (var r = 0; r < rings; r++) for (var s = 0; s < seg; s++) { function pt(ri, si) { var th = ri / rings * Math.PI, ph = si / seg * 6.283; return [Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)]; } var a = pt(r, s), b = pt(r, s + 1), c = pt(r + 1, s + 1), d = pt(r + 1, s); m.quadN([a, b, c, d], [0, 0, 1, 0, 1, 1, 0, 1], TL('ball'), [0.5, 0.5, 0.5], [a, b, c, d]); } return (SPH = m.upload()); }
-function startStage(n) {
+function startStage(n) { G.windN = -1;
   if (!R3.ok) { G.mode = 'nogl'; return; } buildAtlas(); buildRigs(); riders(); ST = stage(n); G.n = n; if (MESH) MESH.free(); MESH = buildMesh(); KIT.closeMenu();
   B = { x: ST.start.x, y: ST.start.y, z: ST.start.z, vx: 0, vy: 0, vz: 0, r: 0.5, spin: 0, ax: 0, az: 0 }; CAM.yaw = 0; CAM.x = 0; CAM.y = 4; CAM.z = -8; G.time = ST.time; G.mode = 'ready'; G.readyT = 2; G.got = 0; ST.drops.forEach(function (d) { d.got = 0; }); TILT.x = TILT.z = 0;
   music.play(WORLDS[ST.w].song);
@@ -1776,16 +1776,16 @@ function update(dt) {
   G.time -= dt; if (G.time <= 0) { G.time = 0; SV.lives--; G.mode = 'fall'; G.fallT = 0; G.banner = { t: 2, s: 'TIME OVER' }; sfx.play('lose'); return; }
   var mv = KIT.stick(0), cy = Math.cos(CAM.yaw), sy = Math.sin(CAM.yaw), ix = mv.x, iz = -mv.y; // tilt relative to the camera
   var tx = -cy * ix + sy * iz, tz = sy * ix + cy * iz; if (G.bot) { tx = G.bot[0]; tz = G.bot[1]; } TILT.x += (tx - TILT.x) * Math.min(1, dt * 8); TILT.z += (tz - TILT.z) * Math.min(1, dt * 8); // right is (-cos, sin), forward (sin, cos)
-  var acc = 13; for (var sub = 0; sub < 4; sub++) { var h = dt / 4;
+  var acc = SV.who === 'gloop' ? 14.5 : 13; for (var sub = 0; sub < 4; sub++) { var h = dt / 4;
     B.vx += TILT.x * acc * h; B.vz += TILT.z * acc * h; B.vy -= 22 * h;
-    B.vx *= 1 - 0.25 * h; B.vz *= 1 - 0.25 * h; B.x += B.vx * h; B.y += B.vy * h; B.z += B.vz * h;
+    var fr = SV.who === 'lab' ? 0.45 : 0.25; B.vx *= 1 - fr * h; B.vz *= 1 - fr * h; B.x += B.vx * h; B.y += B.vy * h; B.z += B.vz * h;
     var s = surfaceUnder(B.x, B.z, B.y - B.r); if (s.p && B.y - B.r < s.y) { B.y = s.y + B.r; if (s.p.k === 'ramp') { var slope = (s.p.y1 - s.p.y0) / (s.p.z1 - s.p.z0); B.vz -= slope * 14 * h; } if (B.vy < -6) sfx.play('land'); B.vy = Math.max(0, B.vy * -0.15); if (s.p.mv) B.z += moverPos(s.p.mv).dz * h; B.onG = 1; } else B.onG = 0;
     ST.bumps.forEach(function (b) { var dx = B.x - b.x, dz = B.z - b.z, d = Math.hypot(dx, dz); if (d < b.r + B.r && Math.abs(B.y - b.y - 0.5) < 1) { B.vx = dx / d * 9; B.vz = dz / d * 9; B.x = b.x + dx / d * (b.r + B.r + 0.01); B.z = b.z + dz / d * (b.r + B.r + 0.01); sfx.play('boom'); KIT.shake(3); } });
   }
   B.spin += Math.hypot(B.vx, B.vz) * dt / B.r; stepRot(dt);
-  ST.drops.forEach(function (d) { if (!d.got && Math.hypot(d.x - B.x, d.y - B.y, d.z - B.z) < 1) { d.got = 1; G.got++; SV.drops = (SV.drops || 0) + 1; sfx.play('coin'); if (SV.drops >= 100) { SV.drops -= 100; SV.lives++; G.banner = { t: 2, s: '1 UP' }; sfx.play('power'); } } });
+  ST.drops.forEach(function (d) { if (!d.got && Math.hypot(d.x - B.x, d.y - B.y, d.z - B.z) < 1) { d.got = 1; G.got++; SV.drops = (SV.drops || 0) + 1 + (SV.who === 'greebo' && Math.random() < 0.3 ? 1 : 0); if (SV.who === 'spermaid') G.time += 0.5; sfx.play('coin'); if (SV.drops >= 100) { SV.drops -= 100; SV.lives++; G.banner = { t: 2, s: '1 UP' }; sfx.play('power'); } } });
   var g = ST.goal; if (Math.abs(B.z - g.z) < 0.4 && Math.abs(B.x - g.x) < 2 && Math.abs(B.y - g.y - 0.5) < 1.5) { G.mode = 'goal'; G.goalT = 0; B.vy = 2; sfx.play('win'); G.banner = { t: 3, s: 'GOAL!' }; music.play('sbgoal'); }
-  if (B.y < -14 + Math.min(0, lowest())) { SV.lives--; G.mode = 'fall'; G.fallT = 0; G.banner = { t: 1.6, s: 'FALL OUT' }; sfx.play('lose'); persist(); }
+  if (B.y < -14 + Math.min(0, lowest())) { if (SV.who === 'cumhead' && G.windN !== G.n) { G.windN = G.n; B.x = ST.start.x; B.y = ST.start.y + 1; B.z = ST.start.z; B.vx = B.vy = B.vz = 0; G.banner = { t: 1.6, s: 'SECOND WIND' }; sfx.play('power'); return; } SV.lives--; G.mode = 'fall'; G.fallT = 0; G.banner = { t: 1.6, s: 'FALL OUT' }; sfx.play('lose'); persist(); }
   // the camera swings round behind the way you roll
   var sp = Math.hypot(B.vx, B.vz); if (sp > 1.2) CAM.yaw += Math.atan2(Math.sin(Math.atan2(B.vx, B.vz) - CAM.yaw), Math.cos(Math.atan2(B.vx, B.vz) - CAM.yaw)) * Math.min(1, dt * 1.6);
   var lk = KIT.stick(1); CAM.yaw += lk.x * dt * 2;
@@ -1916,8 +1916,17 @@ function stageDeco(m, wi) { var rnd = srand(900 + ST.n);
     else { ell(m, x, y + 0.3, z, 0.35, 0.3, 0.35, ['#ff7a2a', '#ffffff', '#c4121c'][k % 3], 8, 5); } }); });
 }
 
-function whoMenu() { KIT.inv({ title: 'Who Rides', cols: 5, slots: Object.keys(WHO).map(function (k) { return { spr: WHO[k].s, name: WHO[k].n, desc: { cumhead: 'Runs inside it like a hamster.', spermaid: 'Swims round the inside of the shell.', greebo: 'Keeps his hat on somehow.', lab: 'The ball needs a wash after.', gloop: 'Gets dizzy. Loves it.' }[k] || '', gold: SV.who === k, def: SV.who === k, tag: SV.who === k ? 'IN' : null, act: SV.who === k ? 'RIDING' : 'RIDE', dis: SV.who === k, fn: function () { SV.who = k; persist(); whoMenu(); } }; }), close: titleMenu }); }
+function whoMenu() { KIT.inv({ title: 'Who Rides', cols: 5, slots: Object.keys(WHO).map(function (k) { return { spr: WHO[k].s, name: WHO[k].n, desc: ({ cumhead: 'Runs inside it like a hamster.', spermaid: 'Swims round the inside of the shell.', greebo: 'Keeps his hat on somehow.', lab: 'The ball needs a wash after.', gloop: 'Gets dizzy. Loves it.' }[k] || '') + (BPAS[k] ? ' ' + BPAS[k] : ''), gold: SV.who === k, def: SV.who === k, tag: SV.who === k ? 'IN' : null, act: SV.who === k ? 'RIDING' : 'RIDE', dis: SV.who === k, fn: function () { SV.who = k; persist(); whoMenu(); } }; }), close: titleMenu }); }
 PAINT.water = PAINT.water || function (p) { p.fill('#ffffff'); for (var i = 0; i < 30; i++) p.rect(Math.floor(p.rnd() * 28), Math.floor(p.rnd() * 32), 4, 1, '#e0e8f0'); };
 
+
+/* ---------- update 184 (his ask): each rider's passive, from Cumheads Quest where they are in it ---------- */
+var BPAS = {
+  cumhead: 'Second Wind: once a stage, falling off puts him back at the start instead of costing a life.',
+  spermaid: 'Siren Song: every drop adds half a second to the clock.',
+  greebo: 'Sticky Fingers: drops are worth 30% more.',
+  lab: 'Covered In It: the ball is sticky and grips the floor.',
+  gloop: 'Little Legs: tips the ball over quicker.'
+};
 </script>
 </body></html>

@@ -1088,7 +1088,7 @@ function resetFoes(sc) {
 /* the screen you came into is the checkpoint: die and it all goes back to how it was */
 function snapshot() {
   var dyn = {}; for (var k in SC) { var sc = SC[k]; dyn[k] = { guards: sc.guards, blums: sc.blums, mines: sc.mines, portals: sc.portals, leverOn: sc.leverOn }; }
-  G.snap = JSON.stringify({ P: P, homs: homs, dyn: dyn, saved: G.saved, lost: G.lost, clock: G.clock, seen: G.seen });
+  P.windUsed = 0; P.windT = 0; G.snap = JSON.stringify({ P: P, homs: homs, dyn: dyn, saved: G.saved, lost: G.lost, clock: G.clock, seen: G.seen });
   try { localStorage.setItem('sw-run', JSON.stringify({ snap: G.snap, deaths: G.deaths })); } catch (e) {}
 }
 function restore(snap) {
@@ -1109,6 +1109,7 @@ function visible(e) { // in the dark you cannot be seen unless you run
 function running() { return KIT.held('b') || KIT.held('run'); }
 function updP(dt) {
   P.t += dt; if (P.inv > 0) P.inv -= dt;
+  if (P.windT > 0) P.windT -= dt;
   if (P.st === 'dead') { P.deadT -= dt; if (P.deadT <= 0) { G.deaths++; restore(G.snap); } return; }
   if (P.st === 'hoist' || P.st === 'drop') { P.at += dt; var k = Math.min(1, P.at / P.dur); P.x = lerp(P.from.x, P.to.x, k); P.y = lerp(P.from.y, P.to.y, P.st === 'hoist' ? Math.sin(k * Math.PI / 2) : k * k); if (k >= 1) { P.st = 'stand'; P.ground = true; P.fallFrom = P.y; if (P.st2 === 'drop') sfx.play('land'); } recordTrail(); return; }
   if (P.st === 'lift') { P.at += dt; if (P.at < 0.6) P.y += (P.lift.up ? -1 : 1) * 160 * dt; else { var to = P.lift.to; var dx0 = P.x, dy0 = P.y; P.x = to.x; P.y = to.y; P.st = 'stand'; carry(dx0, dy0); sfx.play('door'); } return; }
@@ -1175,7 +1176,9 @@ function speak(w) {
   });
 }
 function die(why) {
-  if (P.st === 'dead') return; P.st = 'dead'; P.deadT = 1.5; P.why = why; sfx.play(why === 'blown up' ? 'boom' : 'hurt'); KIT.shake(8);
+  if (P.st === 'dead') return;
+  if (SV.who === 'lab' && why === 'eaten by a blumling') return; // update 184: Laboozie's passive, Covered In It: they will not touch him
+  if (SV.who !== 'lab' && (P.windT > 0 || (!P.windUsed && why.indexOf('fell') !== 0))) { if (!(P.windT > 0)) { P.windUsed = 1; P.windT = 1.5; say(P, 'Second wind!', 1.2); sfx.play('hurt'); } return; } // Cumhead's passive: one fatal blow a checkpoint, then a moment to get clear P.st = 'dead'; P.deadT = 1.5; P.why = why; sfx.play(why === 'blown up' ? 'boom' : 'hurt'); KIT.shake(8);
   for (var i = 0; i < 14; i++) parts.push({ x: P.x, y: P.y - 25, vx: rnd(-120, 120), vy: rnd(-200, -40), t: 0.9, c: i % 2 ? '#f1e0b0' : '#c4121c' });
   say(P, pick(['Ow.', 'Not again.', 'Bollocks.', 'Ugh.']), 1.2);
 }
@@ -1569,7 +1572,7 @@ function titleMenu() {
   G.mode = 'title'; music.play('swtitle'); var cont = KIT.load('sw-run', null);
   KIT.menu({ cls: 'clear', logo: '../assets/sw-logo.webp', title: "Spuzzworld: Cum's Oddysee", sub: "Blumhead has Cumhead in his dungeon with a bear trap on his leg. Execution at dawn. The homunculi are down here too, waiting for the mincer. Limp out alone, or take them with you.",
     items: [cont ? { label: 'CARRY ON', sub: 'From the last screen you reached', fn: function () { KIT.closeMenu(); continueGame(); }, cls: 'hot', def: true } : null,
-      { label: cont ? 'START OVER' : 'BEGIN', fn: function () { KIT.closeMenu(); newGame(); }, cls: cont ? '' : 'hot', def: !cont }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'HOW TO PLAY', fn: helpMenu }].filter(Boolean),
+      { label: cont ? 'START OVER' : 'BEGIN', fn: function () { KIT.closeMenu(); newGame(); }, cls: cont ? '' : 'hot', def: !cont }, { label: 'PLAYING AS: ' + (SV.who === 'lab' ? 'SHITHEAD LABOOZIE' : 'CUMHEAD'), sub: SV.who === 'lab' ? 'Covered In It: blumlings will not eat him' : 'Second Wind: survives one fatal blow every checkpoint', fn: function () { SV.who = SV.who === 'lab' ? 'cum' : 'lab'; persist(); titleMenu(); } }, { label: 'HOW TO PLAY', fn: helpMenu }].filter(Boolean),
     note: SV.done ? 'Escapes ' + SV.done + '  ·  Most saved ' + SV.best + ' of ' + SCREENS.reduce(function (n, s) { return n + s.rows.join('').split('H').length - 1; }, 0) : '' });
 }
 function helpMenu() {

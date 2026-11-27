@@ -3481,8 +3481,8 @@ var VT = {
   speedboat: { n: 'Seaman', cls: 'boat', top: 36, acc: 9, grip: 3, len: 6, wid: 2.2, hgt: 1.4, col: ['#f1e7d0', '#c4121c'], cost: 30000, body: 'boat' },
   dinghy: { n: 'Rubber Johnny', cls: 'boat', top: 22, acc: 7, grip: 3, len: 3.6, wid: 1.8, hgt: 0.9, col: ['#ff7a20', '#12040a'], cost: 5000, body: 'dinghy' },
   heli: { n: 'Choppa Load', cls: 'heli', top: 40, acc: 10, grip: 3, len: 9, wid: 2.4, hgt: 3, col: ['#12040a', '#c4121c', '#1a2a5a'], cost: 120000, body: 'heli' },
-  plane: { n: 'Skyload', cls: 'plane', top: 70, acc: 9, grip: 3, len: 8, wid: 10, hgt: 2.6, col: ['#f1e7d0', '#c4121c'], cost: 150000, body: 'plane' },
-  jet: { n: 'Cumcorde', cls: 'plane', top: 120, acc: 18, grip: 3, len: 14, wid: 9, hgt: 3.5, col: ['#f1e7d0'], cost: 400000, body: 'jet' }
+  plane: { n: 'Skyload', cls: 'plane', top: 48, acc: 7, grip: 3, len: 8, wid: 10, hgt: 2.6, col: ['#f1e7d0', '#c4121c'], cost: 150000, body: 'plane' },
+  jet: { n: 'Cumcorde', cls: 'plane', top: 80, acc: 11, grip: 3, len: 14, wid: 9, hgt: 3.5, col: ['#f1e7d0'], cost: 400000, body: 'jet' }
 };
 var TRAFFICTYPES = ['hatch', 'hatch', 'saloon', 'saloon', 'saloon', 'taxi', 'van', 'muscle', 'sports', 'truck', 'hearse', 'icecream', 'moto', 'limo', 'buggy'];
 var VMESH = {};
@@ -3774,7 +3774,8 @@ function meleeHit(W0) {
 function hurtPlayer(dmg, by) {
   if (G.god || P.state === 'dead' || G.cut) return; if (P.armour > 0) { var a = Math.min(P.armour, dmg * 0.7); P.armour -= a; dmg -= a; }
   P.hp -= dmg; P.hurtT = 0.4; CAM.shake = Math.max(CAM.shake, 0.3); if (dmg > 2) sfx.play('hurt');
-  if (P.hp <= 0) { P.hp = 0; wasted(); }
+  if (P.hp <= 0 && !G.windLife) { G.windLife = 1; P.hp = 1; P.hurtT = 0.8; toast('Second wind! Not today.'); } // update 184: Cumhead's passive from Cumheads Quest, once a life
+  if (P.hp <= 0) { P.hp = 0; G.windLife = 0; wasted(); }
 }
 /* ---------- the camera ---------- */
 function stepCamera(dt) {
@@ -3831,9 +3832,10 @@ function vehInput() { // the player's hands on the controls
   var gp = KIT.gamepad, s = (function () { var x = gp && gp.axes ? gp.axes[0] || 0 : 0, y = gp && gp.axes ? gp.axes[1] || 0 : 0; if (Math.hypot(x, y) >= 0.18) return { x: x, y: y }; var dp = gp && gp.buttons && [12, 13, 14, 15].some(function (i) { return gp.buttons[i] && gp.buttons[i].pressed; }); return dp ? { x: 0, y: 0 } : KIT.stick(0); })(), /* update 161: the touch stick and keys steer even when a pad is (or was) connected; only the pad's d-pad is kept for the radio */ // update 158: on a pad only the stick steers (the d-pad is the radio)
   rt = gp && gp.buttons && gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp && gp.buttons && gp.buttons[6] ? gp.buttons[6].value : 0, drunk = G.drunk || 0;
   var kb = !gp && !TOUCHUI(); // the stick's up and down only drive on a keyboard (W / S); pads and touch use the GAS and BRAKE buttons
-  var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && s.y > 0.3 ? s.y : 0);
+  var inPlane = P && P.veh && P.veh.t && P.veh.t.cls === 'plane';
+  var thr = Math.max(KIT.held('a') ? 1 : 0, rt, kb && !inPlane && s.y < -0.3 ? -s.y : 0), brk = Math.max(KIT.held('b') ? 1 : 0, lt, kb && !inPlane && s.y > 0.3 ? s.y : 0);
   var steer = -s.x; if (drunk > 0.2) steer += Math.sin(G.t * 1.9) * drunk * 0.5;
-  return { thr: thr, brk: brk, steer: steer, hand: KIT.held('x') || KIT.held('hb'), up: KIT.held('a'), down: KIT.held('b'), pitch: s.y, roll: s.x, yaw: -s.x };
+  return { thr: thr, brk: brk, steer: steer, hand: KIT.held('x') || KIT.held('hb'), up: KIT.held('a'), down: KIT.held('b'), pitch: inPlane && !SV.planePilot ? -s.y : s.y, roll: s.x, yaw: -s.x };
 }
 function stepVehicle(v, inp, dt) {
   var t = v.t, cl = t.cls; v.flash = Math.max(0, (v.flash || 0) - dt);
@@ -3902,15 +3904,17 @@ function stepHeli(v, inp, dt) {
 function stepPlane(v, inp, dt) {
   var t = v.t, g = standY(v.x, v.z, v.y), on = v === (P && P.veh), thr = on ? inp.thr : 0, brk = on ? inp.brk : 0.3;
   v.spd = v.spd || 0; v.spd += (thr * t.acc - brk * 14 - v.spd * 0.06) * dt; v.spd = clamp(v.spd, 0, t.top); v.rotor += dt * (8 + v.spd);
-  var take = t.top * 0.38, flying = !v.ground;
-  if (v.ground) { v.a += -(inp.roll || 0) * dt * clamp(v.spd / 6, 0, 1) * 1.2; v.pitch += ((v.spd > take ? (inp.pitch || 0) * 0.4 : 0) - v.pitch) * Math.min(1, dt * 3); if (v.spd > take && (inp.pitch || 0) > 0.3) { v.ground = 0; v.vy = 3; } v.roll *= 0.9; }
-  else { v.roll += (-(inp.roll || 0) * 0.9 - v.roll) * Math.min(1, dt * 2.5); v.a -= Math.sin(v.roll) * dt * 1.1 * clamp(v.spd / 30, 0.3, 1.2); v.pitch += ((inp.pitch || 0) * 0.55 - v.pitch) * Math.min(1, dt * 2); }
+  var take = t.top * 0.38, flying = !v.ground, pin = inp.pitch || 0; // update 184 (his ask): the controls were reversed in places and it crashed before taking off
+  if (v.climbT > 0) { v.climbT -= dt; pin = Math.max(pin, 0.35); } // just off the ground: it keeps climbing a moment, so letting go does not fly it back into the runway
+  if (v.ground) { v.a += -(inp.roll || 0) * dt * clamp(v.spd / 6, 0, 1) * 1.2; v.pitch += ((v.spd > take ? Math.max(0, pin) * 0.35 : 0) - v.pitch) * Math.min(1, dt * 3);
+    if (on && v.spd > take && (pin > 0.2 || v.spd > take * 1.3)) { v.ground = 0; v.vy = 4; v.climbT = 2; v.pitch = Math.max(v.pitch, 0.18); } v.roll *= 0.9; }
+  else { v.roll += ((inp.roll || 0) * 0.8 - v.roll) * Math.min(1, dt * 2.5); v.a -= Math.sin(v.roll) * dt * 1.1 * clamp(v.spd / 30, 0.3, 1.2); v.pitch += (pin * 0.5 - v.pitch) * Math.min(1, dt * 2); }
   var f = [Math.sin(v.a) * Math.cos(v.pitch), Math.sin(v.pitch), Math.cos(v.a) * Math.cos(v.pitch)], liftK = clamp((v.spd - take * 0.8) / take, 0, 1);
   v.vx = f[0] * v.spd; v.vz = f[2] * v.spd;
-  if (!v.ground) { v.vy = f[1] * v.spd - (1 - liftK) * 9; } else v.vy = 0;
+  if (!v.ground) { v.vy = f[1] * v.spd - (1 - liftK) * 5; } else v.vy = 0;
   var nx = v.x + v.vx * dt, nz = v.z + v.vz * dt, ny = Math.min(500, v.y + v.vy * dt), c = collide(nx, nz, 2.5, ny, 2.5);
-  if (c.hit && v.spd > 8) { hurtVeh(v, 999, null); }
-  if (!v.ground && ny <= g) { var bad = v.vy < -6 || Math.abs(v.roll) > 0.5 || v.pitch < -0.3 || !isHardK(kAt(nx, nz)) && kAt(nx, nz) !== K_GRASS && kAt(nx, nz) !== K_FIELD; if (bad) hurtVeh(v, 999, null); else { v.ground = 1; ny = g; v.pitch = 0; } }
+  if (c.hit) { if (!v.ground && v.spd > 22) hurtVeh(v, 999, null); else { hurtVeh(v, Math.min(40, v.spd * 1.5), null); nx = v.x + (c.x || 0) * 0.5; nz = v.z + (c.z || 0) * 0.5; v.spd *= 0.3; } }
+  if (!v.ground && ny <= g) { var bad = v.vy < -12 || Math.abs(v.roll) > 0.75 || v.pitch < -0.5 || (!isHardK(kAt(nx, nz)) && kAt(nx, nz) !== K_GRASS && kAt(nx, nz) !== K_FIELD && v.spd > 20); if (bad) hurtVeh(v, 999, null); else { v.ground = 1; ny = g; v.pitch = 0; v.roll = 0; if (v.vy < -5) hurtVeh(v, 10, null); } }
   if (v.ground) ny = g;
   if (isWaterK(kAt(nx, nz)) && ny < 1) hurtVeh(v, 999, null);
   v.x = clamp(nx, 4, WX - 4); v.z = clamp(nz, 4, WZ - 4); v.y = ny; v.sp = v.spd; v.wheelA += v.spd * dt / 0.3;
@@ -4412,7 +4416,7 @@ function goods(id) {
     case 'tattoo': ['Cumhead on the chest', 'HITLESS across the knuckles', 'A red moon on the back', 'Steve on the bum'].forEach(function (t, i) { G0.push({ n: t, p: 150, dis: SV.tattoo === i + 1, fn: function () { SV.tattoo = i + 1; toast('Inked. TB\'s boys nod at you now.'); } }); }); break;
     case 'bank': G0.push({ n: 'Look at the vault (a job for later)', p: 0, fn: function () { toast('Thick door. Somebody would need a plan.'); } }); break;
     case 'estate': HOUSES.forEach(function (h) { var own = SV.houses.indexOf(h.id) >= 0; G0.push({ n: h.name + (own ? ' (yours)' : ''), p: own ? 0 : h.cost, dis: own, fn: function () { SV.houses.push(h.id); SV.lastHouse = h.id; toast('You own ' + h.name + '. Save there, sleep there, park there.'); worldSetup(); } }); }); break;
-    case 'motors': Object.keys(VT).forEach(function (k) { var t = VT[k]; if (!t.cost || t.cost < 1000 && t.cls !== 'board' && t.cls !== 'bike') return; G0.push({ n: t.n, p: t.cost, fn: function () { SV.cars.push({ type: k, col: 0 }); toast('Your ' + t.n + ' is waiting outside, and in your garages from now on.'); G.deliver = k; } }); }); break;
+    case 'motors': Object.keys(VT).forEach(function (k) { var t = VT[k], price = carPrice(k); if (!price) return; var own = ownsCar(k); G0.push({ n: t.n + (own ? ' (yours)' : ''), p: own ? 0 : price, dis: own, fn: function () { if (ownsCar(k)) return; SV.cars.push({ type: k, col: 0 }); persist(); toast(airSea(k) ? 'Your ' + t.n + ' is yours for good. It waits out front; call insurance any time to have it brought back here.' : 'Your ' + t.n + ' is yours for good: in every garage, and insurance brings it to you any time.'); G.deliver = k; G.deliverSlot = SV.cars.length - 1; } }); }); break;
   }
   return G0;
 }
@@ -4467,7 +4471,7 @@ function enterShop(id, homeId) {
   radioOff();
 }
 function leaveShop() { var I = G.interior; G.interior = null; G.fade = 1.0; PEDS = PEDS.filter(function (p) { return !p.inside; }); G.keeper = null; P.x = I.exitX; P.z = I.exitZ; P.y = standY(P.x, P.z, 999); P.a = I.exitA; CAM.yaw = I.exitA; CAM.x = P.x - Math.sin(P.a) * 4; CAM.z = P.z - Math.cos(P.a) * 4; CAM.y = P.y + 2;
-  if (G.robbing) { G.robbing = null; } if (G.deliver) { var t = G.deliver; G.deliver = null; var v = makeVeh(t, P.x + Math.sin(P.a) * 5, P.z + Math.cos(P.a) * 5, P.a, { owned: 1, col: 0 }); v.keep = 1; toast('Your ' + VT[t].n + ' is outside.'); } }
+  if (G.robbing) { G.robbing = null; } if (G.deliver) { var t = G.deliver; G.deliver = null; var v = makeVeh(t, P.x + Math.sin(P.a) * 5, P.z + Math.cos(P.a) * 5, P.a, { owned: 1, col: 0 }); v.keep = 1; if (G.deliverSlot !== undefined) { v.slot = G.deliverSlot; G.deliverSlot = undefined; } toast('Your ' + VT[t].n + ' is outside.'); } }
 function sleepSave() { G.fade = 2; var wake = G.time < 7 ? 8 : G.time > 20 ? 8 + 24 : G.time + 6; if (wake > 24) { G.day++; wake -= 24; } G.time = wake; P.hp = SV.maxHp; G.drunk = G.high = G.pilled = 0; SV.wanted = 0; SV.heat = 0; if (G.interior && G.interior.home) SV.lastHouse = G.interior.home; persist(); toast('Saved. You wake up feeling fresh.'); }
 /* inside: the room's own floor and walls */
 function interiorCollide(x, z, r) { var RM = G.interior.RM, px = 0, pz = 0; if (x - r < 0.3) px = 0.3 - (x - r); if (x + r > RM.w - 0.3) px = RM.w - 0.3 - (x + r); if (z - r < 0.3) pz = 0.3 - (z - r); if (z + r > RM.d - 0.3) pz = RM.d - 0.3 - (z + r);
@@ -5138,12 +5142,9 @@ function jobsMenu() { // update 158: side jobs (taxi, paramedic, vigilante, pizz
 function phoneClose() { G.phone = 0; KIT.closeMenu(); }
 function phoneAsk(what) { if (PHONE && PHONE.st !== 'done') { toast('Something is already on its way.'); return; }
   if (what === 'taxi') KIT.confirm({ title: 'Spooger', sub: 'A Spooger comes to you. You pay the fare when you pick where to go.', price: 20, have: Math.floor(SV.money), unit: '$', yesLabel: 'Call a cab', yes: function () { phoneCall('taxi'); }, no: phoneOpen });
-  else if (what === 'insure') { var last = SV.lastCar && VT[SV.lastCar] ? SV.lastCar : null, ins = SV.insured && last && SV.insured[last];
-    if (!last) { KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Cum City Insurance has no car on file for you. Drive something first.', items: [{ label: 'BACK', back: true, fn: phoneOpen }] }); return; }
-    KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Your car on file: ' + VT[last].n + (ins ? ' (insured)' : ''), items: [
-      { label: ins ? 'SEND MY CAR (FREE)' : 'SEND MY CAR ($250)', fn: function () { if (ins) phoneCall('insure'); else KIT.confirm({ title: 'Replacement ' + VT[last].n, sub: 'A fresh one is driven to you.', price: 250, have: Math.floor(SV.money), unit: '$', yes: function () { money(-250); phoneCall('insure'); }, no: phoneOpen }); } },
-      ins ? null : { label: 'INSURE IT FOR GOOD ($900)', fn: function () { KIT.confirm({ title: 'Insure the ' + VT[last].n, sub: 'From now on a fresh one is sent free whenever you call.', price: 900, have: Math.floor(SV.money), unit: '$', yes: function () { money(-900); SV.insured = SV.insured || {}; SV.insured[last] = 1; persist(); toast('Insured. Call any time.'); phoneOpen(); }, no: phoneOpen }); } },
-      { label: 'BACK', back: true, fn: phoneOpen }] }); }
+  else if (what === 'insure') { // update 184 (his ask): insurance only brings cars you have bought, any of them, free
+    if (!SV.cars.length) { KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Cum City Insurance only covers cars you own. Buy one at Cum Motors and it is covered for good.', items: [{ label: 'BACK', back: true, fn: phoneOpen }] }); return; }
+    KIT.menu({ cls: 'phone', title: 'INSURANCE', sub: 'Every car you own is covered. Pick one and it is brought to you, with all its work.', items: SV.cars.map(function (c, i) { return { label: VT[c.type].n + (c.cust ? ' (customised)' : ''), sub: airSea(c.type) ? 'Left for you at Cum Motors' : 'Driven to you, free', fn: function () { SV.insSlot = i; if (airSea(c.type)) { insureAtMotors(i); phoneClose(); } else phoneCall('insure'); } }; }).concat([{ label: 'BACK', back: true, fn: phoneOpen }]) }); }
   else if (what === 'stims') KIT.confirm({ title: 'Combat Stims, delivered', sub: 'A courier brings them to you. Hit harder, take less, for 90 seconds.', price: 60, have: Math.floor(SV.money), unit: '$', yes: function () { money(-60); phoneCall('stims'); }, no: phoneOpen }); }
 var CALLS = { taxi: [['cumhead', 'Yeah, hi. I need a Spooger. Where am I? Look for the droplet in the nice shirt.'], ['pedM1', 'Spooger. Two minutes, Mister Mayor. Do not go anywhere.']],
   insure: [['cumhead', 'Hello, insurance? Yeah, my car is a bit... gone. Can you send another one?'], ['pedF1', 'Cum City Insurance. Of course, Mister Mayor. A fresh one is on its way. Please try not to blow this one up.']],
@@ -5152,7 +5153,7 @@ var ARRIVE = { taxi: 'Spooger for Mister Mayor! Hop in, where to?', insure: 'Her
 function phoneCall(what) { phoneClose(); if (what === 'taxi' && SV.money < 20) { toast('$20 call out.'); return; } if (what === 'taxi') money(-20);
   PHONE = { what: { taxi: 'Your cab', insure: 'Your car', stims: 'Your stims' }[what], k: what, st: 'call', t: 0, line: 0 };
   sfx.play('blip'); }
-function phoneVehType(k) { return k === 'taxi' ? 'taxi' : k === 'stims' ? (VT.scooter ? 'scooter' : 'moto') : (SV.lastCar && VT[SV.lastCar] ? SV.lastCar : 'hatch'); }
+function phoneVehType(k) { return k === 'taxi' ? 'taxi' : k === 'stims' ? (VT.scooter ? 'scooter' : 'moto') : (SV.cars[SV.insSlot] ? SV.cars[SV.insSlot].type : 'hatch'); }
 function stepPhone(dt) { var S = PHONE; if (!S || S.st === 'done' || !P) return; S.t += dt;
   if (S.st === 'call') { // the call itself: the phone at his ear, both sides spoken
     var L = CALLS[S.k]; if (S.t > 0.3 && S.line === 0) { S.line = 1; subtitle(CAST.cumhead.name, L[0][1], 3.5); voiceLine('cumhead', L[0][1]); }
@@ -5170,7 +5171,7 @@ function stepPhone(dt) { var S = PHONE; if (!S || S.st === 'done' || !P) return;
   if (S.cam > 0) S.cam -= dt; }
 function arrive(S) { var v = S.v;
   if (S.k === 'stims') { S.hand = 1; }
-  else if (S.k === 'insure') { var dr = v.driver; dr.inVeh = null; v.driver = null; var D = doorPt(v, 1.2); dr.x = D.x; dr.z = D.z; dr.y = v.y; dr.keep = 0; dr.state = 'walk'; v.owned = 1; v.mine = 1; v.god = 0; v.keep = 1; v.ai = null; S.st = 'done'; toast('Your ' + v.t.n + ' is here. It is yours.'); }
+  else if (S.k === 'insure') { var dr = v.driver; dr.inVeh = null; v.driver = null; var D = doorPt(v, 1.2); dr.x = D.x; dr.z = D.z; dr.y = v.y; dr.keep = 0; dr.state = 'walk'; v.owned = 1; v.mine = 1; v.god = 0; v.keep = 1; v.ai = null; S.st = 'done'; insureFit(v, SV.insSlot); toast('Your ' + v.t.n + ' is here.'); }
   else if (S.k === 'taxi') { G.phoneUse = { x: v.x, z: v.z, r: 4, label: 'GET IN THE CAB', fn: taxiMenu, v: v }; } }
 function taxiMenu() { var S = PHONE, v = S && S.v; if (!v) return; var dests = [];
   if (SV.way) dests.push(['YOUR WAYPOINT', SV.way[0], SV.way[1]]);
@@ -5902,7 +5903,7 @@ function customMenu() { var v = P.veh; if (!v || v.dead) return; if (v.t.cls !==
   function buy(name, price, fn, back) { if (price <= 0) { fn(); back(); return; } KIT.confirm({ title: name, sub: v.t.n + (kept ? '' : ' (stolen: it stays till the car is gone)'), price: price, have: Math.floor(SV.money), unit: '$', yes: function () { if (SV.money < price) { toast('Not enough money.'); back(); return; } money(-price); fn(); applyCust(v); custSave(v); sfx.play('coin'); back(); }, no: back }); }
   function part(key, title) { var L = CUSTS[key]; KIT.menu({ title: title, sub: 'Now: ' + L[c[key] || 0][0], items: L.map(function (o, i) { return { label: o[0] + (i === (c[key] || 0) ? '  (FITTED)' : o[1] ? '  $' + o[1].toLocaleString('en-GB') : ''), fn: function () { if (i === (c[key] || 0)) return; buy(title + ': ' + o[0], o[1], function () { c[key] = i; }, function () { part(key, title); }); } }; }).concat([{ label: 'BACK', back: true, fn: customMenu }]) }); }
   function paint() { KIT.menu({ title: 'Paint', sub: '$300 a coat', grid: true, items: CUSTP.map(function (p) { return { label: p[0] + (c.paint === p[1] ? '  (ON)' : ''), fn: function () { buy('Paint: ' + p[0], 300, function () { c.paint = p[1]; }, paint); } }; }).concat([{ label: 'BACK', back: true, fn: customMenu }]) }); }
-  KIT.menu({ title: 'Cream Customs', sub: v.t.n + (kept ? ' · yours, it keeps everything' : ' · stolen: the work goes when the car does. Park it in your garage to keep it.'), items: [
+  KIT.menu({ title: 'Cream Customs', sub: v.t.n + (kept ? ' · yours, it keeps everything for good' : ' · not yours: the work goes when the car does. Buy one at Cum Motors to keep it.'), items: [
     { label: 'PAINT', fn: paint }, { label: 'SPOILER', fn: function () { part('spoiler', 'Spoiler'); } }, { label: 'NEON UNDERGLOW', fn: function () { part('neon', 'Neon'); } },
     { label: 'ENGINE', fn: function () { part('engine', 'Engine'); } }, { label: 'HANDLING', fn: function () { part('grip', 'Handling'); } }, { label: 'ARMOUR', fn: function () { part('armour', 'Armour'); } },
     { label: 'REPAIR ($150)', fn: function () { buy('Repair', 150, function () { v.hp = 100; v.fire = 0; }, customMenu); } },
@@ -5923,10 +5924,9 @@ function neonMesh(type, hex) { var key = 'n:' + type + ':' + hex; if (CUSTM[key]
   if (c.neon && CUSTS.neon[c.neon][2]) R3.draw(neonMesh(v.type, CUSTS.neon[c.neon][2]), ATT, { m: M2, lit: false, alpha: 0.55 + 0.1 * Math.sin(G.t * 4) }); }; })();
 /* the garage keeps each car's work, and knows which slot a car came from */
 function garageMenu(h) { var d = doorOf(h.b), x = d.x + Math.sin(d.a) * 7, z = d.z + Math.cos(d.a) * 7; if (typeof homeGarage === 'function') { var gg = homeGarage(h.b); x = gg.x; z = gg.z; d = { x: x, z: z, a: gg.a }; }
-  KIT.menu({ title: 'Garage', sub: h.name, items: SV.cars.map(function (c, i) { var ex = VEH.filter(function (v) { return v.owned && v.slot === i && !v.dead; })[0]; return { label: VT[c.type].n + (c.cust ? ' (customised)' : '') + (ex ? '  · out' : ''), fn: function () { if (ex) { var j = VEH.indexOf(ex); if (j >= 0 && ex !== P.veh) VEH.splice(j, 1); }
+  KIT.menu({ title: 'Garage', sub: h.name, items: SV.cars.map(function (c, i) { var ex = VEH.filter(function (v) { return v.owned && v.slot === i && !v.dead; })[0]; if (airSea(c.type)) return { label: VT[c.type].n + '  · kept at Cum Motors', fn: function () { KIT.closeMenu(); insureAtMotors(i); } }; return { label: VT[c.type].n + (c.cust ? ' (customised)' : '') + (ex ? '  · out' : ''), fn: function () { if (ex) { var j = VEH.indexOf(ex); if (j >= 0 && ex !== P.veh) VEH.splice(j, 1); }
       var v = makeVeh(c.type, x, z, d.a, { owned: 1, col: c.col }); v.slot = i; v.keep = 1; if (c.cust) { v.cust = JSON.parse(JSON.stringify(c.cust)); applyCust(v); } KIT.closeMenu(); toast('Your ' + VT[c.type].n + ' is out front.'); } }; })
     .concat(SV.kart ? [{ label: 'Cumhead Kart (Lost Loads prize)', fn: function () { var v = makeVeh('kart', x, z, d.a, { owned: 1 }); v.keep = 1; KIT.closeMenu(); } }] : [])
-    .concat(P.veh && !(P.veh.owned && P.veh.slot !== undefined) ? [{ label: 'PARK THIS ' + P.veh.t.n.toUpperCase() + ' HERE (KEEP IT)', fn: function () { var v = P.veh; SV.cars.push({ type: v.type, col: v.col, cust: v.cust ? JSON.parse(JSON.stringify(v.cust)) : null }); exitVehicle(true); VEH.splice(VEH.indexOf(v), 1); KIT.closeMenu(); toast('Parked and kept, with all its work.'); persist(); } }] : [])
     .concat(P.veh && P.veh.owned && P.veh.slot !== undefined ? [{ label: 'PUT THE ' + P.veh.t.n.toUpperCase() + ' AWAY', fn: function () { var v = P.veh; custSave(v); exitVehicle(true); VEH.splice(VEH.indexOf(v), 1); KIT.closeMenu(); toast('Put away.'); } }] : [])
     .concat([{ label: 'BACK', back: true, fn: KIT.closeMenu }]) }); }
 /* painted colours of saved cars come back on load */
@@ -6435,7 +6435,8 @@ function playFile(src, vol, slot) { try { if (VOX[slot]) { VOX[slot].pause(); VO
 var _speakR = speak;
 speak = function (text, st) { if (SV.radioMute) return 0; var f = st && st.id ? voiceFile(st.id, text) : null;
   if (f) { var a = playFile(f, 0.95, 'radio'); if (a) { if (G.radioLine) G.radioLine.spoken = 1; a.onloadedmetadata = function () { if (RAD.seg && RAD.seg.k === 'talk' && isFinite(a.duration)) { RAD.seg.t = a.duration + 0.8; if (G.radioLine) G.radioLine.t = RAD.seg.t; } }; return 1; } }
-  return _speakR(text, st); };
+  if (st && st.id && VOICE_IDS[st.id]) return 0; return _speakR(text, st); };
+var VOICE_IDS = { hs: 1, bl: 1, po: 1, talk: 1, news: 1, traffic: 1, weather: 1, sports: 1 };
 var _radioNextSegV = radioNextSeg;
 radioNextSeg = function () { _radioNextSegV(); if (RAD.seg && RAD.seg.k === 'talk' && G.radioLine && VOX.radio && !VOX.radio.paused) G.radioLine.spoken = 1; };
 var _radioOffV = radioOff; radioOff = function () { if (VOX.radio) { VOX.radio.pause(); VOX.radio = null; } return _radioOffV(); };
@@ -6444,12 +6445,12 @@ var _radioNextV = radioNext; radioNext = function () { if (VOX.radio) { VOX.radi
 var _voiceLineV = voiceLine;
 voiceLine = function (who, text) { if (SV.voiceOff) return; if (VOX.line) { VOX.line.pause(); VOX.line = null; }
   if (who !== 'tb' || TBQUOTES2.indexOf(text) < 0) { var f = voiceFile(who, text); if (f) { if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {} if (VOX.radio) VOX.radio.volume = 0.25; var a = playFile(f, 1, 'line'); if (a) a.onended = function () { if (VOX.radio) VOX.radio.volume = 0.95; }; return; } }
-  return _voiceLineV(who, text); };
+  if (who === 'tb' && TBQUOTES2.indexOf(text) >= 0) return _voiceLineV(who, text); }; // update 184 (his ask: some characters had more than one voice): no browser voice standing in for a line with no recording
 // people in the street: a bubble near you is spoken too
 var _sayV = say;
 say = function (p, txt) { _sayV(p, txt); if (!p.said || SV.voiceOff || G.cut || p.cutWho) return; var d = Math.hypot(p.x - P.x, p.z - P.z); if (d > 18 || G.t < VOX.barkT) return;
   if ((G.interior ? G.interior.id : null) !== (p.inside || null)) return;
-  var vi = Math.floor((p.id || 0) * 97) % 3, who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : ((p.id || 0) < 0.5 ? 'pedM' : 'pedF') + vi), f = p.who === 'tb' ? null : voiceFile(who, p.said) || voiceFile('pedM' + vi, p.said) || voiceFile('pedF' + vi, p.said);
+  var vi = Math.floor((p.id || 0) * 97) % 3, who = p.who && CAST[p.who] ? p.who : (p.cop ? 'cop' : ((p.id || 0) < 0.5 ? 'pedM' : 'pedF') + vi), f = p.who === 'tb' ? null : voiceFile(who, p.said) || (who.indexOf('ped') === 0 ? voiceFile('pedM' + vi, p.said) || voiceFile('pedF' + vi, p.said) : null); // update 184: a character only ever speaks in their own voice
   if (p.who === 'tb') { var i = TBQUOTES2.indexOf(p.said); if (i >= 0) f = 'pn-voice/tb' + (i < 9 ? '0' : '') + (i + 1) + '.mp3'; }
   if (!f) return; VOX.barkT = G.t + 1.2; playFile(f, Math.max(0.15, 1 - d / 20), 'bark'); };
 document.addEventListener('visibilitychange', function () { if (document.hidden) ['line', 'bark', 'radio'].forEach(function (k) { if (VOX[k]) { VOX[k].pause(); VOX[k] = null; } }); });
@@ -6918,8 +6919,8 @@ function pauseMenu() { if (G.mode === 'map') { mapClose(); return; } if (G.phone
   { label: 'OPTIONS', fn: optsMenu }, { label: 'HOW TO PLAY', fn: helpMenu }, { label: G.guest ? 'LEAVE CO-OP' : 'SAVE AND QUIT', fn: function () { persist(); if (typeof netLeave === 'function' && NET.role) netLeave(); titleMenu(); } }] }); }
 function statsMenu() { var s = SV.stats; KIT.menu({ title: 'Stats', html: '<p>Money earned: $' + Math.floor(s.earned).toLocaleString('en-GB') + '<br>Miles driven: ' + s.miles.toFixed(1) + '<br>People flattened or worse: ' + s.kills + '<br>Wasted: ' + s.deaths + ' · Busted: ' + s.busted + '<br>Shops robbed: ' + s.robbed + '<br>Stunt jumps: ' + Object.keys(SV.stuntsDone).length + ' of ' + STUNTS.length + '<br>Street races won: ' + Object.keys(SV.races).length + ' of ' + RACES.length + '<br>Lost Loads found: ' + Object.keys(SV.packages).length + ' of ' + PACKAGES.length + '<br>Mystery clues: ' + Object.keys(SV.clues).length + ' of ' + CLUES.length + '<br>Houses owned: ' + SV.houses.length + ' · Cars in your garages: ' + SV.cars.length + '<br>Missions done: ' + Object.keys(SV.done).length + ' of ' + MISSIONS.length + '</p>', items: [{ label: 'BACK', back: true, fn: pauseMenu }] }); }
 function optsMenu() { KIT.menu({ title: 'Options', items: [R3.resItem(optsMenu), { label: 'VIEW DISTANCE: ' + (VIEWR >= 380 ? 'FAR' : VIEWR >= 300 ? 'NORMAL' : 'NEAR'), fn: function () { VIEWR = VIEWR >= 380 ? 200 : VIEWR >= 300 ? 400 : 300; try { localStorage.setItem('ccn-view', VIEWR); } catch (e) {} optsMenu(); } },
-  { label: 'RADIO: ' + (SV.radioOff ? 'OFF' : 'ON'), fn: function () { SV.radioOff = !SV.radioOff; if (SV.radioOff) radioOff(); optsMenu(); } }, { label: 'SOUND', fn: soundMenu }, { label: 'FULL SCREEN: ' + (fullOn() ? 'ON' : 'OFF'), fn: function () { fullSet(!fullOn()); optsMenu(); } }, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
-function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Controller (like GTA):</b> left stick moves, right stick looks. On foot: <b>A</b> sprint, <b>X</b> jump, <b>B</b> punch / hit, <b>LT</b> aim, <b>RT</b> shoot, <b>LB</b> next weapon, <b>Y</b> gets in a car, goes through a door or talks. Driving: <b>RT</b> accelerate, <b>LT</b> brake and reverse, <b>RB</b> handbrake, <b>Y</b> get out, <b>d-pad left / right</b> radio station, <b>d-pad down</b> map, click the right stick to look behind.</p><p><b>Touch:</b> the buttons say what they do and change when you get in a car (GAS, BRAKE, H.BRAKE, EXIT, LOOK, RADIO).</p><p><b>Keyboard:</b> WASD move, Shift run, Space jump / gas, X brake, C hit / handbrake, Q aim, E or F car / door / talk, R radio / next weapon, M map.</p><p>Yellow markers are missions. Do crime and the police come: lose them out of sight or wash your car at The Cream Wash. Buy houses at Load Estates to save and keep cars. Cars at Cum Motors. Guns at Saba\'s.</p>', items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
+  { label: 'RADIO: ' + (SV.radioOff ? 'OFF' : 'ON'), fn: function () { SV.radioOff = !SV.radioOff; if (SV.radioOff) radioOff(); optsMenu(); } }, { label: 'PLANE STICK: ' + (SV.planePilot ? 'PULL BACK TO CLIMB' : 'PUSH UP TO CLIMB'), fn: function () { SV.planePilot = !SV.planePilot; persist(); optsMenu(); } }, { label: 'SOUND', fn: soundMenu }, { label: 'FULL SCREEN: ' + (fullOn() ? 'ON' : 'OFF'), fn: function () { fullSet(!fullOn()); optsMenu(); } }, { label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
+function helpMenu() { KIT.menu({ title: 'How to Play', html: '<p><b>Controller (like GTA):</b> left stick moves, right stick looks. On foot: <b>A</b> sprint, <b>X</b> jump, <b>B</b> punch / hit, <b>LT</b> aim, <b>RT</b> shoot, <b>LB</b> next weapon, <b>Y</b> gets in a car, goes through a door or talks. Driving: <b>RT</b> accelerate, <b>LT</b> brake and reverse, <b>RB</b> handbrake, <b>Y</b> get out, <b>d-pad left / right</b> radio station, <b>d-pad down</b> map, click the right stick to look behind. <b>Planes:</b> GAS is the throttle, the stick steers and climbs (push up to climb; Options can flip it). Once it is fast enough it lifts off by itself.</p><p><b>Touch:</b> the buttons say what they do and change when you get in a car (GAS, BRAKE, H.BRAKE, EXIT, LOOK, RADIO).</p><p><b>Keyboard:</b> WASD move, Shift run, Space jump / gas, X brake, C hit / handbrake, Q aim, E or F car / door / talk, R radio / next weapon, M map.</p><p>Yellow markers are missions. Do crime and the police come: lose them out of sight or wash your car at The Cream Wash. Buy houses at Load Estates to save and keep cars. Cars at Cum Motors. Guns at Saba\'s.</p>', items: [{ label: 'BACK', back: true, fn: function () { if (G.mode === 'play') pauseMenu(); else titleMenu(); } }] }); }
 function titleMenu() {
   G.mode = 'title'; P = null; KIT.closeMenu(); if (typeof radioOff === 'function') radioOff(); music.play('ccntitle');
   var started = SV.intro;
@@ -7180,6 +7181,7 @@ function coopLab() { return !!(NET && NET.role && G.coop && (G.guest || (G.coop.
 
 /* ---------- update 161: garages you drive into, feet that find the ground, cars that ignore the kerb ---------- */
 function storeCar(h) { var v = P.veh; if (!v || v.dead) return; if (v.t.cls === 'heli' || v.t.cls === 'plane' || v.t.cls === 'boat') { toast('That will not fit in the garage.'); return; }
+  if (!(v.owned && v.slot !== undefined && SV.cars[v.slot])) { toast('Only cars you have bought go in your garage. Cum Motors sells every one.'); return; }
   if (v.owned && v.slot !== undefined && SV.cars[v.slot]) custSave(v); else SV.cars.push({ type: v.type, col: v.col, cust: v.cust ? JSON.parse(JSON.stringify(v.cust)) : null });
   var g = homeGarage(h.b); exitVehicle(true); var i = VEH.indexOf(v); if (i >= 0) VEH.splice(i, 1); P.x = g.x + g.ux * 2.4; P.z = g.z + g.uz * 2.4; P.y = standY(P.x, P.z, 999); P.a = g.a; G.fade = 1.0; sfx.play('door'); toast('Driven in and kept. ' + VT[v.type].n + ' is in your garage.'); persist(); }
 (function () { var ws = worldSetup; worldSetup = function () { ws(); G.uses = G.uses.filter(function (u) { return u.label !== 'GARAGE'; });
@@ -9259,24 +9261,56 @@ function brStep(dt) { var S = G.brs; if (!S || !G.interior) { G.brs = null; G.ta
 /* ---- CUMHEAD TALKS BACK in every mission (his ask): after the person giving the job finishes each piece of talk,
    Cumhead answers. The words fit the moment: taking the job on (by what the job is: a chase, a race, a fight, a
    delivery...), carrying on, and thanking them at the end; some lines are his own for each of the regulars. ---- */
-var CUMSAYS = {
-  start: { chase: ["Which way did they go? Never mind. I'll find them.", 'Leave it with me, {n}. Nobody nicks from you on my watch.', "They won't get far. I've got a city full of cream behind me.", 'Right. I run them off the road, I bring it back. Simple.'],
-    race: ['A race? {n}, I was born in the fast lane.', "I'll be over the line before they find second gear.", "Hold my drip. I'm going in.", 'First place or nothing. Mostly first place.'],
-    fight: ["Say no more. They'll be sorry they came to Cum City.", 'Mayor\'s orders: they\'re done.', 'Point me at them, {n}.', "I'll keep it quick. I've got a city to run."],
-    go: ['On my way, {n}.', 'Consider it done.', "I know a shortcut. Probably.", 'Easy. I could do this in my sleep. I have, actually.'],
-    deliver: ['Delivered hot, delivered fast. That\'s the mayor\'s promise.', "Leave it with me. I won't spill a drop.", 'Fragile? Got it. I drive like a saint.'],
-    def: ["Leave it with me, {n}.", "I'm on it.", 'For you, {n}? Anything. Within reason.', 'Right. Let\'s get this done.'] },
-  mid: ['Got it.', 'Easy.', 'On it.', 'Right behind you.', 'Understood.', 'Nearly there.', 'No problem.', "Don't worry, I've got this."],
-  end: ['Any time, {n}. That\'s what the mayor\'s for.', 'Pleasure doing business, {n}.', "Call me if they come back. They won't.", 'Cheers, {n}. Put the kettle on next time.', 'All in a day\'s drip.', "Just keep my name off the news, yeah?"],
-  who: { tb: ["TB, I'm only doing this so you stop ringing me.", 'Keep your pills to yourself this time, TB.', "If this is another one of your schemes, TB, I'm out."], greebo: ['For you, Greebo, and for the pies.', "Sir Johnathan's watching, isn't he? Fine. I'm going.", 'I never ask what\'s in them, Greebo. I never will.'],
-    lab: ["Sheriff's business, eh? I'll keep it legal. Ish.", 'You owe me a pint after this, Laboozie.', "Right you are, Sheriff."], spermaid: ['For you, sweetie? Of course.', "I'll be careful. You worry too much, Spermaid."],
-    saba: ['Hitless, Saba. I know, I know.', "No hits taken. That's the plan."], amy: ['Mild, hot or dynamite? With you it\'s always dynamite, Amy.', 'Keep the chilli warm, Amy.'], potbelly: ['High score or nothing, Potbelly.', 'Insert coin, eh Potbelly?'],
-    pulsar: ["Just vibes, Pulsar. I'm on it.", 'Keep the beat going, I\'ll be back.'], beeb: ['First one\'s warm, eh Beeb? Line one up.', 'For you, Uncle Beeb.'], joff: ['Pineapple still does not belong on pizza, Joff. But fine.', 'For you, Joff. Not for the pineapple.'] } };
-function cumReply(m, ti, nTalks, nextStep) { var name = CAST[m.who] ? CAST[m.who].name.split(' ')[0] : 'mate', h = 0, s = m.id + ':' + ti; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  function from(L) { return L[h % L.length].replace('{n}', name); }
-  if (ti === nTalks - 1 && ti > 0) return from(CUMSAYS.end);
-  if (ti === 0) { if (CUMSAYS.who[m.who] && h % 3 === 0) return from(CUMSAYS.who[m.who]); var t = nextStep ? nextStep.t : '', kind = t === 'chase' || t === 'destroy' ? 'chase' : t === 'race' ? 'race' : /kill|goons|survive|boss|fight|wave|horde/.test(t) ? 'fight' : t === 'drops' || t === 'deliver' || t === 'collect' ? 'deliver' : t === 'go' || t === 'getin' || t === 'trail' ? 'go' : 'def'; return from(CUMSAYS.start[kind]); }
-  return from(CUMSAYS.mid); }
+var CUMSAYS = { // update 184 (his ask: he repeats himself a lot): far more to say, and each line used once before any comes round again
+  start: { chase: ["Which way did they go? Never mind. I'll find them.", "They won't get far. I've got a city full of cream behind me.", 'Right. I run them off the road, I bring it back. Simple.', 'Nobody outruns the mayor in his own city.',
+      "I'll have them in the gutter before the lights change.", 'Get the kettle on. This will not take long.', "They picked the wrong town to nick from.", 'Buckle up, Cum City. The mayor is driving.', "I'll follow the trail of panic. Always works.", 'Foot down. Mouth shut. Let us go.'],
+    race: ['A race? I was born in the fast lane.', "I'll be over the line before they find second gear.", "Hold my drip. I'm going in.", 'First place or nothing. Mostly first place.', 'Lights out and away we go.',
+      "I've never lost a race I finished.", 'Second place is just the first loser. I know, I have been there.', 'Somebody tell them the mayor does not brake.', "Let's see what this thing has got.", 'Pedal down, brain off.'],
+    fight: ["Say no more. They'll be sorry they came to Cum City.", "Mayor's orders: they're done.", "I'll keep it quick. I've got a city to run.", 'Fists first, questions later.', 'They want trouble? I am trouble with a tie on.',
+      "Right. Sleeves up.", 'I have had a long day. They are about to have a longer one.', "I'll send them home in a bucket.", 'Somebody is getting creamed tonight.', 'Let me at them.'],
+    go: ['Consider it done.', "I know a shortcut. Probably.", 'Easy. I could do this in my sleep. I have, actually.', 'I know these streets better than the potholes do.', 'Back before you miss me.',
+      'Keep the light on for me.', "I'll take the scenic route. Joking. Mostly.", 'Map? I am the map.', 'Off I go, then.', 'Be there in two shakes of a drip.'],
+    deliver: ["Delivered hot, delivered fast. That's the mayor's promise.", "Leave it with me. I won't spill a drop.", 'Fragile? Got it. I drive like a saint.', 'Signed, sealed and splattered. I mean delivered.',
+      'It will get there in one piece. Maybe two.', 'Not a scratch on it. Not a single one.', 'Special delivery from the mayor himself.', 'Nobody touches the parcel. Got it.', 'One careful owner. That is me.'],
+    def: ["I'm on it.", 'Right. Let\'s get this done.', 'Sounds like a job for the mayor.', 'I have done stranger things before breakfast.', 'Why is it always me? Never mind. I know why.',
+      'Fine. But I want it on record I said yes.', 'Say no more.', 'Leave the hard bit to me.', 'I was hoping for a quiet night. Never mind.', 'You had me at please.'] },
+  mid: ['Got it.', 'Easy.', 'On it.', 'Right behind you.', 'Understood.', 'Nearly there.', 'No problem.', "Don't worry, I've got this.", 'Keep talking, I am listening.', 'Yeah, yeah.', 'Noted.', 'Say that again? Only joking. Got it.',
+    'I hear you.', 'Fair enough.', 'Right you are.', 'That makes sense. Sort of.', 'Of course it does.', 'Why am I not surprised.', 'Leave that part to me.', 'Go on.', 'Sounds about right for this city.', 'And then what?',
+    'I knew it.', 'Typical.', 'Interesting.', 'Lovely. Just lovely.', 'You are joking. You are not joking.', 'Righto.', 'Got the picture.', 'Okay. Okay. I am with you.', 'Brilliant. Terrible, but brilliant.', 'I am writing that down. In my head.',
+    'Say no more.', 'Classic Cum City.', 'Fine by me.', 'Leave it out. Really? Fine.', 'Count me in.', 'I suppose somebody has to.', 'That is a new one.', 'Of course.'],
+  end: ["Any time. That's what the mayor's for.", 'Pleasure doing business.', "Call me if they come back. They won't.", 'All in a day\'s drip.', "Just keep my name off the news, yeah?", 'Same time next week?',
+    'Put it on the mayor\'s tab.', 'Another one for the scrapbook.', 'I think that went well. Nobody died. Much.', 'You owe me a drink.', 'Easiest money in Cum City.', 'Tell your friends. Actually, do not.',
+    'The city thanks you. I thank you. Now I need a nap.', 'Job done. Mayor out.', 'Remember who sorted it.', 'I will send the bill. Joking. Probably.', 'That was fun. Do not tell anyone I said that.',
+    'Right. Where is the next one?', 'If anyone asks, I was never here.', 'Sorted.', 'One more for the legend.', 'Not bad for a droplet in a nice shirt.', 'Next time, call me sooner.', 'I will be at the Clubhouse if you need me.',
+    'Done and dusted.', 'Cum City is safe. For now.', 'Lovely stuff.', 'Do not mention it. Seriously, do not.', 'Good. My work here is done.', 'And they said the mayor never does anything.'],
+  who: { tb: ["TB, I'm only doing this so you stop ringing me.", 'Keep your pills to yourself this time, TB.', "If this is another one of your schemes, TB, I'm out.", 'TB, why is it always on fire with you?', 'Fine, TB. But I am not tightening anything.', 'One day, TB, you will ask me for something normal.'],
+    greebo: ['For you, Greebo, and for the pies.', "Sir Johnathan's watching, isn't he? Fine. I'm going.", "I never ask what's in them, Greebo. I never will.", 'Save me a pie, Greebo. A normal one.', 'Greebo, your cat looks at me funny.', 'Anything for the best pies in Cum City.'],
+    lab: ["Sheriff's business, eh? I'll keep it legal. Ish.", 'You owe me a pint after this, Shithead Laboozie.', 'Right you are, Sheriff.', 'Shithead Laboozie, put the bag of shit down while you talk to me.', 'Keep the bags away from my car, Shithead Laboozie.', 'Sheriff, you smell like a bonfire again.'],
+    spermaid: ['For you, sweetie? Of course.', "I'll be careful. You worry too much, Spermaid.", 'Anything for you, Spermaid.', 'You always know where to find me, Spermaid.', 'I will be back before your tea goes cold.'],
+    saba: ['Hitless, Saba. I know, I know.', "No hits taken. That's the plan.", 'Saba, you make it sound easy.', 'I will try not to get a scratch on me, Saba. No promises.', 'Not a single hit, Saba. Watch me.'],
+    amy: ["Mild, hot or dynamite? With you it's always dynamite, Amy.", 'Keep the chilli warm, Amy.', 'Amy, I can still taste that chilli from last week.', 'Hot stuff, Amy. Always is.', 'Save me a bowl, Amy. The mild one.'],
+    potbelly: ['High score or nothing, Potbelly.', 'Insert coin, eh Potbelly?', 'Potbelly, if I win you owe me a cabinet.', 'Game on, Potbelly.', 'Player one ready, Potbelly.'],
+    pulsar: ["Just vibes, Pulsar. I'm on it.", "Keep the beat going, I'll be back.", 'Pulsar, turn it up while I am gone.', 'Drop the bass when I get back, Pulsar.', 'Vibes only, Pulsar. Got it.'],
+    beeb: ["First one's warm, eh Beeb? Line one up.", 'For you, Uncle Beeb.', 'Pour me a cold one for when I get back, Uncle Beeb.', 'Uncle Beeb, keep my stool warm.', 'Anything for the best tavern in town, Uncle Beeb.'],
+    joff: ['Pineapple still does not belong on pizza, Joff. But fine.', 'For you, Joff. Not for the pineapple.', 'Joff, I am doing this for the garlic bread.', 'One pizza, no pineapple, when I get back. Deal, Joff?', 'Fine, Joff. Pineapple wins this round.'],
+    kaya: ['Keep a coffee hot for me, Kaya.', 'Kaya, you make the best cup in Cum City. I mean it.', 'Anything for a free refill, Kaya.', 'On it, Kaya. Extra shot, please.'],
+    elden: ['Elden, I will be back for whatever smells that good.', 'Keep the kitchen running, Elden.', 'For your cooking, Elden? Anything.', 'Chef knows best. I am going.'],
+    ali: ['Ali, everything is better with garlic. Even this.', 'Save me some garlic bread, Ali.', 'For you, Ali. And the nuggets.', 'Garlic breath and all, Ali, I am on it.'],
+    bonjo: ['Smooth as always, Bonjo.', 'Bonjo, you could sell sand in the desert.', 'For you, Bonjo, I will even dress up.', 'Keep it classy, Bonjo. I am on it.'],
+    t: ['Anything for you, T.', 'T, you know I can never say no to you.', 'On it, T. Put the kettle on.', 'For you, T? Twice.'],
+    harold: ['Harold, you always have the strangest jobs.', 'Leave it with me, Harold.', 'Right you are, Harold.'],
+    jessiah: ['For you, Jessiah, of course.', 'Leave it with me, Jessiah.', 'Jessiah, you never call with good news.'],
+    natty: ['Nattyboro, you owe me one after this.', 'On it, Nattyboro.', 'For you, Nattyboro.'],
+    judge: ['Judgement, I will do it, but I want it on the record.', 'Order in the court. I am on it, Judgement.', 'Yes, your honour. Going now.'],
+    fate: ['The cards said I would say yes, did they? Fine.', 'Stacked Fate, you knew I would come.', 'Shuffle the deck. I am going.'],
+    bates: ['Master Bates, the things you ask for.', 'I will not ask what it is for, Master Bates.', 'Leave it with me, Master Bates.'] } };
+var CUMNAME = { lab: 'Shithead Laboozie', beeb: 'Uncle Beeb', bates: 'Master Bates', fate: 'Stacked Fate', pulsar: 'Pulsar' };
+var CUMUSED = {}; // which line in each list comes next, so one is never repeated until the list has been round
+function cumReply(m, ti, nTalks, nextStep) {
+  function from(key, L) { var i = (CUMUSED[key] = (CUMUSED[key] || 0) + 1) - 1; return L[i % L.length]; }
+  if (ti === nTalks - 1 && ti > 0) return from('end', CUMSAYS.end);
+  if (ti === 0) { var c0 = CUMUSED['w' + m.who] || 0; if (CUMSAYS.who[m.who] && c0 < CUMSAYS.who[m.who].length && (m.id || '').length % 2 === 0) return from('w' + m.who, CUMSAYS.who[m.who]); var t = nextStep ? nextStep.t : '', kind = t === 'chase' || t === 'destroy' ? 'chase' : t === 'race' ? 'race' : /kill|goons|survive|boss|fight|wave|horde/.test(t) ? 'fight' : t === 'drops' || t === 'deliver' || t === 'collect' ? 'deliver' : t === 'go' || t === 'getin' || t === 'trail' ? 'go' : 'def'; return from('s' + kind, CUMSAYS.start[kind]); }
+  return from('mid', CUMSAYS.mid); }
 (function () { MISSIONS.forEach(function (m) { var talks = (m.steps || []).filter(function (s) { return s.t === 'talk' && s.lines && s.lines.length; }); var ti = 0;
   (m.steps || []).forEach(function (s, si) { if (s.t !== 'talk' || !s.lines || !s.lines.length) return; if (s.lines.some(function (l) { return l[0] === 'cumhead'; }) || s.cumDone) { ti++; return; }
     var next = (m.steps || []).slice(si + 1).filter(function (x) { return x.t !== 'talk'; })[0]; s.lines = s.lines.concat([['cumhead', cumReply(m, ti, talks.length, next)]]); s.cumDone = 1; ti++; }); }); })();
@@ -10838,5 +10872,33 @@ function mgSlotXY(G0, i) { return [G0.x + G0.w * (0.2 + (i % 3) * 0.3), G0.y + G
     var COL = { a: '#7aff6a', b: '#ff2630', x: '#4adfff', y: '#ffe36a' }; A.notes.forEach(function (n) { if (n.done === 1) return; var x = bx + n.x * bw; ctx.fillStyle = n.done === 2 ? '#5a5a5a' : COL[n.b]; ctx.beginPath(); ctx.arc(x, ly2, 10, 0, 6.283); ctx.fill(); tx(n.b.toUpperCase(), x - tw2(n.b.toUpperCase(), 9) / 2, ly2 - 5, { col: '#12040a', size: 9 }); }); return; }
 }; })();
 
+
+/* ---------- update 184 (his ask): owning cars. You buy a car at Cum Motors and it is yours for good (one of every
+   vehicle, if you like). Cream Customs work stays on a car you own. Any car you own comes out of any of your garages,
+   or Cum City Insurance brings it to you, free (boats and aircraft are left for you at Cum Motors). Stolen cars are
+   never yours. The Clubhouse, where you start, has its own garage. ---------- */
+var EXTRAPRICE = { police: 35000, ambulance: 22000, armytruck: 40000, armyheli: 180000, tank: 300000 };
+function carPrice(k) { var t = VT[k]; if (!t || t.secret) return 0; return t.cost || EXTRAPRICE[k] || 0; }
+function ownsCar(k) { return SV.cars.some(function (c) { return c.type === k; }); }
+function airSea(k) { var c = VT[k] && VT[k].cls; return c === 'boat' || c === 'heli' || c === 'plane'; }
+function insureFit(v, slot) { var c = SV.cars[slot]; if (!c) return; VEH.forEach(function (o) { if (o !== v && o.owned && o.slot === slot && o !== P.veh && !o.dead) o.gone = 1; }); for (var i = VEH.length - 1; i >= 0; i--) if (VEH[i].gone) VEH.splice(i, 1);
+  v.slot = slot; v.owned = 1; v.col = c.col || 0; if (c.cust) { v.cust = JSON.parse(JSON.stringify(c.cust)); applyCust(v); } }
+function insureAtMotors(slot) { var c = SV.cars[slot]; if (!c || !SHOPS.motors) return; var d = doorOf(SHOPS.motors.b), x = d.x + Math.sin(d.a) * 12, z = d.z + Math.cos(d.a) * 12;
+  if (c.type && VT[c.type].cls === 'boat') { var r = typeof nearestWater === 'function' ? nearestWater(x, z) : null; if (r) { x = r.x; z = r.z; } }
+  var v = makeVeh(c.type, x, z, d.a, { owned: 1, col: c.col || 0 }); v.keep = 1; insureFit(v, slot); toast('Cum City Insurance: your ' + VT[c.type].n + ' is waiting at Cum Motors.'); SV.way = [x, z]; }
+// the Clubhouse garage: built beside it like the houses' ones, and used the same way
+(function () {
+  function clubB() { var b = SHOPS.club && SHOPS.club.b; if (!b) return null; if (!clubB.p || clubB.b !== b) { clubB.b = b; clubB.p = Object.create(b); clubB.p.style = 'house'; } return clubB.p; }
+  var CLUBH = { id: 'club', name: 'The Clubhouse' };
+  var bd = building; building = function (m, night, fr, glow, b, lamps) { bd(m, night, fr, glow, b, lamps); if (!b || b.shop !== 'club') return; var pb = clubB(); if (!pb) return; var g = homeGarage(pb), at = g.at, a = g.a;
+    var gy = groundY(g.cx, g.cz), x0 = Math.min(at(g.tc - 1.75, 0)[0], at(g.tc + 1.75, -6.4)[0]), x1 = Math.max(at(g.tc - 1.75, 0)[0], at(g.tc + 1.75, -6.4)[0]), z0 = Math.min(at(g.tc - 1.75, 0)[1], at(g.tc + 1.75, -6.4)[1]), z1 = Math.max(at(g.tc - 1.75, 0)[1], at(g.tc + 1.75, -6.4)[1]);
+    boxT(m, x0, gy - 0.6, z0, x1, gy + 3.0, z1, { wall: b.wallX || 'w_house', top: 'roofs', v: 1 }); boxC(m, x0 - 0.12, gy + 3.0, z0 - 0.12, x1 + 0.12, gy + 3.18, z1 + 0.12, '#2a2226');
+    standQ(m, g.door[0] + g.nx * 0.04, g.door[1] + g.nz * 0.04, a, 3.0, gy + 0.02, gy + 2.6, TL('shutter'), 1.1, 0.2); boxR(m, g.door[0] + g.nx * 0.05, g.door[1] + g.nz * 0.05, a, 1.6, 0.06, gy + 2.6, gy + 2.75, '#c4121c');
+    ell(glow, g.door[0] + g.nx * 0.2, gy + 2.95, g.door[1] + g.nz * 0.2, 0.12, 0.08, 0.12, '#ffd890', 6, 3);
+    if (!HDONE['gclub']) { HDONE['gclub'] = 1; addBox(x0, z0, x1, z1, gy - 0.6, gy + 3.2); } };
+  var ws = worldSetup; worldSetup = function () { ws(); var pb = clubB(); if (!pb) return; CLUBH.b = pb; var g = homeGarage(pb);
+    G.uses.push({ x: g.door[0] + g.nx * 2.2, z: g.door[1] + g.nz * 2.2, r: 3.6, car: 1, label: 'DRIVE INTO YOUR GARAGE', fn: function () { storeCar(CLUBH); } });
+    G.uses.push({ x: g.door[0] + g.nx * 1.0, z: g.door[1] + g.nz * 1.0, r: 2.2, label: 'GARAGE', icon: 'G', fn: function () { garageMenu(CLUBH); } }); };
+})();
 </script>
 </body></html>

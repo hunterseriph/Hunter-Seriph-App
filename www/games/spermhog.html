@@ -5177,5 +5177,16 @@ function drawHFX(cx, cy) {
   sfx.add('zap', function () { t('square', 1800, 300, 0.14, 0.05); n(0.12, 0.12, 5000); });
   sfx.add('bubble', function () { t('sine', 400, 1200, 0.2, 0.08); }); })();
 
+
+/* ---------- update 184 (his ask): the passives from Cumheads Quest. The homunculi already have their breeds' own (above);
+   Cumhead gets Second Wind, Greebo Sticky Fingers, and Shithead Laboozie his Covered In It from Load Legacy. ---------- */
+(function () {
+  var hu = hurt; hurt = function (srcx, hazard) { var p = PL, C = CHR();
+    if (p && p.state === 'normal' && !(p.inv > 0) && !(G.star > 0) && G.mode === 'play' && !p.shield && G.drops <= 0 && C.kind === 'ch' && G.windAct !== G.ai) {
+      G.windAct = G.ai; p.inv = 2; knock(srcx, 0.8); sfx.play('life'); G.banner = 1.4; G.bannerTxt = 'SECOND WIND!'; return; }
+    return hu(srcx, hazard); };
+  var gd = gotDrop; gotDrop = function (quiet) { gd(quiet); if (CHR().kind === 'gs' && Math.random() < 0.3) gd(true); };
+  var hb = hitBoss; hitBoss = function (n, b) { if (CHR().kind === 'lab' && Math.random() < 0.33) n = (n || 1) * 2; return hb(n, b); };
+})();
 </script>
 </body></html>

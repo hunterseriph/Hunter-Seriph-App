@@ -64,13 +64,15 @@ var B3 = (function () {
     '}'].join('\n');
   // the ground: a grid that follows the camera, raised by the same hills the game uses, wearing the place's floor
   var VS_GR = ['attribute vec2 aXZ; uniform mat4 uVP; uniform vec2 uOff; uniform vec2 uSnap; uniform vec4 uH; uniform vec3 uSun; uniform vec3 uSunC; uniform vec3 uAmb;',
-    'varying vec2 vUV; varying float vF; varying vec3 vL;',
-    'float H(vec2 q){ return uH.x*(sin(q.x*0.0041+uH.z)*cos(q.y*0.0037+uH.w)+0.55*sin(q.x*0.0093+q.y*0.0071+uH.z*2.)+0.3*cos(q.x*0.017-q.y*0.013))*uH.y; }',
+    'varying vec2 vUV; varying float vF; varying vec3 vL; varying float vS;',
+    'uniform vec4 uP[12]; uniform float uPw[12];',
+    'float F(vec2 q){ float m=0.; for(int i=0;i<12;i++){ vec4 p=uP[i]; if(p.w<=0.) continue; vec2 d=abs(q-p.xy); float w=uPw[i]; float r=w<20.?sqrt(sqrt(d.x*d.x*d.x*d.x+d.y*d.y*d.y*d.y)):length(d); float t=clamp((p.z-r)/w,0.,1.); m=max(m,p.w*t*t*(3.-2.*t)); } return m; }',
+    'float H(vec2 q){ return uH.x*(sin(q.x*0.0041+uH.z)*cos(q.y*0.0037+uH.w)+0.55*sin(q.x*0.0093+q.y*0.0071+uH.z*2.)+0.3*cos(q.x*0.017-q.y*0.013))*uH.y+F(q); }',
     'void main(){ vec2 q=aXZ+uOff; float h=H(q); vec4 g=uVP*vec4(q.x,h,q.y,1.); g.xy=floor(g.xy/g.w*uSnap+0.5)/uSnap*g.w; gl_Position=g;',
-    ' vec3 n=normalize(vec3(H(q-vec2(6.,0.))-H(q+vec2(6.,0.)),12.,H(q-vec2(0.,6.))-H(q+vec2(0.,6.)))); vL=uAmb*1.25+uSunC*max(dot(n,uSun),0.)*0.75;',
+    ' vec3 n=normalize(vec3(H(q-vec2(6.,0.))-H(q+vec2(6.,0.)),12.,H(q-vec2(0.,6.))-H(q+vec2(0.,6.)))); vL=uAmb*1.25+uSunC*max(dot(n,uSun),0.)*0.75; vS=clamp((0.9-n.y)*3.,0.,1.);',
     ' vUV=q/128.; vF=g.w; }'].join('\n');
-  var FS_GR = ['precision mediump float; varying vec2 vUV; varying float vF; varying vec3 vL; uniform sampler2D uT; uniform vec3 uFog; uniform vec2 uFogR; uniform float uBright; uniform vec3 uLP; uniform vec3 uLC; uniform float uLR;', DITHER,
-    'void main(){ vec3 c=texture2D(uT,vUV).rgb*uBright*vL; float f=clamp((vF-uFogR.x)/(uFogR.y-uFogR.x),0.,1.); c=mix(c,uFog,f*f*(3.-2.*f)); c=floor(clamp(c,0.,1.)*31.+b4(gl_FragCoord.xy))/31.; gl_FragColor=vec4(c,1.); }'].join('\n');
+  var FS_GR = ['precision mediump float; varying vec2 vUV; varying float vF; varying vec3 vL; varying float vS; uniform sampler2D uT; uniform vec3 uFog; uniform vec2 uFogR; uniform float uBright; uniform vec3 uLP; uniform vec3 uLC; uniform float uLR;', DITHER,
+    'void main(){ vec3 c=texture2D(uT,vUV).rgb*uBright*vL; c=mix(c,c*vec3(0.42,0.38,0.36),vS); float f=clamp((vF-uFogR.x)/(uFogR.y-uFogR.x),0.,1.); c=mix(c,uFog,f*f*(3.-2.*f)); c=floor(clamp(c,0.,1.)*31.+b4(gl_FragCoord.xy))/31.; gl_FragColor=vec4(c,1.); }'].join('\n');
   function prog(vs, fs) { function sh(t, s) { var o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
     var p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     var o = { p: p, a: {}, u: {} }, i, n = gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES); for (i = 0; i < n; i++) { var a = gl.getActiveAttrib(p, i); o.a[a.name] = gl.getAttribLocation(p, a.name); }
@@ -112,7 +114,12 @@ var B3 = (function () {
   function texOf(key, canvas) { if (TEX[key]) return TEX[key]; var t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT); return (TEX[key] = t); }
   var HILL = [0, 1, 0, 0];
-  function hgt(x, z) { return HILL[0] * (Math.sin(x * 0.0041 + HILL[2]) * Math.cos(z * 0.0037 + HILL[3]) + 0.55 * Math.sin(x * 0.0093 + z * 0.0071 + HILL[2] * 2) + 0.3 * Math.cos(x * 0.017 - z * 0.013)) * HILL[1]; }
+  /* raised ground: up to 12 ledges (steep, w < 20, squarish) and mounds (gently sloped) near the camera, each [x, z, r, h, w] */
+  var PLAT = [], PU = new Float32Array(48), PW = new Float32Array(12);
+  function plats(list) { PLAT = list || []; PU.fill(0); PW.fill(1); for (var i = 0; i < Math.min(12, PLAT.length); i++) { var q = PLAT[i]; PU[i * 4] = q[0]; PU[i * 4 + 1] = q[1]; PU[i * 4 + 2] = q[2]; PU[i * 4 + 3] = q[3]; PW[i] = q[4]; } }
+  function platH(x, z) { var m = 0; for (var i = 0; i < Math.min(12, PLAT.length); i++) { var q = PLAT[i], dx = Math.abs(x - q[0]), dz = Math.abs(z - q[1]), w = q[4], r = w < 20 ? Math.sqrt(Math.sqrt(dx * dx * dx * dx + dz * dz * dz * dz)) : Math.hypot(dx, dz), t = Math.max(0, Math.min(1, (q[2] - r) / w)); m = Math.max(m, q[3] * t * t * (3 - 2 * t)); } return m; }
+  function hgt(x, z) { return platH(x, z) + hill(x, z); }
+  function hill(x, z) { return HILL[0] * (Math.sin(x * 0.0041 + HILL[2]) * Math.cos(z * 0.0037 + HILL[3]) + 0.55 * Math.sin(x * 0.0093 + z * 0.0071 + HILL[2] * 2) + 0.3 * Math.cos(x * 0.017 - z * 0.013)) * HILL[1]; }
   /* ---------- a frame ---------- */
   var W = 320, H = 180;
   function size(w, h) { W = Math.max(64, Math.round(w)); H = Math.max(36, Math.round(h)); if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; } }
@@ -123,7 +130,7 @@ var B3 = (function () {
     cam.eye = o.eye; cam.VP = mul(persp(o.fov || 0.95, W / H, 6, 3000), look(o.eye, o.at, [0, 1, 0]));
     gl.viewport(0, 0, W, H); gl.clearColor(LOOK.sky[0], LOOK.sky[1], LOOK.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.depthMask(true);
-    if (o.ground) { gl.useProgram(PG.p); uni(PG); var u = PG.u, sx = Math.floor(o.at[0] / GS) * GS, sz = Math.floor(o.at[2] / GS) * GS; gl.uniform2f(u.uOff, sx, sz); gl.uniform4fv(u.uH, HILL); gl.uniform1f(u.uBright, o.ground.bright || 1);
+    if (o.ground) { gl.useProgram(PG.p); uni(PG); var u = PG.u, sx = Math.floor(o.at[0] / GS) * GS, sz = Math.floor(o.at[2] / GS) * GS; gl.uniform2f(u.uOff, sx, sz); gl.uniform4fv(u.uH, HILL); gl.uniform4fv(u['uP[0]'], PU); gl.uniform1fv(u['uPw[0]'], PW); gl.uniform1f(u.uBright, o.ground.bright || 1);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texOf(o.ground.key, o.ground.canvas)); gl.uniform1i(u.uT, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, GB); gl.enableVertexAttribArray(PG.a.aXZ); gl.vertexAttribPointer(PG.a.aXZ, 2, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLES, 0, GN); gl.disableVertexAttribArray(PG.a.aXZ); }
     gl.useProgram(PM.p); uni(PM); gl.uniform1f(PM.u.uUnit, UNIT); gl.uniform1f(PM.u.uRim, LOOK.rim === undefined ? 0.8 : LOOK.rim); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ATEX); gl.uniform1i(PM.u.uTex, 0);
@@ -141,5 +148,5 @@ var B3 = (function () {
     add(name, 0, 0, 0, 0.35, { sc: o.sc || 1, am: 0, ph: 0 }); frame({ eye: [top * 0.42, top * 0.6, top * 1.22], at: [0, top * 0.5, 0], fov: 0.8, look: o.look, hill: [0, 0, 0, 0] });
     var url = cv.toDataURL('image/png'); size(sw, sh); return url; }
   function hex(h) { h = h.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; return [parseInt(h.substr(0, 2), 16) / 255, parseInt(h.substr(2, 2), 16) / 255, parseInt(h.substr(4, 2), 16) / 255]; }
-  return { hex: hex, ok: OK, gl: gl, canvas: cv, load: load, ready: function () { return READY; }, whenReady: function (f) { if (READY) f(); else onReady.push(f); }, MODELS: MODELS, add: add, frame: frame, size: size, project: project, hgt: hgt, portrait: portrait, UNIT: UNIT, cam: cam, get W() { return W; }, get H() { return H; } };
+  return { hex: hex, ok: OK, gl: gl, canvas: cv, load: load, ready: function () { return READY; }, whenReady: function (f) { if (READY) f(); else onReady.push(f); }, MODELS: MODELS, add: add, frame: frame, size: size, project: project, hgt: hgt, plats: plats, portrait: portrait, UNIT: UNIT, cam: cam, get W() { return W; }, get H() { return H; } };
 })();

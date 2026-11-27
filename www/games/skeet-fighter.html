@@ -1671,7 +1671,7 @@ var STORY = [
   'Beat the goo out of every one of them. Then go and beat it out of Blumhead.'
 ];
 function newGame(hero, o) {
-  o = o || {}; G.arc = null; G.duel = null; G.endArc = false; padSubs(false); G.hero = hero; G.rush = !!o.rush; G.hard = !!SV.hard; G.hardK = G.hard ? 1.35 : 1; G.si = o.stage || 0; G.lives = 3; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; G.conts = 0;
+  o = o || {}; G.arc = null; G.duel = null; G.endArc = false; padSubs(false); G.hero = hero; G.runId = Math.random(); G.rush = !!o.rush; G.hard = !!SV.hard; G.hardK = G.hard ? 1.35 : 1; G.si = o.stage || 0; G.lives = 3; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; G.conts = 0;
   P = makePlayer(hero); startStage(G.si);
 }
 function startStage(i) {
@@ -1817,7 +1817,7 @@ function oppArt(o) { // for the VS screen
   var L = [{ spr: BOSSES[o.boss].spr[0], sc: BOSSES[o.boss].sc || 1 }]; if (o.assist) L.push({ spr: BOSSES[o.assist].spr[0], sc: 1 }); return L;
 }
 var SHADE = 'grayscale(1) sepia(1) hue-rotate(225deg) saturate(3.2) brightness(0.62) contrast(1.3)'; // Blumhead's goo purple
-function arcadeStart(hero) { G.hero = hero; G.arc = { i: 0, list: ladder(hero), conts: 0 }; G.rush = false; G.hard = !!SV.hard; G.hardK = G.hard ? 1.25 : 1; G.lives = 0; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; P = makePlayer(hero); arcadeNext(); }
+function arcadeStart(hero) { G.hero = hero; G.runId = Math.random(); G.arc = { i: 0, list: ladder(hero), conts: 0 }; G.rush = false; G.hard = !!SV.hard; G.hardK = G.hard ? 1.25 : 1; G.lives = 0; G.score = 0; G.kills = 0; G.freed = 0; G.best = 0; G.runT = 0; P = makePlayer(hero); arcadeNext(); }
 function arcadeNext() {
   var A = G.arc, o = A.list[A.i]; G.si = o.st; G.S = STAGES[o.st]; G.cam = 400 + o.st * 37; G.vsOpp = { o: o, name: oppName(o), quote: oppQuote(o), art: oppArt(o) };
   G.mode = 'vs'; G.vsT = 0; sfx.play('vs'); music.play(o.boss ? (o.assist ? BOSSES.brothers.song : BOSSES[o.boss].song) : G.S.song); KIT.dropLayer();
@@ -2270,6 +2270,7 @@ function drawSelect() {
   T(H.n, tx, 66, { size: 16, col: '#f1e7d0', outline: true, font: 'title' });
   // everything stacks under the one before, however many lines the blurb wraps to (it ran into the stats on his phone)
   var bl = KIT.wrap(H.blurb, W - tx - 8, 8), yy = 86; bl.forEach(function (l, i) { T(l, tx, yy + i * 10, { size: 8, col: '#a6968f' }); }); yy += bl.length * 10 + 4;
+  var pz = SPAS[HEROLIST[sel]]; if (pz) { var pl = KIT.wrap(pz[0] + ': ' + pz[1], W - tx - 8, 8); pl.forEach(function (l, i) { T(l, tx, yy + i * 10, { size: 8, col: '#ffe36a' }); }); yy += pl.length * 10 + 4; }
   var room = HH - 22 - yy, gapL = Math.max(9, Math.min(10, Math.floor(room / 8)));
   ['POWER', 'SPEED', 'RANGE'].forEach(function (s, i) { var y2 = yy + i * gapL; T(s, tx, y2, { size: 8, col: '#f1e7d0' }); for (var j = 0; j < 5; j++) R(j < H.stats[i] ? '#ff2630' : '#2a0a0e', tx + 50 + j * 10, y2, 8, 7); }); yy += gapL * 3 + 4;
   var sp = H.sp; [['X', sp.fire.n], ['UP+X', sp.rise.n], ['FWD+X', sp.dash.n], ['DOWN+X', sp.ground.n], ['Y', sp.sup.n]].forEach(function (r, i) { T(r[0], tx, yy + i * gapL, { size: 8, col: '#ffe36a' }); T(r[1], tx + 50, yy + i * gapL, { size: 8, col: '#f1e7d0', max: W - tx - 56 }); });
@@ -2843,12 +2844,43 @@ function botInput() {
   return { mx: mx, mz: mz };
 }
 
-KIT.start({ w: 384, h: 216, wide: 512, update: update, draw: draw, onPause: pauseMenu, startPauses: true,
+KIT.start({ w: 384, h: 216, wide: 512, update: function (dt) { update(dt); }, draw: draw, onPause: pauseMenu, startPauses: true,
   idleUpdate: function (dt) { if (netLive()) return update(dt); if (G.mode === 'title') { G.t += dt; G.cam += 18 * dt; } },
   pad: { dpad: true, btns: [{ k: 'a', label: 'A', sub: 'HIT', cls: 'big' }, { k: 'b', label: 'B', sub: 'JUMP' }, { k: 'x', label: 'X', sub: 'SPECIAL' }, { k: 'y', label: 'Y', sub: 'SUPER', cls: 'gold' }, { k: 'lb', label: 'L', sub: 'BLOCK' }, { k: 'rb', label: 'R', sub: 'THROW' }] } });
 titleMenu();
 window.__sk = { G: G, get P() { return P; }, HEROES: HEROES, STAGES: STAGES, BOSSES: BOSSES, newGame: newGame, startStage: startStage, bossIntro: bossIntro, bossFight: bossFight, spawnFoe: spawnFoe, spawnBoss: spawnBoss, titleMenu: titleMenu, toSelect: toSelect, NET: NET, netHost: netHost, netJoin: netJoin, hostStart: hostStart, get IN() { return IN; },
   step: function (n) { for (var i = 0; i < n; i++) { KIT.tick(); update(1 / 60); } }, drawNow: function () { draw(); }, set mode(m) { G.mode = m; } };
 
+
+/* ---------- update 184 (his ask): every fighter has their own passive, the Cumheads Quest ones for Cumhead, Spermaid and
+   Greebo, and their own for the Homunculus and Shithead Laboozie (his from Load Legacy). ---------- */
+var SPAS = {
+  cumhead: ['Second Wind', 'Once a game (once a match in a duel), a knockout blow leaves him on 1 HP'],
+  spermaid: ['Siren Song', 'Every foe she knocks out heals her 6. 8% of blows miss her'],
+  greebo: ['Sticky Fingers', '+30% score from everything'],
+  homunculus: ['Acid Spit', 'His blows leave foes oozing acid for 3 seconds'],
+  laboozie: ['Covered In It', 'Foes he hits take a third more from everything for 4 seconds']
+};
+(function () {
+  var st0 = strike; strike = function (t, m, dir) { var from = m.from;
+    if (t && t.hero && t.hid && !t.prop) {
+      if (t.hid === 'spermaid' && Math.random() < 0.08 && (m.dmg || 0) > 0) { t.inv = Math.max(t.inv || 0, 0.3); spark(t.x, t.z, t.h + t.ht * 0.6, 0, '#9adfff'); return false; }
+      var d = (m.dmg || 0) * (t.team === 'p' ? G.hardK : 1) * (from && from.fire > 0 ? 1.3 : 1) * (t.team === 'p' && t.shieldT > 0 ? 0.3 : 1);
+      if (G.duel && !G.duel.wid) G.duel.wid = Math.random(); var key = G.duel ? G.duel.wid : G.runId;
+      if (t.hid === 'cumhead' && t.wind !== key && t.hp - d <= 0 && t.hp > 1) { t.wind = key; t.hp = 1; t.inv = Math.max(t.inv || 0, 1.2); t.flash = 0.3; spark(t.x, t.z, t.h + t.ht * 0.6, 2, '#ffe36a'); if (typeof sfx !== 'undefined') sfx.play('heavy'); return false; } }
+    var mm = m; if (t && t.covered > 0 && !t.prop) { mm = {}; for (var q in m) mm[q] = m[q]; mm.dmg = (m.dmg || 0) * 1.33; }
+    var r = st0.call(this, t, mm, dir);
+    if (r && from && from.hero && t && !t.prop && t.team !== from.team) {
+      if (from.hid === 'laboozie') t.covered = 4;
+      if (from.hid === 'homunculus') { t.acid = 3; t.acidBy = from; } }
+    return r; };
+  var ko = onKO; onKO = function (t, from) { var s0 = G.score; var r = ko.apply(this, arguments);
+    if (from && from.hero && from.hid === 'spermaid') from.hp = Math.min(from.mhp, from.hp + 6);
+    if (G.score > s0 && players().some(function (p) { return p.hid === 'greebo'; })) G.score += Math.round((G.score - s0) * 0.3);
+    return r; };
+  var up = update; update = function (dt) { up(dt);
+    if (G && G.ents) G.ents.forEach(function (e) { if (e.covered > 0) e.covered -= dt; if (e.acid > 0 && e.hp > 0 && e.st !== 'dead') { e.acid -= dt; e.acidT = (e.acidT || 0) - dt; if (e.acidT <= 0) { e.acidT = 0.5; e.hp -= 1.2; e.flash = 0.05; if (e.hp <= 0) { e.hp = 0; launch(e, 1, 120, 200); onKO(e, e.acidBy); e.acid = 0; } } } });
+    if (G && G.duel && G.duel.players) {} };
+})();
 </script>
 </body></html>
