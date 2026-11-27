@@ -10,6 +10,7 @@ import base64, io, json, os, re, subprocess, sys, tempfile
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__)); APP = os.path.dirname(os.path.dirname(HERE)); GAMES = os.path.join(APP, 'www', 'games')
 PIPER = '/home/claude/piper-dl'
+sys.path.insert(0, HERE)
 SEGAF = os.path.join(HERE, 'SEGA.TTF')  # his SEGA logo font (he sent it so the lettering is right)
 
 
@@ -77,51 +78,19 @@ def dash_frames():
     return strip, W, H
 
 
-def _segs(path):
-    """where the voice is in a recording of "Seriph": start and end of the voiced part (the E-R-I), from the sound itself"""
-    import wave, numpy as np
-    w = wave.open(path); sr = w.getframerate(); x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(float) / 32768
-    hop, win = int(sr * 0.005), int(sr * 0.025); E, HI = [], []
-    for i in range(0, len(x) - win, hop):
-        S = np.abs(np.fft.rfft(x[i:i + win] * np.hanning(win))) ** 2; fq = np.fft.rfftfreq(win, 1 / sr); e = S.sum() + 1e-12; E.append(e); HI.append(S[fq > 3500].sum() / e)
-    E, HI = np.array(E), np.array(HI); v = np.where((E > E.max() * 0.02) & (HI < 0.25))[0]
-    return v[0] * hop / sr, v[-1] * hop / sr, len(x) / sr
-
-
-def _stretch(path, out, e_len=0.56, i_len=0.52):
-    """SEEEE-RIIIII-PH: the E and the I are held, like the long vowels in the SEGA call. Each vowel's steady middle is
-    stretched on its own (the S, the R and the PH stay their natural length), with short crossfades between the pieces"""
-    v0, v1, T = _segs(path); L = v1 - v0
-    cuts = [0, v0 + L * 0.12, v0 + L * 0.46, v0 + L * 0.58, v1 - L * 0.04, T]  # S | E | R | I | PH
-    def tempo(seg, want):
-        k = seg / want; f = []
-        while k < 0.5: f.append('atempo=0.5'); k /= 0.5
-        f.append('atempo=%.4f' % k); return ','.join(f)
-    parts = []
-    for n in range(5):
-        a, b = cuts[n], cuts[n + 1]; f = 'atrim=%.4f:%.4f,asetpts=PTS-STARTPTS' % (a, b)
-        if n == 1: f += ',' + tempo(b - a, e_len)
-        if n == 3: f += ',' + tempo(b - a, i_len)
-        parts.append('[0]%s[p%d]' % (f, n))
-    fc = ';'.join(parts) + ';[p0][p1]acrossfade=d=0.012[q1];[q1][p2]acrossfade=d=0.012[q2];[q2][p3]acrossfade=d=0.012[q3];[q3][p4]acrossfade=d=0.012'
-    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', path, '-filter_complex', fc, out], check=True)
-
-
-def voice():
-    """SEEEERIIIIPH: Seriph called by a little choir (Cumhead's voice in the middle), the E and the I held long like the
-    SEGA call's SEEE and GAAA, a touch higher, in a big room"""
-    tmp = tempfile.mkdtemp(); parts = []
-    for k, (sp, ls) in enumerate([(50, 1.15), (57, 1.15), (51, 1.15), (102, 1.15)]):
-        raw = os.path.join(tmp, 'r%d.wav' % k); out = os.path.join(tmp, 'v%d.wav' % k)
-        subprocess.run([os.path.join(PIPER, 'piper', 'piper'), '--model', os.path.join(PIPER, 'v', 'en-us-libritts-high.onnx'), '--speaker', str(sp), '--length_scale', str(ls), '--noise_scale', '0.4', '--noise_w', '0.3', '--output_file', raw], input=b'Seriph.', check=True, capture_output=True)
-        _stretch(raw, out); parts.append(out)
-    mix = os.path.join(tmp, 'seriph.mp3')
-    fc = ('[0]silenceremove=start_periods=1:start_threshold=-40dB,asetrate=22050*1.07,aresample=44100[a];'
-          '[1]silenceremove=start_periods=1:start_threshold=-40dB,asetrate=22050*1.12,aresample=44100,adelay=14,volume=0.55[b];'
-          '[2]silenceremove=start_periods=1:start_threshold=-40dB,asetrate=22050*1.03,aresample=44100,adelay=24,volume=0.55[c];'
-          '[3]silenceremove=start_periods=1:start_threshold=-40dB,asetrate=22050*1.16,aresample=44100,adelay=8,volume=0.4[d];'
-          '[a][b][c][d]amix=inputs=4:normalize=0,aecho=0.8:0.5:60|120:0.25|0.14,highpass=f=90,acompressor=threshold=-18dB:ratio=3,loudnorm=I=-12:TP=-1,afade=t=out:st=1.6:d=0.4')
-    subprocess.run(['ffmpeg', '-y', '-v', 'error'] + sum([['-i', p] for p in parts], []) + ['-filter_complex', fc, '-ac', '1', '-ar', '44100', '-b:a', '112k', '-t', '2.1', mix], check=True)
+def voice(hold=-9, step=-4):
+    """SEERIIIPH to his spec (updates 188-190): sung by seriph_voice.py (SEEEE held for 0.7 s, then RIIIIPH a little
+    higher with a long IIIII, cut off dead at 1.25 s), then made crisp like an early-90s console sample: hard top end
+    and sizzle (an exciter and a presence lift), squashed hard, then sampled down with no smoothing so it keeps the
+    gritty aliasing, and 8-bit grit on top."""
+    import seriph_voice
+    tmp = tempfile.mkdtemp(); sung = os.path.join(tmp, 'sung.wav'); mix = os.path.join(tmp, 'seriph.mp3'); seriph_voice.make(sung, hold, step)
+    af = ('highpass=f=120,equalizer=f=1000:t=q:w=1.0:g=3,equalizer=f=4000:t=q:w=1.0:g=4,highshelf=f=6000:g=1.5,'  # update 191: a bit less crisp
+          'aexciter=amount=1.5:drive=5:blend=0:freq=3000:ceil=10000,'
+          'acompressor=threshold=-26dB:ratio=6:attack=1:release=45:makeup=6,'
+          'aresample=16000:filter_size=4:phase_shift=0,acrusher=bits=8:mode=lin:mix=0.25,aresample=44100:filter_size=8,lowpass=f=8500,'
+          'alimiter=limit=0.9,loudnorm=I=-10:TP=-0.8')
+    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', sung, '-af', af, '-ac', '1', '-ar', '44100', '-b:a', '128k', mix], check=True)
     return open(mix, 'rb').read()
 
 
