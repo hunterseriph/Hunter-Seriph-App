@@ -1208,12 +1208,25 @@ var SEC = {
   },
   /* ---------- a cave between districts: the hill closes over you, it goes dark, and you come out somewhere new.
      The scenery behind changes while you are inside, so the next part of the level is revealed as you leave ---------- */
-  cave: function (b, id) {
-    b.ground(4); b.drops(-3, 3, 2); var c0 = b.col, H0 = b.h, n = 44;
-    for (var i = 0; i < n; i++) { var c = c0 + i, lip = i < 3 || i >= n - 3 ? 2 : 0; for (var y = H0 - 22; y <= H0 - 7 + lip; y++) b.set(c, y, '#'); for (var y2 = H0 - 6 + lip; y2 < H0; y2++) b.set(c, y2, 'k'); }
-    for (var dx = 4; dx < n - 4; dx += 2.2) b.ent('drop', c0 + dx, H0 - 2 - Math.sin(dx / n * Math.PI) * 2);
-    b.caves.push({ c0: c0, c1: c0 + n });
-    b.ground(Math.floor(n / 2)); SEC.district(b, id); b.ground(n - Math.floor(n / 2)); b.ground(4); return b;
+  cave: function (b, id) { // update 181: no two caves alike (they were all the same flat 44-tile hill): six shapes, each act takes them in its own order
+    if (!b.caveOrd) { b.caveOrd = [0, 1, 2, 3, 4, 5]; for (var s = 5; s > 0; s--) { var t = Math.floor(b.rnd() * (s + 1)), u = b.caveOrd[s]; b.caveOrd[s] = b.caveOrd[t]; b.caveOrd[t] = u; } b.caveN = 0; }
+    var v = b.caveOrd[b.caveN++ % 6]; if (v === 2 && b.h + 7 > HMAX) v = 3; else if (v === 3 && b.h - 7 < HMIN) v = 2;
+    b.ground(4); b.drops(-3, 3, 2); var c0 = b.col, H0 = b.h, n = [44, 54, 46, 46, 40, 50][v], ih = [6, 5, 6, 6, 11, 7][v], half = Math.floor(n / 2);
+    // the floor inside: flat, stepping down, stepping up, or a pool to cross
+    for (var i = 0; i < n; i++) { if (i === half) SEC.district(b, id);
+      if (v === 2 && i > 6 && i < n - 8 && (i - 7) % 9 === 0) b.step(2); if (v === 3 && i > 6 && i < n - 8 && (i - 7) % 9 === 0) b.step(-2);
+      if (v === 5 && i >= half - 8 && i < half + 6) { b.pool(1, 4, b.zone.liquid || 'cream'); continue; } b.ground(1); }
+    var lo = 1e9; for (var c = c0; c < c0 + n; c++) if (!b.cols[c].liq) lo = Math.min(lo, b.top[c]); var hill = lo - ih - [16, 9, 14, 13, 8, 12][v];
+    for (var k = 0; k < n; k++) { var c2 = c0 + k, f = b.top[c2], fs = b.cols[c2].liq ? f - 4 : f, lip = k < 3 || k >= n - 3 ? (v === 1 ? 1 : 2) : 0, roof = (v === 2 || v === 3 ? lo : fs) - ih + lip, ed = Math.min(k, n - 1 - k);
+      var top = hill + (ed < 6 ? 6 - ed : 0) + ([0, 1, 0, 0, 2, 1][v] && ed > 6 ? Math.round(Math.sin(k * 0.45 + v) * [0, 1, 0, 0, 2, 1][v]) : 0); // its outline: rounded ends, a bumpy or a smooth top
+      for (var y = top; y < roof; y++) b.set(c2, y, '#'); for (var y2 = roof; y2 < f; y2++) if (b.get(c2, y2) === '.') b.set(c2, y2, 'k'); }
+    if (v === 1) for (var x = 12; x < n - 12; x += 11) { b.set(c0 + x, H0 - ih, 'v'); b.set(c0 + x + 1, H0 - ih, 'v'); } // a low passage: fangs in the roof, keep your head down
+    if (v === 4) { b.set(c0 + 10, H0 - 4, '='); for (var x2 = 0; x2 < 5; x2++) { b.set(c0 + 10 + x2, H0 - 4, '='); b.set(c0 + 18 + x2, H0 - 7, '='); b.set(c0 + 26 + x2, H0 - 4, '='); } b.ent('box', c0 + 20, H0 - 8, { item: 'drops' }); } // a vault: ledges up in the dark
+    if (v === 5) for (var x3 = half - 6; x3 < half + 4; x3 += 4) { b.set(c0 + x3, H0 - 2, '='); b.set(c0 + x3 + 1, H0 - 2, '='); }
+    for (var dx = 4; dx < n - 4; dx += [2.2, 3, 2.6, 2.6, 2, 2.4][v]) { var cc = Math.floor(c0 + dx), ff = b.top[cc]; b.ent('drop', c0 + dx, (ff === null || ff === undefined ? H0 : ff) - 2 - Math.sin(dx / n * Math.PI) * (v === 1 ? 0 : 2)); }
+    if (v === 0 || v === 3) b.ent('foe', c0 + Math.floor(n * 0.7), b.top[c0 + Math.floor(n * 0.7)], { f: v ? 'n' : 'm' });
+    b.caves.push({ c0: c0, c1: c0 + n, sp: [9, 12, 8, 10, 7, 11][v] });
+    b.ground(4); return b;
   },
   goal: function (b) { b.ground(6); b.thing(-2, 'goal'); b.ground(40); return b; }, // no wall after the sign: the camera stops and he runs off
   arena: function (b, boss) { if (boss === 'pig') { b.ground(4); var p0 = b.col; b.ground(34); b.thing(-30, 'arena', 0, { boss: boss, c0: p0, c1: b.col }); for (var k = 0; k < 40; k++) { b.set(b.col, 0, '.'); b.col++; } return b; } /* Ejaculand: the Load Flume's station platform, then the drop the ride goes down (7b-flume.js) */
@@ -2261,6 +2274,9 @@ SEC.pocket = function (b, gate) { // the cracked wall at the end and what it hid
 /* ---------- digging the deep ---------- */
 function underRoutes(b, a) {
   if (a.sonic) { b.unders = []; return; } // update 144: Sonic structure, no single deep under the act (5i-sonic.js)
+  /* update 181 (his ask: the underground is a route, not a big cave, and it was taken out): it is back as a TUNNEL. Its
+     roof follows its own floor a few rows up (higher only where something down there needs the room), with solid rock
+     between it and the street, so it is a passage you run along under the act, not one open cavern. */
   /* ONE way under the whole act (his ask: a whole path down there through the different areas, not pockets you have to
      come up out of): from just after the start to just before the sign or the arena. Its roof follows the lowest open
      space of each column above it (street, low roads, tunnels, caves) plus a crust; gaps in the street simply open into it.
@@ -2275,13 +2291,25 @@ function underRoutes(b, a) {
   function need(c, w) { var q = 0; for (var i = Math.max(0, c - c0); i < Math.min(n, c - c0 + w); i++) q = Math.max(q, req[i]); return q; }
   var L = Builder(Z, (a.seed || 1) * 31 + 7); L.col = c0; L.h = need(c0, 40); SEC.run(L, 10);
   var pi = a.deep && a.deep.length ? 0 : (a.seed || 0) % plan.length, guard = 0;
+  var adj = 0; // the ways the tunnel goes down or up to stay under the street take turns: a drop, a steep bank
   while (L.col < c1 - 90 && guard++ < 80) {
-    var nd = need(L.col, 120); if (L.h < nd) SEC.drop(L, nd - L.h + 1); else if (L.h > nd + 22) SEC.climb(L, Math.min(6, L.h - nd - 14));
-    var p = plan[pi++ % plan.length]; if (p[0] === 'climb' && L.h - p[1] - 1 < need(L.col, 120)) p = ['run', 8]; // never climb into the roof
+    var nd = need(L.col, a.route ? 64 : 120); if (L.h < nd) { if (a.route && adj++ % 2) { L.ground(3); L.down(nd - L.h + 1, true); } else SEC.drop(L, nd - L.h + 1); } // the tunnel keeps close under the street: it only goes as deep as the next stretch needs
+    else if (L.h > nd + (a.route ? 6 : 22)) { var up6 = Math.min(6, a.route ? L.h - nd : L.h - nd - 14); if (a.route && adj++ % 2) { L.ground(3); L.up(up6, true); L.ground(4); } else SEC.climb(L, up6); }
+    var p = a.route && pi >= plan.length ? ['run', 8 + (pi++ % 4) * 2, ['m', 'n', 'p'][pi % 3]] : plan[pi++ % plan.length]; if (p[0] === 'climb' && L.h - p[1] - 1 < need(L.col, 120)) p = ['run', 8]; if (a.route && L.h - (GIM[p[0]] ? GIM[p[0]].h : 0) - 6 < need(L.col, 64) - 12) { SEC.drop(L, 4); } // never climb into the roof
     SEC[p[0]].apply(null, [L].concat(p.slice(1))); SEC.run(L, 5); }
   while (L.col < c1 - 34) L.ground(1);
-  if (L.h < need(L.col, 30)) SEC.drop(L, need(L.col, 30) - L.h + 1);
+  if (L.h < need(L.col, 30)) { if (a.route) { L.ground(2); L.down(need(L.col, 30) - L.h + 1, true); L.ground(3); } else SEC.drop(L, need(L.col, 30) - L.h + 1); } // the tunnel: a bank you can run back up
   SEC.pocket(L, true); while (L.col < c1) L.ground(1);
+  if (a.route) { // the tunnel's roof: a few rows over its floor (more in some districts than others), clear of what stands down there
+    var raw = [], di0 = 0;
+    for (var k7 = 0; k7 < n; k7++) { var c7 = c0 + k7, Lc7 = L.cols[c7], f7 = L.top[c7]; while (di0 + 1 < b.dists.length && b.dists[di0 + 1].c <= c7) di0++;
+      if (f7 === null || f7 === undefined) { raw.push(null); continue; }
+      var hi7 = f7; if (Lc7) for (var y7 = ceil[k7]; y7 < f7; y7++) if (Lc7[y7] !== '.') { hi7 = y7; break; }
+      raw.push(Math.min(f7 - (8 + (di0 * 2 + (a.seed || 0)) % 3), hi7 - 4)); }
+    L.ents.forEach(function (e) { if (e.k === 'drop' || e.c < c0 || e.c >= c1) return; var g7 = (e.k === 'gim' || e.k === 'gimh') && GIM[e.g] ? GIM[e.g] : null, top = e.row - (g7 ? g7.h + 3 : e.k === 'zip' ? 3 : e.k === 'spring' || e.k === 'updraft' ? 6 : 5), w7 = g7 ? (e.w || 4) : e.k === 'zip' ? e.c1 - e.c : 1;
+      for (var x7 = Math.floor(e.c) - 1; x7 <= Math.ceil(e.c + w7) + 1; x7++) { var i7 = x7 - c0; if (i7 >= 0 && i7 < n && raw[i7] !== null) raw[i7] = Math.min(raw[i7], top); } });
+    for (var k8 = 0; k8 < n; k8++) { var m8 = 1e9; for (var j8 = -4; j8 <= 4; j8++) { var v8 = raw[k8 + j8]; if (v8 !== null && v8 !== undefined) m8 = Math.min(m8, v8); }
+      if (m8 < 1e9) { var rf = Math.max(ceil[k8] + 1, m8 - ((c0 + k8) * 7 % 5 === 0 ? 1 : 0)); for (var y8 = ceil[k8]; y8 < rf; y8++) b.cols[c0 + k8][y8] = '#'; ceil[k8] = rf; } } }
   // carve it in: rock from the roof down, the deep level's tiles over it
   for (var k3 = 0; k3 < n; k3++) { var c3 = c0 + k3, cl = b.cols[c3], Lc = L.cols[c3]; if (!Lc) continue;
     for (var y3 = ceil[k3]; y3 < ROWS; y3++) { var ch = Lc[y3]; cl[y3] = ch === '.' ? 'K' : ch; }
@@ -2292,15 +2320,18 @@ function underRoutes(b, a) {
   b.ents.forEach(function (e) { if (e.k !== 'drop' && e.c >= c0 - 4 && e.c < c1 + 4 && e.row < ceil[Math.max(0, Math.min(n - 1, e.c - c0))]) for (var d2 = -3; d2 <= 3 + (e.k === 'gim' || e.k === 'gimh' ? (e.w || 16) : 0); d2++) busy[e.c + d2] = 1; }); // a gimmick keeps its whole width clear of shafts
   b.bands.forEach(function (q) { for (var cb = q.c0 - 2; cb < q.c1 + 2; cb++) busy[cb] = 1; });
   function solidTo(c) { var t = b.top[c]; if (t === null || t === undefined) return false; for (var y = t + 1; y < ceil[c - c0]; y++) if (b.cols[c][y] !== '#') return false; return true; }
-  function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 30) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || floorRow(cA + w) !== f || !solidTo(cA + w) || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
+  function shaftOK(cA, loose) { if (cA < c0 + 4 || cA + 3 > c1 - 30) return false; var f = floorRow(cA); if (f === null) return false; for (var w = 0; w < 3; w++) { if ((busy[cA + w] && !loose) || (a.route && b.cols[cA + w][b.top[cA + w] - 1] !== '.') || floorRow(cA + w) !== f || !solidTo(cA + w) || Math.abs(b.top[cA + w] - b.top[cA]) > (loose ? 2 : 0)) return false; } return true; }
   function shaft(cA, up) { var f = floorRow(cA + 1); for (var w = 0; w < 3; w++) { var cc4 = cA + w; for (var y6 = b.top[cc4]; y6 < ceil[cc4 - c0] + 1; y6++) b.cols[cc4][y6] = 'K'; }
     b.ents = b.ents.filter(function (e) { return !(e.k !== 'drop' && e.c >= cA - 1 && e.c <= cA + 3 && e.row <= b.top[cA] + 1); });
     if (up) b.ent('updraft', cA + 1, f, { toprow: b.top[cA] - 3 }); else for (var dd = 0; dd < 4; dd++) b.ent('drop', cA + 1, b.top[cA] + 4 + dd * 6);
     for (var d3 = -4; d3 <= 6; d3++) busy[cA + d3] = 1; }
-  function near(c, loose) { for (var d = 0; d < (loose ? 50 : 24); d++) { if (shaftOK(c + d, loose)) return c + d; if (shaftOK(c - d, loose)) return c - d; } return -1; }
+  function near(c, loose) { for (var d = 0; d < (loose ? 50 : a.route ? 32 : 24); d++) { if (shaftOK(c + d, loose)) return c + d; if (shaftOK(c - d, loose)) return c - d; } return -1; }
   // ways in and out all along: a hole down, then an updraft up, and so on; the last is always a way up
-  var up = false; for (var cs = c0 + 14; cs < c1 - 60; cs += DEEP.step) { var q = near(cs); if (q > 0) { shaft(q, up); up = !up; } }
+  var up = false, firstHole = -1; for (var cs = c0 + 14; cs < c1 - 60; cs += DEEP.step) { var q = near(cs); if (q > 0) { if (!up && firstHole < 0) firstHole = q; shaft(q, up); up = !up; } }
   var last = near(c1 - 50, true); if (last > 0) shaft(last, true);
+  if (a.route && firstHole > c0 + 24) { // the tunnel starts at the first way down into it (before that it could never be reached): solid rock there
+    for (var cr = c0; cr < firstHole - 12; cr++) for (var yr = ceil[cr - c0]; yr < ROWS; yr++) b.cols[cr][yr] = '#';
+    b.ents = b.ents.filter(function (e) { return !(e.c >= c0 && e.c < firstHole - 12 && e.row > ceil[Math.max(0, Math.floor(e.c) - c0)]); }); }
   // dark spots: some stretches go pitch black, lanterns and crystals light them
   var dark = [], h = (a.seed || 3); for (var ds = c0 + 60; ds < c1 - 80; ds += 70) { h = (h * 16807) % 2147483647; if (h % 3 === 0) { var dl = 34 + h % 30; dark.push([ds, ds + dl]); ds += dl; } }
   // decoration along the way, in the look of the district above
@@ -3402,7 +3433,59 @@ function sonicPlan(a) {
   dist(4); if (hard) add([['run', 12], ['arena', ZONES[a.z].boss]]); else { add(S[1].slice(0, 2)); add([['switchback', 2, 34, false], ['run', 10], ['dash'], ['run', 12], ['goal']]); }
   a.plan = P; a.sonic = 1; a.gimDone = 1; // the director's one-of-everything is off: a zone's own mechanics come back on purpose
 }
-ACTS.forEach(sonicPlan);
+/* (update 181: the one layout every act shared is gone, see plan181 below) */
+/* ---------- update 181 (his ask: every level had the exact same layout, and the underground routes were gone; no two
+   parts of a level should look the same). The Sonic pieces stay (switchbacks, corkscrews, towers, splits), but every act
+   now lays itself out on its own: which big piece each district gets, in what order, how tall and how long, which of
+   the zone's mechanics, the act's own old set pieces and the gimmicks go where, and which ground shapes sit between.
+   Nothing is used twice in an act: no big piece, no ground shape, no mechanic (street and the way under share one list).
+   The way under is back as a route: a tunnel under the whole act (see underRoutes), with its own pieces. ---------- */
+function plan181(a, ai) {
+  var zid = ZONES[a.z].id, hard = a.act === 2, U = SPLITS[zid], r = (a.seed || 1) * 7919 + ai * 104729 + 17;
+  function rnd(n) { r = (r * 16807) % 2147483647; return r % n; }
+  function shuf(L) { L = L.slice(); for (var i = L.length - 1; i > 0; i--) { var j = rnd(i + 1), t = L[i]; L[i] = L[j]; L[j] = t; } return L; }
+  function key(p) { if (p[0] === 'switchback' || p[0] === 'corkscrew') return p[0] + p[1]; if (p[0] === 'split') return 'split'; /* one fork an act: the two kinds are the same shape */ if ({ pool: 1, conveyor: 1, awnings: 1, platPit: 1, saws: 1, stairs: 1, crushers: 1 }[p[0]]) return p[0]; return pieceKey(p); }
+  var used = {}, D = [], P = [];
+  function take(L, ok) { for (var i = 0; i < L.length; i++) { var k = key(L[i]); if (used[k] || (ok && !ok(L[i]))) continue; used[k] = 1; return L[i].slice(); } return null; }
+  a.plan.forEach(function (p) { if (p[0] === 'district' || p[0] === 'cave') D.push(p[1]); });
+  // the act's own set pieces from its old hand-written plan (the street, the lanes), and the zone's own mechanics
+  var own = [], NOTM = { gaps: 1, crumbleBridge: 1, springTower: 1, loop: 1, cave: 1, tunnel: 1, lanes: 1 };
+  (function walk(list) { list.forEach(function (p) { if (p[0] === 'lanes') { walk(p[1].top); walk(p[1].mid); walk(p[1].low); return; }
+    if (STRUCTP[p[0]] || TERRP[p[0]] || NOTM[p[0]] || !SEC[p[0]] || (p[0] === 'platPit' && !p[4])) return; own.push(p); }); })(a.plan);
+  var sig = []; SIG[zid].forEach(function (L) { L.forEach(function (p) { if (p[0] !== 'run' && p[0] !== 'loop') sig.push(p); }); });
+  if (hard) { sig = harder(sig); own = harder(own); }
+  var gim = Object.keys(GIM).filter(function (n) { return SEC[n] && GIM[n].lay && n !== 'corkscrew' && n !== 'quicksand'; }).map(function (n) { return [n]; });
+  var MECH = shuf(sig).concat(shuf(own)).concat(shuf(gim)); // the zone's own first, then the act's, then the rest
+  // the big pieces: each once per act, sizes picked per act
+  var BIG = shuf([['switchback', 2, 32 + rnd(10), hard], ['switchback', 4, 34 + rnd(8), hard], ['corkscrew', 2, 32 + rnd(10), hard], ['corkscrew', 4, 34 + rnd(6), hard],
+    ['tower', (hard ? 26 : 20) + rnd(8), hard], ['split', U[0], hard], ['split', U[1], hard]]);
+  var TER = shuf([['ascent', 14 + rnd(8)], ['descent', 14 + rnd(8)], ['bigHill', 9 + rnd(5)], ['ridge'], ['valley', 3 + rnd(3)], ['rollers', 2 + rnd(2)], ['stairs', 3, 'up'], ['stairs', 3, 'down'],
+    ['pillars'], ['terraces'], ['bluff'], ['rampup'], ['slide'], ['skijump'], ['chute'], ['ledgedrop'], ['dunes'], ['halfpipe'], ['canyon'], ['overhang'], ['springShaft', 14 + rnd(6)], ['plunge', 14 + rnd(8)], ['loop'], ['climb', 9]]);
+  var FOES = shuf(['m', 'n', 'p', 'w', 'm', 'n', 'p']), fi = 0;
+  function run() { return ['run', 6 + rnd(9), FOES[fi++ % FOES.length]]; }
+  var gates = 2; // two special stage gateways an act, in the first two big pieces that can hide one
+  function big() { var p = take(BIG); if (!p) return take(TER); if (gates > 0) { gates--; if (p[0] === 'split') { var s = {}; for (var q in p[1]) s[q] = p[1][q]; s.gate = true; p[1] = s; } else if (p[0] === 'tower') p[3] = true; else p[4] = true; } return p; }
+  function mech() { return take(MECH) || run(); }
+  function ter() { return take(TER) || run(); }
+  var TPL = shuf([['V', 'M', 'T', 'M'], ['M', 'T', 'V', 'M'], ['T', 'M', 'M', 'V'], ['M', 'V', 'M', 'T'], ['V', 'T', 'M', 'R', 'M'], ['T', 'V', 'M', 'T'], ['M', 'R', 'T', 'V', 'M'], ['M', 'M', 'V', 'T']]);
+  function lay(t) { t.forEach(function (k, i) { var p = k === 'V' ? big() : k === 'T' ? ter() : k === 'M' ? mech() : run(); P.push(p); if (k !== 'R' && i < t.length - 1 && rnd(3) === 0) P.push(run()); }); }
+  var n = D.length, last = n - 1;
+  for (var i = 0; i < n; i++) {
+    P.push([i === 0 ? 'district' : 'cave', D[i]]);
+    if (i === 0) P.push(['start'], ['run', 10 + rnd(6), 'm']);
+    if (i < last) { lay(TPL[i]); P.push(['check']); }
+    else if (hard) P.push(['run', 12], ['arena', ZONES[a.z].boss]);
+    else { lay(TPL[i].slice(0, 3)); P.push(['run', 10], ['dash'], ['run', 12], ['goal']); }
+  }
+  // the way under: the zone's own deep pieces first (zipline, cart, gate...), then what the street did not use
+  var DP = []; (DEEPPLAN[zid] || DEEPPLAN.city).forEach(function (p) { if (p[0] !== 'drop' && p[0] !== 'climb') DP.push(p); });
+  var low = function (p) { var g = GIM[p[0]]; return (!g || g.h <= 8) && p[0] !== 'loop' && p[0] !== 'springTower' && p[0] !== 'gaps' && p[0] !== 'crumbleBridge' && p[0] !== 'lowgrav' && p[0] !== 'trampoline' && p[0] !== 'balloon'; };
+  var deep = [], q;
+  var DPOOL = shuf(DP).concat(shuf(OLDP.map(function (o) { return o[0]; }).filter(function (p) { return p[0] !== 'crumbleBridge' && p[0] !== 'loop' && p[0] !== 'springTower'; }))).concat(shuf(gim));
+  while ((q = take(DPOOL, low))) deep.push(q);
+  a.plan = P; a.deep = deep; a.sonic = 0; a.route = 1; a.gimDone = 1;
+}
+ACTS.forEach(plan181);
 /* waypoints are for the test bot only: out of the act's things into LV.wp */
 (function () { var lA = loadAct; loadAct = function (ai) { lA(ai); LV.wp = ENTS.filter(function (e) { return e.k === 'wp'; }).map(function (e) { return { x: e.x, y: e.y, sp: e.sp }; }); ENTS = ENTS.filter(function (e) { return e.k !== 'wp'; }); }; })();
 
@@ -3840,7 +3923,7 @@ function drawWorld() {
     g.drawImage(TSET, ti * 16, 0, 16, 16, x, y, 16, 16);
   }
   // torches and chains along the walls of caves and tunnels
-  (LV.caves || []).forEach(function (q) { if (q.ch) return; if (q.c1 * TS < cx || q.c0 * TS > cx + W) return; for (var c = q.c0 + 4; c < q.c1 - 2; c += 9) { var r0 = null; for (var y = r0 = Math.floor(cy / TS); y < r1 + 2; y++) if (T(c, y) === 'k' && isSolid(T(c, y + 1), c, y + 1)) { r0 = y; break; } if (r0 === null || T(c, r0) !== 'k') continue;
+  (LV.caves || []).forEach(function (q) { if (q.ch) return; if (q.c1 * TS < cx || q.c0 * TS > cx + W) return; for (var c = q.c0 + 4; c < q.c1 - 2; c += q.sp || 9) { var r0 = null; for (var y = r0 = Math.floor(cy / TS); y < r1 + 2; y++) if (T(c, y) === 'k' && isSolid(T(c, y + 1), c, y + 1)) { r0 = y; break; } if (r0 === null || T(c, r0) !== 'k') continue;
       var x = c * TS + 8 - cx, y0 = r0 * TS - cy - 30, fl = Math.floor(G.t * 10 + c) % 3; R('#12040a', x - 3, y0, 6, 10); R('#5a545c', x - 2, y0 + 1, 4, 8); R('#12040a', x - 4, y0 - 6, 8, 6); R(fl ? '#ff9a30' : '#ffe36a', x - 2, y0 - 9 - fl, 4, 6); R('#ffe36a', x - 1, y0 - 6, 2, 3);
       for (var k = 0; k < 40; k += 2) for (var j = -k; j <= k; j += 4) if (((j + k) / 2) % 2 === 0) R('#3a1a0a', x + j, y0 - 6 + k * 0.9, 1, 1);
       var ch = q.c0 * 7 + c; if (ch % 2) { for (var cl = 0; cl < 5 + ch % 4; cl++) R(cl % 2 ? '#3a343c' : '#22202a', x + 36, y0 - 60 + cl * 6, 3, 5); } } });
