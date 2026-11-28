@@ -28,7 +28,7 @@
   function get() { var o = read() || {}; return { name: clean(o.name), pic: BY[o.pic] ? o.pic : 'cumhead' }; }
   function set(p) {
     var o = get(); if (p.name !== undefined) o.name = clean(p.name); if (p.pic && BY[p.pic]) o.pic = p.pic;
-    try { localStorage.setItem(KEY, JSON.stringify({ name: o.name, pic: o.pic, v: 1 })); } catch (e) {}
+    var old = read() || {}; try { localStorage.setItem(KEY, JSON.stringify({ name: o.name, pic: o.pic, v: 1, fc: old.fc || undefined })); } catch (e) {}
     try { window.dispatchEvent(new CustomEvent('hsprofile', { detail: o })); } catch (e) {}
     return o;
   }
@@ -132,5 +132,37 @@
     render();
   }
   function ready(fn) { if (loaded) fn(); else waiting.push(fn); }
-  window.HSProfile = { get: get, set: set, has: has, name: function (f) { return get().name || f || ''; }, list: LIST, by: BY, draw: draw, html: html, edit: edit, ready: ready, KEY: KEY };
+
+  /* ---------- update 195 (his ask: friends, add friend, recently played with, quick join) ----------
+     code()          -> this player's friend code (six letters and numbers, made once, kept with the profile)
+     friends()       -> [{ fc, name, pic }]   addFriend(fc, name, pic)   removeFriend(fc)
+     recent()        -> [{ fc, name, pic, game, title, at }] the people you were last in an online room with
+     met(list)       -> a game says who is in its room (each { fc, name, pic })
+     lobby(info)     -> a game says it has an online room open ({ code, role, n }) or none (null)
+     presence()      -> what this player is doing right now ({ game, title, code, at }), read by the app to answer friends
+     A game says it is being played as soon as it loads (the app tells friends 'Playing Cum City Nights'), and its room
+     code while a room is open (friends get JOIN). It is all kept on this device; the app (hs-friends.js) answers friends. */
+  var CODEABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function code() { var o = read() || {}; if (o.fc && /^[A-Z0-9]{6}$/.test(o.fc)) return o.fc; var c = ''; for (var i = 0; i < 6; i++) c += CODEABC[Math.floor(Math.random() * CODEABC.length)];
+    o.fc = c; if (o.v === undefined) o.v = 1; try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} return c; }
+  function jget(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v === null ? d : v; } catch (e) { return d; } }
+  function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} try { window.dispatchEvent(new CustomEvent('hsfriends')); } catch (e) {} }
+  function friends() { return jget('hs-friends', []).filter(function (f) { return f && /^[A-Z0-9]{6}$/.test(f.fc); }); }
+  function addFriend(fc, name, pic) { fc = String(fc || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[A-Z0-9]{6}$/.test(fc) || fc === code()) return false; var L = friends(), f = L.filter(function (x) { return x.fc === fc; })[0];
+    if (f) { if (name) f.name = clean(name); if (pic && BY[pic]) f.pic = pic; } else L.push({ fc: fc, name: clean(name) || '', pic: BY[pic] ? pic : 'cumhead', added: Date.now() }); jset('hs-friends', L); return true; }
+  function removeFriend(fc) { jset('hs-friends', friends().filter(function (x) { return x.fc !== fc; })); }
+  function recent() { return jget('hs-recent', []); }
+  var GAMEFILE = (location.pathname.match(/\/games\/([^\/?#]+)\.html/) || [])[1] || '';
+  function met(list) { if (!list || !list.length) return; var R = recent(), mine = code(), now = Date.now(), ch = false;
+    list.forEach(function (p) { if (!p || !p.fc || p.fc === mine || !/^[A-Z0-9]{6}$/.test(p.fc)) return; R = R.filter(function (x) { return x.fc !== p.fc; }); R.unshift({ fc: p.fc, name: clean(p.name) || 'Player', pic: BY[p.pic] ? p.pic : 'cumhead', game: GAMEFILE, title: document.title, at: now }); ch = true; });
+    if (ch) jset('hs-recent', R.slice(0, 30)); }
+  var PRES = null;
+  function presSave() { if (!PRES) return; PRES.at = Date.now(); try { localStorage.setItem('hs-presence', JSON.stringify(PRES)); } catch (e) {} }
+  function lobby(info) { if (!GAMEFILE) return; PRES = PRES || { game: GAMEFILE, title: document.title }; if (info && info.code) { PRES.code = info.code; PRES.role = info.role; PRES.n = info.n || 1; } else { delete PRES.code; delete PRES.role; delete PRES.n; } presSave(); }
+  function presence() { var p = jget('hs-presence', null); return p && Date.now() - (p.at || 0) < 45000 ? p : null; }
+  if (GAMEFILE) { PRES = { game: GAMEFILE, title: document.title }; presSave(); setInterval(presSave, 15000);
+    addEventListener('pagehide', function () { try { var p = jget('hs-presence', null); if (p && p.game === GAMEFILE) localStorage.removeItem('hs-presence'); } catch (e) {} });
+    addEventListener('load', function () { if (PRES) { PRES.title = document.title; presSave(); } }); }
+
+  window.HSProfile = { code: code, friends: friends, addFriend: addFriend, removeFriend: removeFriend, recent: recent, met: met, lobby: lobby, presence: presence, get: get, set: set, has: has, name: function (f) { return get().name || f || ''; }, list: LIST, by: BY, draw: draw, html: html, edit: edit, ready: ready, KEY: KEY };
 })();

@@ -204,6 +204,7 @@ html.pc a:hover>.vthumb img{transform:scale(1.04);filter:brightness(1.12)}
 </style>
 <script src="videos.js"></script>
 <script src="games/profile.js"></script>
+<script src="app-friends.js"></script>
 <script>
 (function(){var r=document.documentElement;function f(){var pc=innerWidth>=900&&(!!window.hsDesktop||matchMedia("(pointer:fine)").matches);if(r.classList.contains("pc")!==pc){r.classList.toggle("pc",pc);window.dispatchEvent(new Event("hslayout"));}}f();addEventListener("resize",f);})();
 </script>
@@ -235,9 +236,6 @@ html.pc a:hover>.vthumb img{transform:scale(1.04);filter:brightness(1.12)}
 </div>
 </div>
 
-<div style="padding: 4px 16px 6px; flex: none">
-<button type="button" id="profCard" class="prof-card" aria-label="Your profile"><span id="profPic" class="prof-pic"></span><span class="prof-txt"><span class="prof-lbl">YOUR PROFILE</span><span id="profName" class="prof-name">Make your profile</span><span id="profSub" class="prof-sub">Pick a name and a character. It shows in every game.</span></span><span class="prof-edit">EDIT ›</span></button>
-</div>
 <style>
 .prof-card{display:flex;align-items:center;gap:14px;width:100%;padding:10px 14px 10px 10px;border:0;color:#f1e7d0;text-align:left;cursor:pointer;font:inherit;background:linear-gradient(180deg,#1c0a0d,#0e0708);box-shadow:inset 0 0 0 1px #4a1a1c;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
 .prof-pic{flex:none;width:64px;height:64px;outline:2px solid #c8b898;outline-offset:-1px;box-shadow:0 0 0 3px #12040a;background:#0e0708}
@@ -269,8 +267,7 @@ html.pc .prof-card:hover{box-shadow:inset 0 0 0 1px #c4121c}
 @media (prefers-reduced-motion:reduce){.screen.on{animation:none}.tab svg,.proj-row,.games-list>a,.shop-grid>a{transition:none}}
 </style>
 <script>
-(function(){function show(){if(!window.HSProfile)return;var p=HSProfile.get(),has=HSProfile.has();document.getElementById('profPic').innerHTML=HSProfile.html(p.pic,64);document.getElementById('profName').textContent=has?p.name:'Make your profile';var c=HSProfile.by[p.pic];document.getElementById('profSub').textContent=has?(c?c.n:''):'Pick a name and a character. It shows in every game.';}
-document.getElementById('profCard').addEventListener('click',function(){HSProfile.edit(show);});addEventListener('hsprofile',show);addEventListener('storage',function(e){if(e.key==='hs-profile')show();});show();})();
+/* update 195: the profile moved to the round button in the corner (app-friends.js) */
 </script>
 
 <div style="padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; flex: none">
@@ -999,6 +996,8 @@ document.addEventListener('click',function(e){
   $('gameTitle').textContent=a.getAttribute('data-title')||''; freshFrame('gameFrame',a.getAttribute('data-game')); location.hash='#/play';
 });
 /* a brand new iframe each time: changing an iframe's src adds a history entry, which made Back need two presses */
+/* update 195: a friend's JOIN button opens their game straight into their room */
+window.hsPlay=function(src,title){ $('gameTitle').textContent=title||''; freshFrame('gameFrame',src); location.hash='#/play'; };
 function freshFrame(id,src){ var old=$(id), f=old.cloneNode(false); if(src) f.setAttribute('src',src); else f.removeAttribute('src'); old.parentNode.replaceChild(f,old); return f; }
 /* update 132: a game can ask the phone to stay upright (Octobeats). OrientPlugin is our own few lines in MainActivity's
    package (tools/patch-android.js); without it the game asks you to turn the phone. Closing a game frees the screen again. */

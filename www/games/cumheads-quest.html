@@ -1,5 +1,6 @@
 <meta charset="utf-8">
 <script src="seriph-intro.js"></script>
+<script src="hs-options.js"></script>
 <title>Cumheads Quest</title>
 <link rel="stylesheet" href="../fonts/fonts.css">
 <style>
@@ -3077,7 +3078,7 @@ function initU17() {
     m.addEventListener('click', function () { OPT.touch = OPT.touch ? 0 : 1; saveOpt(); applyTouch(); sfx.click(); });
     applyTouch();
   })();
-  OPTROWS[0][2] = function () { sfx.init(); sfx.setMuted(!sfx.muted); };
+  OPTROWS.filter(function (r) { return r[0] === 'SOUND'; })[0][2] = function () { sfx.init(); sfx.setMuted(!sfx.muted); }; // update 195: by name (MASTER VOLUME now sits first)
   OPTROWS.push(['ON-SCREEN CONTROLS', function () { return OPT.touch ? 'ON' : 'OFF'; }, function () { OPT.touch = OPT.touch ? 0 : 1; saveOpt(); applyTouch(); }]);
   
 }
@@ -4229,6 +4230,7 @@ function menuPress(a) {
   }
   if (G.qty && (a === 'l' || a === 'r')) { qtyAdj(a === 'r' ? 1 : -1); return true; }
   var sc = kbScope(); if (!sc) return false;
+  if (sc.id === 'opts' && (a === 'l' || a === 'r')) { var fb = kbBtns(sc)[kbi]; if (fb && fb.hasAttribute('data-i')) { optAdj(+fb.getAttribute('data-i'), a === 'r' ? 1 : -1); return true; } } // update 195: left / right change the setting
   var bs = kbBtns(sc); if (!bs.length) return true;
   if (a === 'u' || a === 'l') { kbi = (kbi + bs.length - 1) % bs.length; sfx.tick(); kbPaint(); }
   else if (a === 'd' || a === 'r') { kbi = (kbi + 1) % bs.length; sfx.tick(); kbPaint(); }
@@ -4270,16 +4272,36 @@ function saveOpt() { try { localStorage.setItem('cq-opt', JSON.stringify(OPT)); 
 function applyOpt() { music.setVol(); var a = sfx.audio && sfx.audio(); if (a && a.master && !sfx.muted) a.master.gain.value = 0.7 * OPT.vol; }
 var OPTROWS = [
   ['SOUND', function () { return sfx.muted ? 'OFF' : 'ON'; }, function () { sfx.init(); sfx.setMuted(!sfx.muted); var m = el('mute'); m.classList.toggle('off', sfx.muted); m.setAttribute('aria-pressed', sfx.muted ? 'true' : 'false'); }],
-  ['MUSIC VOLUME', function () { return Math.round(OPT.mus * 100) + '%'; }, function () { OPT.mus = OPT.mus <= 0.01 ? 1 : Math.round((OPT.mus - 0.25) * 100) / 100; saveOpt(); applyOpt(); }],
-  ['SOUND FX VOLUME', function () { return Math.round(OPT.vol * 100) + '%'; }, function () { OPT.vol = OPT.vol <= 0.26 ? 1 : Math.round((OPT.vol - 0.25) * 100) / 100; saveOpt(); applyOpt(); }],
+  ['MUSIC VOLUME', function () { return Math.round(OPT.mus * 100) + '%'; }, function () { OPT.mus = OPT.mus <= 0.01 ? 1 : Math.round((OPT.mus - 0.25) * 100) / 100; saveOpt(); applyOpt(); }, { k: 'slider', get: function () { return OPT.mus; }, set: function (v) { OPT.mus = v; saveOpt(); applyOpt(); } }],
+  ['SOUND FX VOLUME', function () { return Math.round(OPT.vol * 100) + '%'; }, function () { OPT.vol = OPT.vol <= 0.26 ? 1 : Math.round((OPT.vol - 0.25) * 100) / 100; saveOpt(); applyOpt(); }, { k: 'slider', min: 0.05, get: function () { return OPT.vol; }, set: function (v) { OPT.vol = v; saveOpt(); applyOpt(); } }],
   ['SCREEN SHAKE', function () { return OPT.shake ? 'ON' : 'OFF'; }, function () { OPT.shake = OPT.shake ? 0 : 1; saveOpt(); }]
 ];
+/* update 195 (his ask: modern, organised options in every game): the rows are drawn like the other games' options
+   (hs-options.js): grouped, ON/OFF as switches, volumes as sliders you can drag, and left / right change the row you are on */
+if (window.HSOpt) OPTROWS.unshift(['MASTER VOLUME', function () { return Math.round(HSOpt.vol() * 100) + '%'; }, function () { HSOpt.setVol(HSOpt.vol() <= 0.01 ? 1 : HSOpt.vol() - 0.25); }, { k: 'slider', get: HSOpt.vol, set: HSOpt.setVol }]);
+function optSec(n) { return /SHAKE/.test(n) ? 'DISPLAY' : /CONTROLS/.test(n) ? 'CONTROLS' : 'AUDIO'; }
+function optSpec(o) { if (o[3]) return o[3]; var v = o[1](); return v === 'ON' || v === 'OFF' ? { k: 'toggle' } : { k: 'choice' }; }
+function optAdj(i, d) { var o = OPTROWS[i]; if (!o) return; var sp = optSpec(o);
+  if (sp.k === 'slider') { var lo = sp.min || 0, v = Math.round((sp.get() + d * 0.05) * 100) / 100; sp.set(Math.max(lo, Math.min(1, v))); } else o[2]();
+  sfx.tick(); renderOpts(); }
 function renderOpts() {
-  var list = el('optList'); list.innerHTML = '';
-  OPTROWS.forEach(function (o) {
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'optRow'; b.innerHTML = '<span></span><b></b>'; b.firstChild.textContent = o[0]; b.lastChild.textContent = o[1]();
-    b.addEventListener('click', function () { o[2](); sfx.click(); renderOpts(); }); list.appendChild(b);
+  var list = el('optList'), keep = list.querySelector('.kbf'), ki = keep ? keep.getAttribute('data-i') : null; list.innerHTML = ''; list.classList.add('hso'); if (window.HSOpt) HSOpt.style();
+  var sec = null;
+  OPTROWS.forEach(function (o, i) {
+    var sp = optSpec(o), s2 = optSec(o[0]);
+    if (s2 !== sec) { sec = s2; var h = document.createElement('div'); h.className = 'hso-h'; h.textContent = sec; list.appendChild(h); }
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'hso-row'; b.setAttribute('data-i', i);
+    var r = sp.k === 'slider' ? { k: 'slider', spec: { get: sp.get, min: 0, max: 1, fmt: function (v) { return Math.round(v * 100) + '%'; } } } : sp.k === 'toggle' ? { k: 'toggle', on: o[1]() === 'ON' } : { k: 'choice', val: o[1]() };
+    b.innerHTML = '<span class="hso-name"></span><span class="hso-ctl">' + (window.HSOpt ? HSOpt.ctl(r) : '<b>' + o[1]() + '</b>') + '</span>'; b.firstChild.textContent = o[0];
+    b.addEventListener('click', function () { if (sp.k === 'slider') optAdj(i, 1); else { o[2](); sfx.click(); renderOpts(); } });
+    [].forEach.call(b.querySelectorAll('.hso-ar'), function (a) { a.addEventListener('click', function (e) { e.stopPropagation(); optAdj(i, +a.getAttribute('data-d')); }); });
+    var tr = b.querySelector('.hso-tr'); if (tr) { tr.addEventListener('click', function (e) { e.stopPropagation(); });
+      tr.addEventListener('pointerdown', function (e) { e.stopPropagation(); e.preventDefault();
+        var at = function (ev) { var t = el('optList').querySelector('[data-i="' + i + '"] .hso-tr') || tr, rc = t.getBoundingClientRect(); var f = Math.max(0, Math.min(1, (ev.clientX - rc.left) / (rc.width || 1))); sp.set(Math.max(sp.min || 0, Math.round(f * 20) / 20)); renderOpts(); };
+        at(e); var up = function () { removeEventListener('pointermove', at); removeEventListener('pointerup', up); }; addEventListener('pointermove', at); addEventListener('pointerup', up); }); }
+    list.appendChild(b);
   });
+  if (ki !== null) { var nb = list.querySelector('[data-i="' + ki + '"]'); if (nb) nb.classList.add('kbf'); } else kbPaint();
 }
 function showTitlePanel(id) { el('title').hidden = true; el(id).hidden = false; if (id === 'opts') renderOpts(); sfx.click(); }
 function backToTitle(id) { el(id).hidden = true; el('title').hidden = false; sfx.click(); }

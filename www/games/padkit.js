@@ -110,8 +110,9 @@
       if (sc !== scope) { scope = sc; setFocus(null); var bs = buttons(sc), def = sc.querySelector('[data-pad-default]'); setFocus(def && visible(def) ? def : bs[0] || null); prev = s; return; } // a button that opened this menu must not also press inside it (B would close it straight away)
       else if (focus && !visible(focus)) { var bs2 = buttons(sc); setFocus(same(focus, bs2) || bs2[0] || null); }
       ['u', 'd', 'l', 'r'].forEach(function (k) {
-        if (pressed(k)) { move(k); rep[k] = 0.38; }
-        else if (s[k]) { rep[k] -= dt; if (rep[k] <= 0) { move(k); rep[k] = 0.12; } }
+        var go = function () { if ((k === 'l' || k === 'r') && focus && focus.hasAttribute('data-pad-lr')) { try { focus.dispatchEvent(new CustomEvent('hs-lr', { detail: k === 'l' ? -1 : 1 })); } catch (e) {} } else move(k); }; // update 195: left / right change a setting row (hs-options.js)
+        if (pressed(k)) { go(); rep[k] = 0.38; }
+        else if (s[k]) { rep[k] -= dt; if (rep[k] <= 0) { go(); rep[k] = 0.12; } }
       });
       if (pressed('a') && focus) focus.click();
       if (pressed('b')) back();

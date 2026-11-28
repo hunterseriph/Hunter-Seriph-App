@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<script src="seriph-intro.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<script src="seriph-intro.js"></script>
+<script src="hs-options.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Cumhead Kart</title>
 <link rel="stylesheet" href="../fonts/fonts.css">
 <style>
@@ -3344,7 +3345,8 @@ function optionsMenu() {
   KIT.menu({ cls: 'ck plain', title: 'Options', items: [
     { label: 'AUTO ACCELERATE: ' + (SV.auto ? 'ON' : 'OFF'), sub: 'The kart drives itself forward; brake to slow down', fn: function () { SV.auto = !SV.auto; persist(); optionsMenu(); } },
     R3.ok ? R3.resItem(optionsMenu) : null,
-    { label: 'BACK', back: 1, fn: titleMenu }] });
+    { label: 'HOW TO DRIVE', fn: function () { helpMenu(optionsMenu); } },
+    { label: 'BACK', back: 1, fn: function () { titleMenu(); } }] });
 }
 function rivalsFor(ch) {
   var pool = CHARS.filter(function (c) { return c.id !== ch && charOpen(c.id); }).map(function (c) { return c.id; });
@@ -3545,7 +3547,7 @@ function titleMenu(page) {
       (page ? '<button type="button" class="ckbtn back" data-back data-act="back"><b>Back</b></button>' : '') +
       (page ? '' : '<div class="note">DROPS ' + (SV.drops || 0) + '  ·  TROPHIES ' + trophies + '</div>') + '</div></div>',
     acts: {
-      single: function () { titleMenu('single'); }, opt: function () { titleMenu('opts'); }, back: back,
+      single: function () { titleMenu('single'); }, opt: function () { optionsMenu(); }, back: back, // update 195: Options is the same modern settings screen as every game's (hs-options.js)
       gp: function gpFlow() { function ch() { pickChar(cup, gpFlow); } function cup() { pickCup(beginGP, ch); } pickClass(ch, function () { titleMenu('single'); }); },
       race: function raceFlow() { function ch() { pickChar(co, raceFlow); } function co() { pickCourse(beginRace, ch); } pickClass(ch, function () { titleMenu('single'); }); },
       tt: function ttFlow() { function co() { pickCourse(beginTT, ttFlow); } pickChar(co, function () { titleMenu('single'); }); },
@@ -4068,7 +4070,7 @@ function netSend(m, fast) { if (NET.role === 'client' && NET.host) NET.host.send
 /* host: messages from players */
 function hostData(L, m) {
   var pi = NET.players.findIndex(function (p) { return p.id === L.remote; });
-  if (m.t === 'join') { if (pi < 0) { NET.players.push({ id: L.remote, name: String(m.p.name || 'Player').slice(0, 14), pic: m.p.pic, ch: CH[m.p.ch] ? m.p.ch : 'cumhead', ready: true }); } hostLobbyPush(); netChanged(); sfx.play('coin'); return; }
+  if (m.t === 'join') { if (pi < 0) { NET.players.push({ id: L.remote, name: String(m.p.name || 'Player').slice(0, 14), pic: m.p.pic, fc: m.p.fc, ch: CH[m.p.ch] ? m.p.ch : 'cumhead', ready: true }); } hostLobbyPush(); netChanged(); sfx.play('coin'); return; }
   if (pi < 0) return;
   if (m.t === 'bye') { hostDrop(L); return; }
   if (m.t === 'ch' && CH[m.ch]) { NET.players[pi].ch = m.ch; hostLobbyPush(); netChanged(); return; }
@@ -4080,7 +4082,7 @@ function hostDrop(L) {
   var pi = NET.players.findIndex(function (p) { return p.id === L.remote; }); NET.links = NET.links.filter(function (l) { return l !== L; }); L.close();
   if (pi > 0) { var gone = NET.players[pi]; NET.players.splice(pi, 1); if (RACE && RACE.net) RACE.karts.forEach(function (k) { if (k.netId === gone.id) { k.remote = false; k.ai = true; } }); hostLobbyPush(); netChanged(); }
 }
-function hostLobbyPush(back) { NET.links.forEach(function (l) { var i = NET.players.findIndex(function (p) { return p.id === l.remote; }); l.send({ t: 'lobby', players: NET.players.map(function (p) { return { name: p.name, pic: p.pic, ch: p.ch }; }), you: i, back: back ? 1 : 0 }); }); }
+function hostLobbyPush(back) { NET.links.forEach(function (l) { var i = NET.players.findIndex(function (p) { return p.id === l.remote; }); l.send({ t: 'lobby', players: NET.players.map(function (p) { return { name: p.name, pic: p.pic, fc: p.fc, ch: p.ch }; }), you: i, back: back ? 1 : 0 }); }); }
 /* client: messages from the host */
 function clientData(L, m) {
   if (m.t === 'hello?') return;
@@ -5477,6 +5479,26 @@ var KPAS = {
     if (k.ch === 'joff' && k.boostT > 0 && !k.jb) { k.jb = 1; k.boostT *= 1.35; } if (!(k.boostT > 0)) k.jb = 0;
     if (k.ch === 'ali') R.karts.forEach(function (o) { if (o === k || o.done) return; var dx = o.x - k.x, dz = o.z - k.z, d = Math.hypot(dx, dz); if (d < 7 && (dx * Math.cos(k.yaw) + dz * Math.sin(k.yaw)) < 0) o.spd *= 1 - 0.35 * dt; });
     if (k.ch === 'blum') R.karts.forEach(function (o) { if (o === k) return; var dx = o.x - k.x, dz = o.z - k.z, d = Math.hypot(dx, dz); if (d < 1.9 && d > 0.01 && !(o.blumT > 0)) { o.kx += dx / d * 14; o.kz += dz / d * 14; o.blumT = 0.5; } if (o.blumT > 0) o.blumT -= dt; }); };
+})();
+
+/* ---------- update 195 (his ask: friends can see you are in a room and quick join it from the app's friends list) ----------
+   Your friend code goes with you into the room, and you swap codes with the others when you meet (so the app can list
+   who you recently played with); while a room is open the app tells friends its code; '?join=CODE' on the address
+   (the app's JOIN button) goes straight into that room. */
+function hsQuickJoin(code) { mpWait('Joining room ' + code + '…'); netJoin(code, function (ok) { if (ok) mpLobby(); else mpMenu(NET.err || 'Could not join.'); }); }
+(function () { if (!window.HSProfile || !HSProfile.lobby) return;
+  var nm = netMe; netMe = function () { var o = nm.apply(this, arguments); try { o.fc = HSProfile.code(); } catch (e) {} return o; };
+  function me() { var p = HSProfile.get(); return { fc: HSProfile.code(), name: p.name || 'Player', pic: p.pic }; }
+  var hd = hostData; hostData = function (L, m) { if (m && m.t === 'hsfc') { HSProfile.met([m.p]); try { L.send({ t: 'hsfc', p: me() }); } catch (e) {} return; } return hd.apply(this, arguments); };
+  var cd = clientData; clientData = function (L, m) { if (m && m.t === 'hsfc') { HSProfile.met([m.p]); return; } return cd.apply(this, arguments); };
+  var sent = null, nc = netChanged; netChanged = function () { var r = nc.apply(this, arguments); try {
+      var open = NET.role === 'host' ? !!(NET.sig && NET.sig.open) : !!(NET.host && NET.host.up);
+      if (NET.role && NET.code && open) HSProfile.lobby({ code: NET.code, role: NET.role, n: (NET.players && NET.players.length) || (NET.mate ? 2 : 1) }); else if (!NET.role) HSProfile.lobby(null);
+      if (NET.role === 'client' && NET.host && NET.host.up && sent !== NET.host) { sent = NET.host; NET.host.send({ t: 'hsfc', p: me() }); }
+      if (NET.players) HSProfile.met(NET.players.filter(function (p) { return p && p.fc; })); if (NET.mate && NET.mate.fc) HSProfile.met([NET.mate]);
+    } catch (e) {} return r; };
+  var nl = netLeave; netLeave = function () { var r = nl.apply(this, arguments); try { HSProfile.lobby(null); } catch (e) {} sent = null; return r; };
+  var q = location.search.match(/[?&]join=([A-Za-z0-9]{5})/); if (q) setTimeout(function () { try { hsQuickJoin(q[1].toUpperCase()); } catch (e) {} }, 500);
 })();
 </script>
 </body></html>
